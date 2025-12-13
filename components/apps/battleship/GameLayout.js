@@ -42,6 +42,8 @@ const GameLayout = ({
   onSalvoChange,
   fog,
   onFogChange,
+  noTouch,
+  onNoTouchChange,
   colorblind,
   onColorblindChange,
   toast,
@@ -122,6 +124,19 @@ const GameLayout = ({
                 />
                 <label htmlFor="battleship-salvo" className="cursor-pointer text-sm text-white/80">
                   Salvo Mode
+                </label>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/60 px-3 py-2">
+                <input
+                  id="battleship-no-touch"
+                  type="checkbox"
+                  className="h-4 w-4 accent-cyan-400"
+                  checked={noTouch}
+                  onChange={(e) => onNoTouchChange(e.target.checked)}
+                  aria-label="Toggle no-touch adjacency rule"
+                />
+                <label htmlFor="battleship-no-touch" className="cursor-pointer text-sm text-white/80">
+                  Enforce No-Touch Rule
                 </label>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/60 px-3 py-2">

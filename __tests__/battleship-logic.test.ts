@@ -1,11 +1,20 @@
-import { fireShots, CellState } from '../apps/games/battleship/logic';
+import { fireShots } from '../apps/games/battleship/logic';
 
-test('fireShots marks hits and misses for multiple targets', () => {
-  const board: CellState[] = Array(4).fill(null);
-  board[1] = 'ship';
-  board[3] = 'ship';
-  const { board: updated, hits, misses } = fireShots(board, [0, 1, 2, 3]);
-  expect(updated).toEqual(['miss', 'hit', 'miss', 'hit']);
-  expect(hits.sort()).toEqual([1, 3]);
-  expect(misses.sort()).toEqual([0, 2]);
+describe('fireShots', () => {
+  it('ignores repeat or invalid shots and preserves board length', () => {
+    const board = Array(100).fill(null);
+    board[5] = 'ship';
+    const shipCells = new Set([5]);
+
+    const first = fireShots(board, [5, 15, -1, 200], shipCells);
+    const second = fireShots(first.board, [5, 15, -1, 200], shipCells);
+
+    expect(first.board.length).toBe(100);
+    expect(second.board.length).toBe(100);
+    expect(first.hits).toEqual([5]);
+    expect(first.misses).toEqual([15]);
+    expect(second.hits).toEqual([]);
+    expect(second.misses).toEqual([]);
+    expect(second.board).toEqual(first.board);
+  });
 });

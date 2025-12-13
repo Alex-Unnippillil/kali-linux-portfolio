@@ -10,6 +10,8 @@ type HeatmapProps = {
   board: CellState[];
   /** Additional classes for container. */
   className?: string;
+  /** Whether ships may not touch (diagonals included). */
+  noTouch?: boolean;
 };
 
 /**
@@ -17,13 +19,13 @@ type HeatmapProps = {
  * and renders a translucent heat map overlay. The probabilities are
  * recomputed whenever the board changes, i.e. after each move.
  */
-const Heatmap: React.FC<HeatmapProps> = ({ board, className }) => {
+const Heatmap: React.FC<HeatmapProps> = ({ board, className, noTouch }) => {
   const [heat, setHeat] = useState<number[]>(
     () => Array(BOARD_SIZE * BOARD_SIZE).fill(0),
   );
 
   useEffect(() => {
-    const ai = new MonteCarloAI();
+    const ai = new MonteCarloAI({ noAdjacency: Boolean(noTouch) });
     board.forEach((cell, idx) => {
       if (cell === 'hit') ai.record(idx, true);
       else if (cell === 'miss') ai.record(idx, false);
@@ -31,7 +33,7 @@ const Heatmap: React.FC<HeatmapProps> = ({ board, className }) => {
     // nextMove populates the AI's internal heat map.
     ai.nextMove();
     setHeat(ai.getHeatmap().slice());
-  }, [board]);
+  }, [board, noTouch]);
 
   const max = Math.max(...heat);
 

@@ -14,6 +14,8 @@ import {
   randomizePlacement,
 } from '../../apps/games/battleship/ai';
 import { fireShots } from '../../apps/games/battleship/logic';
+import { cellsForShip, getRing, isShipSunk, validatePlacement } from '../../apps/games/battleship/rules';
+import { createRng } from '../../apps/games/battleship/rng';
 import GameLayout from './battleship/GameLayout';
 import usePersistentState from '../../hooks/usePersistentState';
 import useGameControls from './useGameControls';
@@ -223,6 +225,7 @@ const Battleship = () => {
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [message, setMessage] = useState('Place your ships');
   const [difficulty, setDifficulty] = usePersistentState('battleship-difficulty', 'easy');
+  const [noTouch, setNoTouch] = usePersistentState('battleship-no-touch', true);
   const [ai, setAi] = useState(null);
   const [playerAi, setPlayerAi] = useState(null);
   const [salvo, setSalvo] = usePersistentState('battleship-salvo', false);
@@ -230,6 +233,8 @@ const Battleship = () => {
   const [playerShots, setPlayerShots] = useState(1);
   const [aiShots, setAiShots] = useState(1);
   const [selected, setSelected] = useState([]);
+  const [lastPlayerShots, setLastPlayerShots] = useState([]);
+  const [lastAiShots, setLastAiShots] = useState([]);
   const [stats, setStats] = usePersistentState('battleship-stats', {
     wins: 0,
     losses: 0,
@@ -247,6 +252,8 @@ const Battleship = () => {
   const shotId = useRef(0);
   const shotTimers = useRef(new Map());
   const [modal, setModal] = useState(null);
+  const [sunkEnemyIds, setSunkEnemyIds] = useState(new Set());
+  const [sunkPlayerIds, setSunkPlayerIds] = useState(new Set());
   const [battleLog, setBattleLog] = usePersistentState('battleship-progress', {
     lastResult: null,
     lastPlayed: null,
@@ -254,41 +261,45 @@ const Battleship = () => {
     bestStreak: 0,
     totalGames: 0,
   });
+  const enemyShipSet = useMemo(
+    () => new Set(enemyShips.flatMap((ship) => ship.cells || [])),
+    [enemyShips],
+  );
+  const sunkEnemyCells = useMemo(
+    () =>
+      new Set(
+        enemyShips
+          .filter((ship) => sunkEnemyIds.has(ship.id))
+          .flatMap((ship) => ship.cells || []),
+      ),
+    [enemyShips, sunkEnemyIds],
+  );
+  const sunkPlayerCells = useMemo(
+    () =>
+      new Set(
+        ships
+          .filter((ship) => sunkPlayerIds.has(ship.id))
+          .flatMap((ship) => ship.cells || []),
+      ),
+    [ships, sunkPlayerIds],
+  );
 
   const tryPlace = useCallback(
     (shipId, x, y, dir) => {
       const ship = ships.find((s) => s.id === shipId);
       if (!ship) return null;
-      const cells = [];
-      for (let k = 0; k < ship.len; k++) {
-        const cx = x + (dir === 0 ? k : 0);
-        const cy = y + (dir === 1 ? k : 0);
-        if (cx < 0 || cy < 0 || cx >= BOARD_SIZE || cy >= BOARD_SIZE) return null;
-        const idx = cy * BOARD_SIZE + cx;
-        for (const s of ships) {
-          if (s.id !== shipId && s.cells && s.cells.includes(idx)) return null;
-        }
-        cells.push(idx);
-      }
-      for (const idx of cells) {
-        const cx = idx % BOARD_SIZE;
-        const cy = Math.floor(idx / BOARD_SIZE);
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dy = -1; dy <= 1; dy++) {
-            if (dx === 0 && dy === 0) continue;
-            const nx = cx + dx;
-            const ny = cy + dy;
-            if (nx < 0 || ny < 0 || nx >= BOARD_SIZE || ny >= BOARD_SIZE) continue;
-            const nIdx = ny * BOARD_SIZE + nx;
-            for (const s of ships) {
-              if (s.id !== shipId && s.cells && s.cells.includes(nIdx)) return null;
-            }
-          }
-        }
-      }
-      return cells;
+      const cells = cellsForShip(x, y, dir, ship.len, BOARD_SIZE);
+      if (!cells) return null;
+      const candidateLayout = ships.map((s) =>
+        s.id === shipId ? { ...s, x, y, dir, cells } : s,
+      );
+      const validation = validatePlacement(candidateLayout, {
+        size: BOARD_SIZE,
+        noTouch,
+      });
+      return validation.ok ? cells : null;
     },
-    [ships],
+    [noTouch, ships],
   );
 
   const getDragCells = useCallback((ship, x, y) => {
@@ -309,10 +320,18 @@ const Battleship = () => {
   }, []);
 
   const countRemaining = useCallback(
-    (board, layout) =>
-      layout.filter((sh) => sh.cells?.some((c) => board[c] === 'ship')).length,
+    (board, layout) => layout.filter((sh) => sh.cells && !isShipSunk(board, sh.cells)).length,
     [],
   );
+
+  const markBlockedCells = useCallback((board, cells) => {
+    const updated = board.slice();
+    cells.forEach((idx) => {
+      if (idx < 0 || idx >= updated.length) return;
+      if (updated[idx] == null) updated[idx] = 'miss';
+    });
+    return updated;
+  }, []);
 
   const clearToast = useCallback(() => {
     setToast(null);
@@ -378,12 +397,18 @@ const Battleship = () => {
 
   const restart = useCallback(
     (diff = difficulty, salvoMode = salvo) => {
-      const layout = decorateShips(randomizePlacement(true));
-      const enemyLayout = randomizePlacement(true);
+      const seed = Date.now();
+      const layout = decorateShips(
+        randomizePlacement(noTouch, { maxAttempts: 50, seed }),
+      );
+      const enemyLayout = randomizePlacement(noTouch, {
+        maxAttempts: 50,
+        seed: seed + 1,
+      });
       setShips(layout);
       setEnemyShips(enemyLayout);
       setPlayerBoard(placeShips(createBoard(), layout));
-      setEnemyBoard(placeShips(createBoard(), enemyLayout));
+      setEnemyBoard(createBoard());
       setPhase('placement');
       setMessage('Place your ships');
       setSelected([]);
@@ -394,11 +419,15 @@ const Battleship = () => {
       setActiveShipId(null);
       setSelectedShipId(null);
       setShotEffects([]);
+      setLastPlayerShots([]);
+      setLastAiShots([]);
       setModal(null);
+      setSunkEnemyIds(new Set());
+      setSunkPlayerIds(new Set());
       let aiInstance;
-      if (diff === 'hard') aiInstance = new MonteCarloAI();
-      else if (diff === 'medium') aiInstance = new RandomSalvoAI();
-      else aiInstance = new RandomAI();
+      if (diff === 'hard') aiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 2) });
+      else if (diff === 'medium') aiInstance = new RandomSalvoAI({ rng: createRng(seed + 2) });
+      else aiInstance = new RandomAI({ rng: createRng(seed + 2) });
       setAi(aiInstance);
       if (typeof aiInstance.getHeatmap === 'function') {
         aiInstance.nextMove();
@@ -406,7 +435,7 @@ const Battleship = () => {
       } else {
         setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
       }
-      const playerAiInstance = new MonteCarloAI();
+      const playerAiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 3) });
       playerAiInstance.nextMove();
       setPlayerAi(playerAiInstance);
       setGuessHeat(playerAiInstance.getHeatmap().slice());
@@ -416,7 +445,7 @@ const Battleship = () => {
       setAiShots(aShots);
       showAnnouncement('info', 'Fresh deployment grid established.', 'Deployment Reset');
     },
-    [difficulty, placeShips, salvo, showAnnouncement],
+    [difficulty, noTouch, placeShips, salvo, showAnnouncement],
   );
 
   useEffect(() => {
@@ -467,7 +496,7 @@ const Battleship = () => {
   };
 
   const randomize = () => {
-    const layout = decorateShips(randomizePlacement(true));
+    const layout = decorateShips(randomizePlacement(noTouch, { maxAttempts: 50 }));
     setShips(layout);
     setPlayerBoard(placeShips(createBoard(), layout));
     setActiveShipId(null);
@@ -489,12 +518,14 @@ const Battleship = () => {
   };
 
   const aiTurn = useCallback(
-    (shots, playerHit) => {
+    (shots, playerHit, enemyTracking = enemyBoard) => {
       let pb = playerBoard.slice();
       let heat = aiHeat.slice();
+      const moves = [];
       for (let s = 0; s < shots; s++) {
-        const move = ai.nextMove();
+        const move = ai?.nextMove();
         if (move == null) break;
+        moves.push(move);
         if (typeof ai.getHeatmap === 'function') {
           heat = ai.getHeatmap().slice();
         } else {
@@ -502,26 +533,41 @@ const Battleship = () => {
         }
         const hit2 = pb[move] === 'ship';
         pb[move] = hit2 ? 'hit' : 'miss';
-        ai.record(move, hit2);
+        ai?.record(move, hit2);
         spawnShotEffect('player', move, hit2 ? 'hit' : 'miss');
-        if (!pb.includes('ship')) {
-          setPlayerBoard(pb);
-          setAiHeat(heat);
-          setMessage('AI wins!');
-          setPhase('done');
-          setStats((st) => ({ ...st, losses: st.losses + 1 }));
-          setBattleLog((prev) => ({
-            ...prev,
-            lastResult: 'defeat',
-            lastPlayed: Date.now(),
-            streak: 0,
-            bestStreak: prev.bestStreak,
-            totalGames: prev.totalGames + 1,
-          }));
-          showAnnouncement('error', 'Enemy fleet prevails. Regroup and try again.', 'Defeat');
-          setModal('defeat');
-          return;
+      }
+      const newlySunk = ships.filter(
+        (ship) => ship.cells && isShipSunk(pb, ship.cells) && !sunkPlayerIds.has(ship.id),
+      );
+      if (newlySunk.length) {
+        setSunkPlayerIds((prev) => new Set([...prev, ...newlySunk.map((ship) => ship.id)]));
+        if (noTouch) {
+          const ring = Array.from(
+            new Set(newlySunk.flatMap((ship) => getRing(ship.cells, BOARD_SIZE))),
+          );
+          pb = markBlockedCells(pb, ring);
+          ai?.markBlocked?.(ring);
         }
+      }
+      const defeat = ships.every((ship) => ship.cells && isShipSunk(pb, ship.cells));
+      if (defeat) {
+        setPlayerBoard(pb);
+        setAiHeat(heat);
+        setMessage('AI wins!');
+        setPhase('done');
+        setStats((st) => ({ ...st, losses: st.losses + 1 }));
+        setBattleLog((prev) => ({
+          ...prev,
+          lastResult: 'defeat',
+          lastPlayed: Date.now(),
+          streak: 0,
+          bestStreak: prev.bestStreak,
+          totalGames: prev.totalGames + 1,
+        }));
+        showAnnouncement('error', 'Enemy fleet prevails. Regroup and try again.', 'Defeat');
+        setModal('defeat');
+        setLastAiShots(moves);
+        return;
       }
       if (typeof ai.getHeatmap === 'function') {
         ai.nextMove();
@@ -529,8 +575,9 @@ const Battleship = () => {
       }
       setPlayerBoard(pb);
       setAiHeat(heat);
+      setLastAiShots(moves);
       if (salvo) {
-        setAiShots(countRemaining(enemyBoard, enemyShips));
+        setAiShots(countRemaining(enemyTracking, enemyShips));
         setPlayerShots(countRemaining(pb, ships));
       } else {
         setAiShots(1);
@@ -541,7 +588,7 @@ const Battleship = () => {
         playerHit ? 'Enemy is retaliating after your strike!' : 'Enemy salvos splashed harmlessly.',
       );
     },
-    [ai, aiHeat, playerBoard, salvo, enemyBoard, enemyShips, countRemaining, ships, spawnShotEffect, setBattleLog, setStats, showAnnouncement],
+    [ai, aiHeat, playerBoard, salvo, enemyBoard, enemyShips, countRemaining, ships, spawnShotEffect, setBattleLog, setStats, showAnnouncement, sunkPlayerIds, noTouch, markBlockedCells],
   );
 
   const toggleSelect = useCallback(
@@ -558,24 +605,38 @@ const Battleship = () => {
 
   const fireSelected = useCallback(() => {
     if (phase !== 'battle' || !selected.length) return;
-    const hit = selected.some((i) => enemyBoard[i] === 'ship');
+    const hitsOnTruth = new Set(selected.filter((idx) => enemyShipSet.has(idx)));
     selected.forEach((idx) => {
-      const wasHit = enemyBoard[idx] === 'ship';
+      const wasHit = hitsOnTruth.has(idx);
       spawnShotEffect('enemy', idx, wasHit ? 'hit' : 'miss');
     });
-    const { board: newBoard } = fireShots(enemyBoard, selected);
-    setEnemyBoard(newBoard);
+    const { board: firedBoard, hits } = fireShots(enemyBoard, selected, enemyShipSet);
+    let updatedBoard = firedBoard;
+    const newlySunk = enemyShips.filter(
+      (ship) => ship.cells && isShipSunk(updatedBoard, ship.cells) && !sunkEnemyIds.has(ship.id),
+    );
+    if (newlySunk.length) {
+      setSunkEnemyIds((prev) => new Set([...prev, ...newlySunk.map((ship) => ship.id)]));
+      if (noTouch) {
+        const ring = Array.from(new Set(newlySunk.flatMap((ship) => getRing(ship.cells, BOARD_SIZE))));
+        updatedBoard = markBlockedCells(updatedBoard, ring);
+        playerAi?.markBlocked?.(ring);
+      }
+    }
     if (playerAi) {
       selected.forEach((idx) => {
-        const wasHit = enemyBoard[idx] === 'ship';
-        playerAi.record(idx, wasHit);
+        playerAi.record(idx, hitsOnTruth.has(idx));
       });
       playerAi.nextMove();
       setGuessHeat(playerAi.getHeatmap().slice());
     }
+    setEnemyBoard(updatedBoard);
     setSelected([]);
     setPlayerShots(0);
-    if (!newBoard.includes('ship')) {
+    setLastPlayerShots(selected);
+    const remainingEnemy = countRemaining(updatedBoard, enemyShips);
+    setAiShots(salvo ? remainingEnemy : 1);
+    if (enemyShips.every((ship) => ship.cells && isShipSunk(updatedBoard, ship.cells))) {
       setMessage('You win!');
       setPhase('done');
       setStats((s) => ({ ...s, wins: s.wins + 1 }));
@@ -594,10 +655,13 @@ const Battleship = () => {
       setModal('victory');
       return;
     }
-    const aiCount = salvo ? aiShots : 1;
-    setTimeout(() => aiTurn(aiCount, hit), 150);
-    showAnnouncement(hit ? 'success' : 'warning', hit ? 'Direct hit! Brace for counter-fire.' : 'Shots splashed – adjust targeting.');
-  }, [phase, selected, enemyBoard, playerAi, setGuessHeat, salvo, aiShots, aiTurn, setEnemyBoard, spawnShotEffect, setStats, setBattleLog, showAnnouncement]);
+    const aiCount = salvo ? remainingEnemy : 1;
+    setTimeout(() => aiTurn(aiCount, hits.length > 0, updatedBoard), 150);
+    showAnnouncement(
+      hits.length ? 'success' : 'warning',
+      hits.length ? 'Direct hit! Brace for counter-fire.' : 'Shots splashed – adjust targeting.',
+    );
+  }, [phase, selected, enemyBoard, playerAi, enemyShipSet, enemyShips, sunkEnemyIds, noTouch, markBlockedCells, setGuessHeat, salvo, aiTurn, setEnemyBoard, spawnShotEffect, setStats, setBattleLog, showAnnouncement, countRemaining]);
   useGameControls(({ x, y }) => {
     if (phase !== 'battle') return;
     setCursor((c) => {
@@ -691,6 +755,10 @@ const Battleship = () => {
               const hint = activeHint && activeHint.cells && activeHint.cells.includes(idx);
               const hintValid = hint && activeHint.valid;
               const effects = effectMap.get(idx);
+              const isSunk = isEnemy ? sunkEnemyCells.has(idx) : sunkPlayerCells.has(idx);
+              const isLastShot = isEnemy
+                ? lastPlayerShots.includes(idx)
+                : lastAiShots.includes(idx);
               return (
                 <div
                   key={idx}
@@ -723,6 +791,12 @@ const Battleship = () => {
                   )}
                   {selectedMark && (
                     <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-yellow-300/90 bg-yellow-200/30" />
+                  )}
+                  {isLastShot && (
+                    <div className="pointer-events-none absolute inset-0 rounded-md border border-white/50 shadow-[0_0_12px_rgba(255,255,255,0.35)]" />
+                  )}
+                  {cell === 'hit' && isSunk && (
+                    <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-amber-300/80 bg-amber-200/10" />
                   )}
                   {hideInfo && phase === 'battle' && (
                     <div className="absolute inset-0 bg-slate-900" aria-hidden="true" />
@@ -768,6 +842,11 @@ const Battleship = () => {
         }}
         fog={fog}
         onFogChange={(v) => setFog(v)}
+        noTouch={noTouch}
+        onNoTouchChange={(value) => {
+          setNoTouch(value);
+          restart(difficulty, salvo);
+        }}
         colorblind={colorblind}
         onColorblindChange={(v) => setColorblind(v)}
         toast={toast}
