@@ -2,27 +2,32 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react';
 import Memory from '../components/apps/memory';
 
-jest.mock('../components/apps/memory_utils', () => ({
-  createDeck: () => [
-    { id: 0, value: 'A' },
-    { id: 1, value: 'A' },
-    { id: 2, value: 'B' },
-    { id: 3, value: 'B' },
-    { id: 4, value: 'C' },
-    { id: 5, value: 'C' },
-    { id: 6, value: 'D' },
-    { id: 7, value: 'D' },
-    { id: 8, value: 'E' },
-    { id: 9, value: 'E' },
-    { id: 10, value: 'F' },
-    { id: 11, value: 'F' },
-    { id: 12, value: 'G' },
-    { id: 13, value: 'G' },
-    { id: 14, value: 'H' },
-    { id: 15, value: 'H' },
-  ],
-  PATTERN_THEMES: { vibrant: [], pastel: [] },
-}));
+jest.mock('../components/apps/memory_utils', () => {
+  const actual = jest.requireActual('../components/apps/memory_utils');
+  return {
+    ...actual,
+    createDeck: () => [
+      { id: 0, value: 'A', pairId: 'A' },
+      { id: 1, value: 'A', pairId: 'A' },
+      { id: 2, value: 'B', pairId: 'B' },
+      { id: 3, value: 'B', pairId: 'B' },
+      { id: 4, value: 'C', pairId: 'C' },
+      { id: 5, value: 'C', pairId: 'C' },
+      { id: 6, value: 'D', pairId: 'D' },
+      { id: 7, value: 'D', pairId: 'D' },
+      { id: 8, value: 'E', pairId: 'E' },
+      { id: 9, value: 'E', pairId: 'E' },
+      { id: 10, value: 'F', pairId: 'F' },
+      { id: 11, value: 'F', pairId: 'F' },
+      { id: 12, value: 'G', pairId: 'G' },
+      { id: 13, value: 'G', pairId: 'G' },
+      { id: 14, value: 'H', pairId: 'H' },
+      { id: 15, value: 'H', pairId: 'H' },
+    ],
+    PATTERN_THEMES: { vibrant: [], pastel: [] },
+    generateSeed: () => 'test-seed',
+  };
+});
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -118,3 +123,24 @@ test('card flip applies transform style', () => {
   expect(inner.style.transform).toBe('rotateY(180deg)');
 });
 
+test('ignores clicks while resolving a mismatch', () => {
+  const { getAllByTestId } = render(<Memory />);
+  act(() => {
+    jest.runOnlyPendingTimers();
+  });
+  const inners = getAllByTestId('card-inner');
+  const cards = inners.map((el) => el.parentElement as HTMLElement);
+
+  fireEvent.click(cards[0]);
+  fireEvent.click(cards[2]);
+  fireEvent.click(cards[4]);
+
+  const third = inners[4] as HTMLElement;
+  expect(third.style.transform).toBe('rotateY(0deg)');
+
+  act(() => {
+    jest.advanceTimersByTime(800);
+  });
+
+  expect(third.style.transform).toBe('rotateY(0deg)');
+});

@@ -1,18 +1,25 @@
 import { fisherYatesShuffle } from '../components/apps/memory_utils';
 
-describe('fisherYatesShuffle fairness', () => {
-  test('distribution is roughly uniform', () => {
-    const iterations = 6000;
-    const counts = [0, 0, 0];
+describe('fisherYatesShuffle determinism', () => {
+  test('does not mutate input', () => {
     const arr = [1, 2, 3];
-    for (let i = 0; i < iterations; i++) {
-      const shuffled = fisherYatesShuffle(arr);
-      counts[shuffled[0] - 1]++;
-    }
-    const expected = iterations / 3;
-    const tolerance = iterations * 0.05; // 5%
-    counts.forEach((c) => {
-      expect(Math.abs(c - expected)).toBeLessThan(tolerance);
-    });
+    const out = fisherYatesShuffle(arr, () => 0.5);
+    expect(arr).toEqual([1, 2, 3]);
+    expect(out).toHaveLength(3);
+  });
+
+  test('respects rng', () => {
+    const arr = [1, 2, 3];
+    const alwaysZero = () => 0;
+    expect(fisherYatesShuffle(arr, alwaysZero)).toEqual([2, 3, 1]);
+
+    const almostOne = () => 0.999999;
+    expect(fisherYatesShuffle(arr, almostOne)).toEqual([1, 2, 3]);
+  });
+
+  test('returns permutation of original elements', () => {
+    const arr = ['a', 'b', 'c', 'd'];
+    const shuffled = fisherYatesShuffle(arr, () => 0.25);
+    expect(shuffled.sort()).toEqual(arr.sort());
   });
 });
