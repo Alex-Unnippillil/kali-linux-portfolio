@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import GameLoop from './Games/common/loop/GameLoop';
 import {
   Player,
   updatePhysics,
   collectCoin,
   movePlayer,
+  countCoins,
+  isLevelComplete,
   physics,
 } from '../../public/apps/platformer/engine.js';
 
@@ -27,10 +30,29 @@ function playCoinSound() {
   }
 }
 
+const lerp = (a, b, t) => a + (b - a) * t;
+
 const Platformer = () => {
   const canvasRef = useRef(null);
   const resetRef = useRef(() => {});
   const reduceMotion = useRef(false);
+  const loopRef = useRef(null);
+  const pausedRef = useRef(false);
+  const soundRef = useRef(true);
+  const levelCompleteRef = useRef(false);
+  const highscoreRef = useRef(progress.highscore || 0);
+  const checkpointRef = useRef(progress.checkpoint);
+  const inputRef = useRef({
+    leftHeld: false,
+    rightHeld: false,
+    jumpHeld: false,
+    jumpPressed: false,
+    jumpReleased: false,
+  });
+  const prevPosRef = useRef({ x: 0, y: 0 });
+
+  const [coinInfo, setCoinInfo] = useState({ total: 0, remaining: 0 });
+  const [levelComplete, setLevelComplete] = useState(false);
 
   const [levels, setLevels] = useState([]);
   const [levelData, setLevelData] = useState(null);
@@ -73,6 +95,26 @@ const Platformer = () => {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
+  useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
+    soundRef.current = sound;
+  }, [sound]);
+
+  useEffect(() => {
+    levelCompleteRef.current = levelComplete;
+  }, [levelComplete]);
+
+  useEffect(() => {
+    highscoreRef.current = progress.highscore || 0;
+  }, [progress.highscore]);
+
+  useEffect(() => {
+    checkpointRef.current = progress.checkpoint;
+  }, [progress.checkpoint]);
+
   // main game loop
   useEffect(() => {
     if (!levelData) return;
@@ -82,12 +124,19 @@ const Platformer = () => {
 
     const player = new Player();
     let tiles = levelData.tiles.map((row) => row.slice());
-    let spawn = progress.checkpoint || levelData.spawn;
+    let spawn = checkpointRef.current || levelData.spawn;
     player.x = spawn.x;
     player.y = spawn.y;
+    prevPosRef.current = { x: player.x, y: player.y };
     let score = 0;
     let wasOnGround = true;
     let particles = [];
+    let coinsRemaining = countCoins(tiles);
+    const coinsTotal = coinsRemaining;
+    setCoinInfo({ total: coinsTotal, remaining: coinsRemaining });
+    setLevelComplete(false);
+    levelCompleteRef.current = false;
+
     const bgLayers = [
       { speed: 15, stars: [] },
       { speed: 30, stars: [] },
@@ -102,13 +151,29 @@ const Platformer = () => {
     bgLayers[0].stars = genStars(40);
     bgLayers[1].stars = genStars(20);
 
-    const keys = {};
     const handleDown = (e) => {
-      keys[e.code] = true;
-      if (e.code === 'KeyP') setPaused((p) => !p);
+      if (e.code === 'KeyP') {
+        setPaused((p) => !p);
+        return;
+      }
+      if (e.code === 'KeyR') {
+        resetRef.current?.();
+        return;
+      }
+      if (e.code === 'ArrowLeft') inputRef.current.leftHeld = true;
+      if (e.code === 'ArrowRight') inputRef.current.rightHeld = true;
+      if (e.code === 'Space' && !inputRef.current.jumpHeld) {
+        inputRef.current.jumpHeld = true;
+        inputRef.current.jumpPressed = true;
+      }
     };
     const handleUp = (e) => {
-      keys[e.code] = false;
+      if (e.code === 'ArrowLeft') inputRef.current.leftHeld = false;
+      if (e.code === 'ArrowRight') inputRef.current.rightHeld = false;
+      if (e.code === 'Space' && inputRef.current.jumpHeld) {
+        inputRef.current.jumpHeld = false;
+        inputRef.current.jumpReleased = true;
+      }
     };
     window.addEventListener('keydown', handleDown);
     window.addEventListener('keyup', handleUp);
@@ -123,21 +188,38 @@ const Platformer = () => {
       tiles = levelData.tiles.map((row) => row.slice());
       spawn = levelData.spawn;
       score = 0;
+      coinsRemaining = countCoins(tiles);
+      setCoinInfo({ total: coinsRemaining, remaining: coinsRemaining });
       setProgress((p) => ({ ...p, checkpoint: null }));
+      setLevelComplete(false);
+      levelCompleteRef.current = false;
       respawn();
     };
     resetRef.current = reset;
 
-    let last = performance.now();
-    let frame;
-    const update = (dt) => {
-      const input = {
-        left: keys['ArrowLeft'],
-        right: keys['ArrowRight'],
-        jump: keys['Space'],
-      };
+    const tick = (dtMs) => {
+      const dt = dtMs / 1000;
+      prevPosRef.current = { x: player.x, y: player.y };
+      const input = inputRef.current;
+
+      if (pausedRef.current || levelCompleteRef.current) {
+        input.jumpPressed = false;
+        input.jumpReleased = false;
+        return;
+      }
+
       const vyBefore = player.vy;
-      updatePhysics(player, input, dt);
+      updatePhysics(
+        player,
+        {
+          left: input.leftHeld,
+          right: input.rightHeld,
+          jumpHeld: input.jumpHeld,
+          jumpPressed: input.jumpPressed,
+          jumpReleased: input.jumpReleased,
+        },
+        dt
+      );
       movePlayer(player, tiles, TILE_SIZE, dt);
 
       if (
@@ -173,7 +255,6 @@ const Platformer = () => {
         });
       }
 
-      // fall out of world
       if (player.y > levelData.height * TILE_SIZE) respawn();
 
       const cx = Math.floor((player.x + player.w / 2) / TILE_SIZE);
@@ -181,22 +262,36 @@ const Platformer = () => {
 
       if (collectCoin(tiles, cx, cy)) {
         score++;
+        coinsRemaining = Math.max(0, coinsRemaining - 1);
+        setCoinInfo({ total: coinsTotal, remaining: coinsRemaining });
         setAriaMsg(`Score ${score}`);
-        if (sound) playCoinSound();
-        if (score > progress.highscore)
+        if (soundRef.current) playCoinSound();
+        if (score > highscoreRef.current)
           setProgress((p) => ({ ...p, highscore: score }));
+        if (isLevelComplete(coinsRemaining, coinsTotal)) {
+          levelCompleteRef.current = true;
+          setLevelComplete(true);
+          setPaused(true);
+          setProgress((p) => ({ ...p, checkpoint: null }));
+          coinsRemaining = -1;
+        }
       }
 
       const tile = tiles[cy] && tiles[cy][cx];
-      if (tile === 2) respawn(); // hazard tile
+      if (tile === 2) respawn();
       if (tile === 6) {
         spawn = { x: cx * TILE_SIZE, y: cy * TILE_SIZE };
         tiles[cy][cx] = 0;
         setProgress((p) => ({ ...p, checkpoint: spawn }));
       }
+
+      input.jumpPressed = false;
+      input.jumpReleased = false;
     };
 
-    const draw = () => {
+    const draw = (alpha = 1) => {
+      const interpX = lerp(prevPosRef.current.x, player.x, alpha);
+      const interpY = lerp(prevPosRef.current.y, player.y, alpha);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -230,7 +325,7 @@ const Platformer = () => {
         }
       }
       ctx.fillStyle = 'white';
-      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.fillRect(interpX, interpY, player.w, player.h);
       if (!reduceMotion.current) {
         particles.forEach((p) => {
           ctx.globalAlpha = p.life / 0.3;
@@ -240,24 +335,46 @@ const Platformer = () => {
       }
       ctx.fillStyle = 'white';
       ctx.font = '12px monospace';
-      ctx.fillText(`Score: ${score} Hi: ${progress.highscore || 0}`, 4, 12);
+      const displayRemaining = Math.max(0, coinsRemaining);
+      ctx.fillText(
+        `Score: ${score} Hi: ${highscoreRef.current} Coins: ${displayRemaining}/${coinsTotal}`,
+        4,
+        12
+      );
     };
 
-    const loop = (ts) => {
-      const dt = Math.min((ts - last) / 1000, 0.1);
-      last = ts;
-      if (!paused) update(dt);
-      draw();
-      frame = requestAnimationFrame(loop);
-    };
-    frame = requestAnimationFrame(loop);
+    const loop = new GameLoop(tick, undefined, {
+      fps: 60,
+      render: draw,
+      interpolation: true,
+      maxDt: 100,
+    });
+    loop.start();
+    loopRef.current = loop;
 
     return () => {
-      cancelAnimationFrame(frame);
+      loop.stop();
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, [levelData, paused, sound, setProgress, progress.checkpoint, progress.highscore]);
+  }, [levelData, setProgress]);
+
+  const hasNextLevel = progress.level < levels.length - 1;
+
+  const handleNextLevel = () => {
+    levelCompleteRef.current = false;
+    setLevelComplete(false);
+    setPaused(false);
+    if (hasNextLevel) {
+      setProgress((p) => ({
+        ...p,
+        level: Math.min(p.level + 1, levels.length - 1),
+        checkpoint: null,
+      }));
+    } else {
+      resetRef.current?.();
+    }
+  };
 
   const levelPath = levels[progress.level];
   if (!levelPath)
@@ -295,6 +412,35 @@ const Platformer = () => {
           Sound: {sound ? 'On' : 'Off'}
         </button>
       </div>
+      <div className="absolute top-1 right-1 text-xs bg-gray-800/80 text-white px-2 py-1 rounded">
+        Coins: {coinInfo.total - coinInfo.remaining}/{coinInfo.total}
+      </div>
+      {levelComplete && (
+        <div className="absolute inset-0 bg-black/70 text-white flex flex-col items-center justify-center gap-3">
+          <div className="text-lg font-bold">Level complete!</div>
+          <div className="text-sm">
+            Coins collected: {coinInfo.total - coinInfo.remaining} / {coinInfo.total}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleNextLevel}
+              className="px-2 py-1 bg-green-700 text-white rounded"
+            >
+              {hasNextLevel ? 'Next level' : 'Replay level'}
+            </button>
+            <button
+              onClick={() => {
+                levelCompleteRef.current = false;
+                setLevelComplete(false);
+                setPaused(false);
+              }}
+              className="px-2 py-1 bg-gray-700 text-white rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
       <div aria-live="polite" className="sr-only">{ariaMsg}</div>
     </div>
   );

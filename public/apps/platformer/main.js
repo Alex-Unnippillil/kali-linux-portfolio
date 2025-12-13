@@ -3,6 +3,8 @@ import {
   updatePhysics,
   collectCoin,
   movePlayer,
+  countCoins,
+  isLevelComplete,
   setPhysics,
   physics,
 } from './engine.js';
@@ -39,10 +41,12 @@ let mapHeight = 0;
 let tiles = [];
 let spawn = { x: 0, y: 0 };
 let coinTotal = 0;
+let coinsRemaining = 0;
 let score = 0;
 let balance = 0;
 let simTime = 0;
 let speed = 1;
+let prevJumpHeld = false;
 
 const player = new Player();
 const camera = { x: 0, y: 0, deadZone: { w: 100, h: 60 } };
@@ -259,13 +263,12 @@ function loadLevel(name) {
       player.y = spawn.y;
       player.vx = player.vy = 0;
       score = 0;
-      coinTotal = 0;
-      for (let y = 0; y < mapHeight; y++) {
-        for (let x = 0; x < mapWidth; x++) if (tiles[y][x] === 5) coinTotal++;
-      }
+      coinsRemaining = countCoins(tiles);
+      coinTotal = coinsRemaining;
       balance = 0;
       balanceLabel.textContent = String(balance);
       simTime = 0;
+      prevJumpHeld = false;
       initBackground();
     });
 }
@@ -286,14 +289,19 @@ function update(dt) {
   const input = {
     left: keys['ArrowLeft'],
     right: keys['ArrowRight'],
-    jump: keys['Space']
+    jumpHeld: keys['Space'],
+    jumpPressed: false,
+    jumpReleased: false,
   };
   const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
   if (gp) {
     input.left = input.left || gp.buttons[padMap.left]?.pressed;
     input.right = input.right || gp.buttons[padMap.right]?.pressed;
-    input.jump = input.jump || gp.buttons[padMap.jump]?.pressed;
+    input.jumpHeld = input.jumpHeld || gp.buttons[padMap.jump]?.pressed;
   }
+  input.jumpPressed = input.jumpHeld && !prevJumpHeld;
+  input.jumpReleased = !input.jumpHeld && prevJumpHeld;
+  prevJumpHeld = input.jumpHeld;
   const wasOnGround = player.onGround;
   const jumped = updatePhysics(player, input, dt, { jumpBuffer: jumpBufferMs / 1000 });
   movePlayer(player, tiles, tileSize, dt);
@@ -312,7 +320,7 @@ function update(dt) {
   const cy = Math.floor((player.y + player.h / 2) / tileSize);
   if (collectCoin(tiles, cx, cy)) {
     score++;
-    coinTotal--;
+    coinsRemaining--;
     balance += coinValue;
     balanceLabel.textContent = String(balance);
     if (!reduceMotion)
@@ -351,11 +359,11 @@ function update(dt) {
   const elapsed = simTime.toFixed(2);
   timerEl.textContent = `Time: ${elapsed}s`;
 
-  if (coinTotal === 0 && score > 0) {
+  if (coinsRemaining >= 0 && isLevelComplete(coinsRemaining, coinTotal)) {
     if (completeEl) completeEl.classList.remove('hidden');
     window.parent.postMessage({ type: 'levelComplete' }, '*');
     announce('Level complete');
-    coinTotal = -1;
+    coinsRemaining = -1;
   }
 }
 
