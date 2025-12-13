@@ -1,450 +1,414 @@
-import React, { useEffect, useRef, useState } from 'react';
-import usePersistentState from '../../hooks/usePersistentState';
-import GameLoop from './Games/common/loop/GameLoop';
-import {
-  Player,
-  updatePhysics,
-  collectCoin,
-  movePlayer,
-  countCoins,
-  isLevelComplete,
-  physics,
-} from '../../public/apps/platformer/engine.js';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { TILE_SIZE, cameraDefaults, parseLevel, step } from '../../games/platformer/logic';
 
-const TILE_SIZE = 16;
+// Level definitions are data driven: edit the string arrays to tweak layouts or add more.
+// Each row must share the same width. Tokens: # solid, . empty, S spawn, G goal, ^ spikes, C coin, M moving platform.
+const LEVELS = [
+  {
+    name: 'Training Grounds',
+    grid: [
+      '######################',
+      '#....................#',
+      '#............C.......#',
+      '#....................#',
+      '#.....C......###.....#',
+      '#..................G.#',
+      '#.........###........#',
+      '#....................#',
+      '#..S..###......C.....#',
+      '#....................#',
+      '######################',
+    ],
+  },
+  {
+    name: 'Factory Lift',
+    grid: [
+      '########################',
+      '#......................#',
+      '#....C.................#',
+      '#...........M..........#',
+      '#..................^...#',
+      '#......###......#####..#',
+      '#..................C..G#',
+      '#..S.......^...........#',
+      '#............###.......#',
+      '#......................#',
+      '########################',
+    ],
+  },
+];
 
-// simple beep for coin collection
-function playCoinSound() {
-  try {
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ac.createOscillator();
-    const gain = ac.createGain();
-    osc.frequency.value = 800;
-    osc.connect(gain);
-    gain.connect(ac.destination);
-    osc.start();
-    gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
-    osc.stop(ac.currentTime + 0.2);
-  } catch (e) {
-    /* ignore */
-  }
+const PLAYER_SIZE = { w: 20, h: 28 };
+const FIXED_DT = 1 / 60;
+const RENDER_SCALE = 1; // canvas is scaled via CSS; internal resolution stays stable.
+
+function createInitialState(levelIndex) {
+  const levelDef = LEVELS[levelIndex % LEVELS.length];
+  const parsed = parseLevel(levelDef.grid);
+  return {
+    levelIndex,
+    levelName: levelDef.name,
+    state: {
+      level: parsed,
+      player: {
+        x: parsed.spawn.x + (TILE_SIZE - PLAYER_SIZE.w) / 2,
+        y: parsed.spawn.y + (TILE_SIZE - PLAYER_SIZE.h),
+        w: PLAYER_SIZE.w,
+        h: PLAYER_SIZE.h,
+        vx: 0,
+        vy: 0,
+        onGround: false,
+        onPlatformId: null,
+        facing: 1,
+      },
+      time: 0,
+      coinsCollected: 0,
+      deaths: 0,
+      status: 'running',
+      respawnTimer: 0,
+      coyoteTimer: 0,
+      jumpBufferTimer: 0,
+      camera: { x: parsed.spawn.x, y: parsed.spawn.y },
+      shake: { time: 0, magnitude: 0 },
+    },
+  };
 }
 
-const lerp = (a, b, t) => a + (b - a) * t;
+function formatTime(seconds) {
+  const whole = Math.floor(seconds);
+  const ms = Math.floor((seconds - whole) * 1000)
+    .toString()
+    .padStart(3, '0');
+  const mins = Math.floor(whole / 60)
+    .toString()
+    .padStart(2, '0');
+  const secs = (whole % 60).toString().padStart(2, '0');
+  return `${mins}:${secs}.${ms}`;
+}
 
-const Platformer = () => {
+export default function PlatformerApp() {
   const canvasRef = useRef(null);
-  const resetRef = useRef(() => {});
-  const reduceMotion = useRef(false);
-  const loopRef = useRef(null);
+  const requestRef = useRef(null);
+  const lastTimeRef = useRef(0);
+  const accumulatorRef = useRef(0);
   const pausedRef = useRef(false);
-  const soundRef = useRef(true);
-  const levelCompleteRef = useRef(false);
-  const highscoreRef = useRef(progress.highscore || 0);
-  const checkpointRef = useRef(progress.checkpoint);
-  const inputRef = useRef({
-    leftHeld: false,
-    rightHeld: false,
-    jumpHeld: false,
-    jumpPressed: false,
-    jumpReleased: false,
+  const reduceMotionRef = useRef(false);
+  const inputRef = useRef({ left: false, right: false, jumpHeld: false, jumpPressed: false, jumpReleased: false });
+  const prevSnapshotRef = useRef(null);
+  const uiUpdateRef = useRef(0);
+  const [ui, setUi] = useState({
+    level: LEVELS[0].name,
+    time: 0,
+    coins: { collected: 0, total: 0 },
+    deaths: 0,
+    status: 'running',
+    paused: false,
   });
-  const prevPosRef = useRef({ x: 0, y: 0 });
 
-  const [coinInfo, setCoinInfo] = useState({ total: 0, remaining: 0 });
-  const [levelComplete, setLevelComplete] = useState(false);
+  const sessionRef = useRef(createInitialState(0));
 
-  const [levels, setLevels] = useState([]);
-  const [levelData, setLevelData] = useState(null);
-  const [paused, setPaused] = useState(false);
-  const [sound, setSound] = useState(true);
-  const [ariaMsg, setAriaMsg] = useState('');
-
-  const [progress, setProgress] = usePersistentState(
-    'platformer-progress',
-    {
-      level: 0,
-      checkpoint: null,
-      highscore: 0,
-    }
+  const resizeCanvas = useMemo(
+    () =>
+      () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const { level } = sessionRef.current.state;
+        const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+        canvas.width = level.width * TILE_SIZE * dpr * RENDER_SCALE;
+        canvas.height = level.height * TILE_SIZE * dpr * RENDER_SCALE;
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        ctx.setTransform(dpr * RENDER_SCALE, 0, 0, dpr * RENDER_SCALE, 0, 0);
+      },
+    []
   );
-
-  // load list of levels
-  useEffect(() => {
-    fetch('/apps/platformer/levels.json')
-      .then((r) => r.json())
-      .then((d) => setLevels(d.levels || []));
-  }, []);
-
-  // load current level data
-  useEffect(() => {
-    const path = levels[progress.level];
-    if (!path) return;
-    fetch(path)
-      .then((r) => r.json())
-      .then((data) => setLevelData(data));
-  }, [levels, progress.level]);
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
-    reduceMotion.current = mq.matches;
-    const handler = () => {
-      reduceMotion.current = mq.matches;
+    reduceMotionRef.current = mq.matches;
+    const handler = (event) => {
+      reduceMotionRef.current = event.matches;
     };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
 
   useEffect(() => {
-    pausedRef.current = paused;
-  }, [paused]);
-
-  useEffect(() => {
-    soundRef.current = sound;
-  }, [sound]);
-
-  useEffect(() => {
-    levelCompleteRef.current = levelComplete;
-  }, [levelComplete]);
-
-  useEffect(() => {
-    highscoreRef.current = progress.highscore || 0;
-  }, [progress.highscore]);
-
-  useEffect(() => {
-    checkpointRef.current = progress.checkpoint;
-  }, [progress.checkpoint]);
-
-  // main game loop
-  useEffect(() => {
-    if (!levelData) return;
-
     const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
+    if (!canvas) return undefined;
+    resizeCanvas();
 
-    const player = new Player();
-    let tiles = levelData.tiles.map((row) => row.slice());
-    let spawn = checkpointRef.current || levelData.spawn;
-    player.x = spawn.x;
-    player.y = spawn.y;
-    prevPosRef.current = { x: player.x, y: player.y };
-    let score = 0;
-    let wasOnGround = true;
-    let particles = [];
-    let coinsRemaining = countCoins(tiles);
-    const coinsTotal = coinsRemaining;
-    setCoinInfo({ total: coinsTotal, remaining: coinsRemaining });
-    setLevelComplete(false);
-    levelCompleteRef.current = false;
+    const handleResize = () => resizeCanvas();
+    window.addEventListener('resize', handleResize);
 
-    const bgLayers = [
-      { speed: 15, stars: [] },
-      { speed: 30, stars: [] },
-    ];
-    const bgOffsets = [0, 0];
-    const genStars = (count) =>
-      Array.from({ length: count }, () => ({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 2 + 1,
-      }));
-    bgLayers[0].stars = genStars(40);
-    bgLayers[1].stars = genStars(20);
-
-    const handleDown = (e) => {
-      if (e.code === 'KeyP') {
-        setPaused((p) => !p);
-        return;
-      }
-      if (e.code === 'KeyR') {
-        resetRef.current?.();
-        return;
-      }
-      if (e.code === 'ArrowLeft') inputRef.current.leftHeld = true;
-      if (e.code === 'ArrowRight') inputRef.current.rightHeld = true;
-      if (e.code === 'Space' && !inputRef.current.jumpHeld) {
+    const handleKeyDown = (e) => {
+      if (e.repeat) return;
+      if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = true;
+      if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = true;
+      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+        if (!inputRef.current.jumpHeld) inputRef.current.jumpPressed = true;
         inputRef.current.jumpHeld = true;
-        inputRef.current.jumpPressed = true;
       }
+      if (e.code === 'KeyR') restartLevel();
+      if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
     };
-    const handleUp = (e) => {
-      if (e.code === 'ArrowLeft') inputRef.current.leftHeld = false;
-      if (e.code === 'ArrowRight') inputRef.current.rightHeld = false;
-      if (e.code === 'Space' && inputRef.current.jumpHeld) {
+
+    const handleKeyUp = (e) => {
+      if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = false;
+      if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = false;
+      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+        if (inputRef.current.jumpHeld) inputRef.current.jumpReleased = true;
         inputRef.current.jumpHeld = false;
-        inputRef.current.jumpReleased = true;
       }
     };
-    window.addEventListener('keydown', handleDown);
-    window.addEventListener('keyup', handleUp);
 
-    const respawn = () => {
-      player.x = spawn.x;
-      player.y = spawn.y;
-      player.vx = player.vy = 0;
-    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
-    const reset = () => {
-      tiles = levelData.tiles.map((row) => row.slice());
-      spawn = levelData.spawn;
-      score = 0;
-      coinsRemaining = countCoins(tiles);
-      setCoinInfo({ total: coinsRemaining, remaining: coinsRemaining });
-      setProgress((p) => ({ ...p, checkpoint: null }));
-      setLevelComplete(false);
-      levelCompleteRef.current = false;
-      respawn();
-    };
-    resetRef.current = reset;
-
-    const tick = (dtMs) => {
-      const dt = dtMs / 1000;
-      prevPosRef.current = { x: player.x, y: player.y };
-      const input = inputRef.current;
-
-      if (pausedRef.current || levelCompleteRef.current) {
-        input.jumpPressed = false;
-        input.jumpReleased = false;
+    // Fixed-step simulation with an accumulator keeps physics identical across refresh rates.
+    // Rendering interpolates between the previous and current snapshot for smooth movement without extra React renders.
+    const frame = (time) => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      if (pausedRef.current) {
+        lastTimeRef.current = time;
+        draw(ctx, 1);
+        requestRef.current = requestAnimationFrame(frame);
         return;
       }
 
-      const vyBefore = player.vy;
-      updatePhysics(
-        player,
-        {
-          left: input.leftHeld,
-          right: input.rightHeld,
-          jumpHeld: input.jumpHeld,
-          jumpPressed: input.jumpPressed,
-          jumpReleased: input.jumpReleased,
-        },
-        dt
-      );
-      movePlayer(player, tiles, TILE_SIZE, dt);
+      if (!lastTimeRef.current) lastTimeRef.current = time;
+      let delta = (time - lastTimeRef.current) / 1000;
+      lastTimeRef.current = time;
+      delta = Math.min(delta, 0.25);
+      accumulatorRef.current += delta;
 
-      if (
-        player.onGround &&
-        !wasOnGround &&
-        vyBefore > 200 &&
-        !reduceMotion.current
-      ) {
-        for (let i = 0; i < 6; i++) {
-          particles.push({
-            x: player.x + player.w / 2,
-            y: player.y + player.h,
-            vx: (Math.random() - 0.5) * 100,
-            vy: -Math.random() * 100,
-            life: 0.3,
-          });
-        }
-      }
-      wasOnGround = player.onGround;
+      const fixedInput = inputRef.current;
+      const followLerp = reduceMotionRef.current ? 0.06 : 0.12;
+      cameraDefaults.followLerp = followLerp;
 
-      if (!reduceMotion.current) {
-        particles = particles
-          .map((p) => ({
-            ...p,
-            life: p.life - dt,
-            x: p.x + p.vx * dt,
-            y: p.y + p.vy * dt,
-            vy: p.vy + physics.GRAVITY * dt * 0.5,
-          }))
-          .filter((p) => p.life > 0);
-        bgOffsets.forEach((o, i) => {
-          bgOffsets[i] = (o + bgLayers[i].speed * dt) % canvas.width;
-        });
+      while (accumulatorRef.current >= FIXED_DT) {
+        prevSnapshotRef.current = snapshot(sessionRef.current.state);
+        sessionRef.current.state = step(sessionRef.current.state, fixedInput, FIXED_DT);
+        accumulatorRef.current -= FIXED_DT;
+        fixedInput.jumpPressed = false;
+        fixedInput.jumpReleased = false;
       }
 
-      if (player.y > levelData.height * TILE_SIZE) respawn();
-
-      const cx = Math.floor((player.x + player.w / 2) / TILE_SIZE);
-      const cy = Math.floor((player.y + player.h / 2) / TILE_SIZE);
-
-      if (collectCoin(tiles, cx, cy)) {
-        score++;
-        coinsRemaining = Math.max(0, coinsRemaining - 1);
-        setCoinInfo({ total: coinsTotal, remaining: coinsRemaining });
-        setAriaMsg(`Score ${score}`);
-        if (soundRef.current) playCoinSound();
-        if (score > highscoreRef.current)
-          setProgress((p) => ({ ...p, highscore: score }));
-        if (isLevelComplete(coinsRemaining, coinsTotal)) {
-          levelCompleteRef.current = true;
-          setLevelComplete(true);
-          setPaused(true);
-          setProgress((p) => ({ ...p, checkpoint: null }));
-          coinsRemaining = -1;
-        }
-      }
-
-      const tile = tiles[cy] && tiles[cy][cx];
-      if (tile === 2) respawn();
-      if (tile === 6) {
-        spawn = { x: cx * TILE_SIZE, y: cy * TILE_SIZE };
-        tiles[cy][cx] = 0;
-        setProgress((p) => ({ ...p, checkpoint: spawn }));
-      }
-
-      input.jumpPressed = false;
-      input.jumpReleased = false;
+      draw(ctx, accumulatorRef.current / FIXED_DT);
+      syncUi(time);
+      requestRef.current = requestAnimationFrame(frame);
     };
 
-    const draw = (alpha = 1) => {
-      const interpX = lerp(prevPosRef.current.x, player.x, alpha);
-      const interpY = lerp(prevPosRef.current.y, player.y, alpha);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (!reduceMotion.current) {
-        bgLayers.forEach((layer, i) => {
-          ctx.fillStyle = i === 0 ? '#111' : '#222';
-          layer.stars.forEach((star) => {
-            const x = (star.x - bgOffsets[i] + canvas.width) % canvas.width;
-            ctx.fillRect(x, star.y, star.size, star.size);
-          });
-        });
-      }
-      for (let y = 0; y < levelData.height; y++) {
-        for (let x = 0; x < levelData.width; x++) {
-          const t = tiles[y][x];
-          const sx = x * TILE_SIZE;
-          const sy = y * TILE_SIZE;
-          if (t === 1) {
-            ctx.fillStyle = '#666';
-            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-          } else if (t === 5) {
-            ctx.fillStyle = 'gold';
-            ctx.fillRect(sx + 4, sy + 4, TILE_SIZE - 8, TILE_SIZE - 8);
-          } else if (t === 2) {
-            ctx.fillStyle = 'red';
-            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-          } else if (t === 6) {
-            ctx.fillStyle = 'green';
-            ctx.fillRect(sx, sy, TILE_SIZE, TILE_SIZE);
-          }
-        }
-      }
-      ctx.fillStyle = 'white';
-      ctx.fillRect(interpX, interpY, player.w, player.h);
-      if (!reduceMotion.current) {
-        particles.forEach((p) => {
-          ctx.globalAlpha = p.life / 0.3;
-          ctx.fillRect(p.x, p.y, 4, 4);
-          ctx.globalAlpha = 1;
-        });
-      }
-      ctx.fillStyle = 'white';
-      ctx.font = '12px monospace';
-      const displayRemaining = Math.max(0, coinsRemaining);
-      ctx.fillText(
-        `Score: ${score} Hi: ${highscoreRef.current} Coins: ${displayRemaining}/${coinsTotal}`,
-        4,
-        12
-      );
-    };
-
-    const loop = new GameLoop(tick, undefined, {
-      fps: 60,
-      render: draw,
-      interpolation: true,
-      maxDt: 100,
-    });
-    loop.start();
-    loopRef.current = loop;
+    requestRef.current = requestAnimationFrame(frame);
 
     return () => {
-      loop.stop();
-      window.removeEventListener('keydown', handleDown);
-      window.removeEventListener('keyup', handleUp);
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('resize', handleResize);
     };
-  }, [levelData, setProgress]);
+  }, [resizeCanvas]);
 
-  const hasNextLevel = progress.level < levels.length - 1;
+  const snapshot = (state) => ({
+    player: { ...state.player },
+    camera: { ...state.camera },
+    level: state.level,
+    coinsCollected: state.coinsCollected,
+    deaths: state.deaths,
+    status: state.status,
+    time: state.time,
+    shake: { ...state.shake },
+  });
 
-  const handleNextLevel = () => {
-    levelCompleteRef.current = false;
-    setLevelComplete(false);
-    setPaused(false);
-    if (hasNextLevel) {
-      setProgress((p) => ({
-        ...p,
-        level: Math.min(p.level + 1, levels.length - 1),
-        checkpoint: null,
-      }));
-    } else {
-      resetRef.current?.();
+  const draw = (ctx, alpha) => {
+    const current = sessionRef.current.state;
+    const previous = prevSnapshotRef.current || current;
+    const interp = (a, b) => a + (b - a) * alpha;
+    const playerX = interp(previous.player.x, current.player.x);
+    const playerY = interp(previous.player.y, current.player.y);
+    const camX = interp(previous.camera.x, current.camera.x);
+    const camY = interp(previous.camera.y, current.camera.y);
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const scale = dpr * RENDER_SCALE;
+    const shakeMag = reduceMotionRef.current ? 0 : current.shake.magnitude * (current.shake.time > 0 ? current.shake.time / 0.2 : 0);
+    const shakeX = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
+    const shakeY = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
+
+    ctx.save();
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = '#0c0f17';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.translate(-camX + ctx.canvas.width / (2 * scale), -camY + ctx.canvas.height / (2 * scale));
+    ctx.translate(shakeX, shakeY);
+
+    drawBackdrop(ctx, current.level);
+    drawTiles(ctx, current.level);
+    drawPlatforms(ctx, current.level.platforms);
+    drawPlayer(ctx, playerX, playerY, current.player.facing);
+    ctx.restore();
+  };
+
+  const drawBackdrop = (ctx, level) => {
+    ctx.save();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, level.width * TILE_SIZE, level.height * TILE_SIZE);
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    for (let x = 0; x <= level.width; x += 1) {
+      ctx.beginPath();
+      ctx.moveTo(x * TILE_SIZE, 0);
+      ctx.lineTo(x * TILE_SIZE, level.height * TILE_SIZE);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= level.height; y += 1) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * TILE_SIZE);
+      ctx.lineTo(level.width * TILE_SIZE, y * TILE_SIZE);
+      ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  const drawTiles = (ctx, level) => {
+    for (let y = 0; y < level.height; y += 1) {
+      for (let x = 0; x < level.width; x += 1) {
+        const tile = level.tiles[y][x];
+        const px = x * TILE_SIZE;
+        const py = y * TILE_SIZE;
+        if (tile === 1) {
+          ctx.fillStyle = '#1f2937';
+          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+          ctx.strokeStyle = '#111827';
+          ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+        } else if (tile === 2) {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.moveTo(px + TILE_SIZE / 2, py);
+          ctx.lineTo(px + TILE_SIZE, py + TILE_SIZE);
+          ctx.lineTo(px, py + TILE_SIZE);
+          ctx.closePath();
+          ctx.fill();
+        } else if (tile === 3) {
+          ctx.fillStyle = '#f59e0b';
+          ctx.fillRect(px + 8, py + 8, TILE_SIZE - 16, TILE_SIZE - 16);
+        } else if (tile === 4) {
+          ctx.fillStyle = '#34d399';
+          ctx.fillRect(px + 6, py + 6, TILE_SIZE - 12, TILE_SIZE - 12);
+        }
+      }
     }
   };
 
-  const levelPath = levels[progress.level];
-  if (!levelPath)
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        All levels complete!
-      </div>
-    );
+  const drawPlatforms = (ctx, platforms) => {
+    ctx.fillStyle = '#6b7280';
+    platforms.forEach((p) => {
+      ctx.fillRect(p.x, p.y, p.width, p.height);
+      ctx.strokeStyle = '#111827';
+      ctx.strokeRect(p.x, p.y, p.width, p.height);
+    });
+  };
+
+  const drawPlayer = (ctx, x, y, facing) => {
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillRect(x, y, PLAYER_SIZE.w, PLAYER_SIZE.h);
+    ctx.fillStyle = '#111827';
+    const eyeX = facing === 1 ? x + PLAYER_SIZE.w - 6 : x + 2;
+    ctx.fillRect(eyeX, y + 8, 4, 4);
+  };
+
+  const syncUi = (timeMs) => {
+    if (timeMs - uiUpdateRef.current < 120) return;
+    const { state } = sessionRef.current;
+    setUi({
+      level: sessionRef.current.levelName,
+      time: state.time,
+      coins: { collected: state.coinsCollected, total: state.level.coins },
+      deaths: state.deaths,
+      status: state.status,
+      paused: pausedRef.current,
+    });
+    uiUpdateRef.current = timeMs;
+  };
+
+  const restartLevel = () => {
+    const currentLevel = sessionRef.current.levelIndex;
+    const fresh = createInitialState(currentLevel);
+    fresh.state.deaths = sessionRef.current.state.deaths;
+    sessionRef.current = fresh;
+    accumulatorRef.current = 0;
+    lastTimeRef.current = 0;
+    resizeCanvas();
+  };
+
+  const nextLevel = () => {
+    const nextIndex = Math.min(sessionRef.current.levelIndex + 1, LEVELS.length - 1);
+    const fresh = createInitialState(nextIndex);
+    fresh.state.deaths = sessionRef.current.state.deaths;
+    sessionRef.current = fresh;
+    accumulatorRef.current = 0;
+    lastTimeRef.current = 0;
+    pausedRef.current = false;
+    resizeCanvas();
+  };
+
+  const togglePause = () => {
+    pausedRef.current = !pausedRef.current;
+    setUi((prev) => ({ ...prev, paused: pausedRef.current }));
+  };
 
   return (
-    <div className="w-full h-full relative bg-black">
-      <canvas
-        ref={canvasRef}
-        width={levelData ? levelData.width * TILE_SIZE : 320}
-        height={levelData ? levelData.height * TILE_SIZE : 160}
-        className="w-full h-full"
-      />
-      <div className="absolute top-1 left-1 flex gap-2 text-xs">
-        <button
-          onClick={() => setPaused((p) => !p)}
-          className="px-1 bg-gray-700 text-white"
-        >
-          {paused ? 'Resume' : 'Pause'}
-        </button>
-        <button
-          onClick={() => resetRef.current && resetRef.current()}
-          className="px-1 bg-gray-700 text-white"
-        >
-          Reset
-        </button>
-        <button
-          onClick={() => setSound((s) => !s)}
-          className="px-1 bg-gray-700 text-white"
-        >
-          Sound: {sound ? 'On' : 'Off'}
-        </button>
-      </div>
-      <div className="absolute top-1 right-1 text-xs bg-gray-800/80 text-white px-2 py-1 rounded">
-        Coins: {coinInfo.total - coinInfo.remaining}/{coinInfo.total}
-      </div>
-      {levelComplete && (
-        <div className="absolute inset-0 bg-black/70 text-white flex flex-col items-center justify-center gap-3">
-          <div className="text-lg font-bold">Level complete!</div>
-          <div className="text-sm">
-            Coins collected: {coinInfo.total - coinInfo.remaining} / {coinInfo.total}
-          </div>
-          <div className="flex gap-2">
+    <div className="relative w-full h-full flex flex-col bg-slate-950 text-slate-100">
+      <div className="flex items-center gap-3 px-3 py-2 text-xs bg-slate-900 border-b border-slate-800">
+        <div className="font-semibold">{ui.level}</div>
+        <div>Time: {formatTime(ui.time)}</div>
+        <div>
+          Coins: {ui.coins.collected}/{ui.coins.total}
+        </div>
+        <div>Deaths: {ui.deaths}</div>
+        <div>Status: {ui.status === 'complete' ? 'Complete' : ui.paused ? 'Paused' : 'Running'}</div>
+        <div className="ml-auto flex gap-2">
+          <button
+            type="button"
+            onClick={restartLevel}
+            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700"
+          >
+            Restart
+          </button>
+          <button
+            type="button"
+            onClick={togglePause}
+            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700"
+          >
+            {ui.paused ? 'Resume' : 'Pause'}
+          </button>
+          {ui.status === 'complete' && (
             <button
-              onClick={handleNextLevel}
-              className="px-2 py-1 bg-green-700 text-white rounded"
+              type="button"
+              onClick={nextLevel}
+              className="px-2 py-1 rounded bg-emerald-700 hover:bg-emerald-600"
             >
-              {hasNextLevel ? 'Next level' : 'Replay level'}
+              Next Level
             </button>
-            <button
-              onClick={() => {
-                levelCompleteRef.current = false;
-                setLevelComplete(false);
-                setPaused(false);
-              }}
-              className="px-2 py-1 bg-gray-700 text-white rounded"
-            >
-              Close
-            </button>
+          )}
+        </div>
+      </div>
+      <div className="flex-1 grid place-items-center p-2">
+        <div
+          className="relative w-full h-full max-w-5xl max-h-[70vh] bg-slate-900 border border-slate-800 rounded"
+          style={{ aspectRatio: `${sessionRef.current.state.level.width * TILE_SIZE} / ${sessionRef.current.state.level.height * TILE_SIZE}` }}
+        >
+          <canvas
+            ref={canvasRef}
+            className="w-full h-full rounded select-none"
+            style={{ imageRendering: 'pixelated' }}
+          />
+          <div className="absolute bottom-2 left-2 text-[10px] text-slate-300 bg-slate-900/70 px-2 py-1 rounded">
+            Controls: ←/A + →/D to move • Space/W/↑ to jump • R restart • P/Esc pause
           </div>
         </div>
-      )}
-      <div aria-live="polite" className="sr-only">{ariaMsg}</div>
+      </div>
     </div>
   );
-};
-
-export default Platformer;
-
+}
