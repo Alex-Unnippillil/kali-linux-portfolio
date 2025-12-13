@@ -1,19 +1,55 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   SIZE,
-  DIRECTIONS,
   createBoard,
   computeLegalMoves,
   applyMove,
   countPieces,
   getBookMove,
   bestMove,
+  getTurnResolution,
 } from './reversiLogic';
 
 const DIFFICULTIES = {
-  easy: { depth: 2, weights: { mobility: 1, corners: 10, edges: 5 } },
-  medium: { depth: 3, weights: { mobility: 3, corners: 20, edges: 7 } },
-  hard: { depth: 4, weights: { mobility: 5, corners: 25, edges: 10 } },
+  easy: {
+    depth: 2,
+    randomizeTop: 3,
+    weights: {
+      mobilityStart: 7,
+      mobilityEnd: 3,
+      parityStart: 0,
+      parityEnd: 10,
+      corners: 22,
+      edges: 5,
+      cornerAdjPenalty: -12,
+    },
+  },
+  medium: {
+    depth: 4,
+    randomizeTop: 0,
+    weights: {
+      mobilityStart: 8,
+      mobilityEnd: 2.5,
+      parityStart: 0,
+      parityEnd: 12,
+      corners: 26,
+      edges: 6,
+      cornerAdjPenalty: -12,
+    },
+  },
+  hard: {
+    depth: 5,
+    randomizeTop: 0,
+    weights: {
+      mobilityStart: 8,
+      mobilityEnd: 2,
+      parityStart: 0,
+      parityEnd: 14,
+      corners: 28,
+      edges: 6,
+      cornerAdjPenalty: -14,
+    },
+  },
 };
 
 const DEFAULT_BOARD_SIZE = 420;
@@ -46,6 +82,7 @@ const Reversi = () => {
   const animRef = useRef(0);
   const audioRef = useRef(null);
   const workerRef = useRef(null);
+  const aiSearchIdRef = useRef(0);
   const aiThinkingRef = useRef(false);
   const reduceMotionRef = useRef(false);
   const flippingRef = useRef([]);
@@ -54,6 +91,7 @@ const Reversi = () => {
   const hintRef = useRef(null);
   const focusedCellRef = useRef({ r: 3, c: 3 });
   const boardFocusRef = useRef(false);
+  const passTimeoutRef = useRef(null);
 
   const [board, setBoard] = useState(() => createBoard());
   const [boardSize, setBoardSize] = useState(DEFAULT_BOARD_SIZE);
@@ -75,6 +113,7 @@ const Reversi = () => {
   const [isBoardFocused, setIsBoardFocused] = useState(false);
   const [hintMove, setHintMove] = useState(null);
   const [lastMove, setLastMove] = useState(null);
+  const [gameOver, setGameOver] = useState(false);
   const themeRef = useRef('dark');
   const bookEnabled = React.useMemo(() => useBook, [useBook]);
 
@@ -104,6 +143,7 @@ const Reversi = () => {
   useEffect(() => { pausedRef.current = paused; }, [paused]);
   useEffect(() => { themeRef.current = diskTheme; }, [diskTheme]);
   useEffect(() => { setScore(countPieces(board)); }, [board]);
+  useEffect(() => () => clearTimeout(passTimeoutRef.current), []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -115,7 +155,8 @@ const Reversi = () => {
           new URL('../../workers/reversi.worker.js', import.meta.url)
         );
         workerRef.current.onmessage = (e) => {
-          const { type } = e.data;
+          const { type, id } = e.data;
+          if (id && id !== aiSearchIdRef.current) return;
           if (type === 'progress') {
             const { evaluated, total } = e.data;
             setAiProgress({ evaluated, total });
@@ -134,7 +175,7 @@ const Reversi = () => {
           if (!flips) return;
           const prev = boardRef.current.map((row) => row.slice());
           const next = applyMove(prev, r, c, 'W', flips);
-          queueFlips(r, c, 'W', prev);
+          queueFlips(r, c, 'W', flips, prev);
           setHistory((h) => [
             ...h,
             { board: prev, player: 'W', move: { r, c }, flips },
@@ -208,29 +249,16 @@ const Reversi = () => {
     osc.stop(ctx.currentTime + 0.1);
   }, [sound]);
 
-  const queueFlips = (r, c, player, prevBoard) => {
+  const queueFlips = (r, c, player, flips, prevBoard) => {
     if (reduceMotionRef.current) return;
     const start = performance.now();
-    DIRECTIONS.forEach(([dr, dc]) => {
-      const seq = [];
-      let i = r + dr;
-      let j = c + dc;
-      while (
-        i >= 0 && i < SIZE && j >= 0 && j < SIZE &&
-        prevBoard[i][j] && prevBoard[i][j] !== player
-      ) {
-        seq.push([i, j]);
-        i += dr;
-        j += dc;
-      }
-      seq.forEach(([sr, sc], idx) => {
-        flippingRef.current.push({
-          key: `${sr}-${sc}`,
-          from: prevBoard[sr][sc],
-          to: player,
-          start: start + idx * 80,
-          duration: 360,
-        });
+    flips.forEach(([sr, sc], idx) => {
+      flippingRef.current.push({
+        key: `${sr}-${sc}`,
+        from: prevBoard[sr][sc],
+        to: player,
+        start: start + idx * 80,
+        duration: 360,
       });
     });
   };
@@ -466,8 +494,10 @@ const Reversi = () => {
 
   // handle turn logic and AI
   useEffect(() => {
-    const moves = computeLegalMoves(board, player);
-    legalRef.current = moves;
+    clearTimeout(passTimeoutRef.current);
+    const resolution = getTurnResolution(board, player);
+    const activeMoves = resolution.kind === 'play' ? resolution.legalMoves : {};
+    legalRef.current = activeMoves;
 
     const playerMoves = Object.keys(computeLegalMoves(board, 'B')).length;
     const aiMoves = Object.keys(computeLegalMoves(board, 'W')).length;
@@ -480,40 +510,54 @@ const Reversi = () => {
       `${SIZE - 1}-${SIZE - 1}`,
     ];
     setTip(
-      cornerKeys.some((k) => moves[k])
+      cornerKeys.some((k) => activeMoves[k])
         ? 'Tip: Corners are powerful—capture them when you can!'
         : 'Tip: Control the corners to gain an advantage.',
     );
-    if (Object.keys(moves).length === 0) {
+
+    if (resolution.kind === 'gameover') {
+      const { score, winner } = resolution;
       setIsAiThinking(false);
+      aiThinkingRef.current = false;
       setAiProgress(null);
-      const opp = player === 'B' ? 'W' : 'B';
-      const oppMoves = computeLegalMoves(board, opp);
-      if (Object.keys(oppMoves).length === 0) {
-        const { black, white } = countPieces(board);
-        if (black > white) {
-          setWins((w) => ({ ...w, player: w.player + 1 }));
-          setMessage('You win!');
-        } else if (white > black) {
-          setWins((w) => ({ ...w, ai: w.ai + 1 }));
-          setMessage('AI wins!');
-        } else {
-          setMessage('Draw!');
-        }
+      setGameOver(true);
+      if (winner === 'B') {
+        setWins((w) => ({ ...w, player: w.player + 1 }));
+        setMessage('You win!');
+      } else if (winner === 'W') {
+        setWins((w) => ({ ...w, ai: w.ai + 1 }));
+        setMessage('AI wins!');
       } else {
-        setPlayer(opp); // pass turn
+        setMessage('Draw!');
       }
+      setScore(score);
       return;
     }
+
+    setGameOver(false);
+
+    if (resolution.kind === 'pass') {
+      setIsAiThinking(false);
+      aiThinkingRef.current = false;
+      setAiProgress(null);
+      setMessage('No legal moves, passing turn');
+      setHintMove(null);
+      previewRef.current = null;
+      passTimeoutRef.current = setTimeout(() => {
+        setPlayer(resolution.nextPlayer);
+      }, 600);
+      return;
+    }
+
     if (player === 'W' && !paused && !aiThinkingRef.current) {
       const bookMove = bookEnabled ? getBookMove(board, 'W') : null;
       if (bookMove) {
         const [r, c] = bookMove;
-        const flips = moves[`${r}-${c}`];
+        const flips = activeMoves[`${r}-${c}`];
         if (flips) {
           const prev = boardRef.current.map((row) => row.slice());
           const next = applyMove(prev, r, c, 'W', flips);
-          queueFlips(r, c, 'W', prev);
+          queueFlips(r, c, 'W', flips, prev);
           setHistory((h) => [
             ...h,
             { board: prev, player: 'W', move: { r, c }, flips },
@@ -528,8 +572,18 @@ const Reversi = () => {
         setIsAiThinking(true);
         setAiProgress(null);
         if (workerRef.current) {
-          const { depth, weights } = DIFFICULTIES[difficulty];
-          workerRef.current.postMessage({ board, player: 'W', depth, weights });
+          const { depth, weights, randomizeTop } = DIFFICULTIES[difficulty];
+          const id = aiSearchIdRef.current + 1;
+          aiSearchIdRef.current = id;
+          workerRef.current.postMessage({
+            type: 'search',
+            id,
+            board,
+            player: 'W',
+            depth,
+            weights,
+            randomizeTop,
+          });
         }
       }
     }
@@ -543,14 +597,14 @@ const Reversi = () => {
   }, [board, player, paused, difficulty, playSound, bookEnabled]);
 
   const tryMove = useCallback((r, c) => {
-    if (paused || player !== 'B') return;
+    if (paused || player !== 'B' || gameOver) return;
     const key = `${r}-${c}`;
     const flips = legalRef.current[key];
     if (!flips) return;
     previewRef.current = null;
     const prev = boardRef.current.map((row) => row.slice());
     const next = applyMove(prev, r, c, 'B', flips);
-    queueFlips(r, c, 'B', prev);
+    queueFlips(r, c, 'B', flips, prev);
     setHistory((h) => [
       ...h,
       { board: prev, player: 'B', move: { r, c }, flips },
@@ -560,7 +614,7 @@ const Reversi = () => {
     setPlayer('W');
     setLastMove({ r, c, player: 'B' });
     setHintMove(null);
-  }, [paused, player, playSound]);
+  }, [paused, player, playSound, gameOver]);
 
   const handleClick = (e) => {
     const canvas = canvasRef.current;
@@ -577,7 +631,7 @@ const Reversi = () => {
   };
 
   const handleMouseMove = (e) => {
-    if (pausedRef.current || playerRef.current !== 'B') {
+    if (pausedRef.current || playerRef.current !== 'B' || gameOver) {
       previewRef.current = null;
       return;
     }
@@ -604,6 +658,7 @@ const Reversi = () => {
   };
 
   const reset = () => {
+    clearTimeout(passTimeoutRef.current);
     const fresh = createBoard();
     setBoard(fresh);
     setPlayer('B');
@@ -613,13 +668,16 @@ const Reversi = () => {
     setAiProgress(null);
     setIsAiThinking(false);
     aiThinkingRef.current = false;
+    aiSearchIdRef.current += 1;
     setHintMove(null);
     setLastMove(null);
+    setGameOver(false);
     setFocusedCell({ r: 3, c: 3 });
   };
 
   const undo = useCallback(() => {
     if (!history.length) return;
+    clearTimeout(passTimeoutRef.current);
     const last = history[history.length - 1];
     setBoard(last.board.map((row) => row.slice()));
     setPlayer(last.player);
@@ -628,10 +686,12 @@ const Reversi = () => {
     previewRef.current = null;
     flippingRef.current = [];
     aiThinkingRef.current = false;
+    aiSearchIdRef.current += 1;
     setIsAiThinking(false);
     setAiProgress(null);
     setLastMove(null);
     setHintMove(null);
+    setGameOver(false);
     if (last.move) {
       setFocusedCell({ r: last.move.r, c: last.move.c });
     }
@@ -653,7 +713,7 @@ const Reversi = () => {
   }, [player, board]);
 
   const requestHint = useCallback(() => {
-    if (player !== 'B' || paused) return;
+    if (player !== 'B' || paused || gameOver) return;
     const { weights } = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
     const hint = bestMove(boardRef.current, 'B', 3, weights) || null;
     if (hint) {
@@ -664,10 +724,10 @@ const Reversi = () => {
     } else {
       setHintMove(null);
     }
-  }, [difficulty, paused, player]);
+  }, [difficulty, paused, player, gameOver]);
 
   const handleKeyDown = (e) => {
-    if (paused) return;
+    if (paused || gameOver) return;
     const { key } = e;
     if (!focusedCell) return;
     const moveFocus = (dr, dc) => {
@@ -879,7 +939,7 @@ const Reversi = () => {
             <button
               className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
               onClick={requestHint}
-              disabled={player !== 'B' || paused}
+              disabled={player !== 'B' || paused || gameOver}
             >
               Hint
             </button>

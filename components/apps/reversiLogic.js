@@ -23,36 +23,53 @@ export const createBoard = () => {
 
 const inside = (r, c) => r >= 0 && r < SIZE && c >= 0 && c < SIZE;
 
-export const computeLegalMoves = (board, player) => {
+export const getFlipsForMove = (board, r, c, player) => {
+  if (board[r][c]) return [];
   const opponent = player === 'B' ? 'W' : 'B';
+  const flips = [];
+  const seen = new Set();
+  DIRECTIONS.forEach(([dr, dc]) => {
+    let i = r + dr;
+    let j = c + dc;
+    const chain = [];
+    while (inside(i, j) && board[i][j] === opponent) {
+      chain.push([i, j]);
+      i += dr;
+      j += dc;
+    }
+    if (chain.length && inside(i, j) && board[i][j] === player) {
+      chain.forEach(([cr, cc]) => {
+        const key = `${cr}-${cc}`;
+        if (!seen.has(key)) {
+          flips.push([cr, cc]);
+          seen.add(key);
+        }
+      });
+    }
+  });
+  return flips;
+};
+
+export const computeLegalMoves = (board, player) => {
   const moves = {};
   for (let r = 0; r < SIZE; r += 1) {
     for (let c = 0; c < SIZE; c += 1) {
       if (board[r][c]) continue;
-      const flips = [];
-      DIRECTIONS.forEach(([dr, dc]) => {
-        let i = r + dr;
-        let j = c + dc;
-        const cells = [];
-        while (inside(i, j) && board[i][j] === opponent) {
-          cells.push([i, j]);
-          i += dr;
-          j += dc;
-        }
-        if (cells.length && inside(i, j) && board[i][j] === player) {
-          flips.push(...cells);
-        }
-      });
+      const flips = getFlipsForMove(board, r, c, player);
       if (flips.length) moves[`${r}-${c}`] = flips;
     }
   }
   return moves;
 };
 
-export const applyMove = (board, r, c, player, flips) => {
+export const applyMove = (board, r, c, player, flips = undefined) => {
+  const derivedFlips = flips ?? getFlipsForMove(board, r, c, player);
+  if (!derivedFlips.length) {
+    throw new Error('Illegal move: no flips available');
+  }
   const newBoard = board.map((row) => row.slice());
   newBoard[r][c] = player;
-  flips.forEach(([fr, fc]) => {
+  derivedFlips.forEach(([fr, fc]) => {
     newBoard[fr][fc] = player;
   });
   return newBoard;
@@ -70,8 +87,23 @@ export const countPieces = (board) => {
   return { black, white };
 };
 
-const boardKey = (board) =>
+export const boardKey = (board) =>
   board.map((row) => row.map((cell) => cell || '.').join('')).join('/');
+
+export const getTurnResolution = (board, player) => {
+  const legalMoves = computeLegalMoves(board, player);
+  if (Object.keys(legalMoves).length > 0) {
+    return { kind: 'play', legalMoves };
+  }
+  const opponent = player === 'B' ? 'W' : 'B';
+  const opponentMoves = computeLegalMoves(board, opponent);
+  if (Object.keys(opponentMoves).length > 0) {
+    return { kind: 'pass', nextPlayer: opponent, legalMoves };
+  }
+  const score = countPieces(board);
+  const winner = score.black === score.white ? 'D' : score.black > score.white ? 'B' : 'W';
+  return { kind: 'gameover', score, winner };
+};
 
 // Opening book lookup for early moves
 export const getBookMove = (board, player) => {
@@ -89,10 +121,31 @@ const corners = [
   [SIZE - 1, 0],
   [SIZE - 1, SIZE - 1],
 ];
+
+const cornerAdjacents = [
+  { corner: [0, 0], adj: [[0, 1], [1, 0], [1, 1]] },
+  { corner: [0, SIZE - 1], adj: [[0, SIZE - 2], [1, SIZE - 1], [1, SIZE - 2]] },
+  { corner: [SIZE - 1, 0], adj: [[SIZE - 2, 0], [SIZE - 1, 1], [SIZE - 2, 1]] },
+  {
+    corner: [SIZE - 1, SIZE - 1],
+    adj: [
+      [SIZE - 2, SIZE - 1],
+      [SIZE - 1, SIZE - 2],
+      [SIZE - 2, SIZE - 2],
+    ],
+  },
+];
+
+const lerp = (a, b, t) => a + (b - a) * t;
+
 export const DEFAULT_WEIGHTS = {
-  mobility: 5,
+  mobilityStart: 8,
+  mobilityEnd: 2,
+  parityStart: 0,
+  parityEnd: 12,
   corners: 25,
-  edges: 10,
+  edges: 6,
+  cornerAdjPenalty: -10,
 };
 
 export const evaluateBoard = (board, player, weights = DEFAULT_WEIGHTS) => {
@@ -102,32 +155,78 @@ export const evaluateBoard = (board, player, weights = DEFAULT_WEIGHTS) => {
     if (board[r][c] === player) cornerScore += 1;
     else if (board[r][c] === opponent) cornerScore -= 1;
   });
+
   const mobility =
     Object.keys(computeLegalMoves(board, player)).length -
     Object.keys(computeLegalMoves(board, opponent)).length;
+
   let edgeScore = 0;
   for (let i = 1; i < SIZE - 1; i += 1) {
-    // top row
     if (board[0][i] === player) edgeScore += 1;
     else if (board[0][i] === opponent) edgeScore -= 1;
-    // bottom row
     if (board[SIZE - 1][i] === player) edgeScore += 1;
     else if (board[SIZE - 1][i] === opponent) edgeScore -= 1;
-    // left column
     if (board[i][0] === player) edgeScore += 1;
     else if (board[i][0] === opponent) edgeScore -= 1;
-    // right column
     if (board[i][SIZE - 1] === player) edgeScore += 1;
     else if (board[i][SIZE - 1] === opponent) edgeScore -= 1;
   }
+
+  let cornerAdjPenalty = 0;
+  cornerAdjacents.forEach(({ corner, adj }) => {
+    const [cr, cc] = corner;
+    adj.forEach(([r, c]) => {
+      if (board[r][c] === player && board[cr][cc] !== player) {
+        cornerAdjPenalty += 1;
+      } else if (board[r][c] === opponent && board[cr][cc] !== opponent) {
+        cornerAdjPenalty -= 1;
+      }
+    });
+  });
+
   const { black, white } = countPieces(board);
+  const filled = black + white;
+  const phase = filled / (SIZE * SIZE);
   const parity = player === 'B' ? black - white : white - black;
+
+  const mobilityWeight = lerp(weights.mobilityStart, weights.mobilityEnd, phase);
+  const parityWeight = lerp(weights.parityStart, weights.parityEnd, phase);
+
   return (
     weights.corners * cornerScore +
-    weights.mobility * mobility +
+    mobilityWeight * mobility +
     weights.edges * edgeScore +
-    parity
+    parityWeight * parity +
+    weights.cornerAdjPenalty * cornerAdjPenalty
   );
+};
+
+const orderMoves = (entries) => {
+  const cornerKeys = new Set(corners.map(([r, c]) => `${r}-${c}`));
+  const edgeKeys = new Set();
+  for (let i = 1; i < SIZE - 1; i += 1) {
+    edgeKeys.add(`0-${i}`);
+    edgeKeys.add(`${SIZE - 1}-${i}`);
+    edgeKeys.add(`${i}-0`);
+    edgeKeys.add(`${i}-${SIZE - 1}`);
+  }
+
+  const isCornerAdjacent = (r, c) =>
+    cornerAdjacents.some(({ adj }) => adj.some(([ar, ac]) => ar === r && ac === c));
+
+  return entries.sort((a, b) => {
+    const [aKey] = a;
+    const [bKey] = b;
+    const [ar, ac] = aKey.split('-').map(Number);
+    const [br, bc] = bKey.split('-').map(Number);
+    const scoreMove = (r, c) => {
+      if (cornerKeys.has(`${r}-${c}`)) return 3;
+      if (edgeKeys.has(`${r}-${c}`)) return 2;
+      if (isCornerAdjacent(r, c)) return 0;
+      return 1;
+    };
+    return scoreMove(br, bc) - scoreMove(ar, ac);
+  });
 };
 
 export const minimax = (
@@ -138,15 +237,16 @@ export const minimax = (
   weights,
   alpha = -Infinity,
   beta = Infinity,
+  table = new Map(),
 ) => {
   const movesObj = computeLegalMoves(board, player);
-  const entries = Object.entries(movesObj);
+  const entries = orderMoves(Object.entries(movesObj));
   const opponent = player === 'B' ? 'W' : 'B';
-  if (depth === 0 || entries.length === 0) {
+  if (depth <= 0 || entries.length === 0) {
     if (entries.length === 0) {
       const oppMoves = Object.keys(computeLegalMoves(board, opponent));
-      if (oppMoves.length !== 0) {
-        return minimax(board, opponent, depth - 1, maximizer, weights, alpha, beta);
+      if (oppMoves.length !== 0 && depth > 0) {
+        return minimax(board, opponent, depth - 1, maximizer, weights, alpha, beta, table);
       }
       const { black, white } = countPieces(board);
       const diff = maximizer === 'B' ? black - white : white - black;
@@ -155,28 +255,32 @@ export const minimax = (
     return evaluateBoard(board, maximizer, weights);
   }
 
+  const ttKey = `${boardKey(board)}|${player}|${depth}`;
+  if (table.has(ttKey)) return table.get(ttKey);
+
+  let value;
   if (player === maximizer) {
-    let value = -Infinity;
+    value = -Infinity;
     for (const [key, flips] of entries) {
       const [r, c] = key.split('-').map(Number);
       const newBoard = applyMove(board, r, c, player, flips);
-      const val = minimax(newBoard, opponent, depth - 1, maximizer, weights, alpha, beta);
+      const val = minimax(newBoard, opponent, depth - 1, maximizer, weights, alpha, beta, table);
       value = Math.max(value, val);
       alpha = Math.max(alpha, val);
       if (alpha >= beta) break;
     }
-    return value;
+  } else {
+    value = Infinity;
+    for (const [key, flips] of entries) {
+      const [r, c] = key.split('-').map(Number);
+      const newBoard = applyMove(board, r, c, player, flips);
+      const val = minimax(newBoard, opponent, depth - 1, maximizer, weights, alpha, beta, table);
+      value = Math.min(value, val);
+      beta = Math.min(beta, val);
+      if (beta <= alpha) break;
+    }
   }
-
-  let value = Infinity;
-  for (const [key, flips] of entries) {
-    const [r, c] = key.split('-').map(Number);
-    const newBoard = applyMove(board, r, c, player, flips);
-    const val = minimax(newBoard, opponent, depth - 1, maximizer, weights, alpha, beta);
-    value = Math.min(value, val);
-    beta = Math.min(beta, val);
-    if (beta <= alpha) break;
-  }
+  table.set(ttKey, value);
   return value;
 };
 
@@ -188,14 +292,17 @@ export const bestMove = (
   options = {},
 ) => {
   const movesObj = computeLegalMoves(board, player);
-  const entries = Object.entries(movesObj);
+  const entries = orderMoves(Object.entries(movesObj));
   if (entries.length === 0) return null;
   const opponent = player === 'B' ? 'W' : 'B';
+  const scores = [];
   let best = null;
   let bestVal = -Infinity;
   let evaluated = 0;
-  const { onProgress } = options;
+  const { onProgress, randomizeTop = 0 } = options;
   const totalMoves = entries.length;
+  const table = new Map();
+
   for (const [key, flips] of entries) {
     const [r, c] = key.split('-').map(Number);
     const newBoard = applyMove(board, r, c, player, flips);
@@ -207,7 +314,9 @@ export const bestMove = (
       weights,
       -Infinity,
       Infinity,
+      table,
     );
+    scores.push({ move: [r, c], score: val });
     if (val > bestVal) {
       bestVal = val;
       best = [r, c];
@@ -225,6 +334,18 @@ export const bestMove = (
       });
     }
   }
+
+  if (randomizeTop > 0) {
+    const sorted = scores.sort((a, b) => b.score - a.score);
+    const top = sorted.slice(0, Math.min(randomizeTop, sorted.length));
+    const totalWeight = top.reduce((sum, item, idx) => sum + (top.length - idx), 0);
+    let roll = Math.random() * totalWeight;
+    for (let i = 0; i < top.length; i += 1) {
+      roll -= top.length - i;
+      if (roll <= 0) return top[i].move;
+    }
+  }
+
   return best;
 };
 
