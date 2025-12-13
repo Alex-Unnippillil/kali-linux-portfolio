@@ -1,11 +1,8 @@
-import { execFile } from 'child_process';
-import { promises as fs } from 'fs';
-import { randomUUID } from 'crypto';
-import { promisify } from 'util';
-import path from 'path';
+import { z } from 'zod';
+import hydraFixtures from '../../components/apps/hydra/samples/results.json';
+import { checkRateLimit, normalizeIdentifier } from '../../lib/rateLimit';
 
-const execFileAsync = promisify(execFile);
-const allowed = new Set([
+const allowed = [
   'http',
   'https',
   'ssh',
@@ -13,7 +10,23 @@ const allowed = new Set([
   'smtp',
   'http-get',
   'http-post-form',
-]);
+];
+
+const hydraSchema = z.object({
+  action: z.enum(['run', 'resume']).optional(),
+  target: z.string().trim().min(1).max(200),
+  service: z.enum(allowed),
+  userList: z.string().min(1).max(5000),
+  passList: z.string().min(1).max(5000),
+});
+
+const formatOutput = (service, action) => {
+  const entries = hydraFixtures.outputs || {};
+  if (action === 'resume' && entries.resume) {
+    return entries.resume;
+  }
+  return entries[service] || entries.default;
+};
 
 export default async function handler(req, res) {
   if (
@@ -30,88 +43,24 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { action, target, service, userList, passList } = req.body || {};
-
-  const sessionDir = path.join(process.cwd(), 'hydra');
-  const restoreFile = path.join(sessionDir, 'hydra.restore');
-  const sessionFile = path.join(sessionDir, 'session');
-  await fs.mkdir(sessionDir, { recursive: true });
-
-  if (action === 'resume') {
-    try {
-      await fs.copyFile(sessionFile, restoreFile);
-    } catch {
-      res.status(400).json({ error: 'No saved session' });
-      return;
-    }
-    try {
-      await execFileAsync('which', ['hydra']);
-    } catch {
-      res.status(500).json({ error: 'Hydra not installed' });
-      return;
-    }
-    try {
-      const { stdout } = await execFileAsync('hydra', ['-R'], {
-        cwd: sessionDir,
-        timeout: 1000 * 60,
-      });
-      res.status(200).json({ output: stdout.toString() });
-    } catch (error) {
-      const msg = error.stderr?.toString() || error.message;
-      res.status(500).json({ error: msg });
-    } finally {
-      await fs.copyFile(restoreFile, sessionFile).catch(() => {});
-    }
+  const identifier = normalizeIdentifier(req);
+  const limit = checkRateLimit(identifier, { max: 5, windowMs: 60_000 });
+  if (!limit.allowed) {
+    res.status(429).json({ error: 'Rate limit exceeded' });
     return;
   }
 
-  if (!target || !service || !userList || !passList) {
-    res.status(400).json({ error: 'Missing parameters' });
-    return;
-  }
-  if (!allowed.has(service)) {
-    res.status(400).json({ error: 'Unsupported service' });
-    return;
-  }
-
-  const userPath = `/tmp/hydra-users-${randomUUID()}.txt`;
-  const passPath = `/tmp/hydra-pass-${randomUUID()}.txt`;
-
+  let payload;
   try {
-    await fs.writeFile(userPath, userList);
-    await fs.writeFile(passPath, passList);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-    return;
-  }
-
-  try {
-    await execFileAsync('which', ['hydra']);
-  } catch {
-    await Promise.all([
-      fs.unlink(userPath).catch(() => {}),
-      fs.unlink(passPath).catch(() => {}),
-    ]);
-    res.status(500).json({ error: 'Hydra not installed' });
-    return;
-  }
-
-  const args = ['-L', userPath, '-P', passPath, `${service}://${target}`];
-
-  try {
-    const { stdout } = await execFileAsync('hydra', args, {
-      cwd: sessionDir,
-      timeout: 1000 * 60,
-    });
-    res.status(200).json({ output: stdout.toString() });
+    payload = hydraSchema.parse(req.body || {});
   } catch (error) {
-    const msg = error.stderr?.toString() || error.message;
-    res.status(500).json({ error: msg });
-  } finally {
-    await Promise.all([
-      fs.unlink(userPath).catch(() => {}),
-      fs.unlink(passPath).catch(() => {}),
-    ]);
-    await fs.copyFile(restoreFile, sessionFile).catch(() => {});
+    res.status(400).json({ error: 'Invalid request body' });
+    return;
   }
+
+  const { action = 'run', service, target } = payload;
+  const simulated = formatOutput(service, action);
+  res.status(200).json({
+    output: `${simulated}\n[SIMULATION] Target: ${target} | Service: ${service}`,
+  });
 }

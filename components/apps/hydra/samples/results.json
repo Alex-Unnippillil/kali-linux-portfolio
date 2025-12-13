@@ -1,0 +1,11 @@
+{
+  "outputs": {
+    "ssh": "[hydra] ssh://demo-host:22/login - 3 valid credentials found after 18 attempts.\n[DATA] Reused training wordlists only.\n[STATUS] Simulation complete.",
+    "ftp": "[hydra] ftp://demo-host:21/login - anonymous login allowed.\n[DATA] Educational mode: no network traffic generated.\n[STATUS] Simulation complete.",
+    "http-get": "[hydra] http-get://demo-host/login - baseline enumeration finished.\n[DATA] Demo payloads replayed from fixtures.\n[STATUS] Simulation complete.",
+    "http-post-form": "[hydra] http-post-form://demo-host/login - form parameters validated.\n[DATA] Tokens and cookies pulled from offline samples.\n[STATUS] Simulation complete.",
+    "smtp": "[hydra] smtp://demo-host:25/login - STARTTLS required, demo handshake replayed.\n[DATA] Credentials seeded from workshop fixtures.\n[STATUS] Simulation complete.",
+    "resume": "[hydra] Resumed saved session and replayed cached findings.\n[DATA] Deterministic replay ensures no live targets are touched.\n[STATUS] Simulation complete.",
+    "default": "[hydra] Service enumerated using demo fixtures.\n[DATA] No live services queried; this is an offline simulation.\n[STATUS] Simulation complete."
+  }
+}
