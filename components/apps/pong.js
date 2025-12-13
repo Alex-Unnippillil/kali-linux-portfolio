@@ -496,16 +496,17 @@ const PongInner = () => {
     };
   }, [offerSDP]);
 
-  return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
-      <canvas
-        ref={canvasRef}
-        className="bg-black w-full h-full touch-none"
-      />
-      {mode === 'practice' ? (
-        <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
-          Rally: {rally} (Best: {highScore})
-        </div>
+      return (
+        <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+          <canvas
+            ref={canvasRef}
+            className="bg-black w-full h-full touch-none"
+            aria-label="Pong arena"
+          />
+          {mode === 'practice' ? (
+            <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
+              Rally: {rally} (Best: {highScore})
+            </div>
       ) : (
         <>
           <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
