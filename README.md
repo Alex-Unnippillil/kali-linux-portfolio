@@ -9,15 +9,16 @@ A desktop-style portfolio built with Next.js and Tailwind that recreates the loo
 ## Table of Contents
 1. [Legal Notice & Risk Overview](#legal-notice--risk-overview)
 2. [Quick Start](#quick-start)
-3. [Project Architecture](#project-architecture)
-4. [Desktop UX](#desktop-ux)
-5. [App Catalog](#app-catalog)
-6. [Configuration & Environment](#configuration--environment)
-7. [Deployment Guides](#deployment-guides)
-8. [Quality Gates & Tooling](#quality-gates--tooling)
-9. [Security Hardening](#security-hardening)
-10. [Troubleshooting](#troubleshooting)
-11. [License](#license)
+3. [Architecture](#architecture)
+4. [Project Architecture](#project-architecture)
+5. [Desktop UX](#desktop-ux)
+6. [App Catalog](#app-catalog)
+7. [Configuration & Environment](#configuration--environment)
+8. [Deployment Guides](#deployment-guides)
+9. [Quality Gates & Tooling](#quality-gates--tooling)
+10. [Security Hardening](#security-hardening)
+11. [Troubleshooting](#troubleshooting)
+12. [License](#license)
 
 ---
 
@@ -76,6 +77,13 @@ Verify that features relying on `/api/*` degrade gracefully when served statical
 3. On mobile, share text/links to the installed app to create sticky notes automatically.
 
 The service worker is generated during `next build` by [`@ducanh2912/next-pwa`](https://github.com/DuCanhGH/next-pwa) and outputs to `public/sw.js`.
+
+---
+
+## Architecture
+
+- **Router strategy:** The **Pages Router (`pages/`) is authoritative** for all user-facing routes. The small `app/` directory exists only for the shared error boundary, the App Router favicon, and the `api/log-client-error` telemetry endpoint. New pages and APIs should land in `pages/` until a deliberate App Router migration is planned.
+- **Single app surface:** Desktop experiences live in `components/apps/` and are wired into the dynamic registry in `apps.config.js` plus their `pages/` launchers. Avoid duplicating implementations across `apps/` and `components/apps/` when adding new functionality.
 
 ---
 
