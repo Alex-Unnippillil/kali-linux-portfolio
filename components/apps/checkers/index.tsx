@@ -1,425 +1,181 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactGA from 'react-ga4';
 import { pointerHandlers } from '../../../utils/pointer';
+import { Move, serializePosition } from './engine';
 import {
-  createBoard,
-  getPieceMoves,
-  getAllMoves,
-  applyMove,
-  isDraw,
-  hasMoves,
-  Move,
-  Board,
-} from './engine';
+  GameState,
+  RuleMode,
+  applyStep,
+  chooseMove,
+  createGameState,
+  getForcedFromSquares,
+  getLegalMoves,
+} from '../../../games/checkers/logic';
 
 const Checkers = () => {
-  const [board, setBoard] = useState<Board>(createBoard());
-  const [turn, setTurn] = useState<'red' | 'black'>('red');
-  const [selected, setSelected] = useState<[number, number] | null>(null);
-  const [moves, setMoves] = useState<Move[]>([]);
+  const [rule, setRule] = useState<RuleMode>('forced');
+  const [game, setGame] = useState<GameState>(() => createGameState('forced'));
   const [winner, setWinner] = useState<string | null>(null);
   const [draw, setDraw] = useState(false);
-  const [history, setHistory] = useState<
-    { board: Board; turn: string; no: number; move: [number, number][] }[]
-  >([]);
-  const [future, setFuture] = useState<
-    { board: Board; turn: string; no: number; move: [number, number][] }[]
-  >([]);
-  const [noCapture, setNoCapture] = useState(0);
+  const [selected, setSelected] = useState<[number, number] | null>(null);
+  const [moves, setMoves] = useState<Move[]>([]);
   const [hint, setHint] = useState<Move | null>(null);
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
-  const [crowned, setCrowned] = useState<[number, number] | null>(null);
-  const [ariaMessage, setAriaMessage] = useState('');
-  const [cursor, setCursor] = useState<[number, number]>([0, 0]);
   const [showLegal, setShowLegal] = useState(false);
-  const [rule, setRule] = useState<'forced' | 'relaxed'>('forced');
+  const [ariaMessage, setAriaMessage] = useState('');
   const boardRef = useRef<HTMLDivElement>(null);
-
-  const workerRef = useRef<Worker | null>(null);
-  const hintRequest = useRef(false);
-  const pathRef = useRef<[number, number][]>([]);
-  const makeMoveRef = useRef<((move: Move) => void) | null>(null);
-  const crownFrame = useRef<number>(0);
   const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
-
-  const handleKeyDown = (
-    e: React.KeyboardEvent<HTMLDivElement>,
-    r: number,
-    c: number
-  ) => {
-    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Space') {
-      e.preventDefault();
-      selected ? tryMove(r, c) : selectPiece(r, c);
-      return;
-    }
-    const focus = (nr: number, nc: number) => {
-      cellRefs.current[nr]?.[nc]?.focus();
-    };
-    switch (e.key) {
-      case 'ArrowUp':
-        if (r > 0) {
-          e.preventDefault();
-          focus(r - 1, c);
-        }
-        break;
-      case 'ArrowDown':
-        if (r < 7) {
-          e.preventDefault();
-          focus(r + 1, c);
-        }
-        break;
-      case 'ArrowLeft':
-        if (c > 0) {
-          e.preventDefault();
-          focus(r, c - 1);
-        }
-        break;
-      case 'ArrowRight':
-        if (c < 7) {
-          e.preventDefault();
-          focus(r, c + 1);
-        }
-        break;
-      default:
-        break;
-    }
-  };
+  const pathRef = useRef<[number, number][]>([]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker('/checkers-worker.js');
-      workerRef.current.onmessage = (e: MessageEvent<Move>) => {
-        const move = e.data;
-        if (hintRequest.current) {
-          setHint(move);
-          hintRequest.current = false;
-          setTimeout(() => setHint(null), 1000);
-        } else if (move) {
-          makeMoveRef.current?.(move);
-        }
-      };
-      return () => workerRef.current?.terminate();
-    }
-    return undefined;
-  }, []);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('checkersState');
-    if (saved) {
-      const state = JSON.parse(saved);
-      setBoard(state.board);
-      setTurn(state.turn);
-      setHistory((state.history || []).map((h: any) => ({
-        board: h.board,
-        turn: h.turn,
-        no: h.no,
-        move: h.move || [],
-      })));
-      setFuture((state.future || []).map((f: any) => ({
-        board: f.board,
-        turn: f.turn,
-        no: f.no,
-        move: f.move || [],
-      })));
-      setNoCapture(state.noCapture || 0);
-      setWinner(state.winner);
-      setDraw(state.draw);
-      setLastMove(state.lastMove || []);
-      if (state.turn === 'black') {
-        setTimeout(
-          () =>
-            workerRef.current?.postMessage({
-              board: state.board,
-              color: 'black',
-              maxDepth: 8,
-              enforceCapture: rule === 'forced',
-            }),
-          0,
-        );
-      }
-    }
+    const next = createGameState(rule);
+    setGame(next);
+    setWinner(null);
+    setDraw(false);
+    setSelected(null);
+    setMoves([]);
+    setLastMove([]);
+    pathRef.current = [];
   }, [rule]);
 
   useEffect(() => {
-    const state = {
-      board,
-      turn,
-      history,
-      future,
-      noCapture,
-      winner,
-      draw,
-      lastMove,
-    };
-    localStorage.setItem('checkersState', JSON.stringify(state));
-  }, [board, turn, history, future, noCapture, winner, draw, lastMove]);
+    if (game.turnState.pendingCaptureFrom) {
+      const [r, c] = game.turnState.pendingCaptureFrom;
+      const legal = getLegalMoves(game).filter((m) => m.from[0] === r && m.from[1] === c);
+      setSelected([r, c]);
+      setMoves(legal);
+    }
+  }, [game]);
 
-  const allMoves = useMemo(
-    () => getAllMoves(board, turn, rule === 'forced'),
-    [board, turn, rule],
-  );
+  const forced = useMemo(() => getForcedFromSquares(game), [game]);
+  const legalMoves = useMemo(() => getLegalMoves(game), [game]);
+
+  const focusBoard = () => boardRef.current?.focus();
 
   const selectPiece = (r: number, c: number) => {
-    const piece = board[r][c];
-    if (winner || draw || !piece || piece.color !== turn) return;
-    setCursor([r, c]);
-    const pieceMoves = getPieceMoves(board, r, c, rule === 'forced');
-    const mustCapture = rule === 'forced' && allMoves.some((m) => m.captured);
-    const filtered = mustCapture ? pieceMoves.filter((m) => m.captured) : pieceMoves;
-    if (filtered.length) {
+    const piece = game.board[r][c];
+    if (!piece || piece.color !== game.turnState.turn || winner || draw) return;
+    const key = `${r}-${c}`;
+    if (forced.size && !forced.has(key)) return;
+    const pieceMoves = legalMoves.filter((m) => m.from[0] === r && m.from[1] === c);
+    if (pieceMoves.length) {
       setSelected([r, c]);
-      setMoves(filtered);
-      setAriaMessage(`${filtered.length} legal move${filtered.length > 1 ? 's' : ''} available`);
+      setMoves(pieceMoves);
+      setAriaMessage(`${pieceMoves.length} legal move${pieceMoves.length > 1 ? 's' : ''} available`);
     }
-    focusBoard();
+  };
+
+  const applyAndUpdate = (move: Move) => {
+    const { next, events } = applyStep(game, move);
+    const path = pathRef.current.length ? [...pathRef.current, move.to] : [move.from, move.to];
+    pathRef.current = path;
+    setGame(next);
+    setSelected(null);
+    setMoves([]);
+    setHint(null);
+    setLastMove(path);
+
+    if (events.kinged) {
+      setAriaMessage(`Piece crowned at row ${move.to[0] + 1}, column ${move.to[1] + 1}`);
+    } else {
+      setAriaMessage('');
+    }
+
+    if (events.winner) {
+      setWinner(events.winner);
+      ReactGA.event({ category: 'Checkers', action: 'game_over', label: events.winner });
+    } else if (events.draw) {
+      setDraw(true);
+      ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
+    }
+
+    if (events.turnEnded) {
+      pathRef.current = [];
+    }
   };
 
   const tryMove = (r: number, c: number) => {
     const move = moves.find((m) => m.to[0] === r && m.to[1] === c);
-    if (!move) return;
-    makeMove(move);
-    setCursor([r, c]);
-    focusBoard();
-  };
-
-    const makeMove = (move: Move) => {
-    if (pathRef.current.length === 0) pathRef.current = [move.from, move.to];
-    else pathRef.current.push(move.to);
-    const { board: newBoard, capture, king } = applyMove(board, move);
-    const further = capture
-      ? getPieceMoves(newBoard, move.to[0], move.to[1]).filter((m) => m.captured)
-      : [];
-    setBoard(newBoard);
-    if (king) {
-      setCrowned([move.to[0], move.to[1]]);
-      setAriaMessage(`Piece crowned at row ${move.to[0] + 1}, column ${move.to[1] + 1}`);
-      if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
-      const start = performance.now();
-      const step = (now: number) => {
-        if (now - start > 1000) {
-          setCrowned(null);
-        } else {
-          crownFrame.current = requestAnimationFrame(step);
-        }
-      };
-      crownFrame.current = requestAnimationFrame(step);
+    if (move) {
+      applyAndUpdate(move);
+      focusBoard();
     }
-    if (capture && further.length) {
-      setSelected([move.to[0], move.to[1]]);
-      setMoves(further);
-      setNoCapture(0);
-      return;
-    }
-    const newHistory = [
-      ...history,
-      { board, turn, no: noCapture, move: pathRef.current },
-    ];
-    setHistory(newHistory);
-    setFuture([]);
-    const next = turn === 'red' ? 'black' : 'red';
-    const newNo = capture || king ? 0 : noCapture + 1;
-    setNoCapture(newNo);
-    ReactGA.event({
-      category: 'Checkers',
-      action: 'move',
-      label: turn === 'red' ? 'player' : 'ai',
-    });
-    if (capture) {
-      ReactGA.event({
-        category: 'Checkers',
-        action: 'capture',
-        label: turn === 'red' ? 'player' : 'ai',
-      });
-    }
-    if (isDraw(newNo)) {
-      setDraw(true);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
-      setLastMove(pathRef.current);
-      pathRef.current = [];
-      return;
-    }
-    if (!hasMoves(newBoard, next, rule === 'forced')) {
-      setWinner(turn);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: turn });
-    } else {
-      setTurn(next);
-      if (next === 'black') {
-        workerRef.current?.postMessage({
-          board: newBoard,
-          color: 'black',
-          maxDepth: 8,
-          enforceCapture: rule === 'forced',
-        });
-      }
-    }
-    setSelected(null);
-    setMoves([]);
-    setHint(null);
-    setLastMove(pathRef.current);
-    setAriaMessage('');
-    pathRef.current = [];
-    focusBoard();
-    };
-
-    makeMoveRef.current = makeMove;
-
-  const reset = () => {
-    if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
-    setBoard(createBoard());
-    setTurn('red');
-    setSelected(null);
-    setMoves([]);
-    setWinner(null);
-    setDraw(false);
-    setHistory([]);
-    setFuture([]);
-    setNoCapture(0);
-    setHint(null);
-    setLastMove([]);
-    setCrowned(null);
-    setAriaMessage('');
-    pathRef.current = [];
-    setCursor([0, 0]);
-    localStorage.removeItem('checkersState');
-    focusBoard();
-  };
-
-  const undo = () => {
-    if (!history.length) return;
-    const prev = history[history.length - 1];
-    setFuture([{ board, turn, no: noCapture, move: lastMove }, ...future]);
-    setBoard(prev.board);
-    setTurn(prev.turn as 'red' | 'black');
-    setNoCapture(prev.no);
-    setHistory(history.slice(0, -1));
-    setWinner(null);
-    setDraw(false);
-    setSelected(null);
-    setMoves([]);
-    setHint(null);
-    setLastMove(prev.move || []);
-    if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
-    setAriaMessage('');
-    pathRef.current = [];
-    if (prev.turn === 'black') {
-      workerRef.current?.postMessage({
-        board: prev.board,
-        color: 'black',
-        maxDepth: 8,
-        enforceCapture: rule === 'forced',
-      });
-    }
-    focusBoard();
-  };
-
-  const redo = () => {
-    if (!future.length) return;
-    const next = future[0];
-    setHistory([...history, { board, turn, no: noCapture, move: lastMove }]);
-    setBoard(next.board);
-    setTurn(next.turn as 'red' | 'black');
-    setNoCapture(next.no);
-    setFuture(future.slice(1));
-    setWinner(null);
-    setDraw(false);
-    setSelected(null);
-    setMoves([]);
-    setHint(null);
-    setLastMove(next.move || []);
-    if (crownFrame.current) cancelAnimationFrame(crownFrame.current);
-    setAriaMessage('');
-    pathRef.current = [];
-    if (next.turn === 'black') {
-      workerRef.current?.postMessage({
-        board: next.board,
-        color: 'black',
-        maxDepth: 8,
-        enforceCapture: rule === 'forced',
-      });
-    }
-    focusBoard();
   };
 
   const hintMove = () => {
-    hintRequest.current = true;
-    workerRef.current?.postMessage({
-      board,
-      color: turn,
-      maxDepth: 8,
-      enforceCapture: rule === 'forced',
-    });
-    focusBoard();
+    if (winner || draw) return;
+    const move = chooseMove(game, 4);
+    setHint(move);
+    if (move) {
+      setTimeout(() => setHint(null), 1000);
+    }
   };
 
-  const toggleShowLegal = () => {
-    setShowLegal((s) => !s);
-    setAriaMessage(showLegal ? 'Hiding legal moves' : 'Showing legal moves');
-    focusBoard();
+  const reset = () => {
+    const next = createGameState(rule);
+    setGame(next);
+    setWinner(null);
+    setDraw(false);
+    setSelected(null);
+    setMoves([]);
+    setHint(null);
+    setLastMove([]);
+    pathRef.current = [];
+    setAriaMessage('');
   };
 
-  const exportMoves = () => {
-    const toSquare = ([r, c]: [number, number]) =>
-      `${String.fromCharCode(97 + c)}${8 - r}`;
-    const moveStr = history
-      .map((h, i) => {
-        const capture = h.move.some(
-          (p, idx) => idx > 0 && Math.abs(p[0] - h.move[idx - 1][0]) === 2,
-        );
-        const path = h.move.map(toSquare).join(capture ? 'x' : '-');
-        return `${i + 1}. ${path}`;
-      })
-      .join('\n');
-    const blob = new Blob([moveStr], { type: 'text/plain' });
+  useEffect(() => {
+    const runAi = async () => {
+      if (winner || draw) return;
+      if (game.turnState.turn !== 'black') return;
+      let current = game;
+      while (current.turnState.turn === 'black' && !winner && !draw) {
+        const move = chooseMove(current, 4);
+        if (!move) {
+          setWinner('red');
+          return;
+        }
+        const { next, events } = applyStep(current, move);
+        setGame(next);
+        setLastMove((prev) => {
+          const path = prev.length ? prev : [move.from];
+          return [...path, move.to];
+        });
+        if (events.winner) {
+          setWinner(events.winner);
+        }
+        if (events.draw) {
+          setDraw(true);
+          break;
+        }
+        if (events.turnEnded) break;
+        current = next;
+      }
+    };
+    runAi();
+  }, [game, winner, draw]);
+
+  const exportState = () => {
+    const key = serializePosition(
+      game.board,
+      game.turnState.turn,
+      game.turnState.pendingCaptureFrom,
+      game.rules.mode,
+    );
+    const blob = new Blob([key], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'checkers-moves.txt';
+    a.download = 'checkers-state.txt';
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const focusBoard = () => boardRef.current?.focus();
+  const forcedClass = (r: number, c: number) => (forced.has(`${r}-${c}`) ? 'ring-4 ring-amber-400' : '');
 
   useEffect(() => {
     focusBoard();
   }, []);
-
-  const handleKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    let [r, c] = cursor;
-    if (e.key === 'ArrowUp') {
-      r = Math.max(0, r - 1);
-    } else if (e.key === 'ArrowDown') {
-      r = Math.min(7, r + 1);
-    } else if (e.key === 'ArrowLeft') {
-      c = Math.max(0, c - 1);
-    } else if (e.key === 'ArrowRight') {
-      c = Math.min(7, c + 1);
-    } else if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      selected ? tryMove(r, c) : selectPiece(r, c);
-      return;
-    } else if (e.key.toLowerCase() === 'z') {
-      e.preventDefault();
-      undo();
-      return;
-    } else if (e.key.toLowerCase() === 'y') {
-      e.preventDefault();
-      redo();
-      return;
-    } else if (e.key.toLowerCase() === 'h') {
-      e.preventDefault();
-      hintMove();
-      return;
-    } else if (e.key.toLowerCase() === 'l') {
-      e.preventDefault();
-      toggleShowLegal();
-      return;
-    }
-    if (r !== cursor[0] || c !== cursor[1]) {
-      e.preventDefault();
-      setCursor([r, c]);
-    }
-  };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-kali-background text-kali-text p-4">
@@ -431,11 +187,10 @@ const Checkers = () => {
       <div
         ref={boardRef}
         tabIndex={0}
-        onKeyDown={handleKey}
         aria-label="Checkers board"
         className="grid grid-cols-8 gap-0 outline-none"
       >
-        {board.map((row, r) =>
+        {game.board.map((row, r) =>
           row.map((cell, c) => {
             const isDark = (r + c) % 2 === 1;
             const isMove = moves.some((m) => m.to[0] === r && m.to[1] === c);
@@ -443,8 +198,6 @@ const Checkers = () => {
             const isHintDest = hint && hint.to[0] === r && hint.to[1] === c;
             const isSelected = selected && selected[0] === r && selected[1] === c;
             const isLast = lastMove.some((p) => p[0] === r && p[1] === c);
-            const isCrowned = crowned && crowned[0] === r && crowned[1] === c;
-            const isCursor = cursor[0] === r && cursor[1] === c;
             const showMove = showLegal && isMove;
             return (
               <div
@@ -454,42 +207,29 @@ const Checkers = () => {
                   cellRefs.current[r][c] = el;
                 }}
                 tabIndex={0}
-                onKeyDown={(e) => handleKeyDown(e, r, c)}
-                {...pointerHandlers(() =>
-                  selected ? tryMove(r, c) : selectPiece(r, c)
-                )}
+                {...pointerHandlers(() => (selected ? tryMove(r, c) : selectPiece(r, c)))}
                 className={`w-12 h-12 md:w-14 md:h-14 flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-kali-focus ${
                   isDark ? 'bg-kali-panel-dark' : 'bg-kali-panel-light'
                 } ${
                   showMove
                     ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-kali-dark drop-shadow-[0_0_8px_#fbbf24] motion-safe:animate-glow'
                     : ''
-                } ${
-                  isHint || isHintDest
-                    ? 'ring-2 ring-kali-accent motion-safe:animate-pulse'
-                    : ''
-                } ${isSelected ? 'ring-2 ring-kali-control' : ''} ${
-                  isLast ? 'ring-2 ring-kali-error' : ''
-                } ${isCursor ? 'ring-2 ring-yellow-300' : ''}`}
+                } ${isHint || isHintDest ? 'ring-2 ring-kali-accent motion-safe:animate-pulse' : ''} ${
+                  isSelected ? 'ring-2 ring-kali-control' : ''
+                } ${isLast ? 'ring-2 ring-kali-error' : ''} ${forcedClass(r, c)}`}
               >
                 {cell && (
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
-                      cell.color === 'red'
-                        ? 'bg-kali-error text-white'
-                        : 'bg-kali-accent text-kali-dark'
-                    } ${cell.king ? 'border-4 border-yellow-300' : ''} ${
-                      isCrowned ? 'motion-safe:animate-flourish' : ''
-                    }`}
+                      cell.color === 'red' ? 'bg-kali-error text-white' : 'bg-kali-accent text-kali-dark'
+                    } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
                   >
-                    {cell.king && (
-                      <span className="text-yellow-300 text-sm font-bold">K</span>
-                    )}
+                    {cell.king && <span className="text-yellow-300 text-sm font-bold">K</span>}
                   </div>
                 )}
               </div>
             );
-          })
+          }),
         )}
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
@@ -502,30 +242,18 @@ const Checkers = () => {
           </button>
         ) : (
           <>
-            <span className="mr-2 font-semibold text-kali-control">Turn: {turn}</span>
+            <span className="mr-2 font-semibold text-kali-control">Turn: {game.turnState.turn}</span>
             <label className="flex items-center gap-1 font-medium">
               Rules:
               <select
                 className="ml-1 rounded border border-kali-border/60 bg-kali-panel-dark px-2 py-1 text-sm text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus focus:ring-offset-2 focus:ring-offset-kali-dark"
                 value={rule}
-                onChange={(e) => setRule(e.target.value as 'forced' | 'relaxed')}
+                onChange={(e) => setRule(e.target.value as RuleMode)}
               >
                 <option value="forced">Forced Capture</option>
                 <option value="relaxed">Capture Optional</option>
               </select>
             </label>
-            <button
-              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-              onClick={undo}
-            >
-              Undo
-            </button>
-            <button
-              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-              onClick={redo}
-            >
-              Redo
-            </button>
             <button
               className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               onClick={hintMove}
@@ -534,7 +262,7 @@ const Checkers = () => {
             </button>
             <button
               className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-              onClick={toggleShowLegal}
+              onClick={() => setShowLegal((s) => !s)}
               aria-pressed={showLegal}
             >
               {showLegal ? 'Hide Moves' : 'Show Moves'}
@@ -543,9 +271,15 @@ const Checkers = () => {
         )}
         <button
           className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-          onClick={exportMoves}
+          onClick={exportState}
         >
-          Export Moves
+          Export State
+        </button>
+        <button
+          className="rounded border border-kali-border/60 bg-kali-error/80 px-2 py-1 font-medium text-white transition-colors hover:bg-kali-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+          onClick={reset}
+        >
+          Reset
         </button>
       </div>
     </div>

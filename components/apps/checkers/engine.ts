@@ -176,3 +176,18 @@ export const isDraw = (
   }
   return false;
 };
+
+export const serializeBoard = (board: Board): string => {
+  const { red, black, kings } = boardToBitboards(board);
+  return `${red.toString(16)}-${black.toString(16)}-${kings.toString(16)}`;
+};
+
+export const serializePosition = (
+  board: Board,
+  turn: Color,
+  pendingCaptureFrom: [number, number] | null,
+  mode: 'forced' | 'relaxed',
+): string =>
+  `${serializeBoard(board)}-${turn}-${
+    pendingCaptureFrom ? pendingCaptureFrom.join(',') : 'none'
+  }-${mode}`;
