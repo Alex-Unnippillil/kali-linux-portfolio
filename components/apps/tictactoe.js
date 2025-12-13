@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import GameLayout from './GameLayout';
-import { checkWinner, minimax, createBoard } from '../../apps/games/tictactoe/logic';
+import {
+  checkWinner,
+  createBoard,
+  getTurn,
+  applyMove,
+  chooseAiMove,
+} from '../../apps/games/tictactoe/logic';
 
 const SKINS = {
   classic: { X: 'X', O: 'O' },
@@ -19,6 +25,7 @@ const TicTacToe = () => {
   const [ai, setAi] = useState(null);
   const [status, setStatus] = useState('Choose X or O');
   const [winLine, setWinLine] = useState(null);
+  const [aiThinking, setAiThinking] = useState(false);
   const [stats, setStats] = useState(() => {
     if (typeof window === 'undefined') return {};
     try {
@@ -29,6 +36,7 @@ const TicTacToe = () => {
   });
 
   const lineRef = useRef(null);
+  const aiTimeoutRef = useRef(null);
 
   const variantKey = `${mode}-${size}`;
   const recordResult = useCallback(
@@ -58,7 +66,16 @@ const TicTacToe = () => {
     setAi(null);
     setStatus('Choose X or O');
     setWinLine(null);
+    setAiThinking(false);
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+      aiTimeoutRef.current = null;
+    }
   }, [size, mode]);
+
+  useEffect(() => () => {
+    if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+  }, []);
 
   const startGame = (p) => {
     const a = p === 'X' ? 'O' : 'X';
@@ -71,10 +88,17 @@ const TicTacToe = () => {
 
   const handleClick = (idx) => {
     if (player === null) return;
-    if (board[idx] || checkWinner(board, size, mode === 'misere').winner) return;
-    const newBoard = board.slice();
-    newBoard[idx] = player;
-    setBoard(newBoard);
+    if (aiThinking) return;
+    const { winner } = checkWinner(board, size, mode === 'misere');
+    if (winner) return;
+    const toMove = getTurn(board);
+    if (toMove !== player) return;
+    if (board[idx]) return;
+    try {
+      setBoard((prev) => applyMove(prev, idx, player));
+    } catch {
+      // ignore illegal move
+    }
   };
 
   useEffect(() => {
@@ -83,40 +107,43 @@ const TicTacToe = () => {
     if (winner) {
       setStatus(winner === 'draw' ? 'Draw' : `${SKINS[skin][winner]} wins`);
       setWinLine(line);
+      setAiThinking(false);
       if (winner === 'draw') recordResult('draw');
       else if (winner === player) recordResult('win');
       else recordResult('loss');
       return;
     }
-    const filled = board.filter(Boolean).length;
-    const isPlayerTurn =
-      (player === 'X' && filled % 2 === 0) || (player === 'O' && filled % 2 === 1);
-    if (!isPlayerTurn) {
-      const getRandomMove = (b) => {
-        const options = b
-          .map((c, i) => (c ? null : i))
-          .filter((v) => v !== null);
-        return options[Math.floor(Math.random() * options.length)] ?? -1;
-      };
-      let move = -1;
-      if (level === 'easy') {
-        move = getRandomMove(board.slice());
-      } else if (level === 'medium') {
-        move = Math.random() < 0.5
-          ? getRandomMove(board.slice())
-          : minimax(board.slice(), ai, size, mode === 'misere').index;
-      } else {
-        move = minimax(board.slice(), ai, size, mode === 'misere').index;
-      }
-      if (move >= 0) {
-        const newBoard = board.slice();
-        newBoard[move] = ai;
-        setTimeout(() => setBoard(newBoard), 200);
-      }
-    } else {
+
+    const toMove = getTurn(board);
+    if (toMove === ai && !aiThinking) {
+      setStatus('AI thinking...');
+      setAiThinking(true);
+      if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current);
+      aiTimeoutRef.current = setTimeout(() => {
+        setBoard((current) => {
+          const currentWinner = checkWinner(current, size, mode === 'misere').winner;
+          if (currentWinner) return current;
+          const currentTurn = getTurn(current);
+          if (currentTurn !== ai) return current;
+          const move = chooseAiMove(current, ai, {
+            size,
+            mode: mode === 'misere' ? 'misere' : 'classic',
+            difficulty: level,
+            rng: Math.random,
+          });
+          if (move < 0 || current[move]) return current;
+          try {
+            return applyMove(current, move, ai);
+          } catch {
+            return current;
+          }
+        });
+        setAiThinking(false);
+      }, 200);
+    } else if (toMove === player && !aiThinking) {
       setStatus(`${SKINS[skin][player]}'s turn`);
     }
-  }, [board, player, ai, size, skin, mode, level, recordResult]);
+  }, [ai, aiThinking, board, level, mode, player, recordResult, size, skin]);
 
   useEffect(() => {
     if (winLine && lineRef.current) {
@@ -258,9 +285,14 @@ const TicTacToe = () => {
         <button
           className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded"
           onClick={() => {
+            if (aiTimeoutRef.current) {
+              clearTimeout(aiTimeoutRef.current);
+              aiTimeoutRef.current = null;
+            }
             setBoard(createBoard(size));
             setStatus(`${currentSkin[player]}'s turn`);
             setWinLine(null);
+            setAiThinking(false);
           }}
         >
           Restart
@@ -268,11 +300,16 @@ const TicTacToe = () => {
         <button
           className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           onClick={() => {
+            if (aiTimeoutRef.current) {
+              clearTimeout(aiTimeoutRef.current);
+              aiTimeoutRef.current = null;
+            }
             setPlayer(null);
             setAi(null);
             setBoard(createBoard(size));
             setStatus('Choose X or O');
             setWinLine(null);
+            setAiThinking(false);
           }}
         >
           Reset

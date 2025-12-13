@@ -1,26 +1,118 @@
-import { minimax, checkWinner, createBoard } from '../apps/games/tictactoe/logic';
+import {
+  applyMove,
+  checkWinner,
+  chooseAiMove,
+  createBoard,
+  getLegalMoves,
+} from '../apps/games/tictactoe/logic';
+
+const playPerfectGame = (firstMove: number) => {
+  let board = Array(9).fill(null);
+  const history: { player: 'X' | 'O'; move: number }[] = [];
+  board[firstMove] = 'X';
+  history.push({ player: 'X', move: firstMove });
+  while (true) {
+    let result = checkWinner(board, 3).winner;
+    if (result) return { winner: result, history };
+    const aiMove = chooseAiMove(board, 'O', {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    board = applyMove(board, aiMove, 'O');
+    history.push({ player: 'O', move: aiMove });
+    result = checkWinner(board, 3).winner;
+    if (result) return { winner: result, history };
+    const playerMove = chooseAiMove(board, 'X', {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    board = applyMove(board, playerMove, 'X');
+    history.push({ player: 'X', move: playerMove });
+  }
+};
 
 describe('tic tac toe AI', () => {
-  const simulate = (firstMove: number) => {
-    let board = Array(9).fill(null);
-    board[firstMove] = 'X';
-    while (true) {
-      let result = checkWinner(board, 3).winner;
-      if (result) return result;
-      const aiMove = minimax(board, 'O', 3).index;
-      board[aiMove] = 'O';
-      result = checkWinner(board, 3).winner;
-      if (result) return result;
-      const playerMove = minimax(board, 'X', 3).index;
-      board[playerMove] = 'X';
-    }
-  };
+    it('AI never loses on hard mode', () => {
+      const failures: number[] = [];
+      for (let i = 0; i < 9; i++) {
+        const result = playPerfectGame(i);
+        if (result.winner === 'X') failures.push(i);
+      }
+      expect(failures).toEqual([]);
+    });
 
-  it('AI never loses on hard mode', () => {
-    for (let i = 0; i < 9; i++) {
-      const result = simulate(i);
-      expect(result).not.toBe('X');
-    }
+  it('picks center on an empty board', () => {
+    const baseBoard = createBoard(3);
+    const move = chooseAiMove(baseBoard, 'X', {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    expect(move).toBe(4);
+  });
+
+  it('responds with center after a corner start', () => {
+    const board = createBoard(3);
+    board[0] = 'X';
+    const move = chooseAiMove(board, 'O', {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    expect(move).toBe(4);
+  });
+
+  it('avoids completing its own line in misère when possible', () => {
+    const board = [
+      'X',
+      'X',
+      null,
+      'O',
+      'O',
+      null,
+      null,
+      null,
+      null,
+    ];
+    // It is X's turn; placing at index 2 would complete a line and lose.
+    const move = chooseAiMove(board, 'X', {
+      size: 3,
+      mode: 'misere',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    expect(move).not.toBe(2);
+    expect(board[move]).toBeNull();
+  });
+
+  it('blocks obvious threats on hard mode', () => {
+    const board = ['X', 'X', null, null, 'O', null, null, null, null];
+    const move = chooseAiMove(board, 'O', {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    expect(move).toBe(2);
+  });
+});
+
+describe('minimax legality', () => {
+  it('only returns legal cells', () => {
+    const board = ['X', 'O', 'X', null, null, null, null, null, null];
+    const move = chooseAiMove(board, 'O', {
+      size: 3,
+      mode: 'classic',
+      difficulty: 'hard',
+      rng: () => 0,
+    });
+    expect(getLegalMoves(board)).toContain(move);
   });
 });
 
