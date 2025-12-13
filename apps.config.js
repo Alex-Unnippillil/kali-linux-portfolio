@@ -89,7 +89,7 @@ const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
 const PinballApp = createDynamicApp('pinball', 'Pinball');
 const VolatilityApp = createDynamicApp('volatility', 'Volatility');
 
-const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
+const KismetApp = createDynamicApp('kismet', 'Kismet');
 
 const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
 const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
