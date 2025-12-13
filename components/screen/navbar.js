@@ -1,3 +1,5 @@
+'use client';
+
 import React, { PureComponent } from 'react';
 import Image from 'next/image';
 import Clock from '../util-components/clock';
@@ -35,6 +37,120 @@ const areWorkspacesEqual = (next, prev) => {
 };
 
 const TASKBAR_PREVIEW_WIDTH = 280;
+
+const normalizePinnedApps = (payload) => {
+        if (!payload) return [];
+        if (Array.isArray(payload)) {
+                return payload.filter((item) => item && typeof item.id !== 'undefined');
+        }
+        return [];
+};
+
+const clampIndex = (value, min, max) => Math.min(Math.max(value, min), max);
+
+const reorderList = (list, sourceId, targetId, insertAfter = false) => {
+        if (!Array.isArray(list) || list.length === 0) return null;
+        if (!sourceId || sourceId === targetId) return null;
+
+        const working = [...list];
+        const sourceIndex = working.findIndex((item) => item.id === sourceId);
+        if (sourceIndex === -1) return null;
+
+        const [moved] = working.splice(sourceIndex, 1);
+        const targetIndex = targetId ? working.findIndex((item) => item.id === targetId) : -1;
+        const defaultIndex = insertAfter ? working.length : 0;
+        const desiredIndex = targetIndex === -1 ? defaultIndex : (insertAfter ? targetIndex + 1 : targetIndex);
+        const insertIndex = clampIndex(desiredIndex, 0, working.length);
+
+        working.splice(insertIndex, 0, moved);
+        const unchanged = list.length === working.length && list.every((item, index) => item.id === working[index].id);
+        return unchanged ? null : working;
+};
+
+const safeParsePinnedPayload = (payload) => {
+        if (Array.isArray(payload)) return normalizePinnedApps(payload);
+        if (typeof payload === 'string') {
+                try {
+                        const parsed = JSON.parse(payload);
+                        return normalizePinnedApps(parsed);
+                } catch (error) {
+                        return [];
+                }
+        }
+        return [];
+};
+
+const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop }, ref) => {
+        if (!apps?.length) return null;
+
+        return (
+                <ul
+                        ref={ref}
+                        className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        role="list"
+                        aria-label="Open applications"
+                        onDragOver={onDragOver}
+                        onDrop={onDrop}
+                >
+                        {apps.map((app) => renderItem(app))}
+                </ul>
+        );
+});
+
+RunningAppsList.displayName = 'RunningAppsList';
+
+const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop }, ref) => {
+        const hasItems = Array.isArray(apps) && apps.length > 0;
+
+        return (
+                <ul
+                        ref={ref}
+                        className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        role="list"
+                        aria-label="Pinned applications"
+                        onDragOver={onDragOver}
+                        onDrop={onDrop}
+                >
+                        {hasItems
+                                ? apps.map((app) => renderItem(app))
+                                : (
+                                        <li className="pointer-events-none select-none px-2 text-xs text-white/40">
+                                                Drag apps here to pin
+                                        </li>
+                                )}
+                </ul>
+        );
+});
+
+PinnedAppsList.displayName = 'PinnedAppsList';
+
+const SystemTrayCluster = ({
+        children,
+        statusCardOpen,
+        onStatusToggle,
+        onStatusKeyDown,
+}) => (
+        <div className="flex items-center gap-4 text-xs md:text-sm">
+                <PerformanceGraph />
+                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                <div
+                        id="status-bar"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="System status"
+                        aria-expanded={statusCardOpen}
+                        onClick={onStatusToggle}
+                        onKeyDown={onStatusKeyDown}
+                        className={
+                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                        }
+                >
+                        <Status />
+                        <QuickSettings open={statusCardOpen} />
+                </div>
+                {children}
+        </div>
+);
 const areBadgesEqual = (nextBadge, prevBadge) => {
         if (nextBadge === prevBadge) return true;
         if (!nextBadge || !prevBadge) return false;
@@ -315,6 +431,7 @@ export default class Navbar extends PureComponent {
                 this.setState((prevState) => {
                         const current = prevState.preview;
                         if (!current || current.appId !== appId || current.requestId !== requestId) {
+                                this.previewFocusPending = false;
                                 return null;
                         }
                         return {
@@ -405,7 +522,14 @@ export default class Navbar extends PureComponent {
                 this.clearPreviewHideTimeout();
         };
 
-        handlePreviewMouseLeave = () => {
+        handlePreviewMouseLeave = (event) => {
+                const related = event?.relatedTarget;
+                const currentAppId = this.state.preview?.appId;
+                const taskbarButton = this.getTaskbarButtonElement(currentAppId);
+                const isTaskbarTarget = typeof related?.getAttribute === 'function' && related.getAttribute('data-context') === 'taskbar';
+                if (related && (this.previewFlyoutRef.current?.contains(related) || taskbarButton?.contains(related) || isTaskbarTarget)) {
+                        return;
+                }
                 this.schedulePreviewHide();
         };
 
@@ -456,7 +580,12 @@ export default class Navbar extends PureComponent {
                 this.openPreviewForApp(app, event.currentTarget);
         };
 
-        handleAppButtonMouseLeave = () => {
+        handleAppButtonMouseLeave = (event) => {
+                const related = event?.relatedTarget;
+                const isTaskbarTarget = typeof related?.getAttribute === 'function' && related.getAttribute('data-context') === 'taskbar';
+                if (related && (this.previewFlyoutRef.current?.contains(related) || isTaskbarTarget)) {
+                        return;
+                }
                 this.schedulePreviewHide();
         };
 
@@ -478,7 +607,7 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
-                const nextPinnedApps = Array.isArray(detail.pinnedApps) ? detail.pinnedApps : [];
+                const nextPinnedApps = safeParsePinnedPayload(detail.pinnedApps);
 
                 let runningAppsChanged = false;
 
@@ -542,16 +671,13 @@ export default class Navbar extends PureComponent {
                 if (!visibleApps.length) return null;
 
                 return (
-                        <ul
+                        <RunningAppsList
                                 ref={this.taskbarListRef}
-                                className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
-                                role="list"
-                                aria-label="Open applications"
+                                apps={visibleApps}
+                                renderItem={this.renderRunningAppItem}
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
-                        >
-                                {visibleApps.map((app) => this.renderRunningAppItem(app))}
-                        </ul>
+                        />
                 );
         };
 
@@ -573,24 +699,14 @@ export default class Navbar extends PureComponent {
 
         renderPinnedApps = () => {
                 const { pinnedApps = [] } = this.state;
-                const hasItems = pinnedApps.length > 0;
 
                 return (
-                        <ul
-                                className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
-                                role="list"
-                                aria-label="Pinned applications"
+                        <PinnedAppsList
+                                apps={pinnedApps}
+                                renderItem={this.renderPinnedAppItem}
                                 onDragOver={this.handlePinnedDragOver}
                                 onDrop={this.handlePinnedContainerDrop}
-                        >
-                                {hasItems
-                                        ? pinnedApps.map((app) => this.renderPinnedAppItem(app))
-                                        : (
-                                                <li className="pointer-events-none select-none px-2 text-xs text-white/40">
-                                                        Drag apps here to pin
-                                                </li>
-                                        )}
-                        </ul>
+                        />
                 );
         };
 
@@ -876,7 +992,7 @@ export default class Navbar extends PureComponent {
                 if (!sourceId) return;
                 this.pendingPinnedReorder = null;
                 this.setState((prevState) => {
-                        const updated = this.computeReorderedApps(prevState.pinnedApps, sourceId, targetId, insertAfter);
+                        const updated = reorderList(prevState.pinnedApps, sourceId, targetId, insertAfter);
                         if (!updated) return null;
                         this.pendingPinnedReorder = updated.map((item) => item.id);
                         return { pinnedApps: updated };
@@ -892,7 +1008,7 @@ export default class Navbar extends PureComponent {
                 if (!sourceId) return;
                 this.pendingReorder = null;
                 this.setState((prevState) => {
-                        const updated = this.computeReorderedApps(prevState.runningApps, sourceId, targetId, insertAfter);
+                        const updated = reorderList(prevState.runningApps, sourceId, targetId, insertAfter);
                         if (!updated) return null;
                         this.pendingReorder = updated.map((item) => item.id);
                         return { runningApps: updated };
@@ -902,39 +1018,6 @@ export default class Navbar extends PureComponent {
                                 this.pendingReorder = null;
                         }
                 });
-        };
-
-        computeReorderedApps = (apps, sourceId, targetId, insertAfter) => {
-                if (!Array.isArray(apps) || apps.length === 0) return null;
-                if (sourceId === targetId) return null;
-
-                const list = [...apps];
-                const sourceIndex = list.findIndex((item) => item.id === sourceId);
-                if (sourceIndex === -1) return null;
-
-                const [moved] = list.splice(sourceIndex, 1);
-
-                let insertIndex;
-                if (!targetId) {
-                        insertIndex = insertAfter ? list.length : 0;
-                } else {
-                        const targetIndex = list.findIndex((item) => item.id === targetId);
-                        if (targetIndex === -1) {
-                                insertIndex = list.length;
-                        } else {
-                                insertIndex = insertAfter ? targetIndex + 1 : targetIndex;
-                        }
-                }
-
-                if (insertIndex < 0) insertIndex = 0;
-                if (insertIndex > list.length) insertIndex = list.length;
-
-                list.splice(insertIndex, 0, moved);
-
-                const unchanged = apps.length === list.length && apps.every((item, index) => item.id === list[index].id);
-                if (unchanged) return null;
-
-                return list;
         };
 
         handleWorkspaceSelect = (workspaceId) => {
@@ -964,6 +1047,8 @@ export default class Navbar extends PureComponent {
                         <div
                                 ref={this.navbarRef}
                                 className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                role="navigation"
+                                aria-label="Desktop taskbar"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
                                         paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
@@ -983,26 +1068,12 @@ export default class Navbar extends PureComponent {
                                         )}
                                         {pinnedApps}
                                         {runningApps}
-                                        <PerformanceGraph />
                                 </div>
-                                <div className="flex items-center gap-4 text-xs md:text-sm">
-                                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                                        <div
-                                                id="status-bar"
-                                                role="button"
-                                                tabIndex={0}
-                                                aria-label="System status"
-                                                aria-expanded={this.state.status_card}
-                                                onClick={this.handleStatusToggle}
-                                                onKeyDown={this.handleStatusKeyDown}
-                                                className={
-                                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                                                }
-                                        >
-                                                <Status />
-                                                <QuickSettings open={this.state.status_card} />
-                                        </div>
-                                </div>
+                                <SystemTrayCluster
+                                        statusCardOpen={this.state.status_card}
+                                        onStatusToggle={this.handleStatusToggle}
+                                        onStatusKeyDown={this.handleStatusKeyDown}
+                                />
                                 <TaskbarPreviewFlyout
                                         ref={this.previewFlyoutRef}
                                         visible={Boolean(preview)}
