@@ -1,12 +1,26 @@
-import React, { useEffect } from 'react';
+"use client";
+
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import Clock from '../util-components/clock';
 import { useSettings } from '../../hooks/useSettings';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
+const UNLOCK_KEYS = ['Enter', ' ', 'Spacebar', 'Escape'];
+
 export default function LockScreen(props) {
 
     const { bgImageName, useKaliWallpaper } = useSettings();
-    const useKaliTheme = useKaliWallpaper || bgImageName === 'kali-gradient';
+    const effectiveBgImageName = bgImageName || props.bgImgName || 'wall-2';
+    const useKaliTheme = useKaliWallpaper || effectiveBgImageName === 'kali-gradient';
+    const containerRef = useRef(null);
+    const unlockButtonRef = useRef(null);
+
+    const focusLockTarget = useCallback(() => {
+        const focusEl = unlockButtonRef.current || containerRef.current;
+        if (focusEl && typeof focusEl.focus === 'function') {
+            focusEl.focus({ preventScroll: true });
+        }
+    }, []);
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -17,35 +31,87 @@ export default function LockScreen(props) {
             return undefined;
         }
 
-        const handleUnlock = props.unLockScreen;
+        const removeListeners = () => {
+            window.removeEventListener('click', handleUnlock);
+            window.removeEventListener('keydown', handleKeyDown);
+        };
 
-        window.addEventListener('click', handleUnlock);
-        window.addEventListener('keypress', handleUnlock);
+        const handleUnlock = () => {
+            removeListeners();
+            props.unLockScreen?.();
+        };
+
+        const handleKeyDown = (event) => {
+            if (!props.isLocked) return;
+
+            if (event.key === 'Tab') {
+                event.preventDefault();
+                focusLockTarget();
+                return;
+            }
+
+            if (['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) {
+                return;
+            }
+
+            if (UNLOCK_KEYS.includes(event.key)) {
+                event.preventDefault();
+                handleUnlock();
+            }
+        };
+
+        focusLockTarget();
+
+        window.addEventListener('click', handleUnlock, { once: true });
+        window.addEventListener('keydown', handleKeyDown);
 
         return () => {
-            window.removeEventListener('click', handleUnlock);
-            window.removeEventListener('keypress', handleUnlock);
+            removeListeners();
         };
-    }, [props.isLocked, props.unLockScreen]);
+    }, [focusLockTarget, props.isLocked, props.unLockScreen]);
+
+    const wallpaperElement = useMemo(() => {
+        const blurClass = props.isLocked ? 'blur-sm' : 'blur-none';
+        const transitionClasses = `absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 motion-reduce:duration-0 motion-reduce:transition-none ${blurClass}`;
+
+        if (useKaliTheme) {
+            return (
+                <KaliWallpaper
+                    className={transitionClasses}
+                />
+            );
+        }
+
+        return (
+            <img
+                src={`/wallpapers/${effectiveBgImageName}.webp`}
+                alt=""
+                className={`${transitionClasses} object-cover`}
+            />
+        );
+    }, [effectiveBgImageName, props.isLocked, useKaliTheme]);
 
     return (
         <div
             id="ubuntu-lock-screen"
+            ref={containerRef}
             style={{ zIndex: "100", contentVisibility: 'auto' }}
-            aria-hidden={props.isLocked ? "false" : "true"}
-            className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
-            {useKaliTheme ? (
-                <KaliWallpaper
-                    className={`absolute top-0 left-0 h-full w-full transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
-                />
-            ) : (
-                <img
-                    src={`/wallpapers/${bgImageName}.webp`}
-                    alt=""
-                    className={`absolute top-0 left-0 w-full h-full object-cover transform z-20 transition duration-500 ${props.isLocked ? 'blur-sm' : 'blur-none'}`}
-                />
-            )}
+            aria-hidden={!props.isLocked}
+            role={props.isLocked ? 'dialog' : undefined}
+            aria-modal={props.isLocked ? true : undefined}
+            tabIndex={-1}
+            className={(props.isLocked ? " visible translate-y-0 " : " invisible -translate-y-full ") + " absolute outline-none bg-black bg-opacity-90 transform duration-500 motion-reduce:duration-0 motion-reduce:transition-none select-none top-0 right-0 overflow-hidden m-0 p-0 h-screen w-screen"}>
+            {wallpaperElement}
             <div className="w-full h-full z-50 overflow-hidden relative flex flex-col justify-center items-center text-white">
+                <button
+                    type="button"
+                    ref={unlockButtonRef}
+                    className="sr-only"
+                    onClick={props.unLockScreen}
+                >
+                    Unlock screen
+                </button>
+                <span className="sr-only">Press Enter, Space, or Escape to unlock.</span>
                 <div className=" text-7xl">
                     <Clock onlyTime={true} />
                 </div>
@@ -53,9 +119,9 @@ export default function LockScreen(props) {
                     <Clock onlyDay={true} />
                 </div>
                 <div className=" mt-16 text-base">
-                    Click or Press a key to unlock
+                    Click or press Enter, Space, or Escape to unlock
                 </div>
             </div>
         </div>
-    )
+    );
 }
