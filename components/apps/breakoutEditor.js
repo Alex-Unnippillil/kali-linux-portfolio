@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
+import { GridSchema, ROWS, COLS } from '../../games/breakout/schema';
 
-const ROWS = 5;
-const COLS = 10;
 const KEY_PREFIX = 'breakout-level:';
 
 const cellClass = (cell) =>
@@ -25,6 +24,7 @@ export default function BreakoutEditor({ onLoad }) {
     Array.from({ length: ROWS }, () => Array(COLS).fill(0)),
   );
   const [name, setName] = useState('level1');
+  const [error, setError] = useState('');
   const currentType = useRef(1);
   const dragging = useRef(false);
 
@@ -34,6 +34,7 @@ export default function BreakoutEditor({ onLoad }) {
       copy[r][c] = t;
       return copy;
     });
+    setError('');
   };
 
   const handleDrop = (r, c) => {
@@ -58,7 +59,13 @@ export default function BreakoutEditor({ onLoad }) {
   }, []);
 
   const save = () => {
-    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));
+    const parsed = GridSchema.safeParse(grid);
+    if (!parsed.success) {
+      setError(parsed.error.issues.map((i) => i.message).join(', '));
+      return;
+    }
+    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(parsed.data));
+    setError('');
   };
 
   const load = () => {
@@ -66,15 +73,27 @@ export default function BreakoutEditor({ onLoad }) {
     if (txt) {
       try {
         const arr = JSON.parse(txt);
-        if (Array.isArray(arr)) setGrid(arr);
+        const parsed = GridSchema.safeParse(arr);
+        if (parsed.success) {
+          setGrid(parsed.data);
+          setError('');
+        } else {
+          setError(parsed.error.issues.map((i) => i.message).join(', '));
+        }
       } catch {
-        /* ignore */
+        setError('Invalid level data');
       }
     }
   };
 
   const play = () => {
-    if (onLoad) onLoad(grid);
+    const parsed = GridSchema.safeParse(grid);
+    if (parsed.success) {
+      setError('');
+      if (onLoad) onLoad(parsed.data);
+    } else {
+      setError(parsed.error.issues.map((i) => i.message).join(', '));
+    }
   };
 
   return (
@@ -140,6 +159,7 @@ export default function BreakoutEditor({ onLoad }) {
           Play
         </button>
       </div>
+      {error && <div className="text-red-400 text-sm">{error}</div>}
     </div>
   );
 }

@@ -1,13 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { GridSchema, ROWS, COLS, Cell, Grid } from "./schema";
 
-const ROWS = 5;
-const COLS = 10;
 const KEY_PREFIX = "breakout-level:";
-
-type Cell = 0 | 1 | 2 | 3;
-type Grid = Cell[][];
 
 const cellClass = (cell: Cell) =>
   cell === 0
@@ -28,6 +24,7 @@ export default function BreakoutEditor() {
     Array.from({ length: ROWS }, () => Array(COLS).fill(0) as Cell[]),
   );
   const [name, setName] = useState("level1");
+  const [error, setError] = useState("");
   const currentType = useRef<Cell>(1);
   const dragging = useRef(false);
 
@@ -37,6 +34,7 @@ export default function BreakoutEditor() {
       copy[r][c] = t;
       return copy;
     });
+    setError("");
   };
 
   const handleDrop = (r: number, c: number) => {
@@ -61,7 +59,13 @@ export default function BreakoutEditor() {
   }, []);
 
   const save = () => {
-    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));
+    const parsed = GridSchema.safeParse(grid);
+    if (!parsed.success) {
+      setError(parsed.error.issues.map((i) => i.message).join(", "));
+      return;
+    }
+    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(parsed.data));
+    setError("");
   };
 
   const load = () => {
@@ -69,9 +73,15 @@ export default function BreakoutEditor() {
     if (txt) {
       try {
         const arr = JSON.parse(txt);
-        if (Array.isArray(arr)) setGrid(arr as Grid);
+        const parsed = GridSchema.safeParse(arr);
+        if (parsed.success) {
+          setGrid(parsed.data);
+          setError("");
+        } else {
+          setError(parsed.error.issues.map((i) => i.message).join(", "));
+        }
       } catch {
-        /* ignore */
+        setError("Invalid level data");
       }
     }
   };
@@ -132,6 +142,7 @@ export default function BreakoutEditor() {
           Load
         </button>
       </div>
+      {error && <div className="text-red-400 text-sm">{error}</div>}
     </div>
   );
 }

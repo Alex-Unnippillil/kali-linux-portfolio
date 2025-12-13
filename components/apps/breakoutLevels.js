@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { GridSchema } from '../../games/breakout/schema';
 
 const KEY_PREFIX = 'breakout-level:';
 
@@ -10,6 +11,7 @@ const KEY_PREFIX = 'breakout-level:';
  */
 export default function BreakoutLevels({ onSelect }) {
   const [levels, setLevels] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const arr = [];
@@ -26,9 +28,15 @@ export default function BreakoutLevels({ onSelect }) {
     const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);
     if (txt && onSelect) {
       try {
-        onSelect(JSON.parse(txt));
+        const parsed = GridSchema.safeParse(JSON.parse(txt));
+        if (parsed.success) {
+          onSelect(parsed.data);
+          setError('');
+        } else {
+          setError(parsed.error.issues.map((i) => i.message).join(', '));
+        }
       } catch {
-        /* ignore */
+        setError('Invalid level data');
       }
     }
   };
@@ -38,7 +46,10 @@ export default function BreakoutLevels({ onSelect }) {
       <div>Choose Level</div>
       <button
         type="button"
-        onClick={() => onSelect(null)}
+        onClick={() => {
+          setError('');
+          onSelect(null);
+        }}
         className="px-2 py-1 bg-gray-700 rounded"
       >
         Default
@@ -53,6 +64,7 @@ export default function BreakoutLevels({ onSelect }) {
           {lvl}
         </button>
       ))}
+      {error && <div className="text-red-400 text-sm">{error}</div>}
     </div>
   );
 }
