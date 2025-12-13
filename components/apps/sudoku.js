@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { generateSudoku, isValidPlacement } from '../../apps/games/sudoku';
+import { generateSudoku, isLegalMove } from '../../apps/games/sudoku';
 import { getHint } from '../../workers/sudokuSolver';
 import {
   createCell,
   cloneCell,
-  toggleCandidate,
   cellsToBoard,
+  sanitizeAllCandidates,
+  toggleCandidateIfLegal,
 } from '../../apps/games/sudoku/cell';
 
 const SIZE = 9;
@@ -68,15 +69,29 @@ const Sudoku = () => {
     if (puzzle[r][c] !== 0) return;
     const v = parseInt(value, 10);
     const newBoard = board.map((row) => row.map((cell) => cloneCell(cell)));
+    const matrix = cellsToBoard(newBoard);
     const cell = newBoard[r][c];
     if (pencilMode || forcePencil) {
-      if (v >= 1 && v <= 9) toggleCandidate(cell, v);
+      if (v >= 1 && v <= 9) {
+        const success = toggleCandidateIfLegal(
+          newBoard,
+          r,
+          c,
+          v,
+          (rr, cc, n) => isLegalMove(matrix, rr, cc, n),
+        );
+        if (!success) setAriaMessage(`Cannot pencil ${v} at row ${r + 1}, column ${c + 1}`);
+      }
     } else {
       const val = !v || v < 1 || v > 9 ? 0 : v;
+      if (val !== 0 && !isLegalMove(matrix, r, c, val)) {
+        setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
+        return;
+      }
       cell.value = val;
       cell.candidates = [];
       let countedMistake = false;
-      if (val !== 0 && !isValidPlacement(cellsToBoard(newBoard), r, c, val)) {
+      if (val !== 0 && hasConflict(newBoard, r, c, val)) {
         setMistakes((m) => m + 1);
         countedMistake = true;
         setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
@@ -98,6 +113,7 @@ const Sudoku = () => {
         setAriaMessage('Sudoku completed');
       }
     }
+    sanitizeAllCandidates(newBoard, (rr, cc, n) => isLegalMove(cellsToBoard(newBoard), rr, cc, n));
     setBoard(newBoard);
   };
 

@@ -2,17 +2,14 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import GameShell from "../../components/games/GameShell";
-import {
-  generateSudoku,
-  SIZE,
-  isValidPlacement,
-} from "../../apps/games/sudoku";
+import { generateSudoku, SIZE, isLegalMove } from "../../apps/games/sudoku";
 import {
   Cell,
   createCell,
   cloneCell,
-  toggleCandidate,
   cellsToBoard,
+  sanitizeAllCandidates,
+  toggleCandidateIfLegal,
 } from "../../apps/games/sudoku/cell";
 import PencilMarks from "./components/PencilMarks";
 
@@ -78,15 +75,22 @@ const SudokuGame: React.FC = () => {
     if (puzzle[r][c] !== 0) return;
     const v = parseInt(value, 10);
     const newBoard = board.map((row) => row.map((cell) => cloneCell(cell)));
+    const matrix = cellsToBoard(newBoard);
     const cell = newBoard[r][c];
     if ((pencilMode || forcePencil) && v >= 1 && v <= 9) {
-      toggleCandidate(cell, v);
+      const success = toggleCandidateIfLegal(
+        newBoard,
+        r,
+        c,
+        v,
+        (rr, cc, n) => isLegalMove(matrix, rr, cc, n),
+      );
+      if (!success) {
+        setAriaMessage(`Cannot pencil ${v} at row ${r + 1}, column ${c + 1}`);
+      }
     } else {
       const val = isNaN(v) ? 0 : v;
-      if (
-        val !== 0 &&
-        !isValidPlacement(cellsToBoard(newBoard), r, c, val)
-      ) {
+      if (val !== 0 && !isLegalMove(matrix, r, c, val)) {
         setAriaMessage(`Move at row ${r + 1}, column ${c + 1} invalid`);
         return;
       }
@@ -104,6 +108,9 @@ const SudokuGame: React.FC = () => {
         setAriaMessage("");
       }
     }
+    sanitizeAllCandidates(newBoard, (rr, cc, n) =>
+      isLegalMove(cellsToBoard(newBoard), rr, cc, n),
+    );
     setBoard(newBoard);
   };
 

@@ -28,3 +28,28 @@ export const toggleCandidate = (cell: Cell, n: number): void => {
 /** Convert a board of cells into a simple number matrix */
 export const cellsToBoard = (board: Cell[][]): number[][] =>
   board.map((row) => row.map((cell) => cell.value));
+
+export const sanitizeAllCandidates = (cells: Cell[][], isLegal: (r: number, c: number, n: number) => boolean): void => {
+  for (let r = 0; r < cells.length; r++) {
+    for (let c = 0; c < cells[r].length; c++) {
+      const cell = cells[r][c];
+      if (cell.value !== 0) {
+        cell.candidates = [];
+        continue;
+      }
+      cell.candidates = cell.candidates.filter((n) => isLegal(r, c, n));
+    }
+  }
+};
+
+export const toggleCandidateIfLegal = (
+  cells: Cell[][],
+  r: number,
+  c: number,
+  n: number,
+  isLegal: (r: number, c: number, n: number) => boolean,
+): boolean => {
+  if (!isLegal(r, c, n)) return false;
+  toggleCandidate(cells[r][c], n);
+  return true;
+};
