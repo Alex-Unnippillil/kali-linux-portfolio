@@ -232,6 +232,10 @@ export default class Navbar extends PureComponent {
                 this.previewHideTimeout = null;
                 this.previewRequestSequence = 0;
                 this.previewFocusPending = false;
+                this.previewRefreshInterval = null;
+                this.previewRefreshInFlight = false;
+                this.previewUpdatingTimeout = null;
+                this.previewUpdatingMinUntil = 0;
                 this.pendingPinnedReorder = null;
                 this.draggingSection = null;
                 this.navbarRef = React.createRef();
@@ -240,6 +244,14 @@ export default class Navbar extends PureComponent {
                 this.pendingOffsetUpdate = null;
                 this.lastNavbarHeight = null;
         }
+
+        isAppRunning = (app) => {
+                const appId = app?.id;
+                if (!appId) return false;
+                if (typeof app?.isRunning === 'boolean') return app.isRunning;
+                const runningApps = this.state?.runningApps || [];
+                return runningApps.some((item) => item?.id === appId);
+        };
 
         componentDidMount() {
                 if (typeof window !== 'undefined') {
@@ -267,6 +279,7 @@ export default class Navbar extends PureComponent {
                         document.removeEventListener('keydown', this.handleDocumentKeyDown);
                 }
                 this.clearPreviewHideTimeout();
+                this.stopPreviewAutoRefresh();
                 this.teardownResizeObserver();
                 this.resetDesktopOffset();
         }
@@ -418,7 +431,97 @@ export default class Navbar extends PureComponent {
         hidePreview = () => {
                 this.clearPreviewHideTimeout();
                 this.previewFocusPending = false;
+                this.stopPreviewAutoRefresh();
+                this.clearPreviewUpdatingTimeout();
                 this.setState((prevState) => (prevState.preview ? { preview: null } : null));
+        };
+
+        clearPreviewUpdatingTimeout = () => {
+                if (this.previewUpdatingTimeout) {
+                        clearTimeout(this.previewUpdatingTimeout);
+                        this.previewUpdatingTimeout = null;
+                }
+        };
+
+        setPreviewUpdating = (value, options = {}) => {
+                const { minDurationMs = 900, requestId, appId } = options || {};
+                this.clearPreviewUpdatingTimeout();
+                if (value) {
+                        this.previewUpdatingMinUntil = Date.now() + (Number.isFinite(minDurationMs) ? minDurationMs : 900);
+                        this.setState((prevState) => {
+                                const current = prevState.preview;
+                                if (!current) return null;
+                                if (appId && current.appId !== appId) return null;
+                                if (requestId != null && current.requestId !== requestId) return null;
+                                if (current.updating === true) return null;
+                                return { preview: { ...current, updating: true } };
+                        });
+                        return;
+                }
+
+                const delay = Math.max(0, (this.previewUpdatingMinUntil || 0) - Date.now());
+                if (delay > 0) {
+                        const expectedAppId = appId || this.state.preview?.appId;
+                        const expectedRequestId = requestId ?? this.state.preview?.requestId;
+                        this.previewUpdatingTimeout = setTimeout(() => {
+                                this.previewUpdatingTimeout = null;
+                                this.setState((prevState) => {
+                                        const current = prevState.preview;
+                                        if (!current) return null;
+                                        if (expectedAppId && current.appId !== expectedAppId) return null;
+                                        if (expectedRequestId != null && current.requestId !== expectedRequestId) return null;
+                                        if (current.updating !== true) return null;
+                                        return { preview: { ...current, updating: false } };
+                                });
+                        }, delay);
+                } else {
+                        this.setState((prevState) => {
+                                const current = prevState.preview;
+                                if (!current) return null;
+                                if (appId && current.appId !== appId) return null;
+                                if (requestId != null && current.requestId !== requestId) return null;
+                                if (current.updating !== true) return null;
+                                return { preview: { ...current, updating: false } };
+                        });
+                }
+        };
+
+        startPreviewAutoRefresh = () => {
+                if (typeof window === 'undefined') return;
+                if (this.previewRefreshInterval) return;
+                // Keep this fairly conservative to avoid hammering html-to-image.
+                this.previewRefreshInterval = window.setInterval(() => {
+                        const current = this.state.preview;
+                        if (!current || !current.appId) return;
+                        if (this.previewRefreshInFlight) return;
+                        // Avoid stacking refresh requests if we're still waiting on the prior response.
+                        this.previewRefreshInFlight = true;
+
+                        const requestId = ++this.previewRequestSequence;
+                        this.previewUpdatingMinUntil = Date.now() + 900;
+                        this.setState((prevState) => {
+                                const existing = prevState.preview;
+                                if (!existing || existing.appId !== current.appId) return null;
+                                return {
+                                        preview: {
+                                                ...existing,
+                                                requestId,
+                                                // Keep showing the last image while we refresh.
+                                                updating: true,
+                                        },
+                                };
+                        }, () => {
+                                this.dispatchPreviewRequest(current.appId, requestId, true);
+                        });
+                }, 5000);
+        };
+
+        stopPreviewAutoRefresh = () => {
+                if (!this.previewRefreshInterval) return;
+                clearInterval(this.previewRefreshInterval);
+                this.previewRefreshInterval = null;
+                this.previewRefreshInFlight = false;
+                this.previewUpdatingMinUntil = 0;
         };
 
         handlePreviewResponse = (event) => {
@@ -432,6 +535,7 @@ export default class Navbar extends PureComponent {
                         const current = prevState.preview;
                         if (!current || current.appId !== appId || current.requestId !== requestId) {
                                 this.previewFocusPending = false;
+                                this.previewRefreshInFlight = false;
                                 return null;
                         }
                         return {
@@ -442,6 +546,15 @@ export default class Navbar extends PureComponent {
                                 },
                         };
                 }, () => {
+                        this.previewRefreshInFlight = false;
+                        // If we were refreshing, keep the "Updating…" label on-screen long enough to read.
+                        if (this.state.preview?.updating) {
+                                this.setPreviewUpdating(false, { appId, requestId });
+                        }
+                        // Start the periodic refresh loop after we have an initial preview.
+                        if (this.state.preview) {
+                                this.startPreviewAutoRefresh();
+                        }
                         if (this.previewFocusPending && this.previewFlyoutRef.current) {
                                 this.previewFlyoutRef.current.focus();
                         }
@@ -471,6 +584,8 @@ export default class Navbar extends PureComponent {
 
         openPreviewForApp = (app, target, options = {}) => {
                 if (!app || !target || typeof target.getBoundingClientRect !== 'function') return;
+                // Only show previews for open/running applications.
+                if (!this.isAppRunning(app)) return;
 
                 const rect = target.getBoundingClientRect();
                 const position = this.computePreviewPosition(rect);
@@ -507,6 +622,7 @@ export default class Navbar extends PureComponent {
                                 status: status || 'loading',
                                 image: image || null,
                                 requestId,
+                                updating: false,
                         },
                 }, () => {
                         if (shouldRequest) {
@@ -514,6 +630,9 @@ export default class Navbar extends PureComponent {
                         } else if (this.previewFocusPending && this.previewFlyoutRef.current) {
                                 this.previewFlyoutRef.current.focus();
                                 this.previewFocusPending = false;
+                                this.startPreviewAutoRefresh();
+                        } else {
+                                this.startPreviewAutoRefresh();
                         }
                 });
         };
@@ -577,6 +696,7 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonMouseEnter = (event, app) => {
+                if (!this.isAppRunning(app)) return;
                 this.openPreviewForApp(app, event.currentTarget);
         };
 
@@ -590,6 +710,7 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonFocus = (event, app) => {
+                if (!this.isAppRunning(app)) return;
                 this.openPreviewForApp(app, event.currentTarget);
         };
 
@@ -647,6 +768,7 @@ export default class Navbar extends PureComponent {
 
         handleAppButtonKeyDown = (event, app) => {
                 if (event.key === 'ArrowDown') {
+                        if (!this.isAppRunning(app)) return;
                         event.preventDefault();
                         this.openPreviewForApp(app, event.currentTarget, { forceRefresh: true, shouldFocus: true });
                         return;
@@ -1080,6 +1202,7 @@ export default class Navbar extends PureComponent {
                                         title={preview?.appTitle}
                                         image={preview?.image}
                                         status={preview?.status}
+                                        updating={preview?.updating}
                                         position={preview?.position}
                                         onMouseEnter={this.handlePreviewMouseEnter}
                                         onMouseLeave={this.handlePreviewMouseLeave}

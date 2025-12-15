@@ -1,16 +1,17 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef, useState, type ReactEventHandler } from 'react';
-import EmbedFrame from '../../components/EmbedFrame';
+import { useMemo, useRef } from 'react';
 import { CloseIcon, MaximizeIcon, MinimizeIcon } from '../../components/ToolbarIcons';
 import { kaliTheme } from '../../styles/themes/kali';
 import { SIDEBAR_WIDTH, ICON_SIZE } from './utils';
 
-const STACKBLITZ_ORIGIN = 'https://stackblitz.com';
-const STACKBLITZ_EMBED_URL =
+export const STACKBLITZ_EMBED_URL =
   'https://stackblitz.com/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md';
-export const STACKBLITZ_HANDSHAKE_TIMEOUT_MS = 12000;
+
+const STACKBLITZ_IFRAME_ALLOW = 'clipboard-read; clipboard-write; fullscreen';
+const STACKBLITZ_IFRAME_SANDBOX =
+  'allow-same-origin allow-scripts allow-forms allow-popups allow-modals allow-downloads';
 
 const EDITOR_TABS = [
   { label: 'README.md', isActive: true },
@@ -18,169 +19,17 @@ const EDITOR_TABS = [
   { label: 'package.json', isActive: false },
 ];
 
-type EmbedStatus = 'loading' | 'ready' | 'error' | 'timeout';
-
-type StackBlitzPayload = {
-  type?: string;
-  status?: string;
-  reason?: string;
-};
-
-const READY_KEYWORDS = ['ready', 'frame-ready', 'workspace-ready'];
-const DENIED_KEYWORDS = ['denied', 'blocked', 'forbidden'];
-
-function normalizePayload(data: unknown): StackBlitzPayload {
-  if (typeof data === 'string') {
-    try {
-      return normalizePayload(JSON.parse(data));
-    } catch {
-      return { type: data };
-    }
-  }
-
-  if (data && typeof data === 'object') {
-    const record = data as Record<string, unknown>;
-    const keys = ['type', 'event', 'action', 'cmd', 'kind'];
-    for (const key of keys) {
-      const value = record[key];
-      if (typeof value === 'string') {
-        return {
-          type: value,
-          status: typeof record.status === 'string' ? record.status : undefined,
-          reason:
-            typeof record.reason === 'string'
-              ? record.reason
-              : typeof record.error === 'string'
-                ? record.error
-                : typeof record.message === 'string'
-                  ? record.message
-                  : undefined,
-        };
-      }
-    }
-
-    return {
-      status: typeof record.status === 'string' ? record.status : undefined,
-      reason:
-        typeof record.reason === 'string'
-          ? record.reason
-          : typeof record.error === 'string'
-            ? record.error
-            : typeof record.message === 'string'
-              ? record.message
-              : undefined,
-    };
-  }
-
-  return {};
-}
-
-const getStatusMessage = (status: EmbedStatus, errorMessage: string | null): string => {
-  switch (status) {
-    case 'ready':
-      return '';
-    case 'error':
-      return errorMessage ?? 'StackBlitz denied the embed request.';
-    case 'timeout':
-      return 'StackBlitz is taking longer than expected. You can open the project in a new tab.';
-    default:
-      return 'Connecting to the StackBlitz workspace…';
-  }
-};
-
 export default function VsCode() {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
-  const [status, setStatus] = useState<EmbedStatus>('loading');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const statusRef = useRef<EmbedStatus>('loading');
-
-  useEffect(() => {
-    statusRef.current = status;
-  }, [status]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
+  const openInStackBlitzUrl = useMemo(() => {
+    try {
+      const url = new URL(STACKBLITZ_EMBED_URL);
+      url.searchParams.delete('embed');
+      return url.toString();
+    } catch {
+      return STACKBLITZ_EMBED_URL;
     }
-
-    const handleMessage = (event: MessageEvent) => {
-      if (!event.origin.startsWith(STACKBLITZ_ORIGIN)) {
-        return;
-      }
-
-      const targetWindow = frameRef.current?.contentWindow;
-      if (targetWindow && event.source && event.source !== targetWindow) {
-        return;
-      }
-
-      const payload = normalizePayload(event.data);
-      const type = payload.type?.toLowerCase();
-      const payloadStatus = payload.status?.toLowerCase();
-
-      if (type) {
-        if (READY_KEYWORDS.some((keyword) => type.includes(keyword))) {
-          setStatus('ready');
-          setErrorMessage(null);
-          return;
-        }
-
-        if (
-          statusRef.current !== 'ready' &&
-          (DENIED_KEYWORDS.some((keyword) => type.includes(keyword)) || type.includes('error'))
-        ) {
-          setStatus('error');
-          setErrorMessage(payload.reason ?? 'StackBlitz denied the embed request.');
-          return;
-        }
-      }
-
-      if (payloadStatus) {
-        if (READY_KEYWORDS.some((keyword) => payloadStatus.includes(keyword))) {
-          setStatus('ready');
-          setErrorMessage(null);
-          return;
-        }
-
-        if (
-          statusRef.current !== 'ready' &&
-          DENIED_KEYWORDS.some((keyword) => payloadStatus.includes(keyword))
-        ) {
-          setStatus('error');
-          setErrorMessage(payload.reason ?? 'StackBlitz denied the embed request.');
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
   }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return undefined;
-    }
-
-    if (status !== 'loading') {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setStatus((current) => (current === 'ready' ? current : 'timeout'));
-    }, STACKBLITZ_HANDSHAKE_TIMEOUT_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [status]);
-
-  const showOverlay = status !== 'ready';
-  const statusMessage = getStatusMessage(status, errorMessage);
-
-  const handleFrameError: ReactEventHandler<HTMLIFrameElement> = () => {
-    if (statusRef.current === 'ready') {
-      return;
-    }
-    setStatus('error');
-    setErrorMessage('Unable to reach StackBlitz from this browser.');
-  };
 
   return (
     <div
@@ -241,38 +90,23 @@ export default function VsCode() {
           </span>
         </nav>
         <div className="relative flex-1" style={{ backgroundColor: kaliTheme.background }}>
-          <EmbedFrame
+          <iframe
             ref={frameRef}
             src={STACKBLITZ_EMBED_URL}
-            title="VsCode"
-            className="w-full h-full"
-            allowedOrigins={[STACKBLITZ_ORIGIN]}
-            onError={handleFrameError}
-            loadingLabel="Connecting to StackBlitz…"
-            fallbackLabel="Open in StackBlitz"
-            openInNewTabLabel="Open in StackBlitz"
+            title="Visual Studio Code (StackBlitz)"
+            className="h-full w-full border-0"
+            allow={STACKBLITZ_IFRAME_ALLOW}
+            sandbox={STACKBLITZ_IFRAME_SANDBOX}
+            loading="lazy"
           />
-          {showOverlay && (
-            <div className="absolute inset-0 flex items-center justify-center bg-[color:var(--color-overlay-strong)] px-6 text-center">
-              <div
-                className="flex flex-col items-center gap-3 text-[color:var(--color-text)]"
-                role={status === 'error' || status === 'timeout' ? 'alert' : 'status'}
-                aria-live="polite"
-              >
-                <span className="text-sm md:text-base">{statusMessage}</span>
-                {(status === 'error' || status === 'timeout') && (
-                  <a
-                    href={STACKBLITZ_EMBED_URL.replace('embed=1&', '')}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] px-3 py-1 text-sm font-medium text-[color:var(--color-text)] transition-colors hover:bg-[var(--kali-panel)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
-                  >
-                    Open in StackBlitz
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
+          <a
+            href={openInStackBlitzUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pointer-events-auto absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-[color:var(--kali-panel-border)] bg-[color-mix(in_srgb,var(--kali-panel)_82%,transparent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_78%,var(--kali-bg))] shadow-[0_12px_30px_-16px_var(--kali-blue-glow)] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+          >
+            Open in StackBlitz
+          </a>
           <div
             className="absolute top-4 left-4 flex items-center gap-4 rounded border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-4 shadow-kali-panel"
             style={{ backgroundColor: 'color-mix(in srgb, var(--kali-panel) 88%, transparent)' }}

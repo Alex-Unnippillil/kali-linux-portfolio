@@ -6,6 +6,7 @@ const TaskbarPreviewFlyout = React.forwardRef(
                         title,
                         image,
                         status = 'loading',
+                        updating = false,
                         position = { top: 0, left: 0 },
                         visible = false,
                         onMouseEnter,
@@ -54,17 +55,24 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                                         role="document"
                                                         aria-label={imageLabel}
                                                 >
-                                                        {status === 'ready' && image ? (
+                                                        {image ? (
                                                                 <img
                                                                         src={image}
                                                                         alt={imageLabel}
                                                                         className="max-h-48 w-64 object-contain"
                                                                 />
                                                         ) : null}
-                                                        {status === 'loading' && (
+                                                        {status === 'loading' && !image && (
                                                                 <div className="flex h-32 w-64 items-center justify-center">
                                                                         <span className="text-[0.65rem] uppercase tracking-widest text-white/60">
                                                                                 Loading preview…
+                                                                        </span>
+                                                                </div>
+                                                        )}
+                                                        {Boolean(updating) && image && (
+                                                                <div className="absolute inset-x-0 bottom-0 flex items-center justify-end bg-black/35 px-2 py-1">
+                                                                        <span className="text-[0.6rem] uppercase tracking-widest text-white/70">
+                                                                                Updating…
                                                                         </span>
                                                                 </div>
                                                         )}

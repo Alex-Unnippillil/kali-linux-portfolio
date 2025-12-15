@@ -23,6 +23,7 @@ import TaskbarMenu from '../context-menus/taskbar-menu';
 import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
+import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
@@ -355,6 +356,7 @@ export class Desktop extends Component {
         this.overlayRegistry = new Map(OVERLAY_WINDOW_LIST.map((meta) => [meta.id, meta]));
         this.folderMetadata = new Map(DEFAULT_DESKTOP_FOLDERS.map((folder) => [folder.id, folder]));
         this.windowPreviewCache = new Map();
+        this.windowPreviewLastGoodCache = new Map();
         this.windowSwitcherRequestId = 0;
         this.refreshAppRegistry();
 
@@ -4085,21 +4087,74 @@ export class Desktop extends Component {
         this.focus(windows[next]);
     }
 
+    resolvePreviewIconUrl = (icon) => {
+        if (typeof window === 'undefined') return null;
+        if (typeof icon !== 'string' || !icon) return null;
+        try {
+            return new URL(icon, window.location.href).toString();
+        } catch (e) {
+            return null;
+        }
+    };
+
+    buildFallbackPreview = (id) => {
+        const app = this.getAppById(id) || {};
+        const title = app.title || app.name || id;
+        return buildWindowPreviewFallbackDataUrl({
+            title,
+            iconUrl: this.resolvePreviewIconUrl(app.icon),
+            subtitle: null,
+        });
+    };
+
+    captureWindowPreview = async (id, mode = 'normal') => {
+        if (typeof document === 'undefined') return null;
+        const node = document.getElementById(id);
+        if (!node) return null;
+        try {
+            return await toPng(node, {
+                cacheBust: true,
+                pixelRatio: 1,
+                skipFonts: true,
+                style: {
+                    opacity: '1',
+                    visibility: 'visible',
+                },
+                filter: createWindowPreviewFilter(mode),
+            });
+        } catch (error) {
+            return null;
+        }
+    };
+
     getWindowPreview = async (id) => {
         if (this.windowPreviewCache.has(id)) {
-            return this.windowPreviewCache.get(id);
+            const cached = this.windowPreviewCache.get(id);
+            if (typeof cached === 'string' && cached.length) {
+                return cached;
+            }
+            // Previously we could cache null when snapshotting failed; treat that as a miss
+            // so the taskbar preview can recover automatically.
+            this.windowPreviewCache.delete(id);
         }
 
-        let preview = null;
-        if (typeof document !== 'undefined') {
-            const node = document.getElementById(id);
-            if (node) {
-                try {
-                    preview = await toPng(node);
-                } catch (error) {
-                    preview = null;
-                }
-            }
+        let preview = await this.captureWindowPreview(id, 'normal');
+        if (!preview) {
+            preview = await this.captureWindowPreview(id, 'aggressive');
+        }
+        // If we managed to capture a PNG, persist it as the "last known good" snapshot.
+        if (typeof preview === 'string' && preview.startsWith('data:image/png')) {
+            this.windowPreviewLastGoodCache.set(id, preview);
+        }
+
+        // If capture fails (cross-origin iframes, tainted canvases, etc.), fall back to the
+        // last good snapshot instead of showing "unavailable".
+        if (!preview && this.windowPreviewLastGoodCache?.has(id)) {
+            preview = this.windowPreviewLastGoodCache.get(id);
+        }
+
+        if (!preview) {
+            preview = this.buildFallbackPreview(id);
         }
 
         this.windowPreviewCache.set(id, preview);
@@ -4982,14 +5037,15 @@ export class Desktop extends Component {
         }
 
         // capture window snapshot
-        let image = null;
-        const node = document.getElementById(objId);
-        if (node) {
-            try {
-                image = await toPng(node);
-            } catch (e) {
-                // ignore snapshot errors
-            }
+        let image = await this.captureWindowPreview(objId, 'normal');
+        if (!image) {
+            image = await this.captureWindowPreview(objId, 'aggressive');
+        }
+        if (!image && this.windowPreviewLastGoodCache?.has(objId)) {
+            image = this.windowPreviewLastGoodCache.get(objId);
+        }
+        if (!image) {
+            image = this.buildFallbackPreview(objId);
         }
 
         // persist in trash with autopurge
