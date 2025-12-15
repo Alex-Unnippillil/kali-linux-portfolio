@@ -78,6 +78,11 @@ const NotificationBell: React.FC = () => {
     unreadCount,
     clearNotifications,
     markAllRead,
+    quietHours,
+    setQuietHours,
+    doNotDisturb,
+    setDoNotDisturb,
+    quietModeActive,
   } = useNotifications();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -233,17 +238,46 @@ const NotificationBell: React.FC = () => {
     closePanel();
   }, [clearNotifications, closePanel, notifications.length]);
 
+  const handleDoNotDisturbChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setDoNotDisturb(event.target.checked);
+    },
+    [setDoNotDisturb],
+  );
+
+  const handleQuietHoursToggle = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const enabled = event.target.checked;
+      setQuietHours(prev => ({ ...prev, enabled }));
+    },
+    [setQuietHours],
+  );
+
+  const handleQuietHoursTimeChange = useCallback(
+    (key: 'start' | 'end') =>
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = event.target.value;
+        setQuietHours(prev => ({ ...prev, [key]: value }));
+      },
+    [setQuietHours],
+  );
+
   return (
     <div className="relative">
       <button
         type="button"
         ref={buttonRef}
-        aria-label="Open notifications"
+        aria-label={
+          doNotDisturb
+            ? 'Open notifications (Do Not Disturb active)'
+            : 'Open notifications'
+        }
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={togglePanel}
         className="relative mx-1 flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-ubt-grey transition focus:border-ubb-orange focus:outline-none focus:ring-0 hover:bg-white hover:bg-opacity-10"
+        title={doNotDisturb ? 'Do Not Disturb is on' : 'Open notifications'}
       >
         <svg
           aria-hidden="true"
@@ -255,6 +289,14 @@ const NotificationBell: React.FC = () => {
           <path d="M10 2a4 4 0 00-4 4v1.09c0 .471-.158.93-.45 1.3L4.3 10.2A1 1 0 005 11.8h10a1 1 0 00.7-1.6l-1.25-1.81a2 2 0 01-.45-1.3V6a4 4 0 00-4-4z" />
           <path d="M7 12a3 3 0 006 0H7z" />
         </svg>
+        {doNotDisturb && (
+          <span
+            className="absolute -bottom-1 -left-1 flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-[0.55rem] font-semibold text-white shadow"
+            aria-hidden="true"
+          >
+            Z
+          </span>
+        )}
         {unreadCount > 0 && (
           <span className="absolute -top-1.5 -right-1.5 min-w-[1.5rem] rounded-full bg-ubb-orange px-1 text-center text-[0.65rem] font-semibold leading-5 text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
@@ -283,6 +325,62 @@ const NotificationBell: React.FC = () => {
             >
               Dismiss all
             </button>
+          </div>
+          <div className="space-y-3 border-b border-white/10 px-4 py-3 text-sm text-white">
+            <label className="flex items-center justify-between font-medium">
+              <span>Do Not Disturb</span>
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-purple-500"
+                checked={doNotDisturb}
+                onChange={handleDoNotDisturbChange}
+                aria-label="Toggle Do Not Disturb"
+              />
+            </label>
+            <div className="space-y-2 rounded-md border border-white/10 bg-white/5 px-3 py-3">
+              <label className="flex items-center justify-between text-xs uppercase tracking-wide text-ubt-grey">
+                <span className="font-semibold text-white">Quiet hours</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-purple-500"
+                  checked={quietHours.enabled}
+                  onChange={handleQuietHoursToggle}
+                  aria-label="Toggle quiet hours schedule"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-3 text-xs text-ubt-grey">
+                <label className="flex flex-col gap-1">
+                  <span className="font-semibold text-white">Start</span>
+                  <input
+                    type="time"
+                    value={quietHours.start}
+                    onChange={handleQuietHoursTimeChange('start')}
+                    disabled={!quietHours.enabled}
+                    className="w-full rounded border border-white/20 bg-transparent px-2 py-1 text-sm text-white placeholder:text-ubt-grey disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="Quiet hours start time"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-semibold text-white">End</span>
+                  <input
+                    type="time"
+                    value={quietHours.end}
+                    onChange={handleQuietHoursTimeChange('end')}
+                    disabled={!quietHours.enabled}
+                    className="w-full rounded border border-white/20 bg-transparent px-2 py-1 text-sm text-white placeholder:text-ubt-grey disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label="Quiet hours end time"
+                  />
+                </label>
+              </div>
+              {quietModeActive && (
+                <p className="rounded-md border border-ubb-orange/30 bg-ubb-orange/10 px-3 py-2 text-xs text-ubb-orange">
+                  Notifications are muted{' '}
+                  {doNotDisturb
+                    ? 'until Do Not Disturb is turned off.'
+                    : 'during the scheduled quiet hours.'}
+                </p>
+              )}
+            </div>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
