@@ -2,13 +2,23 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
 
-export const createDynamicApp = (id, title) =>
+/**
+ * Create a lazily loaded app component.
+ *
+ * IMPORTANT: Pass a *static* loader function (e.g. `() => import('./components/apps/terminal')`).
+ * Avoid variable-path imports (like `import(\`../components/apps/${id}\`)`) because they force
+ * webpack to build a large context module and dramatically slow down dev compilation.
+ */
+export const createDynamicApp = (loader, title) =>
   dynamic(
     async () => {
       try {
-        const mod = await import(
-          /* webpackPrefetch: true */ `../components/apps/${id}`
-        );
+        if (typeof loader !== 'function') {
+          throw new Error(
+            `createDynamicApp expected a loader function for "${title}". Received: ${typeof loader}`,
+          );
+        }
+        const mod = await loader();
         logEvent({ category: 'Application', action: `Loaded ${title}` });
         return mod.default;
       } catch (err) {

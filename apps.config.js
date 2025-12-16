@@ -1,114 +1,116 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
-import { displayDesktopFolder } from './components/apps/desktop-folder';
-import { displayX } from './components/apps/x';
-import { displaySpotify } from './components/apps/spotify';
-import { displaySettings } from './components/apps/settings';
-import { displayFirefox } from './components/apps/firefox';
-import { displayGedit } from './components/apps/gedit';
-import { displayTodoist } from './components/apps/todoist';
-import { displayWeather } from './components/apps/weather';
-import { displayClipboardManager } from './components/apps/ClipboardManager';
-import { displayFiglet } from './components/apps/figlet';
-import { displayResourceMonitor } from './components/apps/resource_monitor';
-import { displayScreenRecorder } from './components/apps/screen-recorder';
-import { displayNikto } from './components/apps/nikto';
 
 // Dynamic applications and games
-const TerminalApp = createDynamicApp('terminal', 'Terminal');
+const TerminalApp = createDynamicApp(() => import('./components/apps/terminal'), 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
-const VsCodeApp = createDynamicApp('vscode', 'VsCode');
-const YouTubeApp = createDynamicApp('youtube', 'YouTube');
-const CalculatorApp = createDynamicApp('calculator', 'Calculator');
-const ConverterApp = createDynamicApp('converter', 'Converter');
-const TicTacToeApp = createDynamicApp('tictactoe', 'Tic Tac Toe');
-const ChessApp = createDynamicApp('chess', 'Chess');
+const VsCodeApp = createDynamicApp(() => import('./components/apps/vscode'), 'VsCode');
+const YouTubeApp = createDynamicApp(() => import('./components/apps/youtube'), 'YouTube');
+const CalculatorApp = createDynamicApp(() => import('./components/apps/calculator'), 'Calculator');
+const ConverterApp = createDynamicApp(() => import('./components/apps/converter'), 'Converter');
+const TicTacToeApp = createDynamicApp(() => import('./components/apps/tictactoe'), 'Tic Tac Toe');
+const ChessApp = createDynamicApp(() => import('./components/apps/chess'), 'Chess');
 // Classic four-in-a-row game
-const ConnectFourApp = createDynamicApp('connect-four', 'Connect Four');
-const HangmanApp = createDynamicApp('hangman', 'Hangman');
-const FroggerApp = createDynamicApp('frogger', 'Frogger');
-const FlappyBirdApp = createDynamicApp('flappy-bird', 'Flappy Bird');
-const Game2048App = createDynamicApp('2048', '2048');
-const SnakeApp = createDynamicApp('snake', 'Snake');
-const MemoryApp = createDynamicApp('memory', 'Memory');
+const ConnectFourApp = createDynamicApp(() => import('./components/apps/connect-four'), 'Connect Four');
+const HangmanApp = createDynamicApp(() => import('./components/apps/hangman'), 'Hangman');
+const FroggerApp = createDynamicApp(() => import('./components/apps/frogger'), 'Frogger');
+const FlappyBirdApp = createDynamicApp(() => import('./components/apps/flappy-bird'), 'Flappy Bird');
+const Game2048App = createDynamicApp(() => import('./components/apps/2048'), '2048');
+const SnakeApp = createDynamicApp(() => import('./components/apps/snake'), 'Snake');
+const MemoryApp = createDynamicApp(() => import('./components/apps/memory'), 'Memory');
 // Classic puzzle where players clear a minefield.
-const MinesweeperApp = createDynamicApp('minesweeper', 'Minesweeper');
-const PongApp = createDynamicApp('pong', 'Pong');
-const PacmanApp = createDynamicApp('pacman', 'Pacman');
-const CarRacerApp = createDynamicApp('car-racer', 'Car Racer');
-const LaneRunnerApp = createDynamicApp('lane-runner', 'Lane Runner');
-const PlatformerApp = createDynamicApp('platformer', 'Platformer');
-const BattleshipApp = createDynamicApp('battleship', 'Battleship');
-const CheckersApp = createDynamicApp('checkers', 'Checkers');
-const ReversiApp = createDynamicApp('reversi', 'Reversi');
-const SimonApp = createDynamicApp('simon', 'Simon');
-const SokobanApp = createDynamicApp('sokoban', 'Sokoban');
+const MinesweeperApp = createDynamicApp(() => import('./components/apps/minesweeper'), 'Minesweeper');
+const PongApp = createDynamicApp(() => import('./components/apps/pong'), 'Pong');
+const PacmanApp = createDynamicApp(() => import('./components/apps/pacman'), 'Pacman');
+const CarRacerApp = createDynamicApp(() => import('./components/apps/car-racer'), 'Car Racer');
+const LaneRunnerApp = createDynamicApp(() => import('./components/apps/lane-runner'), 'Lane Runner');
+const PlatformerApp = createDynamicApp(() => import('./components/apps/platformer'), 'Platformer');
+const BattleshipApp = createDynamicApp(() => import('./components/apps/battleship'), 'Battleship');
+const CheckersApp = createDynamicApp(() => import('./components/apps/checkers'), 'Checkers');
+const ReversiApp = createDynamicApp(() => import('./components/apps/reversi'), 'Reversi');
+const SimonApp = createDynamicApp(() => import('./components/apps/simon'), 'Simon');
+const SokobanApp = createDynamicApp(() => import('./components/apps/sokoban'), 'Sokoban');
 // Use the enhanced TypeScript implementation of Solitaire that supports
 // draw-3 mode, hints, animations, and auto-complete.
-const SolitaireApp = createDynamicApp('solitaire/index', 'Solitaire');
-const TowerDefenseApp = createDynamicApp('tower-defense', 'Tower Defense');
-const WordSearchApp = createDynamicApp('word-search', 'Word Search');
-const WordleApp = createDynamicApp('wordle', 'Wordle');
-const BlackjackApp = createDynamicApp('blackjack', 'Blackjack');
-const BreakoutApp = createDynamicApp('breakout', 'Breakout');
-const AsteroidsApp = createDynamicApp('asteroids', 'Asteroids');
-const SudokuApp = createDynamicApp('sudoku', 'Sudoku');
-const SpaceInvadersApp = createDynamicApp('space-invaders', 'Space Invaders');
-const NonogramApp = createDynamicApp('nonogram', 'Nonogram');
-const TetrisApp = createDynamicApp('tetris', 'Tetris');
-const CandyCrushApp = createDynamicApp('candy-crush', 'Candy Crush');
-const FileExplorerApp = createDynamicApp('file-explorer', 'Files');
-const Radare2App = createDynamicApp('radare2', 'Radare2');
-const AboutAlexApp = createDynamicApp('alex', 'About Alex');
+const SolitaireApp = createDynamicApp(() => import('./components/apps/solitaire/index'), 'Solitaire');
+const TowerDefenseApp = createDynamicApp(() => import('./components/apps/tower-defense'), 'Tower Defense');
+const WordSearchApp = createDynamicApp(() => import('./components/apps/word-search'), 'Word Search');
+const WordleApp = createDynamicApp(() => import('./components/apps/wordle'), 'Wordle');
+const BlackjackApp = createDynamicApp(() => import('./components/apps/blackjack'), 'Blackjack');
+const BreakoutApp = createDynamicApp(() => import('./components/apps/breakout'), 'Breakout');
+const AsteroidsApp = createDynamicApp(() => import('./components/apps/asteroids'), 'Asteroids');
+const SudokuApp = createDynamicApp(() => import('./components/apps/sudoku'), 'Sudoku');
+const SpaceInvadersApp = createDynamicApp(() => import('./components/apps/space-invaders'), 'Space Invaders');
+const NonogramApp = createDynamicApp(() => import('./components/apps/nonogram'), 'Nonogram');
+const TetrisApp = createDynamicApp(() => import('./components/apps/tetris'), 'Tetris');
+const CandyCrushApp = createDynamicApp(() => import('./components/apps/candy-crush'), 'Candy Crush');
+const FileExplorerApp = createDynamicApp(() => import('./components/apps/file-explorer'), 'Files');
+const Radare2App = createDynamicApp(() => import('./components/apps/radare2'), 'Radare2');
+const AboutAlexApp = createDynamicApp(() => import('./components/apps/alex'), 'About Alex');
 
-const QrApp = createDynamicApp('qr', 'QR Tool');
-const AsciiArtApp = createDynamicApp('ascii_art', 'ASCII Art');
-const QuoteApp = createDynamicApp('quote', 'Quote');
-const ProjectGalleryApp = createDynamicApp('project-gallery', 'Project Gallery');
-const WeatherWidgetApp = createDynamicApp('weather_widget', 'Weather Widget');
-const InputLabApp = createDynamicApp('input-lab', 'Input Lab');
-const SubnetCalculatorApp = createDynamicApp('subnet-calculator', 'Subnet Calculator');
-const GhidraApp = createDynamicApp('ghidra', 'Ghidra');
+const QrApp = createDynamicApp(() => import('./components/apps/qr'), 'QR Tool');
+const AsciiArtApp = createDynamicApp(() => import('./components/apps/ascii_art'), 'ASCII Art');
+const QuoteApp = createDynamicApp(() => import('./components/apps/quote'), 'Quote');
+const ProjectGalleryApp = createDynamicApp(() => import('./components/apps/project-gallery'), 'Project Gallery');
+const WeatherWidgetApp = createDynamicApp(() => import('./components/apps/weather_widget'), 'Weather Widget');
+const InputLabApp = createDynamicApp(() => import('./components/apps/input-lab'), 'Input Lab');
+const SubnetCalculatorApp = createDynamicApp(() => import('./components/apps/subnet-calculator'), 'Subnet Calculator');
+const GhidraApp = createDynamicApp(() => import('./components/apps/ghidra'), 'Ghidra');
 
-const StickyNotesApp = createDynamicApp('sticky_notes', 'Sticky Notes');
-const TrashApp = createDynamicApp('trash', 'Trash');
-const SerialTerminalApp = createDynamicApp('serial-terminal', 'Serial Terminal');
+const StickyNotesApp = createDynamicApp(() => import('./components/apps/sticky_notes'), 'Sticky Notes');
+const TrashApp = createDynamicApp(() => import('./components/apps/trash'), 'Trash');
+const SerialTerminalApp = createDynamicApp(() => import('./components/apps/serial-terminal'), 'Serial Terminal');
 
 
-const WiresharkApp = createDynamicApp('wireshark', 'Wireshark');
-const BleSensorApp = createDynamicApp('ble-sensor', 'BLE Sensor');
-const DsniffApp = createDynamicApp('dsniff', 'dsniff');
-const BeefApp = createDynamicApp('beef', 'BeEF');
-const MetasploitApp = createDynamicApp('metasploit', 'Metasploit');
+const WiresharkApp = createDynamicApp(() => import('./components/apps/wireshark'), 'Wireshark');
+const BleSensorApp = createDynamicApp(() => import('./components/apps/ble-sensor'), 'BLE Sensor');
+const DsniffApp = createDynamicApp(() => import('./components/apps/dsniff'), 'dsniff');
+const BeefApp = createDynamicApp(() => import('./components/apps/beef'), 'BeEF');
+const MetasploitApp = createDynamicApp(() => import('./components/apps/metasploit'), 'Metasploit');
 
-const AutopsyApp = createDynamicApp('autopsy', 'Autopsy');
-const PluginManagerApp = createDynamicApp('plugin-manager', 'Plugin Manager');
+const AutopsyApp = createDynamicApp(() => import('./components/apps/autopsy'), 'Autopsy');
+const PluginManagerApp = createDynamicApp(() => import('./components/apps/plugin-manager'), 'Plugin Manager');
 
-const GomokuApp = createDynamicApp('gomoku', 'Gomoku');
-const PinballApp = createDynamicApp('pinball', 'Pinball');
-const VolatilityApp = createDynamicApp('volatility', 'Volatility');
+const GomokuApp = createDynamicApp(() => import('./components/apps/gomoku'), 'Gomoku');
+const PinballApp = createDynamicApp(() => import('./components/apps/pinball'), 'Pinball');
+const VolatilityApp = createDynamicApp(() => import('./components/apps/volatility'), 'Volatility');
 
-const KismetApp = createDynamicApp('kismet.jsx', 'Kismet');
+const KismetApp = createDynamicApp(() => import('./components/apps/kismet.jsx'), 'Kismet');
 
-const HashcatApp = createDynamicApp('hashcat', 'Hashcat');
-const MsfPostApp = createDynamicApp('msf-post', 'Metasploit Post');
-const EvidenceVaultApp = createDynamicApp('evidence-vault', 'Evidence Vault');
-const MimikatzApp = createDynamicApp('mimikatz', 'Mimikatz');
-const MimikatzOfflineApp = createDynamicApp('mimikatz/offline', 'Mimikatz Offline');
-const EttercapApp = createDynamicApp('ettercap', 'Ettercap');
-const ReaverApp = createDynamicApp('reaver', 'Reaver');
-const HydraApp = createDynamicApp('hydra', 'Hydra');
-const JohnApp = createDynamicApp('john', 'John the Ripper');
-const NessusApp = createDynamicApp('nessus', 'Nessus');
-const NmapNSEApp = createDynamicApp('nmap-nse', 'Nmap NSE');
-const OpenVASApp = createDynamicApp('openvas', 'OpenVAS');
-const ReconNGApp = createDynamicApp('reconng', 'Recon-ng');
-const SecurityToolsApp = createDynamicApp('security-tools', 'Security Tools');
-const SSHApp = createDynamicApp('ssh', 'SSH Command Builder');
-const HTTPApp = createDynamicApp('http', 'HTTP Request Builder');
-const HtmlRewriteApp = createDynamicApp('html-rewriter', 'HTML Rewriter');
-const ContactApp = createDynamicApp('contact', 'Contact');
+const HashcatApp = createDynamicApp(() => import('./components/apps/hashcat'), 'Hashcat');
+const MsfPostApp = createDynamicApp(() => import('./components/apps/msf-post'), 'Metasploit Post');
+const EvidenceVaultApp = createDynamicApp(() => import('./components/apps/evidence-vault'), 'Evidence Vault');
+const MimikatzApp = createDynamicApp(() => import('./components/apps/mimikatz'), 'Mimikatz');
+const MimikatzOfflineApp = createDynamicApp(() => import('./components/apps/mimikatz/offline'), 'Mimikatz Offline');
+const EttercapApp = createDynamicApp(() => import('./components/apps/ettercap'), 'Ettercap');
+const ReaverApp = createDynamicApp(() => import('./components/apps/reaver'), 'Reaver');
+const HydraApp = createDynamicApp(() => import('./components/apps/hydra'), 'Hydra');
+const JohnApp = createDynamicApp(() => import('./components/apps/john'), 'John the Ripper');
+const NessusApp = createDynamicApp(() => import('./components/apps/nessus'), 'Nessus');
+const NmapNSEApp = createDynamicApp(() => import('./components/apps/nmap-nse'), 'Nmap NSE');
+const OpenVASApp = createDynamicApp(() => import('./components/apps/openvas'), 'OpenVAS');
+const ReconNGApp = createDynamicApp(() => import('./components/apps/reconng'), 'Recon-ng');
+const SecurityToolsApp = createDynamicApp(() => import('./components/apps/security-tools'), 'Security Tools');
+const SSHApp = createDynamicApp(() => import('./apps/ssh'), 'SSH Command Builder');
+const HTTPApp = createDynamicApp(() => import('./apps/http'), 'HTTP Request Builder');
+const HtmlRewriteApp = createDynamicApp(() => import('./apps/html-rewriter'), 'HTML Rewriter');
+const ContactApp = createDynamicApp(() => import('./components/apps/contact'), 'Contact');
+
+// Previously-static displays are now dynamic to keep initial compilation fast.
+const DesktopFolderApp = createDynamicApp(() => import('./components/apps/desktop-folder'), 'Folder');
+const XApp = createDynamicApp(() => import('./components/apps/x'), 'X');
+const SpotifyApp = createDynamicApp(() => import('./components/apps/spotify'), 'Spotify');
+const SettingsApp = createDynamicApp(() => import('./components/apps/settings'), 'Settings');
+const FirefoxApp = createDynamicApp(() => import('./components/apps/firefox'), 'Firefox');
+const GeditApp = createDynamicApp(() => import('./components/apps/gedit'), 'Gedit');
+const TodoistApp = createDynamicApp(() => import('./components/apps/todoist'), 'Todoist');
+const WeatherApp = createDynamicApp(() => import('./components/apps/weather'), 'Weather');
+const ClipboardManagerApp = createDynamicApp(() => import('./components/apps/ClipboardManager'), 'Clipboard Manager');
+const FigletApp = createDynamicApp(() => import('./components/apps/figlet'), 'Figlet');
+const ResourceMonitorApp = createDynamicApp(() => import('./components/apps/resource_monitor'), 'Resource Monitor');
+const ScreenRecorderApp = createDynamicApp(() => import('./components/apps/screen-recorder'), 'Screen Recorder');
+const NiktoApp = createDynamicApp(() => import('./components/apps/nikto'), 'Nikto');
 
 
 
@@ -199,6 +201,20 @@ const displayContact = createDisplay(ContactApp);
 const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
+
+const displayDesktopFolder = createDisplay(DesktopFolderApp);
+const displayX = createDisplay(XApp);
+const displaySpotify = createDisplay(SpotifyApp);
+const displaySettings = createDisplay(SettingsApp);
+const displayFirefox = createDisplay(FirefoxApp);
+const displayGedit = createDisplay(GeditApp);
+const displayTodoist = createDisplay(TodoistApp);
+const displayWeather = createDisplay(WeatherApp);
+const displayClipboardManager = createDisplay(ClipboardManagerApp);
+const displayFiglet = createDisplay(FigletApp);
+const displayResourceMonitor = createDisplay(ResourceMonitorApp);
+const displayScreenRecorder = createDisplay(ScreenRecorderApp);
+const displayNikto = createDisplay(NiktoApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [

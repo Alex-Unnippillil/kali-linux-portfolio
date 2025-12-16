@@ -209,6 +209,9 @@ try {
 module.exports = withBundleAnalyzer(
   withPWA({
     ...(isStaticExport && { output: 'export' }),
+    // Allow overriding the dist directory in development to avoid Windows file-lock issues
+    // (e.g. AV scanners locking `.next/trace`).
+    distDir: process.env.NEXT_DIST_DIR || '.next',
     webpack: configureWebpack,
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI

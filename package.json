@@ -6,7 +6,7 @@
   "scripts": {
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "tsc -p tsconfig.gamepad.json",
-    "dev": "next dev",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "postbuild": "node scripts/safe-copy.mjs",
     "start": "next start",
