@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = {
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
-  allowNetwork: false,
+  allowNetwork: true,
   haptics: true,
 };
 
@@ -167,7 +167,13 @@ export async function setPongSpin(value) {
 export async function getAllowNetwork() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.allowNetwork;
-  return storage.getItem('allow-network') === 'true';
+  const stored = storage.getItem('allow-network');
+  if (stored === null) {
+    // Default to allowing network requests and persist for future runs.
+    storage.setItem('allow-network', 'true');
+    return true;
+  }
+  return stored === 'true';
 }
 
 export async function setAllowNetwork(value) {

@@ -13,11 +13,12 @@ describe('YouTubeApp', () => {
     jest.restoreAllMocks();
   });
 
-  it('renders channel sections as categories and loads playlist videos', async () => {
+  it('renders channel playlists and loads playlist videos', async () => {
     const fetchMock = jest
       .spyOn(global, 'fetch')
       .mockImplementation(async (input: RequestInfo | URL) => {
         const url = typeof input === 'string' ? input : input.toString();
+        const asUrl = new URL(url);
 
         if (url.includes('/youtube/v3/channels')) {
           return new Response(
@@ -36,27 +37,12 @@ describe('YouTubeApp', () => {
           );
         }
 
-        if (url.includes('/youtube/v3/channelSections')) {
-          return new Response(
-            JSON.stringify({
-              items: [
-                {
-                  id: 'section-1',
-                  snippet: { title: 'Labs' },
-                  contentDetails: { playlists: ['PL_LABS'] },
-                },
-                {
-                  id: 'section-2',
-                  snippet: { title: 'Tutorials' },
-                  contentDetails: { playlists: ['PL_TUTORIALS'] },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-
         if (url.includes('/youtube/v3/playlists')) {
+          const channelId = asUrl.searchParams.get('channelId');
+          if (!channelId) {
+            return new Response(JSON.stringify({ items: [] }), { status: 200 });
+          }
+
           return new Response(
             JSON.stringify({
               items: [
@@ -90,7 +76,6 @@ describe('YouTubeApp', () => {
 
         if (url.includes('/youtube/v3/playlistItems')) {
           // Return different items depending on playlistId query param
-          const asUrl = new URL(url);
           const playlistId = asUrl.searchParams.get('playlistId');
           const items =
             playlistId === 'PL_LABS'
@@ -129,10 +114,9 @@ describe('YouTubeApp', () => {
 
     render(<YouTubeApp channelId="UCxPIJ3hw6AOwomUWh5B7SfQ" />);
 
-    // Categories
+    // Directory section
     await waitFor(() => {
-      expect(screen.getByText('Labs')).toBeInTheDocument();
-      expect(screen.getByText('Tutorials')).toBeInTheDocument();
+      expect(screen.getByText('Playlists')).toBeInTheDocument();
     });
 
     // Playlist listing

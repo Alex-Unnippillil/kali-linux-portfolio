@@ -2,17 +2,16 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import EmbedFrame from '../../EmbedFrame';
+import { useSettings } from '../../../hooks/useSettings';
 import type {
-  YouTubeChannelSection,
   YouTubeChannelSummary,
   YouTubePlaylistSummary,
   YouTubePlaylistVideo,
 } from '../../../utils/youtube';
 import {
-  fetchYouTubeChannelSections,
   fetchYouTubeChannelSummary,
   fetchYouTubePlaylistItems,
-  fetchYouTubePlaylistsByIds,
+  fetchYouTubePlaylistsByChannelIdAll,
   parseYouTubeChannelId,
 } from '../../../utils/youtube';
 
@@ -59,6 +58,7 @@ function videoUrl(videoId: string) {
 }
 
 export default function YouTubeApp({ channelId }: Props) {
+  const { allowNetwork, setAllowNetwork } = useSettings();
   const parsedChannelId = useMemo(() => {
     const envChannel = process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
     return (
@@ -73,7 +73,6 @@ export default function YouTubeApp({ channelId }: Props) {
     null,
   );
   const [directory, setDirectory] = useState<PlaylistListing[]>([]);
-  const [allSections, setAllSections] = useState<YouTubeChannelSection[]>([]);
   const [playlistIndex, setPlaylistIndex] = useState<Map<string, YouTubePlaylistSummary>>(
     () => new Map(),
   );
@@ -93,14 +92,21 @@ export default function YouTubeApp({ channelId }: Props) {
 
   const loadDirectory = useCallback(async () => {
     if (!hasApiKey) {
-      setError(
-        'Set NEXT_PUBLIC_YOUTUBE_API_KEY to load your playlists from the YouTube Data API.',
-      );
+      setError('Set NEXT_PUBLIC_YOUTUBE_API_KEY to load public playlists from YouTube.');
+      setLoadingDirectory(false);
+      return;
+    }
+    if (!allowNetwork) {
+      // Attempt to auto-enable network for this session so the app can load.
+      setAllowNetwork(true);
+      setError('Network requests were disabled. Enabling network to load YouTube playlists…');
       setLoadingDirectory(false);
       return;
     }
     if (!parsedChannelId) {
-      setError('Missing or invalid YouTube channel id.');
+      setError(
+        'Missing or invalid YouTube channel id. Set NEXT_PUBLIC_YOUTUBE_CHANNEL_ID or pass channelId prop.',
+      );
       setLoadingDirectory(false);
       return;
     }
@@ -112,35 +118,22 @@ export default function YouTubeApp({ channelId }: Props) {
     abortDirectoryRef.current = controller;
 
     try {
-      const [summary, sections] = await Promise.all([
+      const [summary, playlists] = await Promise.all([
         fetchYouTubeChannelSummary(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
-        fetchYouTubeChannelSections(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
+        fetchYouTubePlaylistsByChannelIdAll(
+          parsedChannelId,
+          YOUTUBE_API_KEY ?? '',
+          controller.signal,
+        ),
       ]);
 
       setChannelSummary(summary);
-      setAllSections(sections);
-
-      const playlistIds = sections.flatMap((s) => s.playlistIds);
-      const playlists = await fetchYouTubePlaylistsByIds(
-        playlistIds,
-        YOUTUBE_API_KEY ?? '',
-        controller.signal,
-      );
-
-      const map = new Map<string, YouTubePlaylistSummary>(
-        playlists.map((p) => [p.id, p]),
-      );
+      const map = new Map<string, YouTubePlaylistSummary>(playlists.map((p) => [p.id, p]));
       setPlaylistIndex(map);
 
-      const listings: PlaylistListing[] = sections
-        .map((section) => ({
-          sectionId: section.id,
-          sectionTitle: section.title,
-          playlists: section.playlistIds
-            .map((id) => map.get(id))
-            .filter(Boolean) as YouTubePlaylistSummary[],
-        }))
-        .filter((entry) => entry.playlists.length > 0);
+      const listings: PlaylistListing[] = playlists.length
+        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists }]
+        : [];
 
       setDirectory(listings);
 
@@ -156,7 +149,7 @@ export default function YouTubeApp({ channelId }: Props) {
       setLoadingDirectory(false);
       abortDirectoryRef.current = null;
     }
-  }, [hasApiKey, parsedChannelId]);
+  }, [allowNetwork, hasApiKey, parsedChannelId, setAllowNetwork]);
 
   useEffect(() => {
     void loadDirectory();
@@ -287,7 +280,7 @@ export default function YouTubeApp({ channelId }: Props) {
               <p className="mt-1 text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                 {channelSummary?.title
                   ? `Directory for ${channelSummary.title}`
-                  : 'A directory of playlists, grouped by your channel categories.'}
+                  : 'All public playlists for this channel.'}
               </p>
             </div>
           </div>
@@ -343,6 +336,19 @@ export default function YouTubeApp({ channelId }: Props) {
             </code>{' '}
             to load playlists from YouTube.
           </p>
+        )}
+
+        {!allowNetwork && (
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-amber-200/90" role="status">
+            <span>Network requests are disabled. Enable them to load playlists.</span>
+            <button
+              type="button"
+              onClick={() => setAllowNetwork(true)}
+              className="rounded-md border border-[var(--kali-panel-border)] bg-kali-control px-3 py-1 text-xs font-semibold text-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+            >
+              Enable network
+            </button>
+          </div>
         )}
 
         {error && (
@@ -426,7 +432,7 @@ export default function YouTubeApp({ channelId }: Props) {
             ) : (
               <div className="mt-4 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                 {hasApiKey && parsedChannelId
-                  ? 'No playlists found yet. Check your channel sections or adjust your filter.'
+                  ? 'No public playlists found for this channel.'
                   : 'Enter a valid channel id and configure the YouTube API key to load playlists.'}
               </div>
             )}

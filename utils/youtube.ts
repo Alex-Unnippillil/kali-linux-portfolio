@@ -310,6 +310,88 @@ export async function fetchYouTubePlaylistsByIds(
   return uniqueIds.map((id) => index.get(id)).filter(Boolean) as YouTubePlaylistSummary[];
 }
 
+export async function fetchYouTubePlaylistsByChannelIdAll(
+  channelId: string,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<YouTubePlaylistSummary[]> {
+  type PlaylistsListResponse = {
+    nextPageToken?: string;
+    items?: Array<{
+      id?: string;
+      snippet?: {
+        title?: string;
+        description?: string;
+        publishedAt?: string;
+        thumbnails?: {
+          maxres?: { url?: string };
+          standard?: { url?: string };
+          high?: { url?: string };
+          medium?: { url?: string };
+          default?: { url?: string };
+        };
+      };
+      contentDetails?: { itemCount?: number };
+      status?: { privacyStatus?: string };
+    }>;
+  };
+
+  const results: YouTubePlaylistSummary[] = [];
+  let pageToken: string | undefined;
+
+  // Safety net to avoid accidental infinite loops.
+  let safety = 0;
+  do {
+    safety += 1;
+    if (safety > 200) break;
+
+    const data = await fetchYouTubeApi<PlaylistsListResponse>(
+      'playlists',
+      {
+        part: 'snippet,contentDetails,status',
+        channelId,
+        maxResults: '50',
+        pageToken,
+      },
+      apiKey,
+      signal,
+    );
+
+    for (const item of data.items ?? []) {
+      const id = item.id ?? '';
+      if (!id) continue;
+
+      const thumb =
+        item.snippet?.thumbnails?.maxres?.url ||
+        item.snippet?.thumbnails?.standard?.url ||
+        item.snippet?.thumbnails?.high?.url ||
+        item.snippet?.thumbnails?.medium?.url ||
+        item.snippet?.thumbnails?.default?.url ||
+        '';
+
+      results.push({
+        id,
+        title: item.snippet?.title?.trim() || 'Untitled playlist',
+        description: item.snippet?.description ?? '',
+        thumbnail: thumb,
+        itemCount: toInt(item.contentDetails?.itemCount, 0),
+        publishedAt: item.snippet?.publishedAt ?? new Date().toISOString(),
+        privacyStatus: item.status?.privacyStatus ?? 'public',
+      });
+    }
+
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  // Stable sort: newest first, then title.
+  return results.sort((a, b) => {
+    const da = Date.parse(a.publishedAt);
+    const db = Date.parse(b.publishedAt);
+    if (Number.isFinite(da) && Number.isFinite(db) && da !== db) return db - da;
+    return a.title.localeCompare(b.title);
+  });
+}
+
 export async function fetchYouTubePlaylistItems(
   playlistId: string,
   apiKey: string,
