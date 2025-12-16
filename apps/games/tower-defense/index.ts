@@ -1,6 +1,15 @@
+export type Vec = { x: number; y: number };
+
 export const GRID_SIZE = 10;
-export const START = { x: 0, y: Math.floor(GRID_SIZE / 2) };
-export const GOAL = { x: GRID_SIZE - 1, y: Math.floor(GRID_SIZE / 2) };
+export const START: Vec = { x: 0, y: Math.floor(GRID_SIZE / 2) };
+export const GOAL: Vec = { x: GRID_SIZE - 1, y: Math.floor(GRID_SIZE / 2) };
+
+export const DIRECTIONS: Vec[] = [
+  { x: 1, y: 0 },
+  { x: -1, y: 0 },
+  { x: 0, y: 1 },
+  { x: 0, y: -1 },
+];
 
 // ---- pathfinding with caching ----
 let cachedKey = '';
@@ -27,6 +36,61 @@ export const resetPathCache = () => {
   cachedKey = '';
   cachedPath = [];
   pathComputationCount = 0;
+};
+
+const inBounds = (v: Vec) =>
+  v.x >= 0 && v.y >= 0 && v.x < GRID_SIZE && v.y < GRID_SIZE;
+
+export const computeFlowField = (
+  start: Vec,
+  goal: Vec,
+  towers: { x: number; y: number }[],
+  allowedPath: Set<string>,
+): Vec[][] | null => {
+  const towerBlockers = new Set(towers.map((t) => `${t.x},${t.y}`));
+  const key = (p: Vec) => `${p.x},${p.y}`;
+  const walkable = (p: Vec) =>
+    inBounds(p) &&
+    (allowedPath.size === 0 || allowedPath.has(key(p))) &&
+    !towerBlockers.has(key(p));
+
+  if (!walkable(start) || !walkable(goal)) return null;
+
+  const queue: Vec[] = [start];
+  const came = new Map<string, string>();
+  const visited = new Set<string>([key(start)]);
+
+  while (queue.length) {
+    const current = queue.shift()!;
+    if (current.x === goal.x && current.y === goal.y) break;
+
+    for (const d of DIRECTIONS) {
+      const next: Vec = { x: current.x + d.x, y: current.y + d.y };
+      const nextKey = key(next);
+      if (!walkable(next) || visited.has(nextKey)) continue;
+      visited.add(nextKey);
+      came.set(nextKey, key(current));
+      queue.push(next);
+    }
+  }
+
+  if (!visited.has(key(goal))) return null;
+
+  const field: Vec[][] = Array.from({ length: GRID_SIZE }, () =>
+    Array.from({ length: GRID_SIZE }, () => ({ x: 0, y: 0 })),
+  );
+
+  let currentKey = key(goal);
+  while (currentKey !== key(start)) {
+    const prevKey = came.get(currentKey);
+    if (!prevKey) break;
+    const [cx, cy] = currentKey.split(',').map(Number);
+    const [px, py] = prevKey.split(',').map(Number);
+    field[px][py] = { x: cx - px, y: cy - py };
+    currentKey = prevKey;
+  }
+
+  return field;
 };
 
 // ---- simple object pools ----
