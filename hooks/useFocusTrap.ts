@@ -87,6 +87,7 @@ export const useFocusTrap = (
     };
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
+    const restoreFocusNode = restoreFocusRef?.current ?? null;
 
     focusFirstElement();
 
@@ -133,8 +134,13 @@ export const useFocusTrap = (
 
     container.addEventListener('keydown', handleKeyDown);
     const handleFocus = (event: FocusEvent) => {
-      const target = event.target as Node | null;
-      if (!target || container.contains(target)) {
+      // `window` focus events can have non-Node targets (e.g. Window), which would
+      // throw if passed to `Node.contains`. Prefer the actual active element.
+      const rawTarget: EventTarget | null = event.target;
+      const candidate: Node | null =
+        rawTarget instanceof Node ? rawTarget : (document.activeElement instanceof Node ? document.activeElement : null);
+
+      if (!candidate || container.contains(candidate)) {
         return;
       }
 
@@ -150,7 +156,7 @@ export const useFocusTrap = (
       container.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('focus', handleFocus, true);
 
-      const restoreTarget = restoreFocusRef?.current ?? previouslyFocused;
+      const restoreTarget = restoreFocusNode ?? previouslyFocused;
 
       if (restoreTarget && restoreTarget.isConnected) {
         restoreTarget.focus({ preventScroll: true });

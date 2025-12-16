@@ -253,10 +253,15 @@ export class Desktop extends Component {
 
         this.iconSizePresetMap = this.loadStoredIconPresetMap();
 
-        const initialViewportWidth =
-            typeof window !== 'undefined' && typeof window.innerWidth === 'number' ? window.innerWidth : 0;
-        const initialIconSizeBucket = this.getViewportBucketId(initialViewportWidth);
-        const initialIconSizePreset = this.getStoredIconSizePreset(initialIconSizeBucket);
+        // IMPORTANT: Keep constructor state SSR-safe and deterministic.
+        // If we read `window.innerWidth` or `localStorage` here, the server markup can diverge from the first client render
+        // during hydration (Next.js will warn and re-render the tree on the client).
+        //
+        // We intentionally start with stable defaults and then "upgrade" to the real viewport bucket + stored preset
+        // in `componentDidMount()` via `setupViewportObserver()`.
+        const initialViewportWidth = 0;
+        const initialIconSizeBucket = 'gte-1024';
+        const initialIconSizePreset = 'medium';
         const initialPresetConfig = this.getIconSizePresetConfig(initialIconSizePreset);
 
         this.baseIconDimensions = { ...initialPresetConfig.dimensions };

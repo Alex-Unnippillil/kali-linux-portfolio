@@ -4,6 +4,7 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const [isHydrated, setIsHydrated] = useState(false)
     const iconSizePreset = props.iconSizePreset || 'medium'
     const iconSizeBucket = props.iconSizeBucket
     const iconSizeBucketLabel = props.iconSizeBucketLabel || 'current display'
@@ -15,6 +16,9 @@ function DesktopMenu(props) {
     ]
 
     useEffect(() => {
+        // Prevent SSR/client hydration mismatches for UI that depends on client-only state like viewport size.
+        // We intentionally render a stable, SSR-safe label until after the first client mount.
+        setIsHydrated(true)
         document.addEventListener('fullscreenchange', checkFullScreen);
         return () => {
             document.removeEventListener('fullscreenchange', checkFullScreen);
@@ -81,8 +85,11 @@ function DesktopMenu(props) {
             <div className="px-5 pb-1 text-xs tracking-wide uppercase text-ub-warm-grey text-opacity-80">
                 View
             </div>
-            <div className="px-5 pb-2 text-[0.65rem] uppercase tracking-wide text-ub-warm-grey text-opacity-60">
-                {`Applies to ${iconSizeBucketLabel}`}
+            <div
+                className="px-5 pb-2 text-[0.65rem] uppercase tracking-wide text-ub-warm-grey text-opacity-60"
+                suppressHydrationWarning
+            >
+                {`Applies to ${isHydrated ? iconSizeBucketLabel : 'current display'}`}
             </div>
             {iconSizeOptions.map((option) => {
                 const isActive = iconSizePreset === option.value

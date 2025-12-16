@@ -95,6 +95,51 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       console.error('Analytics initialization failed', err);
     });
 
+    // In dev, a previously-registered service worker (e.g. from a production run on localhost)
+    // can keep serving stale cached `_next/static/*` assets, causing `ChunkLoadError`.
+    // Proactively unregister + clear SW caches once per tab session.
+    if (process.env.NODE_ENV !== 'production' && 'serviceWorker' in navigator) {
+      const cleanupKey = '__kali_dev_sw_cleanup_done__';
+      const alreadyCleaned =
+        typeof window !== 'undefined' && window.sessionStorage?.getItem(cleanupKey) === 'true';
+
+      if (!alreadyCleaned) {
+        try {
+          window.sessionStorage?.setItem(cleanupKey, 'true');
+        } catch {
+          // ignore storage failures
+        }
+
+        const cleanup = async (): Promise<void> => {
+          try {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map((reg) => reg.unregister()));
+          } catch (err) {
+            console.warn('Dev service worker cleanup failed', err);
+          }
+
+          try {
+            if ('caches' in window) {
+              const keys = await caches.keys();
+              const toDelete = keys.filter((key) =>
+                /(workbox|next-pwa|kali-portfolio|_next)/i.test(key)
+              );
+              await Promise.all(toDelete.map((key) => caches.delete(key)));
+            }
+          } catch (err) {
+            console.warn('Dev cache cleanup failed', err);
+          }
+
+          // If this page was controlled by an old SW, we need one reload to fully drop control.
+          if (navigator.serviceWorker.controller) {
+            window.location.reload();
+          }
+        };
+
+        void cleanup();
+      }
+    }
+
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
       const swPath = resolveServiceWorkerPath();
       const register = async (): Promise<void> => {
