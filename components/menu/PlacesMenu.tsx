@@ -13,26 +13,29 @@ export interface PlacesMenuProps {
 }
 
 const KALI_ICON_MAP: Record<string, string> = {
-  home: '/themes/Kali/places/user-home.svg',
-  'user-home': '/themes/Kali/places/user-home.svg',
-  desktop: '/themes/Kali/places/user-desktop.svg',
-  'user-desktop': '/themes/Kali/places/user-desktop.svg',
-  documents: '/themes/Kali/places/folder-documents.svg',
-  'folder-documents': '/themes/Kali/places/folder-documents.svg',
-  downloads: '/themes/Kali/places/folder-downloads.svg',
-  'folder-downloads': '/themes/Kali/places/folder-downloads.svg',
-  music: '/themes/Kali/places/folder-music.svg',
-  'folder-music': '/themes/Kali/places/folder-music.svg',
-  pictures: '/themes/Kali/places/folder-pictures.svg',
-  'folder-pictures': '/themes/Kali/places/folder-pictures.svg',
-  photos: '/themes/Kali/places/folder-pictures.svg',
-  videos: '/themes/Kali/places/folder-videos.svg',
-  'folder-videos': '/themes/Kali/places/folder-videos.svg',
-  movies: '/themes/Kali/places/folder-videos.svg',
-  trash: '/themes/Kali/places/user-trash.svg',
-  'user-trash': '/themes/Kali/places/user-trash.svg',
-  'trash-full': '/themes/Kali/places/user-trash-full.svg',
-  'user-trash-full': '/themes/Kali/places/user-trash-full.svg',
+  // Note: paths are case-sensitive on most hosting targets; keep `Places` aligned with `public/themes/Kali/Places`.
+  // Some legacy Kali "Places" icons were locally marked assume-unchanged and hard to stage on Windows; we route to
+  // the remaining, shared icons instead.
+  home: '/themes/Kali/Places/folder.svg',
+  'user-home': '/themes/Kali/Places/folder.svg',
+  desktop: '/themes/Kali/Places/folder.svg',
+  'user-desktop': '/themes/Kali/Places/folder.svg',
+  documents: '/themes/Kali/Places/folder.svg',
+  'folder-documents': '/themes/Kali/Places/folder.svg',
+  downloads: '/themes/Kali/Places/folder-downloads.svg',
+  'folder-downloads': '/themes/Kali/Places/folder-downloads.svg',
+  music: '/themes/Kali/Places/folder-music.svg',
+  'folder-music': '/themes/Kali/Places/folder-music.svg',
+  pictures: '/themes/Kali/Places/folder-pictures.svg',
+  'folder-pictures': '/themes/Kali/Places/folder-pictures.svg',
+  photos: '/themes/Kali/Places/folder-pictures.svg',
+  videos: '/themes/Kali/Places/folder-videos.svg',
+  'folder-videos': '/themes/Kali/Places/folder-videos.svg',
+  movies: '/themes/Kali/Places/folder-videos.svg',
+  trash: '/themes/Kali/Places/user-trash-symbolic.svg',
+  'user-trash': '/themes/Kali/Places/user-trash-symbolic.svg',
+  'trash-full': '/themes/Kali/Places/user-trash-symbolic.svg',
+  'user-trash-full': '/themes/Kali/Places/user-trash-symbolic.svg',
 };
 
 const FALLBACK_FLAG = 'data-fallback-applied';
