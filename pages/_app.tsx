@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
-import type { AppProps } from 'next/app';
+import NextApp, { type AppContext, type AppProps } from 'next/app';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
@@ -18,6 +18,11 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { LocaleProvider } from '../lib/i18n/LocaleProvider';
+import { DEFAULT_NAMESPACES } from '../lib/i18n/constants';
+import { detectLocaleFromRequest } from '../lib/i18n/detector';
+import { activateLocale, preloadTranslations } from '../lib/i18n/config';
+import { serializeLocaleCookie, appendSetCookieHeader } from '../lib/i18n/utils';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
@@ -70,7 +75,13 @@ const resolveServiceWorkerPath = (): string => {
   );
 };
 
-interface MyAppProps extends AppProps {}
+interface I18nPageProps {
+  locale?: string;
+  namespaces?: string[];
+  initialI18nStore?: Record<string, Record<string, unknown>>;
+}
+
+interface MyAppProps extends AppProps<I18nPageProps> {}
 
 type AnalyticsEventWithMetadata = BeforeSendEvent & {
   metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
@@ -261,7 +272,13 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
+              <LocaleProvider
+                initialLocale={pageProps.locale}
+                namespaces={pageProps.namespaces ?? Array.from(DEFAULT_NAMESPACES)}
+                initialResources={pageProps.initialI18nStore}
+              >
+                <Component {...pageProps} />
+              </LocaleProvider>
               <ShortcutOverlay />
               <Analytics
                 beforeSend={(event) => {
@@ -282,6 +299,48 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     </ErrorBoundary>
   );
 }
+
+MyApp.getInitialProps = async (appContext: AppContext) => {
+  const appProps = await NextApp.getInitialProps(appContext);
+
+  const detected = detectLocaleFromRequest(appContext.ctx.req, appContext.ctx.asPath);
+  const namespaces = Array.isArray((appProps.pageProps as I18nPageProps)?.namespaces)
+    ? ((appProps.pageProps as I18nPageProps).namespaces as string[])
+    : Array.from(DEFAULT_NAMESPACES);
+
+  let initialI18nStore: Record<string, Record<string, unknown>> | undefined;
+  try {
+    initialI18nStore = await preloadTranslations(detected.locale, namespaces);
+    await activateLocale(detected.locale, namespaces, initialI18nStore);
+  } catch (error) {
+    console.error('Failed to preload translations', error);
+  }
+
+  const localeCookie = serializeLocaleCookie(detected.locale, {
+    secure: process.env.NODE_ENV === 'production',
+  });
+
+  if (appContext.ctx.res) {
+    if (!appContext.ctx.res.headersSent) {
+      appendSetCookieHeader(appContext.ctx.res, localeCookie);
+    }
+    if (detected.redirectPath && !appContext.ctx.res.headersSent) {
+      appContext.ctx.res.statusCode = 307;
+      appContext.ctx.res.setHeader('Location', detected.redirectPath);
+      appContext.ctx.res.end();
+    }
+  }
+
+  return {
+    ...appProps,
+    pageProps: {
+      ...(appProps.pageProps as Record<string, unknown>),
+      locale: detected.locale,
+      namespaces,
+      initialI18nStore,
+    },
+  };
+};
 
 export default MyApp;
 
