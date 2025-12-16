@@ -1,139 +1,38 @@
 'use client';
 
-import React, {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import EmbedFrame from '../../EmbedFrame';
-import { demoYouTubeVideos } from '../../../data/youtube/demoVideos';
-import usePersistentState from '../../../hooks/usePersistentState';
+import type {
+  YouTubeChannelSection,
+  YouTubeChannelSummary,
+  YouTubePlaylistSummary,
+  YouTubePlaylistVideo,
+} from '../../../utils/youtube';
+import {
+  fetchYouTubeChannelSections,
+  fetchYouTubeChannelSummary,
+  fetchYouTubePlaylistItems,
+  fetchYouTubePlaylistsByIds,
+  parseYouTubeChannelId,
+} from '../../../utils/youtube';
 
 const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
-export type VideoResult = {
-  id: string;
-  title: string;
-  description: string;
-  channelTitle: string;
-  publishedAt: string;
-  thumbnail: string;
+type PlaylistListing = {
+  sectionId: string;
+  sectionTitle: string;
+  playlists: YouTubePlaylistSummary[];
+};
+
+type PlaylistItemsState = {
+  items: YouTubePlaylistVideo[];
+  nextPageToken?: string;
+  loading: boolean;
+  error?: string;
 };
 
 interface Props {
-  initialResults?: VideoResult[];
-}
-
-const HISTORY_STORAGE_KEY = 'youtube:recently-watched';
-const SEARCH_DEBOUNCE_MS = 500;
-const MAX_HISTORY_ITEMS = 10;
-
-const hasOwnText = (value?: string) => Boolean(value && value.trim().length);
-
-function normalizeVideo(video: VideoResult): VideoResult {
-  return {
-    id: video.id,
-    title: hasOwnText(video.title) ? video.title : 'Untitled video',
-    description: video.description ?? '',
-    channelTitle: hasOwnText(video.channelTitle)
-      ? video.channelTitle
-      : 'Unknown channel',
-    publishedAt: video.publishedAt ?? new Date().toISOString(),
-    thumbnail: video.thumbnail ?? '',
-  };
-}
-
-const demoResults = demoYouTubeVideos.map((video) => normalizeVideo(video));
-
-type YouTubeSearchResponse = {
-  items?: Array<{
-    id?: { videoId?: string };
-    snippet?: {
-      title?: string;
-      description?: string;
-      channelTitle?: string;
-      publishedAt?: string;
-      thumbnails?: {
-        high?: { url?: string };
-        medium?: { url?: string };
-        default?: { url?: string };
-      };
-    };
-  }>;
-  error?: { message?: string };
-};
-
-function isVideoList(value: unknown): value is VideoResult[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        item &&
-        typeof item.id === 'string' &&
-        typeof item.title === 'string' &&
-        typeof item.description === 'string' &&
-        typeof item.channelTitle === 'string' &&
-        typeof item.publishedAt === 'string' &&
-        typeof item.thumbnail === 'string',
-    )
-  );
-}
-
-async function fetchVideosFromYouTube(
-  query: string,
-  signal?: AbortSignal,
-): Promise<VideoResult[]> {
-  const searchUrl = new URL('https://www.googleapis.com/youtube/v3/search');
-  searchUrl.searchParams.set('key', YOUTUBE_API_KEY ?? '');
-  searchUrl.searchParams.set('part', 'snippet');
-  searchUrl.searchParams.set('type', 'video');
-  searchUrl.searchParams.set('maxResults', '12');
-  searchUrl.searchParams.set('q', query);
-
-  const response = await fetch(searchUrl.toString(), { signal });
-  const data = (await response.json()) as YouTubeSearchResponse;
-
-  if (!response.ok) {
-    throw new Error(data.error?.message || 'YouTube search failed');
-  }
-
-  return (data.items ?? [])
-    .map((item) => ({
-      id: item.id?.videoId ?? '',
-      title: item.snippet?.title ?? 'Untitled video',
-      description: item.snippet?.description ?? '',
-      channelTitle: item.snippet?.channelTitle ?? 'Unknown channel',
-      publishedAt: item.snippet?.publishedAt ?? new Date().toISOString(),
-      thumbnail:
-        item.snippet?.thumbnails?.high?.url ||
-        item.snippet?.thumbnails?.medium?.url ||
-        item.snippet?.thumbnails?.default?.url ||
-        '',
-    }))
-    .filter((item): item is VideoResult => Boolean(item.id));
-}
-
-function filterDemoVideos(query: string): VideoResult[] {
-  const term = query.toLowerCase();
-  const seen = new Set<string>();
-
-  return demoResults.filter((video) => {
-    if (seen.has(video.id)) {
-      return false;
-    }
-
-    const haystack = `${video.title} ${video.description} ${video.channelTitle}`.toLowerCase();
-    const match = haystack.includes(term);
-
-    if (match) {
-      seen.add(video.id);
-    }
-
-    return match;
-  });
+  channelId?: string;
 }
 
 function formatDate(value?: string) {
@@ -147,230 +46,305 @@ function formatDate(value?: string) {
   }).format(date);
 }
 
-export default function YouTubeApp({ initialResults }: Props) {
-  const fallbackInitial = useMemo(() => {
-    if (initialResults?.length) {
-      return initialResults.map((video) => normalizeVideo(video));
-    }
-    return demoResults;
-  }, [initialResults]);
+function playlistUrl(playlistId: string) {
+  return `https://www.youtube.com/playlist?list=${playlistId}`;
+}
 
-  const [results, setResults] = useState<VideoResult[]>(() => fallbackInitial);
-  const [query, setQuery] = useState('');
-  const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(
-    fallbackInitial[0] ?? null,
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [lastSearchSource, setLastSearchSource] = useState<'api' | 'demo' | null>(
-    null,
-  );
-  const [rawHistory, setHistoryState, , clearHistoryState] =
-    usePersistentState<VideoResult[]>(HISTORY_STORAGE_KEY, [], isVideoList);
+function channelUrl(channelId: string) {
+  return `https://www.youtube.com/channel/${channelId}`;
+}
 
-  const history = useMemo(
-    () => rawHistory.map((item) => normalizeVideo(item)),
-    [rawHistory],
-  );
+function videoUrl(videoId: string) {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+}
+
+export default function YouTubeApp({ channelId }: Props) {
+  const parsedChannelId = useMemo(() => {
+    const envChannel = process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
+    return (
+      parseYouTubeChannelId(channelId ?? '') ??
+      (envChannel ? parseYouTubeChannelId(envChannel) : null)
+    );
+  }, [channelId]);
 
   const hasApiKey = Boolean(YOUTUBE_API_KEY);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const requestIdRef = useRef(0);
 
-  useEffect(() => {
-    setResults(fallbackInitial);
-    setSelectedVideo((previous) => previous ?? fallbackInitial[0] ?? null);
-  }, [fallbackInitial]);
-
-  const setHistory = useCallback(
-    (updater: React.SetStateAction<VideoResult[]>) => {
-      setHistoryState((prev) => {
-        const normalizedPrev = prev.map((item) => normalizeVideo(item));
-        const next =
-          typeof updater === 'function'
-            ? (updater as (value: VideoResult[]) => VideoResult[])(
-                normalizedPrev,
-              )
-            : updater;
-        return next.map((item) => normalizeVideo(item));
-      });
-    },
-    [setHistoryState],
+  const [channelSummary, setChannelSummary] = useState<YouTubeChannelSummary | null>(
+    null,
+  );
+  const [directory, setDirectory] = useState<PlaylistListing[]>([]);
+  const [allSections, setAllSections] = useState<YouTubeChannelSection[]>([]);
+  const [playlistIndex, setPlaylistIndex] = useState<Map<string, YouTubePlaylistSummary>>(
+    () => new Map(),
+  );
+  const [playlistItems, setPlaylistItems] = useState<Record<string, PlaylistItemsState>>(
+    {},
   );
 
-  const handleSelectVideo = useCallback(
-    (video: VideoResult) => {
-      const normalized = normalizeVideo(video);
-      setSelectedVideo(normalized);
-      setHistory((prev) => {
-        const filtered = prev.filter((item) => item.id !== normalized.id);
-        return [normalized, ...filtered].slice(0, MAX_HISTORY_ITEMS);
-      });
-    },
-    [setHistory],
-  );
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
+  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [filter, setFilter] = useState('');
 
-  const executeSearch = useCallback(
-    async (value: string) => {
-      const trimmed = value.trim();
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
+  const [loadingDirectory, setLoadingDirectory] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-      if (!trimmed) {
-        setResults(fallbackInitial);
-        setSelectedVideo((prev) => prev ?? fallbackInitial[0] ?? null);
-        setError(null);
-        setLastSearchSource(null);
-        setLoading(false);
-        return;
-      }
+  const abortDirectoryRef = useRef<AbortController | null>(null);
+  const abortPlaylistRef = useRef<AbortController | null>(null);
 
-      if (trimmed.length < 2) {
-        setError('Type at least two characters to search.');
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      setError(null);
-
-      let items: VideoResult[] = [];
-      let source: 'api' | 'demo' = 'demo';
-
-      if (hasApiKey) {
-        abortControllerRef.current?.abort();
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-
-        try {
-          const apiItems = await fetchVideosFromYouTube(trimmed, controller.signal);
-          items = apiItems.map((item) => normalizeVideo(item));
-          source = 'api';
-        } catch (error_: unknown) {
-          const err = error_ as Error;
-          if (err.name === 'AbortError') {
-            setLoading(false);
-            return;
-          }
-          console.error(
-            'YouTube API search failed, using demo data instead.',
-            err,
-          );
-          setError(
-            'Falling back to demo results while the YouTube API is unavailable.',
-          );
-          items = filterDemoVideos(trimmed).map((item) => normalizeVideo(item));
-          source = 'demo';
-        } finally {
-          abortControllerRef.current = null;
-        }
-      } else {
-        items = filterDemoVideos(trimmed).map((item) => normalizeVideo(item));
-        source = 'demo';
-      }
-
-      if (requestIdRef.current !== requestId) {
-        setLoading(false);
-        return;
-      }
-
-      setResults(items);
-      setLastSearchSource(source);
-      if (!items.length) {
-        setSelectedVideo((prev) => (prev && prev.id ? prev : null));
-      } else {
-        setSelectedVideo((prev) => prev ?? items[0]);
-      }
-      setLoading(false);
-    },
-    [fallbackInitial, hasApiKey],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      abortControllerRef.current?.abort();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (debounceTimeoutRef.current) {
-      clearTimeout(debounceTimeoutRef.current);
+  const loadDirectory = useCallback(async () => {
+    if (!hasApiKey) {
+      setError(
+        'Set NEXT_PUBLIC_YOUTUBE_API_KEY to load your playlists from the YouTube Data API.',
+      );
+      setLoadingDirectory(false);
+      return;
+    }
+    if (!parsedChannelId) {
+      setError('Missing or invalid YouTube channel id.');
+      setLoadingDirectory(false);
+      return;
     }
 
-    debounceTimeoutRef.current = setTimeout(() => {
-      void executeSearch(query);
-    }, SEARCH_DEBOUNCE_MS);
+    setLoadingDirectory(true);
+    setError(null);
+    abortDirectoryRef.current?.abort();
+    const controller = new AbortController();
+    abortDirectoryRef.current = controller;
 
+    try {
+      const [summary, sections] = await Promise.all([
+        fetchYouTubeChannelSummary(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
+        fetchYouTubeChannelSections(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
+      ]);
+
+      setChannelSummary(summary);
+      setAllSections(sections);
+
+      const playlistIds = sections.flatMap((s) => s.playlistIds);
+      const playlists = await fetchYouTubePlaylistsByIds(
+        playlistIds,
+        YOUTUBE_API_KEY ?? '',
+        controller.signal,
+      );
+
+      const map = new Map<string, YouTubePlaylistSummary>(
+        playlists.map((p) => [p.id, p]),
+      );
+      setPlaylistIndex(map);
+
+      const listings: PlaylistListing[] = sections
+        .map((section) => ({
+          sectionId: section.id,
+          sectionTitle: section.title,
+          playlists: section.playlistIds
+            .map((id) => map.get(id))
+            .filter(Boolean) as YouTubePlaylistSummary[],
+        }))
+        .filter((entry) => entry.playlists.length > 0);
+
+      setDirectory(listings);
+
+      // Auto-select first playlist if nothing selected
+      const firstPlaylist = listings[0]?.playlists[0]?.id;
+      setSelectedPlaylistId((prev) => prev ?? firstPlaylist ?? null);
+    } catch (err: unknown) {
+      const e = err as Error;
+      if (e.name === 'AbortError') return;
+      console.error('YouTube directory load failed', e);
+      setError(e.message || 'Failed to load YouTube playlists.');
+    } finally {
+      setLoadingDirectory(false);
+      abortDirectoryRef.current = null;
+    }
+  }, [hasApiKey, parsedChannelId]);
+
+  useEffect(() => {
+    void loadDirectory();
     return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
+      abortDirectoryRef.current?.abort();
+      abortPlaylistRef.current?.abort();
     };
-  }, [query, executeSearch]);
+  }, [loadDirectory]);
 
-  const handleSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
+  const loadPlaylistItems = useCallback(
+    async (playlistId: string, mode: 'replace' | 'append') => {
+      if (!hasApiKey || !playlistId) return;
+
+      setPlaylistItems((prev) => ({
+        ...prev,
+        [playlistId]: {
+          items: prev[playlistId]?.items ?? [],
+          nextPageToken: prev[playlistId]?.nextPageToken,
+          loading: true,
+          error: undefined,
+        },
+      }));
+
+      abortPlaylistRef.current?.abort();
+      const controller = new AbortController();
+      abortPlaylistRef.current = controller;
+
+      try {
+        const previous = playlistItems[playlistId];
+        const pageToken = mode === 'append' ? previous?.nextPageToken : undefined;
+        const response = await fetchYouTubePlaylistItems(playlistId, YOUTUBE_API_KEY ?? '', {
+          pageToken,
+          maxResults: 50,
+          signal: controller.signal,
+        });
+
+        setPlaylistItems((prev) => {
+          const existing = prev[playlistId]?.items ?? [];
+          const merged = mode === 'append' ? [...existing, ...response.items] : response.items;
+          return {
+            ...prev,
+            [playlistId]: {
+              items: merged,
+              nextPageToken: response.nextPageToken,
+              loading: false,
+              error: undefined,
+            },
+          };
+        });
+
+        // Auto-select first video if selection not set or selection not in list
+        setSelectedVideoId((prev) => {
+          const candidate = response.items[0]?.videoId;
+          if (!candidate) return prev;
+          if (!prev || mode === 'replace') return prev ?? candidate;
+          return prev;
+        });
+      } catch (err: unknown) {
+        const e = err as Error;
+        if (e.name === 'AbortError') return;
+        console.error('YouTube playlist items load failed', e);
+        setPlaylistItems((prev) => ({
+          ...prev,
+          [playlistId]: {
+            items: prev[playlistId]?.items ?? [],
+            nextPageToken: prev[playlistId]?.nextPageToken,
+            loading: false,
+            error: e.message || 'Failed to load playlist videos.',
+          },
+        }));
+      } finally {
+        abortPlaylistRef.current = null;
       }
-      void executeSearch(query);
     },
-    [query, executeSearch],
+    [hasApiKey, playlistItems],
   );
 
-  const handleClearHistory = useCallback(() => {
-    clearHistoryState();
-  }, [clearHistoryState]);
+  useEffect(() => {
+    if (!selectedPlaylistId) return;
+    const current = playlistItems[selectedPlaylistId];
+    if (current?.items?.length) return;
+    void loadPlaylistItems(selectedPlaylistId, 'replace');
+  }, [selectedPlaylistId, playlistItems, loadPlaylistItems]);
+
+  const filteredDirectory = useMemo(() => {
+    const term = filter.trim().toLowerCase();
+    if (!term) return directory;
+
+    return directory
+      .map((entry) => ({
+        ...entry,
+        playlists: entry.playlists.filter((p) => p.title.toLowerCase().includes(term)),
+      }))
+      .filter((entry) => entry.playlists.length > 0);
+  }, [directory, filter]);
+
+  const selectedPlaylist = selectedPlaylistId
+    ? playlistIndex.get(selectedPlaylistId) ?? null
+    : null;
+
+  const selectedPlaylistVideos = useMemo(() => {
+    return selectedPlaylistId ? playlistItems[selectedPlaylistId]?.items ?? [] : [];
+  }, [playlistItems, selectedPlaylistId]);
+
+  const selectedVideo = useMemo(() => {
+    if (!selectedVideoId) return null;
+    return selectedPlaylistVideos.find((v) => v.videoId === selectedVideoId) ?? null;
+  }, [selectedPlaylistVideos, selectedVideoId]);
+
+  const playlistState = selectedPlaylistId ? playlistItems[selectedPlaylistId] : undefined;
 
   return (
     <div className="flex h-full flex-col bg-[radial-gradient(circle_at_top_left,_color-mix(in_srgb,var(--kali-blue)_18%,var(--color-bg))_0%,_var(--color-bg)_45%,_var(--color-dark)_100%)] text-[var(--color-text)]">
       <header className="border-b border-[var(--kali-panel-border)] bg-[var(--color-overlay-strong)] px-6 py-6 shadow-sm backdrop-blur">
-        <h1 className="text-2xl font-semibold">YouTube Explorer</h1>
-        <p className="mt-2 max-w-3xl text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
-          Search for security walkthroughs, development tutorials, and capture the flag recaps. Click any result to watch it and it will be remembered in your history.
-        </p>
-        <form
-          onSubmit={handleSubmit}
-          className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center"
-        >
-          <label className="sr-only" htmlFor="youtube-search">
-            Search videos
-          </label>
-          <input
-            id="youtube-search"
-            aria-label="Search videos"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={'Try "Wireshark", "OSINT workflow", or "Metasploit demo"'}
-            className="w-full rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[color:var(--color-text)] placeholder:text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)] focus:border-[var(--color-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
-          />
-          <button
-            type="submit"
-            className="rounded-md border border-[var(--kali-panel-border)] bg-kali-control px-5 py-3 text-sm font-semibold text-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
-            disabled={loading}
-          >
-            {loading ? 'Searching…' : 'Search'}
-          </button>
-        </form>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            {channelSummary?.thumbnail ? (
+              <img
+                src={channelSummary.thumbnail}
+                alt=""
+                className="h-12 w-12 rounded-lg border border-[var(--kali-panel-border)] object-cover"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--kali-panel-highlight)]" />
+            )}
+            <div>
+              <h1 className="text-2xl font-semibold">YouTube Playlists</h1>
+              <p className="mt-1 text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+                {channelSummary?.title
+                  ? `Directory for ${channelSummary.title}`
+                  : 'A directory of playlists, grouped by your channel categories.'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {parsedChannelId && (
+              <a
+                href={channelUrl(parsedChannelId)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-xs font-semibold text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              >
+                Open channel
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => void loadDirectory()}
+              className="rounded-md border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-xs font-semibold text-black shadow-[0_0_0_1px_rgba(255,255,255,0.08)] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={loadingDirectory}
+            >
+              {loadingDirectory ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1">
+            <label className="sr-only" htmlFor="youtube-playlist-filter">
+              Filter playlists
+            </label>
+            <input
+              id="youtube-playlist-filter"
+              aria-label="Filter playlists"
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Filter playlists…"
+              className="w-full rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-sm text-[color:var(--color-text)] placeholder:text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)] focus:border-[var(--color-focus-ring)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus-ring)]"
+            />
+          </div>
+          <div className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+            {loadingDirectory
+              ? 'Loading directory…'
+              : `${filteredDirectory.reduce((sum, group) => sum + group.playlists.length, 0)} playlists in ${filteredDirectory.length} categories`}
+          </div>
+        </div>
+
         {!hasApiKey && (
-          <p className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-            Using the built-in demo library because
-            {' '}
-            <code className="rounded bg-[var(--kali-panel-highlight)] px-1">NEXT_PUBLIC_YOUTUBE_API_KEY</code>
-            {' '}
-            is not configured.
+          <p className="mt-3 text-sm text-amber-200/90" role="status">
+            Configure{' '}
+            <code className="rounded bg-[var(--kali-panel-highlight)] px-1">
+              NEXT_PUBLIC_YOUTUBE_API_KEY
+            </code>{' '}
+            to load playlists from YouTube.
           </p>
         )}
-        {lastSearchSource === 'demo' && hasApiKey && !error && (
-          <p className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]" role="status">
-            Showing demo results while the YouTube API request completes.
-          </p>
-        )}
+
         {error && (
           <p className="mt-3 text-sm text-red-400" role="alert">
             {error}
@@ -379,168 +353,273 @@ export default function YouTubeApp({ initialResults }: Props) {
       </header>
 
       <main className="flex flex-1 flex-col gap-6 px-6 py-6 lg:flex-row">
-        <section className="flex-1 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-            Watch
-          </h2>
-          <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
-            {selectedVideo ? (
-              <EmbedFrame
-                key={selectedVideo.id}
-                title={`YouTube player for ${selectedVideo.title}`}
-                src={`https://www.youtube-nocookie.com/embed/${selectedVideo.id}`}
-                className="h-full w-full border-0"
-                containerClassName="relative h-full w-full"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                fallbackLabel="Open on YouTube"
-                openInNewTabLabel="Open on YouTube"
-                loadingLabel="Loading YouTube player…"
-              />
+        <aside className="lg:w-[420px]">
+          <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-4 shadow-kali-panel">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+              Categories
+            </h2>
+
+            {loadingDirectory && !filteredDirectory.length ? (
+              <div className="mt-4 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+                Loading playlists…
+              </div>
+            ) : filteredDirectory.length ? (
+              <div className="mt-4 space-y-4">
+                {filteredDirectory.map((group) => (
+                  <div key={group.sectionId} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-[var(--color-text)]">
+                        {group.sectionTitle}
+                      </h3>
+                      <span className="text-[11px] text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                        {group.playlists.length}
+                      </span>
+                    </div>
+                    <ul className="space-y-2" aria-label={`${group.sectionTitle} playlists`}>
+                      {group.playlists.map((playlist) => {
+                        const active = playlist.id === selectedPlaylistId;
+                        return (
+                          <li key={playlist.id}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedPlaylistId(playlist.id);
+                                setSelectedVideoId(null);
+                              }}
+                              className={`flex w-full items-center gap-3 rounded-md border bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                                active
+                                  ? 'border-kali-control text-kali-control'
+                                  : 'border-[var(--kali-panel-border)] hover:border-kali-control hover:text-kali-control'
+                              }`}
+                              aria-label={`Open playlist ${playlist.title}`}
+                            >
+                              {playlist.thumbnail ? (
+                                <img
+                                  src={playlist.thumbnail}
+                                  alt=""
+                                  className="h-12 w-20 rounded object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                                  No preview
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
+                                  {playlist.title}
+                                </p>
+                                <p className="mt-1 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                                  {playlist.itemCount} videos
+                                  {playlist.privacyStatus !== 'public'
+                                    ? ` • ${playlist.privacyStatus}`
+                                    : ''}
+                                </p>
+                              </div>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                Search and choose a video to start watching.
+              <div className="mt-4 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+                {hasApiKey && parsedChannelId
+                  ? 'No playlists found yet. Check your channel sections or adjust your filter.'
+                  : 'Enter a valid channel id and configure the YouTube API key to load playlists.'}
               </div>
             )}
           </div>
-          {selectedVideo && (
-            <div className="mt-4 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
-              <h3 className="text-lg font-semibold text-[var(--color-text)]">
-                {selectedVideo.title}
-              </h3>
-              <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                {selectedVideo.channelTitle} • Published {formatDate(selectedVideo.publishedAt)}
-              </p>
-              {selectedVideo.description && (
-                <p className="text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
-                  {selectedVideo.description}
-                </p>
-              )}
-            </div>
-          )}
-        </section>
-
-        <aside className="lg:w-80">
-          <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-                Recently watched
-              </h2>
-              <button
-                type="button"
-                onClick={handleClearHistory}
-                className="text-xs font-semibold text-kali-control transition hover:text-kali-control/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:opacity-40"
-                disabled={!history.length}
-              >
-                Clear history
-              </button>
-            </div>
-            <ul className="mt-4 space-y-3" data-testid="recently-watched">
-              {history.length ? (
-                history.map((video) => (
-                  <li key={video.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectVideo(video)}
-                      className="flex w-full items-center gap-3 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-3 text-left shadow-[0_6px_16px_rgba(8,15,26,0.32)] transition-colors hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-                      aria-label={`Watch ${video.title} again`}
-                    >
-                      {video.thumbnail ? (
-                        <img
-                          src={video.thumbnail}
-                          alt=""
-                          className="h-12 w-20 rounded object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          No preview
-                        </div>
-                      )}
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
-                          {video.title}
-                        </p>
-                        <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                          {video.channelTitle}
-                        </p>
-                      </div>
-                    </button>
-                  </li>
-                ))
-              ) : (
-                <li className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                  Your history is empty. Watch a video to add it here.
-                </li>
-              )}
-            </ul>
-          </div>
         </aside>
-      </main>
 
-      <section className="border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_65%,transparent)] bg-[var(--color-surface)] px-6 py-6 shadow-[0_-1px_0_rgba(15,148,210,0.08)]">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
-            Search results
-          </h2>
-          {loading && (
-            <span className="flex items-center gap-2 text-xs text-kali-control">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-kali-control" aria-hidden />
-              Loading results…
-            </span>
-          )}
-        </div>
-        {results.length ? (
-          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {results.map((video) => {
-              const isActive = selectedVideo?.id === video.id;
-              return (
-                <button
-                  key={video.id}
-                  type="button"
-                  onClick={() => handleSelectVideo(video)}
-                  className={`flex h-full flex-col overflow-hidden rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] text-left shadow-[0_8px_22px_rgba(8,15,26,0.4)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] hover:border-kali-control ${
-                    isActive
-                      ? 'border-kali-control shadow-[0_10px_30px_rgba(15,148,210,0.28)]'
-                      : 'hover:shadow-[0_10px_35px_rgba(2,6,23,0.45)]'
-                  }`}
-                  aria-label={`Watch ${video.title}`}
+        <section className="flex-1 space-y-6">
+          <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+                  Playlist
+                </h2>
+                <h3 className="mt-2 text-xl font-semibold text-[var(--color-text)]">
+                  {selectedPlaylist?.title ?? 'Select a playlist'}
+                </h3>
+                {selectedPlaylist?.publishedAt && (
+                  <p className="mt-1 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                    Published {formatDate(selectedPlaylist.publishedAt)} •{' '}
+                    {selectedPlaylist.itemCount} videos
+                  </p>
+                )}
+              </div>
+              {selectedPlaylist && (
+                <a
+                  href={playlistUrl(selectedPlaylist.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-xs font-semibold text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
                 >
-                  {video.thumbnail ? (
-                    <img
-                      src={video.thumbnail}
-                      alt=""
-                      className="h-40 w-full object-cover"
+                  Open playlist
+                </a>
+              )}
+            </div>
+
+            {selectedPlaylist?.description ? (
+              <p className="mt-4 text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
+                {selectedPlaylist.description}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-5">
+            <div className="lg:col-span-3">
+              <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+                  Watch
+                </h2>
+                <div className="mt-3 aspect-video overflow-hidden rounded-lg bg-[var(--kali-panel-highlight)]">
+                  {selectedVideo ? (
+                    <EmbedFrame
+                      key={selectedVideo.videoId}
+                      title={`YouTube player for ${selectedVideo.title}`}
+                      src={`https://www.youtube-nocookie.com/embed/${selectedVideo.videoId}`}
+                      className="h-full w-full border-0"
+                      containerClassName="relative h-full w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      fallbackLabel="Open on YouTube"
+                      openInNewTabLabel="Open on YouTube"
+                      loadingLabel="Loading YouTube player…"
                     />
                   ) : (
-                    <div className="flex h-40 w-full items-center justify-center bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      No preview available
+                    <div className="flex h-full items-center justify-center text-sm text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                      Choose a video from the playlist.
                     </div>
                   )}
-                  <div className="flex flex-1 flex-col gap-2 p-4">
-                    <h3 className="text-base font-semibold text-[var(--color-text)] line-clamp-2">
-                      {video.title}
-                    </h3>
+                </div>
+
+                {selectedVideo && (
+                  <div className="mt-4 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="text-lg font-semibold text-[var(--color-text)]">
+                        {selectedVideo.title}
+                      </h3>
+                      <a
+                        href={videoUrl(selectedVideo.videoId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-xs font-semibold text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                      >
+                        Open video
+                      </a>
+                    </div>
                     <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {video.channelTitle}
+                      Published {formatDate(selectedVideo.publishedAt)}
                     </p>
-                    <p className="line-clamp-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
-                      {video.description || 'No description available.'}
-                    </p>
-                    <p className="mt-auto text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
-                      {formatDate(video.publishedAt)}
-                    </p>
+                    {selectedVideo.description ? (
+                      <p className="text-sm leading-relaxed text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]">
+                        {selectedVideo.description}
+                      </p>
+                    ) : null}
                   </div>
-                </button>
-              );
-            })}
+                )}
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
+              <div className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--color-surface)] p-5 shadow-kali-panel">
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_60%,transparent)]">
+                    Videos
+                  </h2>
+                  {playlistState?.loading && (
+                    <span className="flex items-center gap-2 text-xs text-kali-control">
+                      <span
+                        className="h-2 w-2 animate-pulse rounded-full bg-kali-control"
+                        aria-hidden
+                      />
+                      Loading…
+                    </span>
+                  )}
+                </div>
+
+                {!selectedPlaylistId ? (
+                  <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+                    Select a playlist to see videos.
+                  </p>
+                ) : playlistState?.error ? (
+                  <div className="rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-4">
+                    <p className="text-sm text-red-400" role="alert">
+                      {playlistState.error}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void loadPlaylistItems(selectedPlaylistId, 'replace')}
+                      className="mt-3 rounded-md border border-[var(--kali-panel-border)] bg-kali-control px-4 py-2 text-xs font-semibold text-black transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : selectedPlaylistVideos.length ? (
+                  <>
+                    <ul className="space-y-2" aria-label="Playlist videos">
+                      {selectedPlaylistVideos.map((video) => {
+                        const active = video.videoId === selectedVideoId;
+                        return (
+                          <li key={video.videoId}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedVideoId(video.videoId)}
+                              className={`flex w-full items-start gap-3 rounded-md border bg-[var(--color-surface-muted)] p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                                active
+                                  ? 'border-kali-control text-kali-control'
+                                  : 'border-[var(--kali-panel-border)] hover:border-kali-control hover:text-kali-control'
+                              }`}
+                              aria-label={`Watch ${video.title}`}
+                            >
+                              {video.thumbnail ? (
+                                <img
+                                  src={video.thumbnail}
+                                  alt=""
+                                  className="h-12 w-20 rounded object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-12 w-20 items-center justify-center rounded bg-[var(--kali-panel-highlight)] text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                                  No preview
+                                </div>
+                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-semibold text-[var(--color-text)] line-clamp-2">
+                                  {video.title}
+                                </p>
+                                <p className="mt-1 text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
+                                  {formatDate(video.publishedAt)}
+                                </p>
+                              </div>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+
+                    {playlistState?.nextPageToken && (
+                      <button
+                        type="button"
+                        onClick={() => void loadPlaylistItems(selectedPlaylistId, 'append')}
+                        className="mt-4 w-full rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-3 text-xs font-semibold text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:opacity-50"
+                        disabled={playlistState.loading}
+                      >
+                        {playlistState.loading ? 'Loading…' : 'Load more'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+                    {playlistState?.loading ? 'Loading videos…' : 'No videos found.'}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-        ) : (
-          <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
-            {loading
-              ? 'Fetching results…'
-              : 'No matches yet. Try a different search term or clear the search box to see featured videos.'}
-          </p>
-        )}
-      </section>
+        </section>
+      </main>
     </div>
   );
 }

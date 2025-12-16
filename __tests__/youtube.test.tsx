@@ -1,67 +1,162 @@
 import '@testing-library/jest-dom';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-
-import { demoYouTubeVideos } from '../data/youtube/demoVideos';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 let YouTubeApp: (typeof import('../components/apps/youtube'))['default'];
 
 describe('YouTubeApp', () => {
   beforeAll(async () => {
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY = '';
+    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY = 'test-key';
     ({ default: YouTubeApp } = await import('../components/apps/youtube'));
   });
 
   beforeEach(() => {
-    window.localStorage.clear();
+    jest.restoreAllMocks();
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+  it('renders channel sections as categories and loads playlist videos', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation(async (input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
 
-  it('renders initial results and loads a video into the watch view', async () => {
-    render(<YouTubeApp initialResults={demoYouTubeVideos} />);
+        if (url.includes('/youtube/v3/channels')) {
+          return new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'UCxPIJ3hw6AOwomUWh5B7SfQ',
+                  snippet: {
+                    title: 'Alex Unnippillil',
+                    thumbnails: { high: { url: 'https://example.com/channel.jpg' } },
+                  },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
 
-    const firstVideo = demoYouTubeVideos[0];
-    const watchButton = screen.getByRole('button', { name: `Watch ${firstVideo.title}` });
+        if (url.includes('/youtube/v3/channelSections')) {
+          return new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'section-1',
+                  snippet: { title: 'Labs' },
+                  contentDetails: { playlists: ['PL_LABS'] },
+                },
+                {
+                  id: 'section-2',
+                  snippet: { title: 'Tutorials' },
+                  contentDetails: { playlists: ['PL_TUTORIALS'] },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
 
-    fireEvent.click(watchButton);
+        if (url.includes('/youtube/v3/playlists')) {
+          return new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'PL_LABS',
+                  snippet: {
+                    title: 'Lab Playlist',
+                    description: 'Lab desc',
+                    publishedAt: '2024-01-01T00:00:00Z',
+                    thumbnails: { high: { url: 'https://example.com/pl1.jpg' } },
+                  },
+                  contentDetails: { itemCount: 2 },
+                  status: { privacyStatus: 'public' },
+                },
+                {
+                  id: 'PL_TUTORIALS',
+                  snippet: {
+                    title: 'Tutorial Playlist',
+                    description: 'Tutorial desc',
+                    publishedAt: '2024-02-01T00:00:00Z',
+                    thumbnails: { high: { url: 'https://example.com/pl2.jpg' } },
+                  },
+                  contentDetails: { itemCount: 1 },
+                  status: { privacyStatus: 'public' },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+
+        if (url.includes('/youtube/v3/playlistItems')) {
+          // Return different items depending on playlistId query param
+          const asUrl = new URL(url);
+          const playlistId = asUrl.searchParams.get('playlistId');
+          const items =
+            playlistId === 'PL_LABS'
+              ? [
+                  {
+                    snippet: {
+                      title: 'First Lab Video',
+                      description: 'desc',
+                      publishedAt: '2024-03-01T00:00:00Z',
+                      position: 0,
+                      resourceId: { videoId: 'VID_1' },
+                      thumbnails: { high: { url: 'https://example.com/v1.jpg' } },
+                    },
+                  },
+                ]
+              : [
+                  {
+                    snippet: {
+                      title: 'First Tutorial Video',
+                      description: 'desc',
+                      publishedAt: '2024-04-01T00:00:00Z',
+                      position: 0,
+                      resourceId: { videoId: 'VID_2' },
+                      thumbnails: { high: { url: 'https://example.com/v2.jpg' } },
+                    },
+                  },
+                ];
+
+          return new Response(JSON.stringify({ items }), { status: 200 });
+        }
+
+        return new Response(JSON.stringify({ error: { message: 'Unknown endpoint' } }), {
+          status: 404,
+        });
+      });
+
+    render(<YouTubeApp channelId="UCxPIJ3hw6AOwomUWh5B7SfQ" />);
+
+    // Categories
+    await waitFor(() => {
+      expect(screen.getByText('Labs')).toBeInTheDocument();
+      expect(screen.getByText('Tutorials')).toBeInTheDocument();
+    });
+
+    // Playlist listing
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Open playlist Lab Playlist/i })).toBeInTheDocument();
+    });
+
+    // Select playlist + video
+    fireEvent.click(screen.getByRole('button', { name: /Open playlist Lab Playlist/i }));
 
     await waitFor(() => {
-      expect(screen.getByTitle(`YouTube player for ${firstVideo.title}`)).toHaveAttribute(
+      expect(screen.getByRole('button', { name: /Watch First Lab Video/i })).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /Watch First Lab Video/i }));
+
+    await waitFor(() => {
+      expect(screen.getByTitle(/YouTube player for First Lab Video/i)).toHaveAttribute(
         'src',
-        expect.stringContaining(firstVideo.id),
+        expect.stringContaining('VID_1'),
       );
     });
 
-    const historyItems = screen.getByTestId('recently-watched');
-    expect(historyItems).toHaveTextContent(firstVideo.title);
-  });
-
-  it('filters results using the demo library and clears history', async () => {
-    jest.useFakeTimers();
-
-    render(<YouTubeApp initialResults={demoYouTubeVideos} />);
-
-    const input = screen.getByLabelText(/search videos/i);
-
-    fireEvent.change(input, { target: { value: 'Wireshark' } });
-
-    await act(async () => {
-      jest.advanceTimersByTime(600);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Watch Wireshark Deep Dive/i })).toBeInTheDocument();
-    });
-
-    const history = screen.getByTestId('recently-watched');
-    expect(history).toHaveTextContent('Your history is empty');
-
-    const clearButton = screen.getByRole('button', { name: /Clear history/i });
-    fireEvent.click(clearButton);
-
-    expect(history).toHaveTextContent('Your history is empty');
-
+    // sanity: fetch called
+    expect(fetchMock).toHaveBeenCalled();
   });
 });
