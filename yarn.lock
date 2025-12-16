@@ -13401,7 +13401,7 @@ __metadata:
     layout-bmfont-text: "npm:^1.2.0"
     nice-color-palettes: "npm:^3.0.0"
     quad-indices: "npm:^2.0.1"
-  checksum: 10c0/1364e859ab88baf64fb54ccc6048ab970b3dc8467ee425769bf7a2fcade373bb4465d288271b0bdbf434c3f0fe843f1ba72c14358d13d3d5166a8b5d5ece0c99
+  checksum: 10c0/10d0d93cd035783fa747028adfa625f1a2a41d35a466a1aac974847ac0df3ce8fbbbaef8ef7af778080c6a49f0d9a9085c1c9fb7b7f72c81b63047e708491764
   languageName: node
   linkType: hard
 

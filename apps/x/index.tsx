@@ -210,6 +210,11 @@ export default function XTimeline() {
     setTimelineLoaded(false);
     try {
       const widgets = await loadEmbedScript();
+      if (!widgets) {
+        if (!isMountedRef.current) return;
+        setScriptError(true);
+        return;
+      }
       if (!isMountedRef.current || !timelineRef.current) return;
       timelineRef.current.innerHTML = '';
       const options = {
@@ -630,7 +635,10 @@ export default function XTimeline() {
             />
             {scriptError && (
               <div className="text-center space-y-2">
-                <div>Timeline failed to load.</div>
+                <div>
+                  Timeline failed to load. X embeds may be blocked by your browser
+                  or an ad blocker.
+                </div>
                 <div className="flex justify-center gap-2">
                   <button
                     type="button"

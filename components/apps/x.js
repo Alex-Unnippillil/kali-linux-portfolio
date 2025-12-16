@@ -98,6 +98,11 @@ export default function XApp() {
     setTimelineLoaded(false);
     try {
       const widgets = await loadEmbedScript();
+      if (!widgets) {
+        if (!isMountedRef.current) return;
+        setScriptError(true);
+        return;
+      }
       if (!isMountedRef.current || !timelineRef.current) return;
       timelineRef.current.innerHTML = '';
       await widgets.createTimeline(
@@ -231,7 +236,10 @@ export default function XApp() {
         />
         {scriptError && (
           <div className="p-4 text-center space-y-2">
-            <div className="text-gray-200">Timeline failed to load.</div>
+            <div className="text-gray-200">
+              Timeline failed to load. X embeds may be blocked by your browser or
+              an ad blocker.
+            </div>
             <div className="flex justify-center gap-2">
               <button
                 type="button"

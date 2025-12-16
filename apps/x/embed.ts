@@ -7,6 +7,8 @@ export type TwttrWidgets = {
 };
 
 export const EMBED_SCRIPT_SRC = 'https://embed.x.com/widgets.js';
+const FAILED_ATTR = 'data-x-embed-failed';
+const FAILED_REASON_ATTR = 'data-x-embed-failed-reason';
 
 declare global {
   interface Window {
@@ -19,16 +21,16 @@ declare global {
 
 export async function loadEmbedScript(
   timeoutMs = 10000,
-): Promise<TwttrWidgets> {
+): Promise<TwttrWidgets | null> {
   if (typeof window === 'undefined') {
-    throw new Error('X embed script requires a browser environment.');
+    return null;
   }
 
   if (window.twttr?.widgets) {
     return window.twttr.widgets;
   }
 
-  return new Promise<TwttrWidgets>((resolve, reject) => {
+  return new Promise<TwttrWidgets | null>((resolve) => {
     const existing = document.querySelector(
       `script[src="${EMBED_SCRIPT_SRC}"]`,
     );
@@ -36,7 +38,16 @@ export async function loadEmbedScript(
     let script: HTMLScriptElement;
     let needsAppend = false;
     if (existing instanceof HTMLScriptElement) {
-      script = existing;
+      // If a previous attempt failed, remove and try again (e.g. user disabled blockers).
+      if (existing.getAttribute(FAILED_ATTR) === 'true') {
+        existing.remove();
+        script = document.createElement('script');
+        script.async = true;
+        script.src = EMBED_SCRIPT_SRC;
+        needsAppend = true;
+      } else {
+        script = existing;
+      }
     } else {
       script = document.createElement('script');
       script.async = true;
@@ -61,7 +72,13 @@ export async function loadEmbedScript(
 
     const fail = (message: string) => {
       cleanup();
-      reject(new Error(message));
+      try {
+        script.setAttribute(FAILED_ATTR, 'true');
+        script.setAttribute(FAILED_REASON_ATTR, message);
+      } catch {
+        // ignore attribute errors
+      }
+      resolve(null);
     };
 
     const inspectWidgets = () => {
