@@ -15,8 +15,8 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
         backdropFilter: 'blur(4px)',
         border: '1px solid var(--color-border)',
         fontFamily: 'monospace',
-        fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
-        lineHeight: 1.4,
+        fontSize: 'var(--terminal-font-size, clamp(1rem, 0.6vw + 1rem, 1.1rem))',
+        lineHeight: 'var(--terminal-line-height, 1.4)',
         ...style,
       }}
       {...props}
