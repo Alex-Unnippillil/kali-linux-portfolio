@@ -8176,6 +8176,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"inherits@npm:^2.0.1":
+  version: 2.0.4
+  resolution: "inherits@npm:2.0.4"
+  checksum: 10c0/4e531f648b29039fb7426fb94075e6545faa1eb9fe83c29f0b6d9e7263aceb4289d2d4557db0d428188eeb449cc7c5e77b0a0b2c4e248ff2a65933a0dee49ef2
+  languageName: node
+  linkType: hard
+
 "internal-slot@npm:^1.1.0":
   version: 1.1.0
   resolution: "internal-slot@npm:1.1.0"
@@ -13393,15 +13400,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"three-bmfont-text@github:dmarcos/three-bmfont-text#eed4878795be9b3e38cf6aec6b903f56acd1f695":
-  version: 3.0.0
-  resolution: "three-bmfont-text@https://github.com/dmarcos/three-bmfont-text.git#commit=eed4878795be9b3e38cf6aec6b903f56acd1f695"
+"three-bmfont-text@npm:three-bmfont-text@3.0.1":
+  version: 3.0.1
+  resolution: "three-bmfont-text@npm:3.0.1"
   dependencies:
     array-shuffle: "npm:^1.0.1"
+    inherits: "npm:^2.0.1"
     layout-bmfont-text: "npm:^1.2.0"
     nice-color-palettes: "npm:^3.0.0"
+    object-assign: "npm:^4.0.1"
     quad-indices: "npm:^2.0.1"
-  checksum: 10c0/10d0d93cd035783fa747028adfa625f1a2a41d35a466a1aac974847ac0df3ce8fbbbaef8ef7af778080c6a49f0d9a9085c1c9fb7b7f72c81b63047e708491764
+  checksum: 10c0/69dd96ea7716ccc11e787a455f9e823fab420f299a6fad0acf0c4b0b194c7909895df6fe7be88174fd329ce961c5dba182bc2aebfa46ddf5f854121c7dff3a65
   languageName: node
   linkType: hard
 
