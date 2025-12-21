@@ -1007,6 +1007,9 @@ export class Window extends Component {
         this._pendingDragUpdate = update;
         this.applyEdgeResistance(node, update);
 
+        const rect = this.readNodeRect(node);
+        this.checkSnapPreview(node, rect);
+
         if (this._dragFrame !== null) {
             return;
         }

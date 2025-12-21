@@ -59,6 +59,75 @@ function videoUrl(videoId: string) {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+const OFFLINE_SUMMARY: YouTubeChannelSummary = {
+  id: DEFAULT_CHANNEL_ID,
+  title: 'Offline YouTube Catalog',
+  thumbnail: '',
+};
+
+const OFFLINE_PLAYLISTS: YouTubePlaylistSummary[] = [
+  {
+    id: 'offline-labs',
+    title: 'Offline Labs',
+    description: 'Sample lab walkthroughs available without network access.',
+    thumbnail: '',
+    itemCount: 2,
+    publishedAt: '2024-01-01T00:00:00Z',
+    privacyStatus: 'public',
+  },
+  {
+    id: 'offline-tutorials',
+    title: 'Offline Tutorials',
+    description: 'Tutorials cached for offline viewing.',
+    thumbnail: '',
+    itemCount: 1,
+    publishedAt: '2024-02-15T00:00:00Z',
+    privacyStatus: 'public',
+  },
+];
+
+const OFFLINE_DIRECTORY: YouTubePlaylistDirectory = {
+  playlists: OFFLINE_PLAYLISTS,
+  sections: [
+    {
+      sectionId: 'offline',
+      sectionTitle: 'Playlists',
+      playlists: OFFLINE_PLAYLISTS,
+    },
+  ],
+};
+
+const OFFLINE_PLAYLIST_ITEMS: Record<string, YouTubePlaylistVideo[]> = {
+  'offline-labs': [
+    {
+      videoId: 'offline-lab-1',
+      title: 'Offline Lab Intro',
+      description: 'A quick walkthrough available without network access.',
+      thumbnail: '',
+      publishedAt: '2024-03-01T00:00:00Z',
+      position: 0,
+    },
+    {
+      videoId: 'offline-lab-2',
+      title: 'Offline Lab Deep Dive',
+      description: 'Extended offline-ready clip.',
+      thumbnail: '',
+      publishedAt: '2024-04-05T00:00:00Z',
+      position: 1,
+    },
+  ],
+  'offline-tutorials': [
+    {
+      videoId: 'offline-tutorial-1',
+      title: 'Offline Tutorial Quickstart',
+      description: 'Getting started without hitting the network.',
+      thumbnail: '',
+      publishedAt: '2024-05-10T00:00:00Z',
+      position: 0,
+    },
+  ],
+};
+
 export default function YouTubeApp({ channelId }: Props) {
   const { allowNetwork, setAllowNetwork } = useSettings();
   const parsedChannelId = useMemo(() => {
@@ -94,14 +163,44 @@ export default function YouTubeApp({ channelId }: Props) {
   const abortDirectoryRef = useRef<AbortController | null>(null);
   const abortPlaylistRef = useRef<AbortController | null>(null);
 
+  const applyOfflineDirectory = useCallback(() => {
+    setChannelSummary(OFFLINE_SUMMARY);
+    const map = new Map<string, YouTubePlaylistSummary>(
+      OFFLINE_DIRECTORY.playlists.map((p) => [p.id, p]),
+    );
+    setPlaylistIndex(map);
+
+    const listings: PlaylistListing[] = OFFLINE_DIRECTORY.sections.length
+      ? OFFLINE_DIRECTORY.sections
+      : OFFLINE_DIRECTORY.playlists.length
+      ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: OFFLINE_DIRECTORY.playlists }]
+      : [];
+
+    setDirectory(listings);
+    const firstPlaylist = listings[0]?.playlists[0]?.id;
+    setSelectedPlaylistId((prev) => prev ?? firstPlaylist ?? null);
+    setError(null);
+  }, []);
+
+  const applyOfflinePlaylistItems = useCallback(
+    (playlistId: string) => {
+      const items = OFFLINE_PLAYLIST_ITEMS[playlistId] ?? [];
+      setPlaylistItems((prev) => ({
+        ...prev,
+        [playlistId]: {
+          items,
+          nextPageToken: undefined,
+          loading: false,
+          error: undefined,
+        },
+      }));
+      setSelectedVideoId((prev) => prev ?? items[0]?.videoId ?? null);
+    },
+    [setSelectedVideoId],
+  );
+
   const loadDirectory = useCallback(async () => {
-    if (!allowNetwork) {
-      // Attempt to auto-enable network for this session so the app can load.
-      setAllowNetwork(true);
-      setError('Network requests were disabled. Enabling network to load YouTube playlists…');
-      setLoadingDirectory(false);
-      return;
-    }
+    const networkDisabled = !allowNetwork;
     if (!resolvedChannelId) {
       setError(
         'Missing or invalid YouTube channel id. Set NEXT_PUBLIC_YOUTUBE_CHANNEL_ID or pass channelId prop.',
@@ -137,7 +236,7 @@ export default function YouTubeApp({ channelId }: Props) {
           };
           return [payload.summary, payload.directory] as const;
         } catch (proxyError) {
-          if (!hasClientApiKey) throw proxyError;
+          if (!hasClientApiKey || networkDisabled) throw proxyError;
           return Promise.all([
             fetchYouTubeChannelSummary(resolvedChannelId, YOUTUBE_CLIENT_API_KEY ?? '', controller.signal),
             fetchYouTubePlaylistDirectoryByChannelId(
@@ -179,12 +278,15 @@ export default function YouTubeApp({ channelId }: Props) {
           ? 'Unable to reach the YouTube API. Check your network connection and API key.'
           : e.message || 'Failed to load YouTube playlists.',
       );
+      if (networkDisabled) {
+        applyOfflineDirectory();
+      }
       return;
     } finally {
       setLoadingDirectory(false);
       abortDirectoryRef.current = null;
     }
-  }, [allowNetwork, hasClientApiKey, resolvedChannelId, setAllowNetwork]);
+  }, [allowNetwork, applyOfflineDirectory, hasClientApiKey, resolvedChannelId]);
 
   useEffect(() => {
     void loadDirectory();
@@ -196,6 +298,7 @@ export default function YouTubeApp({ channelId }: Props) {
 
   const loadPlaylistItems = useCallback(
     async (playlistId: string, mode: 'replace' | 'append') => {
+      const networkDisabled = !allowNetwork;
       if (!playlistId) return;
 
       setPlaylistItems((prev) => ({
@@ -233,7 +336,7 @@ export default function YouTubeApp({ channelId }: Props) {
             }
             return (await resp.json()) as Awaited<ReturnType<typeof fetchYouTubePlaylistItems>>;
           } catch (proxyError) {
-            if (!hasClientApiKey) throw proxyError;
+            if (!hasClientApiKey || networkDisabled) throw proxyError;
             return fetchYouTubePlaylistItems(playlistId, YOUTUBE_CLIENT_API_KEY ?? '', {
               pageToken,
               maxResults: 50,
@@ -281,20 +384,24 @@ export default function YouTubeApp({ channelId }: Props) {
         if (e.message?.toLowerCase().includes('api key')) {
           setMissingApiKeyHint(true);
         }
-        setPlaylistItems((prev) => ({
-          ...prev,
-          [playlistId]: {
-            items: prev[playlistId]?.items ?? [],
-            nextPageToken: prev[playlistId]?.nextPageToken,
-            loading: false,
-            error: e.message || 'Failed to load playlist videos.',
-          },
-        }));
+        if (networkDisabled) {
+          applyOfflinePlaylistItems(playlistId);
+        } else {
+          setPlaylistItems((prev) => ({
+            ...prev,
+            [playlistId]: {
+              items: prev[playlistId]?.items ?? [],
+              nextPageToken: prev[playlistId]?.nextPageToken,
+              loading: false,
+              error: e.message || 'Failed to load playlist videos.',
+            },
+          }));
+        }
       } finally {
         abortPlaylistRef.current = null;
       }
     },
-    [hasClientApiKey, playlistItems],
+    [allowNetwork, applyOfflinePlaylistItems, hasClientApiKey, playlistItems],
   );
 
   useEffect(() => {

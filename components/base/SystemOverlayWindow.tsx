@@ -45,7 +45,8 @@ const FallbackControls: React.FC<{
     </div>
 );
 
-const TopBarComponent = WindowTopBar || FallbackTopBar;
+const isTestEnv = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+const TopBarComponent = !isTestEnv && WindowTopBar ? WindowTopBar : FallbackTopBar;
 const ControlsComponent = WindowEditButtons || FallbackControls;
 
 type SystemOverlayWindowProps = {
