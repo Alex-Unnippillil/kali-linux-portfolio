@@ -1,0 +1,16 @@
+# Exclude local artifacts from Vercel uploads
+.git/
+.github/
+.next/
+.next-dev/
+.vercel/
+node_modules/
+**/node_modules/
+out/
+build/
+dist/
+coverage/
+test-log.md
+playwright-report/
+test-results/
+*.log

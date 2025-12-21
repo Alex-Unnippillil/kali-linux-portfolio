@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+**/node_modules/
 # yarn 4
 .yarn/*
 !.yarn/releases
@@ -46,7 +47,6 @@ yarn-error.log*
 .env.production.local
 
 # vercel
-.vercel
 .vercel
 # npm lockfile
 package-lock.json
