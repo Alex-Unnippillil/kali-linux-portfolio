@@ -392,8 +392,15 @@ export async function fetchYouTubePlaylistsByChannelIdAll(
     pageToken = data.nextPageToken;
   } while (pageToken);
 
+  const visible = results.filter(
+    (playlist) =>
+      playlist.privacyStatus === 'public' ||
+      playlist.privacyStatus === 'unlisted' ||
+      playlist.privacyStatus === undefined,
+  );
+
   // Stable sort: newest first, then title.
-  return results.sort((a, b) => {
+  return visible.sort((a, b) => {
     const da = Date.parse(a.publishedAt);
     const db = Date.parse(b.publishedAt);
     if (Number.isFinite(da) && Number.isFinite(db) && da !== db) return db - da;

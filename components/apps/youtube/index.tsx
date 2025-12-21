@@ -124,8 +124,18 @@ export default function YouTubeApp({ channelId }: Props) {
           parsedChannelId,
           YOUTUBE_API_KEY ?? '',
           controller.signal,
-        ),
-      ]);
+        );
+      } catch (directoryError: unknown) {
+        const e = directoryError as Error;
+        if (e.name === 'AbortError') return;
+        console.error('YouTube directory load failed', e);
+        setError(
+          e.message?.includes('Failed to fetch')
+            ? 'Unable to reach the YouTube API. Check your network connection and API key.'
+            : e.message || 'Failed to load YouTube playlists.',
+        );
+        return;
+      }
 
       setChannelSummary(summary);
       const map = new Map<string, YouTubePlaylistSummary>(
@@ -140,6 +150,7 @@ export default function YouTubeApp({ channelId }: Props) {
         : [];
 
       setDirectory(listings);
+      setError(null);
 
       // Auto-select first playlist if nothing selected
       const firstPlaylist = listings[0]?.playlists[0]?.id;
