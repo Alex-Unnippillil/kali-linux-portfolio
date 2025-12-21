@@ -118,18 +118,9 @@ export default function YouTubeApp({ channelId }: Props) {
     abortDirectoryRef.current = controller;
 
     try {
-      const summary = await fetchYouTubeChannelSummary(
-        parsedChannelId,
-        YOUTUBE_API_KEY ?? '',
-        controller.signal,
-      ).catch((err: unknown) => {
-        console.error('YouTube channel summary load failed', err);
-        return null;
-      });
-
-      let playlistDirectory: Awaited<ReturnType<typeof fetchYouTubePlaylistDirectoryByChannelId>>;
-      try {
-        playlistDirectory = await fetchYouTubePlaylistDirectoryByChannelId(
+      const [summary, playlistDirectory] = await Promise.all([
+        fetchYouTubeChannelSummary(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
+        fetchYouTubePlaylistDirectoryByChannelId(
           parsedChannelId,
           YOUTUBE_API_KEY ?? '',
           controller.signal,
@@ -154,6 +145,8 @@ export default function YouTubeApp({ channelId }: Props) {
 
       const listings: PlaylistListing[] = playlistDirectory.sections.length
         ? playlistDirectory.sections
+        : playlistDirectory.playlists.length
+        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
         : [];
 
       setDirectory(listings);
