@@ -14,9 +14,15 @@ jobs:
           node-version: 20
           cache: 'yarn'
           cache-dependency-path: 'yarn.lock'
+      - name: Install Puppeteer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 lsof libatk1.0-0 libatk-bridge2.0-0 libgtk-3-0 libxss1 libasound2 fonts-liberation libappindicator3-1 xdg-utils
       - name: Installing Packages
         run: yarn install --immutable
-      - name: Check for duplicate dependencies
+      - name: Deduplicate dependencies
+        run: yarn dedupe
+      - name: Verify dependencies are deduped
         run: yarn dedupe --check
 
       - name: Test
