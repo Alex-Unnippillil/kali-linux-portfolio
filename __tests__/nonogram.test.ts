@@ -9,12 +9,9 @@ import {
 
 describe('nonogram utilities', () => {
   test('validateSolution confirms grid matches clues', () => {
-    const { rows, cols } = getPuzzleBySeed('0');
-    const solved = Array(rows.length)
-      .fill(null)
-      .map(() => Array(cols.length).fill(1));
-    expect(validateSolution(solved, rows, cols)).toBe(true);
-    const unsolved = solved.map((row) => row.slice());
+    const { rows, cols, grid } = getPuzzleBySeed('0');
+    expect(validateSolution(grid, rows, cols)).toBe(true);
+    const unsolved = grid.map((row) => row.slice());
     unsolved[0][0] = 0;
     expect(validateSolution(unsolved, rows, cols)).toBe(false);
   });
@@ -51,7 +48,7 @@ describe('nonogram utilities', () => {
     };
     backtrack(0);
     expect(solutions.length).toBeGreaterThan(0);
-    solutions.forEach((sol) => expect(sol[i][j]).toBe(1));
+    solutions.forEach((sol) => expect(sol[i][j]).toBe(hint.value === 1 ? 1 : 0));
   });
 
   test('autoFillLines solves uniquely determined lines', () => {
@@ -68,6 +65,13 @@ describe('nonogram utilities', () => {
     const grid = [[0]];
     const result = autoFillLines(grid, rows, cols);
     expect(result[0][0]).toBe(-1);
+  });
+
+  test('validateSolution treats unknowns as unsolved', () => {
+    const rows: number[][] = [[]];
+    const cols: number[][] = [[]];
+    const grid = [[0]];
+    expect(validateSolution(grid, rows, cols)).toBe(false);
   });
 
   test('daily seed deterministic', () => {
