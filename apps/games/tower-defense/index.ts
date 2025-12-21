@@ -1,160 +1,169 @@
-export const GRID_SIZE = 10;
-export const START = { x: 0, y: Math.floor(GRID_SIZE / 2) };
-export const GOAL = { x: GRID_SIZE - 1, y: Math.floor(GRID_SIZE / 2) };
+export type Vec2 = { x: number; y: number };
 
-// ---- pathfinding with caching ----
-let cachedKey = '';
-let cachedPath: { x: number; y: number }[] = [];
-export let pathComputationCount = 0;
+export const GRID_SIZE = 12;
 
-export const getPath = (towers: { x: number; y: number }[]) => {
-  const key = towers
-    .map((t) => `${t.x},${t.y}`)
-    .sort()
-    .join('|');
-  if (key === cachedKey && cachedPath.length) return cachedPath;
-  pathComputationCount += 1;
-  const path: { x: number; y: number }[] = [];
-  for (let x = START.x; x <= GOAL.x; x += 1) {
-    path.push({ x, y: START.y });
+export const START: Vec2 = { x: 0, y: 5 };
+export const GOAL: Vec2 = { x: GRID_SIZE - 1, y: 6 };
+
+export const PATH: Vec2[] = [
+  { x: 0, y: 5 },
+  { x: 3, y: 5 },
+  { x: 3, y: 8 },
+  { x: 6, y: 8 },
+  { x: 6, y: 3 },
+  { x: 9, y: 3 },
+  { x: 9, y: 6 },
+  { x: 11, y: 6 },
+];
+
+export const buildPathCells = () => {
+  const cells = new Set<string>();
+  for (let i = 0; i < PATH.length - 1; i += 1) {
+    const a = PATH[i];
+    const b = PATH[i + 1];
+    const dx = Math.sign(b.x - a.x);
+    const dy = Math.sign(b.y - a.y);
+    let x = a.x;
+    let y = a.y;
+    cells.add(`${x},${y}`);
+    while (x !== b.x || y !== b.y) {
+      x += dx;
+      y += dy;
+      cells.add(`${x},${y}`);
+    }
   }
-  cachedKey = key;
-  cachedPath = path;
-  return path;
+  return cells;
 };
 
-export const resetPathCache = () => {
-  cachedKey = '';
-  cachedPath = [];
-  pathComputationCount = 0;
-};
+export const isPathCell = (x: number, y: number, pathCells: Set<string>) =>
+  pathCells.has(`${x},${y}`);
 
-// ---- simple object pools ----
-export type Projectile = {
-  active: boolean;
-  x: number;
-  y: number;
-  targetId: number;
-  damage: number;
-  speed: number;
-};
+export const isBuildableCell = (
+  x: number,
+  y: number,
+  pathCells: Set<string>,
+) =>
+  x >= 0 &&
+  y >= 0 &&
+  x < GRID_SIZE &&
+  y < GRID_SIZE &&
+  !isPathCell(x, y, pathCells);
 
-export const createProjectilePool = (size: number): Projectile[] =>
-  Array.from({ length: size }, () => ({
-    active: false,
-    x: 0,
-    y: 0,
-    targetId: 0,
-    damage: 0,
-    speed: 0,
-  }));
-
-export const fireProjectile = (
-  pool: Projectile[],
-  data: Omit<Projectile, 'active'>
-) => {
-  const p = pool.find((pr) => !pr.active);
-  if (!p) return null;
-  Object.assign(p, data, { active: true });
-  return p;
-};
-
-export const deactivateProjectile = (p: Projectile) => {
-  p.active = false;
-};
-
-export type Enemy = {
-  active: boolean;
-  id: number;
-  x: number;
-  y: number;
-  pathIndex: number;
-  progress: number;
-  health: number;
-  resistance: number;
-  baseSpeed: number;
-  slow: null | { amount: number; duration: number };
-  dot: null | { damage: number; duration: number };
-  type?: string;
-};
-
-export const createEnemyPool = (size: number): Enemy[] =>
-  Array.from({ length: size }, () => ({
-    active: false,
-    id: 0,
-    x: 0,
-    y: 0,
-    pathIndex: 0,
-    progress: 0,
-    health: 0,
-    resistance: 0,
-    baseSpeed: 0,
-    slow: null,
-    dot: null,
-    type: 'basic',
-  }));
-
-export const spawnEnemy = (pool: Enemy[], data: Omit<Enemy, 'active'>) => {
-  const e = pool.find((en) => !en.active);
-  if (!e) return null;
-  Object.assign(e, data, { active: true });
-  return e;
-};
-
-export const deactivateEnemy = (e: Enemy) => {
-  e.active = false;
-};
-
-// ---- sprite cache ----
-const spriteCache: Record<string, HTMLImageElement> = {};
-export const loadSprite = (src: string) => {
-  if (!spriteCache[src]) {
-    const img = new Image();
-    img.src = src;
-    spriteCache[src] = img;
-  }
-  return spriteCache[src];
-};
-
-export const clearSpriteCache = () => {
-  Object.keys(spriteCache).forEach((k) => delete spriteCache[k]);
-};
-
-// ---- tower stats and upgrades ----
-export const TOWER_TYPES = {
-  single: [
-    { range: 1, damage: 1 },
-    { range: 2, damage: 2 },
-    { range: 3, damage: 3 },
-  ],
-} as const;
-
-export type TowerType = keyof typeof TOWER_TYPES;
-
-export const getTowerDPS = (type: TowerType, level: number) => {
-
-  const stats = TOWER_TYPES[type]?.[level - 1];
-  if (!stats) return 0;
-  return stats.damage; // 1 shot per second
-};
-
-export const ENEMY_TYPES = {
-  fast: { speed: 60, health: 5 },
-  tank: { speed: 30, health: 15 },
-};
+export type TowerType = "bolt" | "slow" | "pierce";
 
 export type Tower = {
+  id: string;
   x: number;
   y: number;
-  range: number;
-  damage: number;
+  type: TowerType;
   level: number;
-  type?: TowerType;
+  cooldown: number;
 };
 
-export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
-  tower.level += 1;
-  if (path === 'range') tower.range += 1;
-  else tower.damage += 1;
+export const TOWER_LIBRARY: Record<
+  TowerType,
+  { cost: number; range: number; damage: number; fireRate: number; color: string }
+> = {
+  bolt: {
+    cost: 20,
+    range: 2.4,
+    damage: 2,
+    fireRate: 1.1,
+    color: "#7af0ff",
+  },
+  slow: {
+    cost: 28,
+    range: 2,
+    damage: 1.5,
+    fireRate: 0.9,
+    color: "#8ef58e",
+  },
+  pierce: {
+    cost: 35,
+    range: 2.8,
+    damage: 3,
+    fireRate: 0.7,
+    color: "#ff9a3c",
+  },
 };
 
+export const getTowerStats = (tower: Tower) => {
+  const base = TOWER_LIBRARY[tower.type];
+  const levelScale = 1 + (tower.level - 1) * 0.3;
+  return {
+    ...base,
+    range: base.range * levelScale,
+    damage: base.damage * levelScale,
+    fireRate: base.fireRate * levelScale,
+  };
+};
+
+export type EnemyType = "scout" | "brute" | "swarm";
+
+export type Enemy = {
+  id: string;
+  type: EnemyType;
+  pathIndex: number;
+  health: number;
+  maxHealth: number;
+  speed: number;
+  reward: number;
+  position: Vec2;
+  slowTimer?: number;
+};
+
+export const ENEMY_LIBRARY: Record<
+  EnemyType,
+  { health: number; speed: number; reward: number; color: string }
+> = {
+  scout: { health: 8, speed: 2.6, reward: 3, color: "#6dd7ff" },
+  brute: { health: 18, speed: 1.6, reward: 6, color: "#ff6f91" },
+  swarm: { health: 5, speed: 3.2, reward: 2, color: "#f7dd72" },
+};
+
+export const WAVE_PLAN: EnemyType[][] = [
+  ["scout", "scout", "scout", "scout", "scout"],
+  ["scout", "scout", "swarm", "swarm", "swarm", "scout"],
+  ["brute", "scout", "scout", "swarm", "swarm"],
+  ["brute", "brute", "swarm", "swarm", "swarm", "scout", "scout"],
+  [
+    "brute",
+    "brute",
+    "swarm",
+    "swarm",
+    "swarm",
+    "swarm",
+    "scout",
+    "scout",
+  ],
+];
+
+export const TEXTURES = {
+  grid: "linear-gradient(135deg, rgba(48,96,130,0.4) 0%, rgba(24,38,54,0.6) 50%, rgba(12,22,32,0.85) 100%)",
+  panel:
+    "linear-gradient(180deg, rgba(10,24,38,0.95), rgba(8,16,28,0.9) 60%, rgba(4,10,20,0.95))",
+  path: "repeating-linear-gradient(45deg, rgba(0, 255, 255, 0.12) 0 8px, rgba(0, 128, 255, 0.12) 8px 16px)",
+};
+
+export const formatWaveNumber = (wave: number) => `Wave ${wave}`;
+
+export const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
+
+export const distance = (a: Vec2, b: Vec2) =>
+  Math.hypot(a.x - b.x, a.y - b.y);
+
+export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+export const positionAlongPath = (path: Vec2[], index: number) => {
+  const clampedIndex = clamp(index, 0, path.length - 1);
+  return path[clampedIndex];
+};
+
+export const moveTowards = (current: Vec2, target: Vec2, step: number) => {
+  const dx = target.x - current.x;
+  const dy = target.y - current.y;
+  const dist = Math.hypot(dx, dy) || 1;
+  const ratio = Math.min(1, step / dist);
+  return { x: current.x + dx * ratio, y: current.y + dy * ratio };
+};
