@@ -11,7 +11,7 @@ import type {
 import {
   fetchYouTubeChannelSummary,
   fetchYouTubePlaylistItems,
-  fetchYouTubePlaylistsByChannelIdAll,
+  fetchYouTubePlaylistDirectoryByChannelId,
   parseYouTubeChannelId,
 } from '../../../utils/youtube';
 
@@ -118,9 +118,9 @@ export default function YouTubeApp({ channelId }: Props) {
     abortDirectoryRef.current = controller;
 
     try {
-      const [summary, playlists] = await Promise.all([
+      const [summary, playlistDirectory] = await Promise.all([
         fetchYouTubeChannelSummary(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
-        fetchYouTubePlaylistsByChannelIdAll(
+        fetchYouTubePlaylistDirectoryByChannelId(
           parsedChannelId,
           YOUTUBE_API_KEY ?? '',
           controller.signal,
@@ -128,11 +128,15 @@ export default function YouTubeApp({ channelId }: Props) {
       ]);
 
       setChannelSummary(summary);
-      const map = new Map<string, YouTubePlaylistSummary>(playlists.map((p) => [p.id, p]));
+      const map = new Map<string, YouTubePlaylistSummary>(
+        playlistDirectory.playlists.map((p) => [p.id, p]),
+      );
       setPlaylistIndex(map);
 
-      const listings: PlaylistListing[] = playlists.length
-        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists }]
+      const listings: PlaylistListing[] = playlistDirectory.sections.length
+        ? playlistDirectory.sections
+        : playlistDirectory.playlists.length
+        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
         : [];
 
       setDirectory(listings);
@@ -230,7 +234,7 @@ export default function YouTubeApp({ channelId }: Props) {
   useEffect(() => {
     if (!selectedPlaylistId) return;
     const current = playlistItems[selectedPlaylistId];
-    if (current?.items?.length) return;
+    if (current?.items?.length || current?.loading) return;
     void loadPlaylistItems(selectedPlaylistId, 'replace');
   }, [selectedPlaylistId, playlistItems, loadPlaylistItems]);
 

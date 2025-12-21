@@ -13401,7 +13401,7 @@ __metadata:
     layout-bmfont-text: "npm:^1.2.0"
     nice-color-palettes: "npm:^3.0.0"
     quad-indices: "npm:^2.0.1"
-  checksum: 10c0/10d0d93cd035783fa747028adfa625f1a2a41d35a466a1aac974847ac0df3ce8fbbbaef8ef7af778080c6a49f0d9a9085c1c9fb7b7f72c81b63047e708491764
+  checksum: 10c0/1364e859ab88baf64fb54ccc6048ab970b3dc8467ee425769bf7a2fcade373bb4465d288271b0bdbf434c3f0fe843f1ba72c14358d13d3d5166a8b5d5ece0c99
   languageName: node
   linkType: hard
 
@@ -13838,6 +13838,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"undici@npm:^7.16.0":
+  version: 7.16.0
+  resolution: "undici@npm:7.16.0"
+  checksum: 10c0/efd867792e9f233facf9efa0a087e2d9c3e4415c0b234061b9b40307ca4fa01d945fee4d43c7b564e1b80e0d519bcc682f9f6e0de13c717146c00a80e2f1fb0f
+  languageName: node
+  linkType: hard
+
 "unicode-canonical-property-names-ecmascript@npm:^2.0.0":
   version: 2.0.1
   resolution: "unicode-canonical-property-names-ecmascript@npm:2.0.1"
@@ -14018,6 +14025,7 @@ __metadata:
     three: "npm:^0.179.1"
     turndown: "npm:^7.2.1"
     typescript: "npm:5.8.2"
+    undici: "npm:^7.16.0"
     wait-on: "npm:^8.0.4"
     webpack: "npm:^5.92.0"
     workbox-build: "npm:7.1.1"
