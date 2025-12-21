@@ -442,7 +442,8 @@ export async function fetchYouTubePlaylistDirectoryByChannelId(
     .map((section) => {
       const ordered = section.playlistIds
         .map((id) => playlistIndex.get(id))
-        .filter(Boolean) as YouTubePlaylistSummary[];
+        .filter((playlist): playlist is YouTubePlaylistSummary => Boolean(playlist))
+        .sort((a, b) => a.title.localeCompare(b.title));
       if (!ordered.length) return null;
       return {
         sectionId: section.id,
@@ -452,17 +453,27 @@ export async function fetchYouTubePlaylistDirectoryByChannelId(
     })
     .filter(Boolean) as YouTubePlaylistDirectory['sections'];
 
-  if (playlistIndex.size && !sectionListings.find((section) => section.sectionId === 'all')) {
-    sectionListings.push({
+  const allPlaylists = Array.from(playlistIndex.values()).sort((a, b) =>
+    a.title.localeCompare(b.title),
+  );
+
+  const sectionsWithDefault = [...sectionListings];
+
+  if (playlistIndex.size && !sectionsWithDefault.find((section) => section.sectionId === 'all')) {
+    sectionsWithDefault.push({
       sectionId: 'all',
       sectionTitle: 'Playlists',
-      playlists: Array.from(playlistIndex.values()),
+      playlists: allPlaylists,
     });
   }
 
+  const sortedSections = sectionsWithDefault.sort((a, b) =>
+    a.sectionTitle.localeCompare(b.sectionTitle),
+  );
+
   return {
-    playlists: Array.from(playlistIndex.values()),
-    sections: sectionListings,
+    playlists: allPlaylists,
+    sections: sortedSections,
   };
 }
 
