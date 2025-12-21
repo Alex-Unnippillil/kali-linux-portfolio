@@ -1,77 +1,39 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 
 interface ShieldProps {
-  /** milliseconds for the shield to fully regenerate once destroyed */
-  regenDuration?: number;
-  /** maximum hit points of the shield */
-  maxHp?: number;
+  hp: number;
+  maxHp: number;
+  regenProgress?: number;
+  label?: string;
 }
 
-/**
- * A simple shield component used by the Space Invaders clone.
- *
- * The shield tracks its own hit points. When HP reaches zero the component
- * starts a regeneration timer. During regeneration a progress bar is rendered
- * below the shield so the player can see when it will be available again.
- */
-const Shield: React.FC<ShieldProps> = ({ regenDuration = 3000, maxHp = 6 }) => {
-  const [hp, setHp] = useState(maxHp);
-  const [progress, setProgress] = useState(0); // 0..1
-  const animRef = useRef<number | null>(null);
-
-  // Start a regeneration timer when the shield is destroyed
-  useEffect(() => {
-    if (hp > 0) return; // still alive
-    const start = performance.now();
-
-    const step = (ts: number) => {
-      const pct = Math.min((ts - start) / regenDuration, 1);
-      setProgress(pct);
-      if (pct < 1) {
-        animRef.current = requestAnimationFrame(step);
-      } else {
-        setHp(maxHp);
-        setProgress(0);
-      }
-    };
-
-    animRef.current = requestAnimationFrame(step);
-    return () => {
-      if (animRef.current) cancelAnimationFrame(animRef.current);
-    };
-  }, [hp, regenDuration, maxHp]);
-
-  // Example damage handler – in a real game the parent would manage this
-  const takeDamage = () => {
-    setHp((h) => Math.max(h - 1, 0));
-  };
-
-  const widthPercent = (hp / maxHp) * 100;
+const Shield: React.FC<ShieldProps> = ({ hp, maxHp, regenProgress, label }) => {
+  const clampedHp = Math.max(0, Math.min(maxHp, hp));
+  const pct = maxHp > 0 ? (clampedHp / maxHp) * 100 : 0;
+  const regenPct = Math.min(Math.max(regenProgress ?? 0, 0), 1) * 100;
 
   return (
-    <div className="relative inline-block" onClick={takeDamage} aria-label="shield">
-      <div
-        className="h-4 w-12 bg-green-600"
-        style={{ opacity: hp === 0 ? 0.3 : 1 }}
-      >
+    <div className="flex items-center gap-2" aria-label={label ?? 'shield status'}>
+      {label && <span className="text-xs text-gray-200">{label}</span>}
+      <div className="relative h-3 w-24 bg-gray-700 rounded-sm overflow-hidden" aria-hidden>
         <div
-          className="h-full bg-green-400"
-          style={{ width: `${widthPercent}%` }}
+          className="h-full bg-cyan-400"
+          style={{ width: `${pct}%`, transition: 'width 150ms linear' }}
         />
-      </div>
-      {hp === 0 && (
-        <div className="absolute left-0 top-full mt-1 h-1 w-full bg-gray-700">
+        {regenProgress !== undefined && clampedHp === 0 && (
           <div
-            className="h-full bg-cyan-400"
-            style={{ width: `${progress * 100}%` }}
+            className="absolute inset-0 bg-cyan-200/40"
+            style={{ width: `${regenPct}%` }}
           />
-        </div>
-      )}
+        )}
+      </div>
+      <span className="text-xs text-gray-100" aria-live="polite">
+        {clampedHp}/{maxHp}
+      </span>
     </div>
   );
 };
 
 export default Shield;
-
