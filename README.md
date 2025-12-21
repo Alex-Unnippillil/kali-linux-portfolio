@@ -246,6 +246,7 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | `NEXT_PUBLIC_TRACKING_ID` | GA4 Measurement ID (`G-XXXXXXX`). |
 | `NEXT_PUBLIC_SERVICE_ID` / `NEXT_PUBLIC_TEMPLATE_ID` / `NEXT_PUBLIC_USER_ID` | EmailJS identifiers for the Gedit contact app. |
 | `NEXT_PUBLIC_YOUTUBE_API_KEY` | Loads the YouTube app playlist directory (channel sections + playlists). |
+| `YOUTUBE_API_KEY` | Server-side YouTube Data API key used by `/api/youtube/*` to proxy playlist requests. |
 | `NEXT_PUBLIC_BEEF_URL` / `NEXT_PUBLIC_GHIDRA_URL` / `NEXT_PUBLIC_GHIDRA_WASM` | Optional remote iframe targets for simulated tooling. |
 | `NEXT_PUBLIC_UI_EXPERIMENTS` | Enables experimental UI heuristics. |
 | `NEXT_PUBLIC_STATIC_EXPORT` | Set to `'true'` during static export to disable server APIs. |
@@ -309,6 +310,7 @@ docker run -p 3000:3000 \
   -e NEXT_PUBLIC_SERVICE_ID=... \
   -e NEXT_PUBLIC_TEMPLATE_ID=... \
   -e NEXT_PUBLIC_USER_ID=... \
+  -e YOUTUBE_API_KEY=... \
   -e NEXT_PUBLIC_YOUTUBE_API_KEY=... \
   -e NEXT_PUBLIC_BEEF_URL=... \
   -e NEXT_PUBLIC_GHIDRA_URL=... \
@@ -325,6 +327,7 @@ NEXT_PUBLIC_TRACKING_ID=
 NEXT_PUBLIC_USER_ID=
 NEXT_PUBLIC_SERVICE_ID=
 NEXT_PUBLIC_TEMPLATE_ID=
+YOUTUBE_API_KEY=
 NEXT_PUBLIC_YOUTUBE_API_KEY=YOUR_YOUTUBE_API_KEY
 NEXT_PUBLIC_CURRENCY_API_URL=
 NEXT_PUBLIC_DEMO_MODE=false

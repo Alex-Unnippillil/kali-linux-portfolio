@@ -16,7 +16,8 @@ import {
   parseYouTubeChannelId,
 } from '../../../utils/youtube';
 
-const YOUTUBE_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+const YOUTUBE_CLIENT_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+const DEFAULT_CHANNEL_ID = 'UCxPIJ3hw6AOwomUWh5B7SfQ';
 
 type PlaylistListing = {
   sectionId: string;
@@ -68,7 +69,8 @@ export default function YouTubeApp({ channelId }: Props) {
     );
   }, [channelId]);
 
-  const hasApiKey = Boolean(YOUTUBE_API_KEY);
+  const resolvedChannelId = parsedChannelId ?? DEFAULT_CHANNEL_ID;
+  const hasClientApiKey = Boolean(YOUTUBE_CLIENT_API_KEY);
 
   const [channelSummary, setChannelSummary] = useState<YouTubeChannelSummary | null>(
     null,
@@ -87,16 +89,12 @@ export default function YouTubeApp({ channelId }: Props) {
 
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [missingApiKeyHint, setMissingApiKeyHint] = useState(false);
 
   const abortDirectoryRef = useRef<AbortController | null>(null);
   const abortPlaylistRef = useRef<AbortController | null>(null);
 
   const loadDirectory = useCallback(async () => {
-    if (!hasApiKey) {
-      setError('Set NEXT_PUBLIC_YOUTUBE_API_KEY to load public playlists from YouTube.');
-      setLoadingDirectory(false);
-      return;
-    }
     if (!allowNetwork) {
       // Attempt to auto-enable network for this session so the app can load.
       setAllowNetwork(true);
@@ -104,7 +102,7 @@ export default function YouTubeApp({ channelId }: Props) {
       setLoadingDirectory(false);
       return;
     }
-    if (!parsedChannelId) {
+    if (!resolvedChannelId) {
       setError(
         'Missing or invalid YouTube channel id. Set NEXT_PUBLIC_YOUTUBE_CHANNEL_ID or pass channelId prop.',
       );
@@ -114,19 +112,42 @@ export default function YouTubeApp({ channelId }: Props) {
 
     setLoadingDirectory(true);
     setError(null);
+    setMissingApiKeyHint(false);
     abortDirectoryRef.current?.abort();
     const controller = new AbortController();
     abortDirectoryRef.current = controller;
 
     try {
-      const [summary, playlistDirectory] = await Promise.all([
-        fetchYouTubeChannelSummary(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
-        fetchYouTubePlaylistDirectoryByChannelId(
-          parsedChannelId,
-          YOUTUBE_API_KEY ?? '',
-          controller.signal,
-        ),
-      ]);
+      const [summary, playlistDirectory] = await (async () => {
+        try {
+          const response = await fetch(
+            `/api/youtube/directory?channelId=${encodeURIComponent(resolvedChannelId)}`,
+            { signal: controller.signal },
+          );
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(
+              body?.error ||
+                `YouTube directory request failed (${response.status} ${response.statusText})`,
+            );
+          }
+          const payload = (await response.json()) as {
+            summary: YouTubeChannelSummary | null;
+            directory: YouTubePlaylistDirectory;
+          };
+          return [payload.summary, payload.directory] as const;
+        } catch (proxyError) {
+          if (!hasClientApiKey) throw proxyError;
+          return Promise.all([
+            fetchYouTubeChannelSummary(resolvedChannelId, YOUTUBE_CLIENT_API_KEY ?? '', controller.signal),
+            fetchYouTubePlaylistDirectoryByChannelId(
+              resolvedChannelId,
+              YOUTUBE_CLIENT_API_KEY ?? '',
+              controller.signal,
+            ),
+          ]);
+        }
+      })();
 
       setChannelSummary(summary);
       const map = new Map<string, YouTubePlaylistSummary>(
@@ -150,6 +171,9 @@ export default function YouTubeApp({ channelId }: Props) {
       const e = directoryError as Error;
       if (e.name === 'AbortError') return;
       console.error('YouTube directory load failed', e);
+      if (e.message?.toLowerCase().includes('api key')) {
+        setMissingApiKeyHint(true);
+      }
       setError(
         e.message?.includes('Failed to fetch')
           ? 'Unable to reach the YouTube API. Check your network connection and API key.'
@@ -160,7 +184,7 @@ export default function YouTubeApp({ channelId }: Props) {
       setLoadingDirectory(false);
       abortDirectoryRef.current = null;
     }
-  }, [allowNetwork, hasApiKey, parsedChannelId, setAllowNetwork]);
+  }, [allowNetwork, hasClientApiKey, resolvedChannelId, setAllowNetwork]);
 
   useEffect(() => {
     void loadDirectory();
@@ -172,7 +196,7 @@ export default function YouTubeApp({ channelId }: Props) {
 
   const loadPlaylistItems = useCallback(
     async (playlistId: string, mode: 'replace' | 'append') => {
-      if (!hasApiKey || !playlistId) return;
+      if (!playlistId) return;
 
       setPlaylistItems((prev) => ({
         ...prev,
@@ -191,11 +215,32 @@ export default function YouTubeApp({ channelId }: Props) {
       try {
         const previous = playlistItems[playlistId];
         const pageToken = mode === 'append' ? previous?.nextPageToken : undefined;
-        const response = await fetchYouTubePlaylistItems(playlistId, YOUTUBE_API_KEY ?? '', {
-          pageToken,
-          maxResults: 50,
-          signal: controller.signal,
-        });
+        const response = await (async () => {
+          try {
+            const query = new URLSearchParams({
+              playlistId,
+              maxResults: '50',
+            });
+            if (pageToken) query.set('pageToken', pageToken);
+            const resp = await fetch(`/api/youtube/playlist-items?${query.toString()}`, {
+              signal: controller.signal,
+            });
+            if (!resp.ok) {
+              const body = await resp.json().catch(() => ({}));
+              throw new Error(
+                body?.error || `YouTube playlist request failed (${resp.status} ${resp.statusText})`,
+              );
+            }
+            return (await resp.json()) as Awaited<ReturnType<typeof fetchYouTubePlaylistItems>>;
+          } catch (proxyError) {
+            if (!hasClientApiKey) throw proxyError;
+            return fetchYouTubePlaylistItems(playlistId, YOUTUBE_CLIENT_API_KEY ?? '', {
+              pageToken,
+              maxResults: 50,
+              signal: controller.signal,
+            });
+          }
+        })();
 
         setPlaylistItems((prev) => {
           const existing = prev[playlistId]?.items ?? [];
@@ -233,6 +278,9 @@ export default function YouTubeApp({ channelId }: Props) {
           return;
         }
         console.error('YouTube playlist items load failed', e);
+        if (e.message?.toLowerCase().includes('api key')) {
+          setMissingApiKeyHint(true);
+        }
         setPlaylistItems((prev) => ({
           ...prev,
           [playlistId]: {
@@ -246,7 +294,7 @@ export default function YouTubeApp({ channelId }: Props) {
         abortPlaylistRef.current = null;
       }
     },
-    [hasApiKey, playlistItems],
+    [hasClientApiKey, playlistItems],
   );
 
   useEffect(() => {
@@ -308,9 +356,9 @@ export default function YouTubeApp({ channelId }: Props) {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {parsedChannelId && (
+            {resolvedChannelId && (
               <a
-                href={channelUrl(parsedChannelId)}
+                href={channelUrl(resolvedChannelId)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] px-4 py-2 text-xs font-semibold text-[color:color-mix(in_srgb,var(--color-text)_78%,transparent)] transition hover:border-kali-control hover:text-kali-control focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
@@ -350,13 +398,15 @@ export default function YouTubeApp({ channelId }: Props) {
           </div>
         </div>
 
-        {!hasApiKey && (
+        {missingApiKeyHint && (
           <p className="mt-3 text-sm text-amber-200/90" role="status">
             Configure{' '}
+            <code className="rounded bg-[var(--kali-panel-highlight)] px-1">YOUTUBE_API_KEY</code>{' '}
+            on the server or{' '}
             <code className="rounded bg-[var(--kali-panel-highlight)] px-1">
               NEXT_PUBLIC_YOUTUBE_API_KEY
             </code>{' '}
-            to load playlists from YouTube.
+            for client-side fallback to load playlists from YouTube.
           </p>
         )}
 
@@ -453,9 +503,11 @@ export default function YouTubeApp({ channelId }: Props) {
               </div>
             ) : (
               <div className="mt-4 rounded-md border border-[var(--kali-panel-border)] bg-[var(--color-surface-muted)] p-4 text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
-                {hasApiKey && parsedChannelId
+                {missingApiKeyHint
+                  ? 'Configure a YouTube API key to load playlists.'
+                  : resolvedChannelId
                   ? 'No public playlists found for this channel.'
-                  : 'Enter a valid channel id and configure the YouTube API key to load playlists.'}
+                  : 'Enter a valid channel id to load playlists.'}
               </div>
             )}
           </div>

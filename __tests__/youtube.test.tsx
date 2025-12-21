@@ -18,109 +18,94 @@ describe('YouTubeApp', () => {
       .spyOn(global, 'fetch')
       .mockImplementation(async (input: RequestInfo | URL) => {
         const url = typeof input === 'string' ? input : input.toString();
-        const asUrl = new URL(url);
-
-        if (url.includes('/youtube/v3/channels')) {
-          return new Response(
-            JSON.stringify({
-              items: [
-                {
-                  id: 'UCxPIJ3hw6AOwomUWh5B7SfQ',
-                  snippet: {
-                    title: 'Alex Unnippillil',
-                    thumbnails: { high: { url: 'https://example.com/channel.jpg' } },
-                  },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-
-        if (url.includes('/youtube/v3/channelSections')) {
-          return new Response(
-            JSON.stringify({
-              items: [
-                {
-                  id: 'section-b',
-                  snippet: { title: 'Zeta Guides' },
-                  contentDetails: { playlists: ['PL_LABS'] },
-                },
-                {
-                  id: 'section-a',
-                  snippet: { title: 'Alpha Tutorials' },
-                  contentDetails: { playlists: ['PL_TUTORIALS'] },
-                },
-              ],
-            }),
-            { status: 200 },
-          );
-        }
-
-        if (url.includes('/youtube/v3/playlists')) {
-          const channelId = asUrl.searchParams.get('channelId');
-          if (!channelId) {
-            return new Response(JSON.stringify({ items: [] }), { status: 200 });
+        const asUrl = (() => {
+          try {
+            return new URL(url);
+          } catch {
+            return new URL(url, 'http://localhost');
           }
+        })();
 
+        if (url.includes('/api/youtube/directory')) {
           return new Response(
             JSON.stringify({
-              items: [
-                {
-                  id: 'PL_TUTORIALS',
-                  snippet: {
+              summary: {
+                id: 'UCxPIJ3hw6AOwomUWh5B7SfQ',
+                title: 'Alex Unnippillil',
+                thumbnail: 'https://example.com/channel.jpg',
+              },
+              directory: (() => {
+                const playlists = [
+                  {
+                    id: 'PL_TUTORIALS',
                     title: 'Tutorial Playlist',
                     description: 'Tutorial desc',
+                    thumbnail: 'https://example.com/pl2.jpg',
+                    itemCount: 1,
                     publishedAt: '2024-02-01T00:00:00Z',
-                    thumbnails: { high: { url: 'https://example.com/pl2.jpg' } },
+                    privacyStatus: 'public',
                   },
-                  contentDetails: { itemCount: 1 },
-                  status: { privacyStatus: 'public' },
-                },
-                {
-                  id: 'PL_LABS',
-                  snippet: {
+                  {
+                    id: 'PL_LABS',
                     title: 'Lab Playlist',
                     description: 'Lab desc',
+                    thumbnail: 'https://example.com/pl1.jpg',
+                    itemCount: 2,
                     publishedAt: '2024-01-01T00:00:00Z',
-                    thumbnails: { high: { url: 'https://example.com/pl1.jpg' } },
+                    privacyStatus: 'public',
                   },
-                  contentDetails: { itemCount: 2 },
-                  status: { privacyStatus: 'public' },
-                },
-              ],
+                ].sort((a, b) => a.title.localeCompare(b.title));
+                const sections = [
+                  {
+                    id: 'section-b',
+                    sectionId: 'section-b',
+                    sectionTitle: 'Zeta Guides',
+                    playlists: playlists.filter((playlist) => playlist.id === 'PL_LABS'),
+                  },
+                  {
+                    id: 'section-a',
+                    sectionId: 'section-a',
+                    sectionTitle: 'Alpha Tutorials',
+                    playlists: playlists.filter((playlist) => playlist.id === 'PL_TUTORIALS'),
+                  },
+                  {
+                    id: 'all',
+                    sectionId: 'all',
+                    sectionTitle: 'Playlists',
+                    playlists,
+                  },
+                ].sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle));
+
+                return { playlists, sections };
+              })(),
             }),
             { status: 200 },
           );
         }
 
-        if (url.includes('/youtube/v3/playlistItems')) {
+        if (url.includes('/api/youtube/playlist-items')) {
           // Return different items depending on playlistId query param
           const playlistId = asUrl.searchParams.get('playlistId');
           const items =
             playlistId === 'PL_LABS'
               ? [
                   {
-                    snippet: {
-                      title: 'First Lab Video',
-                      description: 'desc',
-                      publishedAt: '2024-03-01T00:00:00Z',
-                      position: 0,
-                      resourceId: { videoId: 'VID_1' },
-                      thumbnails: { high: { url: 'https://example.com/v1.jpg' } },
-                    },
+                    videoId: 'VID_1',
+                    title: 'First Lab Video',
+                    description: 'desc',
+                    thumbnail: 'https://example.com/v1.jpg',
+                    publishedAt: '2024-03-01T00:00:00Z',
+                    position: 0,
                   },
                 ]
               : [
                   {
-                    snippet: {
-                      title: 'First Tutorial Video',
-                      description: 'desc',
-                      publishedAt: '2024-04-01T00:00:00Z',
-                      position: 0,
-                      resourceId: { videoId: 'VID_2' },
-                      thumbnails: { high: { url: 'https://example.com/v2.jpg' } },
-                    },
+                    videoId: 'VID_2',
+                    title: 'First Tutorial Video',
+                    description: 'desc',
+                    thumbnail: 'https://example.com/v2.jpg',
+                    publishedAt: '2024-04-01T00:00:00Z',
+                    position: 0,
                   },
                 ];
 
