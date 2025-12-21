@@ -135,6 +135,8 @@ export default function YouTubeApp({ channelId }: Props) {
 
       const listings: PlaylistListing[] = playlistDirectory.sections.length
         ? playlistDirectory.sections
+        : playlistDirectory.playlists.length
+        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
         : [];
 
       setDirectory(listings);
