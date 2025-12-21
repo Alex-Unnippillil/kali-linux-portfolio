@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 let YouTubeApp: (typeof import('../components/apps/youtube'))['default'];
 
@@ -37,6 +37,26 @@ describe('YouTubeApp', () => {
           );
         }
 
+        if (url.includes('/youtube/v3/channelSections')) {
+          return new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 'section-b',
+                  snippet: { title: 'Zeta Guides' },
+                  contentDetails: { playlists: ['PL_LABS'] },
+                },
+                {
+                  id: 'section-a',
+                  snippet: { title: 'Alpha Tutorials' },
+                  contentDetails: { playlists: ['PL_TUTORIALS'] },
+                },
+              ],
+            }),
+            { status: 200 },
+          );
+        }
+
         if (url.includes('/youtube/v3/playlists')) {
           const channelId = asUrl.searchParams.get('channelId');
           if (!channelId) {
@@ -47,17 +67,6 @@ describe('YouTubeApp', () => {
             JSON.stringify({
               items: [
                 {
-                  id: 'PL_LABS',
-                  snippet: {
-                    title: 'Lab Playlist',
-                    description: 'Lab desc',
-                    publishedAt: '2024-01-01T00:00:00Z',
-                    thumbnails: { high: { url: 'https://example.com/pl1.jpg' } },
-                  },
-                  contentDetails: { itemCount: 2 },
-                  status: { privacyStatus: 'public' },
-                },
-                {
                   id: 'PL_TUTORIALS',
                   snippet: {
                     title: 'Tutorial Playlist',
@@ -66,6 +75,17 @@ describe('YouTubeApp', () => {
                     thumbnails: { high: { url: 'https://example.com/pl2.jpg' } },
                   },
                   contentDetails: { itemCount: 1 },
+                  status: { privacyStatus: 'public' },
+                },
+                {
+                  id: 'PL_LABS',
+                  snippet: {
+                    title: 'Lab Playlist',
+                    description: 'Lab desc',
+                    publishedAt: '2024-01-01T00:00:00Z',
+                    thumbnails: { high: { url: 'https://example.com/pl1.jpg' } },
+                  },
+                  contentDetails: { itemCount: 2 },
                   status: { privacyStatus: 'public' },
                 },
               ],
@@ -121,11 +141,37 @@ describe('YouTubeApp', () => {
 
     // Playlist listing
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Open playlist Lab Playlist/i })).toBeInTheDocument();
+      const categoriesPanel = screen.getByRole('heading', { name: /Categories/i }).closest('div');
+      expect(categoriesPanel).not.toBeNull();
+      expect(
+        within(categoriesPanel as HTMLElement).getAllByRole('button', {
+          name: /Open playlist Lab Playlist/i,
+        }).length,
+      ).toBeGreaterThan(0);
     });
 
+    // Sorted categories (alphabetical by section title) and playlists
+    const categoriesPanel = screen.getByRole('heading', { name: /Categories/i }).closest('div');
+    expect(categoriesPanel).not.toBeNull();
+    const categoryHeadings = within(categoriesPanel as HTMLElement)
+      .getAllByRole('heading', { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(categoryHeadings.slice(0, 3)).toEqual(['Alpha Tutorials', 'Playlists', 'Zeta Guides']);
+
+    const aggregatedList = within(categoriesPanel as HTMLElement).getByRole('list', {
+      name: /Playlists playlists/i,
+    });
+    const playlistButtons = within(aggregatedList)
+      .getAllByRole('button', { name: /Open playlist/i })
+      .map((button) => button.textContent?.trim());
+    expect(playlistButtons[0]).toContain('Lab Playlist');
+    expect(playlistButtons[1]).toContain('Tutorial Playlist');
+
     // Select playlist + video
-    fireEvent.click(screen.getByRole('button', { name: /Open playlist Lab Playlist/i }));
+    const labPlaylistButtons = within(aggregatedList).getAllByRole('button', {
+      name: /Open playlist Lab Playlist/i,
+    });
+    fireEvent.click(labPlaylistButtons[0]);
 
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Watch First Lab Video/i })).toBeInTheDocument();
