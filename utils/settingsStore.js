@@ -13,7 +13,7 @@ const DEFAULT_SETTINGS = {
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
-  allowNetwork: true,
+  allowNetwork: false,
   haptics: true,
 };
 
@@ -24,7 +24,7 @@ function getLocalStorage() {
   try {
     return window.localStorage;
   } catch (error) {
-    if (process.env.NODE_ENV !== 'production' && !hasLoggedStorageWarning) {
+    if (process.env.NODE_ENV === 'development' && !hasLoggedStorageWarning) {
       console.warn(
         'Local storage is not available; falling back to default settings.',
         error
@@ -169,9 +169,9 @@ export async function getAllowNetwork() {
   if (!storage) return DEFAULT_SETTINGS.allowNetwork;
   const stored = storage.getItem('allow-network');
   if (stored === null) {
-    // Default to allowing network requests and persist for future runs.
-    storage.setItem('allow-network', 'true');
-    return true;
+    // Default to blocking network requests and persist for future runs.
+    storage.setItem('allow-network', 'false');
+    return false;
   }
   return stored === 'true';
 }

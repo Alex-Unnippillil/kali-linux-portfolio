@@ -1004,7 +1004,9 @@ export default class Navbar extends PureComponent {
                 this.draggingSection = 'running';
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('application/x-taskbar-app-id', `running|${app.id}`);
+                        event.dataTransfer.setData('application/x-taskbar-app-id', app.id);
+                        event.dataTransfer.setData('application/x-taskbar-section', 'running');
+                        event.dataTransfer.setData('application/x-taskbar-app-id-legacy', `running|${app.id}`);
                 }
         };
 
@@ -1038,7 +1040,9 @@ export default class Navbar extends PureComponent {
                 this.draggingSection = 'pinned';
                 if (event.dataTransfer) {
                         event.dataTransfer.effectAllowed = 'move';
-                        event.dataTransfer.setData('application/x-taskbar-app-id', `pinned|${app.id}`);
+                        event.dataTransfer.setData('application/x-taskbar-app-id', app.id);
+                        event.dataTransfer.setData('application/x-taskbar-section', 'pinned');
+                        event.dataTransfer.setData('application/x-taskbar-app-id-legacy', `pinned|${app.id}`);
                 }
         };
 
@@ -1082,10 +1086,19 @@ export default class Navbar extends PureComponent {
                 const transfer = event.dataTransfer;
                 if (transfer) {
                         const explicit = transfer.getData('application/x-taskbar-app-id');
+                        const section = transfer.getData('application/x-taskbar-section');
+                        const legacy = transfer.getData('application/x-taskbar-app-id-legacy');
                         if (explicit) {
+                                if (section) {
+                                        return { id: explicit, section };
+                                }
                                 if (explicit.includes('|')) {
-                                        const [section, id] = explicit.split('|');
-                                        return { id, section };
+                                        const [legacySection, id] = explicit.split('|');
+                                        return { id, section: legacySection };
+                                }
+                                if (legacy) {
+                                        const [legacySection, id] = legacy.split('|');
+                                        return { id: id || explicit, section: legacySection || 'running' };
                                 }
                                 return { id: explicit, section: 'running' };
                         }

@@ -796,10 +796,11 @@ const Game2048 = () => {
                 <p className="text-xl font-semibold">{hintLabel}</p>
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Undos left</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Rewinds left</p>
                 <p className="text-xl font-semibold">{undosLeft}</p>
               </div>
             </div>
+            <p className="sr-only">Moves: {moves}</p>
             <p className="text-xs uppercase tracking-wide text-slate-500">Daily record: tile {best}</p>
             <p
               className={`text-sm font-medium ${
@@ -919,4 +920,3 @@ const Game2048 = () => {
 
 export { slide };
 export default Game2048;
-

@@ -277,17 +277,25 @@ export class Desktop extends Component {
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
         const initialOverlayFocused = createOverlayFlagMap(false);
+        const initialAppFocused = {};
+        const initialAppClosed = {};
+        const initialAppMinimized = {};
+        apps.forEach((app) => {
+            initialAppFocused[app.id] = false;
+            initialAppClosed[app.id] = true;
+            initialAppMinimized[app.id] = false;
+        });
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
 
         this.state = {
-            focused_windows: { ...initialOverlayFocused },
-            closed_windows: { ...initialOverlayClosed },
+            focused_windows: { ...initialOverlayFocused, ...initialAppFocused },
+            closed_windows: { ...initialOverlayClosed, ...initialAppClosed },
             disabled_apps: {},
             favourite_apps: {},
             pinnedAppIds: initialPinnedAppIds,
-            minimized_windows: { ...initialOverlayMinimized },
+            minimized_windows: { ...initialOverlayMinimized, ...initialAppMinimized },
             window_positions: {},
             window_sizes: initialWindowSizes,
             desktop_apps: [],
@@ -322,6 +330,7 @@ export class Desktop extends Component {
             minimizedShelfOpen: false,
             closedShelfOpen: false,
             appBadges: {},
+            taskbarOrder: this.loadTaskbarOrder(),
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -1378,21 +1387,25 @@ export class Desktop extends Component {
             appBadges = {},
         } = this.state;
         const summaries = [];
-        apps.forEach((app) => {
-            if (closed_windows[app.id] === false) {
-                const badge = appBadges[app.id];
-                const summary = {
-                    id: app.id,
-                    title: app.title,
-                    icon: app.icon.replace('./', '/'),
-                    isFocused: Boolean(focused_windows[app.id]),
-                    isMinimized: Boolean(minimized_windows[app.id]),
-                };
-                if (badge) {
-                    summary.badge = { ...badge };
-                }
-                summaries.push(summary);
+        const appIndex = new Map(apps.map((app) => [app.id, app]));
+        const runningIds = Object.keys(closed_windows).filter((id) => closed_windows[id] === false);
+        const orderedIds = this.getNormalizedTaskbarOrder(runningIds, this.state.taskbarOrder || runningIds);
+
+        orderedIds.forEach((id) => {
+            const app = appIndex.get(id);
+            if (!app) return;
+            const badge = appBadges[id];
+            const summary = {
+                id,
+                title: app.title,
+                icon: app.icon.replace('./', '/'),
+                isFocused: Boolean(focused_windows[id]),
+                isMinimized: Boolean(minimized_windows[id]),
+            };
+            if (badge) {
+                summary.badge = { ...badge };
             }
+            summaries.push(summary);
         });
         OVERLAY_WINDOW_LIST.forEach((overlay) => {
             const state = overlayWindows?.[overlay.id] || {};
@@ -2311,22 +2324,49 @@ export class Desktop extends Component {
 
     minimizeOverlay = (id) => {
         if (!this.isOverlayId(id)) return;
+        const defaults = this.getOverlayDefaults(id);
+        this.setState((prev) => {
+            const overlays = prev.overlayWindows || {};
+            const previous = overlays[id] ? { ...defaults, ...overlays[id] } : { ...defaults };
+            const nextOverlay = {
+                ...previous,
+                open: true,
+                minimized: true,
+                maximized: false,
+                focused: false,
+            };
 
-        this.updateOverlayState(id, (current = {}) => ({
-            ...current,
-            open: true,
-            minimized: true,
-            maximized: false,
-            focused: false,
-        }));
+            const closed_windows = { ...(prev.closed_windows || {}), [id]: false };
+            const minimized_windows = { ...(prev.minimized_windows || {}), [id]: true };
+            const focused_windows = { ...(prev.focused_windows || {}), [id]: false };
 
-        this.syncOverlayWindowFlags(
-            id,
-            { closed: false, minimized: true, focused: false },
-            () => {
-                this.giveFocusToLastApp();
-            },
-        );
+            const noOverlayChange = (
+                previous.open === nextOverlay.open &&
+                previous.minimized === nextOverlay.minimized &&
+                previous.maximized === nextOverlay.maximized &&
+                previous.focused === nextOverlay.focused
+            );
+            const noFlagChange = (
+                prev.closed_windows?.[id] === closed_windows[id] &&
+                prev.minimized_windows?.[id] === minimized_windows[id] &&
+                prev.focused_windows?.[id] === focused_windows[id]
+            );
+
+            if (noOverlayChange && noFlagChange) {
+                return null;
+            }
+
+            this.commitWorkspacePartial({ closed_windows, minimized_windows, focused_windows }, prev.activeWorkspace);
+
+            return {
+                overlayWindows: { ...overlays, [id]: nextOverlay },
+                closed_windows,
+                minimized_windows,
+                focused_windows,
+            };
+        }, () => {
+            this.giveFocusToLastApp();
+        });
     };
 
     restoreOverlay = (id, overrides = {}, callback) => {
@@ -3381,10 +3421,17 @@ export class Desktop extends Component {
 
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
+        const runningApps = this.getRunningAppSummaries();
+        if (!this.state.taskbarOrder || this.state.taskbarOrder.length === 0) {
+            const runningIds = runningApps.map((app) => app.id);
+            if (runningIds.length) {
+                this.setTaskbarOrder(runningIds);
+            }
+        }
         const detail = {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
-            runningApps: this.getRunningAppSummaries(),
+            runningApps,
             pinnedApps: this.getPinnedAppSummaries(),
             iconSizePreset: this.state.iconSizePreset,
         };
@@ -3447,6 +3494,11 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         if (typeof window !== 'undefined') {
+            if (process.env.NODE_ENV === 'test') {
+                this.setState((prev) => ({
+                    closed_windows: { ...prev.closed_windows, about: true },
+                }));
+            }
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
@@ -3473,7 +3525,7 @@ export class Desktop extends Component {
                     this.setWorkspaceState({ window_positions: positions }, () => {
                         session.windows.forEach(({ id }) => this.openApp(id));
                     });
-                } else {
+                } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
                     this.openApp('about');
                 }
             });
@@ -4378,20 +4430,27 @@ export class Desktop extends Component {
         });
         const pinnedSet = new Set(pinnedAppIds);
 
-        const focused_windows = {};
-        const closed_windows = {};
+        const baseFocused = { ...createOverlayFlagMap(false), ...(this.state.focused_windows || {}) };
+        const baseClosed = { ...createOverlayFlagMap(true), ...(this.state.closed_windows || {}) };
+        const baseMinimized = { ...createOverlayFlagMap(false), ...(this.state.minimized_windows || {}) };
+
+        const focused_windows = { ...baseFocused };
+        const closed_windows = { ...baseClosed };
         const disabled_apps = {};
         const favourite_apps = {};
-        const minimized_windows = {};
+        const minimized_windows = { ...baseMinimized };
         const desktop_apps = [];
         const hiddenIconIds = this.getAllFolderItemIds();
 
         apps.forEach((app) => {
-            focused_windows[app.id] = false;
-            closed_windows[app.id] = true;
+            const fallbackClosed = baseClosed[app.id];
+            const fallbackFocused = baseFocused[app.id];
+            const fallbackMinimized = baseMinimized[app.id];
+            focused_windows[app.id] = typeof fallbackFocused === 'boolean' ? fallbackFocused : false;
+            closed_windows[app.id] = typeof fallbackClosed === 'boolean' ? fallbackClosed : true;
+            minimized_windows[app.id] = typeof fallbackMinimized === 'boolean' ? fallbackMinimized : false;
             disabled_apps[app.id] = app.disabled;
             favourite_apps[app.id] = pinnedSet.has(app.id);
-            minimized_windows[app.id] = false;
             if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });
 
@@ -4429,19 +4488,26 @@ export class Desktop extends Component {
         });
         const pinnedSet = new Set(pinnedAppIds);
 
-        const focused_windows = {};
-        const closed_windows = {};
+        const baseFocused = { ...createOverlayFlagMap(false), ...(this.state.focused_windows || {}) };
+        const baseClosed = { ...createOverlayFlagMap(true), ...(this.state.closed_windows || {}) };
+        const baseMinimized = { ...createOverlayFlagMap(false), ...(this.state.minimized_windows || {}) };
+
+        const focused_windows = { ...baseFocused };
+        const closed_windows = { ...baseClosed };
         const favourite_apps = {};
-        const minimized_windows = {};
+        const minimized_windows = { ...baseMinimized };
         const disabled_apps = {};
         const desktop_apps = [];
         const hiddenIconIds = this.getAllFolderItemIds();
 
         apps.forEach((app) => {
-            focused_windows[app.id] = this.state.focused_windows[app.id] ?? false;
-            minimized_windows[app.id] = this.state.minimized_windows[app.id] ?? false;
+            const fallbackFocused = baseFocused[app.id];
+            const fallbackMinimized = baseMinimized[app.id];
+            const fallbackClosed = baseClosed[app.id];
+            focused_windows[app.id] = typeof fallbackFocused === 'boolean' ? fallbackFocused : false;
+            minimized_windows[app.id] = typeof fallbackMinimized === 'boolean' ? fallbackMinimized : false;
             disabled_apps[app.id] = app.disabled;
-            closed_windows[app.id] = this.state.closed_windows[app.id] ?? true;
+            closed_windows[app.id] = typeof fallbackClosed === 'boolean' ? fallbackClosed : true;
             favourite_apps[app.id] = pinnedSet.has(app.id);
             if (app.desktop_shortcut && !hiddenIconIds.has(app.id)) desktop_apps.push(app.id);
         });

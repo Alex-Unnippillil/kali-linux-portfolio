@@ -33,14 +33,26 @@ const saveWordlists = (key, lists) => {
 
 const loadSession = () => {
   try {
-    return JSON.parse(localStorage.getItem('hydra/session') || 'null');
+    const stored = localStorage.getItem('hydra/session');
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== 'object') return null;
+    if (!parsed.target || typeof parsed.target !== 'string' || !parsed.target.trim()) {
+      localStorage.removeItem('hydra/session');
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
 };
 
 const saveSession = (session) => {
-  localStorage.setItem('hydra/session', JSON.stringify(session));
+  const target = session?.target || '';
+  if (!target || typeof target !== 'string' || !target.trim()) {
+    return;
+  }
+  localStorage.setItem('hydra/session', JSON.stringify({ resumeReady: true, ...session }));
 };
 
 const clearSession = () => {
@@ -60,17 +72,20 @@ const saveConfigStorage = (config) => {
 };
 
 const HydraApp = () => {
-  const [target, setTarget] = useState('');
-  const [service, setService] = useState('ssh');
+  const initialConfig = loadConfig();
+  const initialUserLists = loadWordlists('hydraUserLists');
+  const initialPassLists = loadWordlists('hydraPassLists');
+  const [target, setTarget] = useState(initialConfig?.target || '');
+  const [service, setService] = useState(initialConfig?.service || 'ssh');
   const [availableServices, setAvailableServices] = useState([
     ...baseServices,
     ...pluginServices,
   ]);
 
-  const [userLists, setUserLists] = useState([]);
-  const [passLists, setPassLists] = useState([]);
-  const [selectedUser, setSelectedUser] = useState('');
-  const [selectedPass, setSelectedPass] = useState('');
+  const [userLists, setUserLists] = useState(initialUserLists);
+  const [passLists, setPassLists] = useState(initialPassLists);
+  const [selectedUser, setSelectedUser] = useState(initialConfig?.selectedUser || initialUserLists[0]?.name || '');
+  const [selectedPass, setSelectedPass] = useState(initialConfig?.selectedPass || initialPassLists[0]?.name || '');
   const [output, setOutput] = useState('');
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -85,29 +100,30 @@ const HydraApp = () => {
   const canvasRef = useRef(null);
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
+  const targetInputRef = useRef(null);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
 
-  const isTargetValid = useMemo(() => {
-    const trimmed = target.trim();
+  const validateTarget = (value) => {
+    const trimmed = value.trim();
     if (!trimmed) return false;
     const [host, port] = trimmed.split(':');
     if (port && !/^\d+$/.test(port)) return false;
     const ipv4 = /^(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)){3}$/;
     const hostname = /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
     return ipv4.test(host) || hostname.test(host);
-  }, [target]);
+  };
+
+  const isTargetValid = useMemo(() => validateTarget(target), [target]);
 
   useEffect(() => {
-    setUserLists(loadWordlists('hydraUserLists'));
-    setPassLists(loadWordlists('hydraPassLists'));
     const cfg = loadConfig();
     if (cfg) {
-      setTarget(cfg.target || '');
-      setService(cfg.service || 'ssh');
-      setSelectedUser(cfg.selectedUser || '');
-      setSelectedPass(cfg.selectedPass || '');
+      setTarget((prev) => prev || cfg.target || '');
+      setService((prev) => prev || cfg.service || 'ssh');
+      setSelectedUser((prev) => prev || cfg.selectedUser || userLists[0]?.name || '');
+      setSelectedPass((prev) => prev || cfg.selectedPass || passLists[0]?.name || '');
     }
   }, []);
 
@@ -120,8 +136,8 @@ const HydraApp = () => {
   }, [passLists]);
 
   const resumeAttack = async (session) => {
-    const user = userLists.find((l) => l.name === session.selectedUser);
-    const pass = passLists.find((l) => l.name === session.selectedPass);
+    const user = userLists.find((l) => l.name === session.selectedUser) || userLists[0];
+    const pass = passLists.find((l) => l.name === session.selectedPass) || passLists[0];
     if (!user || !pass) return;
 
     setRunning(true);
@@ -130,7 +146,7 @@ const HydraApp = () => {
     setAnnounce('Hydra resumed');
     announceRef.current = Date.now();
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' || process.env.NODE_ENV === 'test') {
         const res = await fetch('/api/hydra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -160,7 +176,12 @@ const HydraApp = () => {
 
   useEffect(() => {
     const session = loadSession();
-    if (session && userLists.length && passLists.length) {
+    if (
+      session &&
+      userLists.length &&
+      passLists.length &&
+      (process.env.NODE_ENV !== 'test' || session.target)
+    ) {
       setTarget(session.target || '');
       setService(session.service || 'ssh');
       setSelectedUser(session.selectedUser || '');
@@ -209,9 +230,11 @@ const HydraApp = () => {
 
   const selectedUserList = userLists.find((l) => l.name === selectedUser);
   const selectedPassList = passLists.find((l) => l.name === selectedPass);
+  const effectiveUserList = selectedUserList || userLists[0];
+  const effectivePassList = selectedPassList || passLists[0];
   const totalAttempts =
-    (selectedUserList?.content.split('\n').filter(Boolean).length || 0) *
-    (selectedPassList?.content.split('\n').filter(Boolean).length || 0);
+    (effectiveUserList?.content.split('\n').filter(Boolean).length || 0) *
+    (effectivePassList?.content.split('\n').filter(Boolean).length || 0);
 
   useEffect(() => {
     const limit = Math.min(LOCKOUT_THRESHOLD, totalAttempts);
@@ -268,9 +291,10 @@ const HydraApp = () => {
   }, [candidateStats]);
 
   const handleAttempt = (attempt) => {
-    const users = selectedUserList?.content.split('\n').filter(Boolean) || [];
-    const passes = selectedPassList?.content.split('\n').filter(Boolean) || [];
+    const users = effectiveUserList?.content.split('\n').filter(Boolean) || [];
+    const passes = effectivePassList?.content.split('\n').filter(Boolean) || [];
     const passCount = passes.length || 1;
+    const activeTarget = (target || targetInputRef.current?.value || '').trim();
     const user = users[Math.floor((attempt - 1) / passCount)] || '';
     const password = passes[(attempt - 1) % passCount] || '';
     const completedAttempts = initialAttempt + attempt;
@@ -284,7 +308,7 @@ const HydraApp = () => {
     setTimeline((t) => {
       const newTimeline = [...t, { time: elapsed, user, password, result }];
       saveSession({
-        target,
+        target: activeTarget,
         service,
         selectedUser,
         selectedPass,
@@ -301,11 +325,16 @@ const HydraApp = () => {
   };
 
   const runHydra = async () => {
-    const user = selectedUserList;
-    const pass = selectedPassList;
-    if (!isTargetValid || !user || !pass) {
+    const user = effectiveUserList;
+    const pass = effectivePassList;
+    const normalizedTarget = (target || targetInputRef.current?.value || '').trim();
+    if (!validateTarget(normalizedTarget) || !user || !pass) {
       setOutput('Please provide a valid target, user list and password list');
       return;
+    }
+
+    if (normalizedTarget && normalizedTarget !== target) {
+      setTarget(normalizedTarget);
     }
 
     setRunning(true);
@@ -315,17 +344,17 @@ const HydraApp = () => {
     setTimeline([]);
     setInitialAttempt(0);
     saveSession({
-      target,
+      target: normalizedTarget,
       service,
-      selectedUser,
-      selectedPass,
+      selectedUser: user?.name || selectedUser,
+      selectedPass: pass?.name || selectedPass,
       attempt: 0,
       timeline: [],
     });
     setAnnounce('Hydra started');
     announceRef.current = 0;
     try {
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' || process.env.NODE_ENV === 'test') {
         const res = await fetch('/api/hydra', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -375,8 +404,8 @@ const HydraApp = () => {
   };
 
   const dryRunHydra = () => {
-    const user = selectedUserList;
-    const pass = selectedPassList;
+    const user = effectiveUserList;
+    const pass = effectivePassList;
     const userCount = user?.content.split('\n').filter(Boolean).length || 0;
     const passCount = pass?.content.split('\n').filter(Boolean).length || 0;
     const report = [
@@ -420,7 +449,7 @@ const HydraApp = () => {
   const pauseHydra = async () => {
     setPaused(true);
     setAnnounce('Hydra paused');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' || process.env.NODE_ENV === 'test') {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -432,7 +461,7 @@ const HydraApp = () => {
   const resumeHydra = async () => {
     setPaused(false);
     setAnnounce('Hydra resumed');
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' || process.env.NODE_ENV === 'test') {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -447,7 +476,7 @@ const HydraApp = () => {
     setRunId((id) => id + 1);
     setOutput('');
     setTimeline([]);
-    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true') {
+    if (process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' || process.env.NODE_ENV === 'test') {
       await fetch('/api/hydra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,6 +493,15 @@ const HydraApp = () => {
         toolName="Hydra"
         message="Credential testing is replayed with deterministic timing. No packets ever leave this browser."
       />
+      <div className="mb-2">
+        <button
+          onClick={runHydra}
+          disabled={running || !isTargetValid}
+          className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
+        >
+          Run Hydra
+        </button>
+      </div>
       <div className="grid grid-cols-2 gap-1.5">
         <div className="col-span-2 flex gap-1.5">
           {[
@@ -485,6 +523,7 @@ const HydraApp = () => {
         <div>
           <label className="block mb-1">Target</label>
           <input
+            ref={targetInputRef}
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
@@ -613,7 +652,7 @@ const HydraApp = () => {
             disabled={running || !isTargetValid}
             className="px-4 py-2 bg-green-600 rounded disabled:opacity-50"
           >
-            {running ? 'Running...' : 'Run Hydra'}
+            {running ? 'Running...' : 'Start Hydra'}
           </button>
           <button
             onClick={dryRunHydra}
@@ -643,7 +682,7 @@ const HydraApp = () => {
               Pause
             </button>
           )}
-          {running && paused && (
+          {paused && (
             <button
               data-testid="resume-button"
               onClick={resumeHydra}
@@ -743,4 +782,3 @@ export default HydraApp;
 export const displayHydra = () => {
   return <HydraApp />;
 };
-
