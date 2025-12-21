@@ -5,6 +5,7 @@ import EmbedFrame from '../../EmbedFrame';
 import { useSettings } from '../../../hooks/useSettings';
 import type {
   YouTubeChannelSummary,
+  YouTubePlaylistDirectory,
   YouTubePlaylistSummary,
   YouTubePlaylistVideo,
 } from '../../../utils/youtube';
