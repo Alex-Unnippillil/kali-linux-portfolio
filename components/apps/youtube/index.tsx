@@ -213,7 +213,18 @@ export default function YouTubeApp({ channelId }: Props) {
         });
       } catch (err: unknown) {
         const e = err as Error;
-        if (e.name === 'AbortError') return;
+        if (e.name === 'AbortError') {
+          setPlaylistItems((prev) => ({
+            ...prev,
+            [playlistId]: {
+              items: prev[playlistId]?.items ?? [],
+              nextPageToken: prev[playlistId]?.nextPageToken,
+              loading: false,
+              error: undefined,
+            },
+          }));
+          return;
+        }
         console.error('YouTube playlist items load failed', e);
         setPlaylistItems((prev) => ({
           ...prev,
