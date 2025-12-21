@@ -14,6 +14,33 @@ global.TextEncoder = TextEncoder;
 // @ts-ignore
 global.TextDecoder = TextDecoder as any;
 
+const { ReadableStream, WritableStream } = require('node:stream/web');
+// @ts-ignore
+if (typeof global.ReadableStream === 'undefined') {
+  // @ts-ignore
+  global.ReadableStream = ReadableStream;
+}
+// @ts-ignore
+if (typeof global.WritableStream === 'undefined') {
+  // @ts-ignore
+  global.WritableStream = WritableStream;
+}
+
+const { MessageChannel, MessagePort } = require('worker_threads');
+// @ts-ignore
+if (typeof global.MessageChannel === 'undefined') {
+  // @ts-ignore
+  global.MessageChannel = MessageChannel;
+}
+// @ts-ignore
+if (typeof global.MessagePort === 'undefined') {
+  // @ts-ignore
+  global.MessagePort = MessagePort;
+}
+
+// Undici expects these globals to be present; load it after the polyfills are applied.
+const { fetch: undiciFetch, Headers, Request, Response } = require('undici');
+
 // Provide a minimal structuredClone polyfill for environments lacking it
 // @ts-ignore
 if (typeof global.structuredClone === 'undefined') {
@@ -23,12 +50,27 @@ if (typeof global.structuredClone === 'undefined') {
 
 // Ensure a global `fetch` exists for tests. Jest's jsdom environment
 // doesn't provide one on the Node `global` object, which causes
-// `jest.spyOn(global, 'fetch')` to fail. Providing a simple stub allows
-// tests to spy on and mock `fetch` as needed.
+// `jest.spyOn(global, 'fetch')` to fail. Providing a real implementation
+// from undici also polyfills Request/Response helpers needed by tests.
 // @ts-ignore
 if (!global.fetch) {
   // @ts-ignore
-  global.fetch = () => Promise.reject(new Error('fetch not implemented'));
+  global.fetch = undiciFetch;
+}
+// @ts-ignore
+if (typeof global.Response === 'undefined') {
+  // @ts-ignore
+  global.Response = Response;
+}
+// @ts-ignore
+if (typeof global.Request === 'undefined') {
+  // @ts-ignore
+  global.Request = Request;
+}
+// @ts-ignore
+if (typeof global.Headers === 'undefined') {
+  // @ts-ignore
+  global.Headers = Headers;
 }
 
 // jsdom does not provide a global Image constructor which is used by
@@ -45,6 +87,11 @@ class ImageMock {
 
 // @ts-ignore - allow overriding the global Image for the test env
 global.Image = ImageMock as unknown as typeof Image;
+
+const globalWindow =
+  typeof globalThis !== 'undefined' && (globalThis as Record<string, unknown>)['window']
+    ? ((globalThis as Record<string, unknown>)['window'] as Window | undefined)
+    : undefined;
 
 // Provide a minimal canvas mock so libraries like xterm.js can run under JSDOM.
 // In non-browser environments (like Jest's node environment) HTMLCanvasElement may
@@ -81,9 +128,9 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 }
 
 // Basic matchMedia mock for libraries that expect it
-if (typeof window !== 'undefined' && !window.matchMedia) {
+if (globalWindow && !globalWindow.matchMedia) {
   // @ts-ignore
-  window.matchMedia = () => ({
+  globalWindow.matchMedia = () => ({
     matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
@@ -93,7 +140,7 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 }
 
 // Minimal IntersectionObserver mock so components relying on it don't crash in tests
-if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
+if (globalWindow && !('IntersectionObserver' in globalWindow)) {
   class IntersectionObserverMock {
     constructor() {}
     observe() {}
@@ -102,7 +149,7 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
     takeRecords() { return []; }
   }
   // @ts-ignore
-  window.IntersectionObserver = IntersectionObserverMock;
+  globalWindow.IntersectionObserver = IntersectionObserverMock;
   // @ts-ignore
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
@@ -110,15 +157,14 @@ if (typeof window !== 'undefined' && !('IntersectionObserver' in window)) {
 // jsdom does not implement scrollIntoView; provide a no-op stub so components
 // depending on it do not fail during tests.
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
-  // eslint-disable-next-line no-empty-function
   Element.prototype.scrollIntoView = () => {};
 }
 
 // Simple localStorage mock for environments without it
-if (typeof window !== 'undefined' && !window.localStorage) {
+if (globalWindow && !globalWindow.localStorage) {
   const store: Record<string, string> = {};
   // @ts-ignore
-  window.localStorage = {
+  globalWindow.localStorage = {
     getItem: (key: string) => (key in store ? store[key] : null),
     setItem: (key: string, value: string) => {
       store[key] = String(value);
