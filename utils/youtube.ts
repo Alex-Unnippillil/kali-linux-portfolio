@@ -442,8 +442,8 @@ export async function fetchYouTubePlaylistDirectoryByChannelId(
     .map((section) => {
       const ordered = section.playlistIds
         .map((id) => playlistIndex.get(id))
-        .filter(Boolean)
-        .sort((a, b) => a.title.localeCompare(b.title)) as YouTubePlaylistSummary[];
+        .filter((playlist): playlist is YouTubePlaylistSummary => Boolean(playlist))
+        .sort((a, b) => a.title.localeCompare(b.title));
       if (!ordered.length) return null;
       return {
         sectionId: section.id,
