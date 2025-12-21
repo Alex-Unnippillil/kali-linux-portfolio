@@ -11,7 +11,7 @@ import type {
 import {
   fetchYouTubeChannelSummary,
   fetchYouTubePlaylistItems,
-  fetchYouTubePlaylistsByChannelIdAll,
+  fetchYouTubePlaylistDirectoryByChannelId,
   parseYouTubeChannelId,
 } from '../../../utils/youtube';
 
@@ -118,24 +118,46 @@ export default function YouTubeApp({ channelId }: Props) {
     abortDirectoryRef.current = controller;
 
     try {
-      const [summary, playlists] = await Promise.all([
-        fetchYouTubeChannelSummary(parsedChannelId, YOUTUBE_API_KEY ?? '', controller.signal),
-        fetchYouTubePlaylistsByChannelIdAll(
+      const summary = await fetchYouTubeChannelSummary(
+        parsedChannelId,
+        YOUTUBE_API_KEY ?? '',
+        controller.signal,
+      ).catch((err: unknown) => {
+        console.error('YouTube channel summary load failed', err);
+        return null;
+      });
+
+      let playlistDirectory: Awaited<ReturnType<typeof fetchYouTubePlaylistDirectoryByChannelId>>;
+      try {
+        playlistDirectory = await fetchYouTubePlaylistDirectoryByChannelId(
           parsedChannelId,
           YOUTUBE_API_KEY ?? '',
           controller.signal,
-        ),
-      ]);
+        );
+      } catch (directoryError: unknown) {
+        const e = directoryError as Error;
+        if (e.name === 'AbortError') return;
+        console.error('YouTube directory load failed', e);
+        setError(
+          e.message?.includes('Failed to fetch')
+            ? 'Unable to reach the YouTube API. Check your network connection and API key.'
+            : e.message || 'Failed to load YouTube playlists.',
+        );
+        return;
+      }
 
       setChannelSummary(summary);
-      const map = new Map<string, YouTubePlaylistSummary>(playlists.map((p) => [p.id, p]));
+      const map = new Map<string, YouTubePlaylistSummary>(
+        playlistDirectory.playlists.map((p) => [p.id, p]),
+      );
       setPlaylistIndex(map);
 
-      const listings: PlaylistListing[] = playlists.length
-        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists }]
+      const listings: PlaylistListing[] = playlistDirectory.sections.length
+        ? playlistDirectory.sections
         : [];
 
       setDirectory(listings);
+      setError(null);
 
       // Auto-select first playlist if nothing selected
       const firstPlaylist = listings[0]?.playlists[0]?.id;
@@ -209,7 +231,18 @@ export default function YouTubeApp({ channelId }: Props) {
         });
       } catch (err: unknown) {
         const e = err as Error;
-        if (e.name === 'AbortError') return;
+        if (e.name === 'AbortError') {
+          setPlaylistItems((prev) => ({
+            ...prev,
+            [playlistId]: {
+              items: prev[playlistId]?.items ?? [],
+              nextPageToken: prev[playlistId]?.nextPageToken,
+              loading: false,
+              error: undefined,
+            },
+          }));
+          return;
+        }
         console.error('YouTube playlist items load failed', e);
         setPlaylistItems((prev) => ({
           ...prev,
@@ -230,7 +263,7 @@ export default function YouTubeApp({ channelId }: Props) {
   useEffect(() => {
     if (!selectedPlaylistId) return;
     const current = playlistItems[selectedPlaylistId];
-    if (current?.items?.length) return;
+    if (current?.items?.length || current?.loading) return;
     void loadPlaylistItems(selectedPlaylistId, 'replace');
   }, [selectedPlaylistId, playlistItems, loadPlaylistItems]);
 

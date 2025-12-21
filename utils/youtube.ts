@@ -33,6 +33,15 @@ export type YouTubePlaylistSummary = {
   privacyStatus: string;
 };
 
+export type YouTubePlaylistDirectory = {
+  playlists: YouTubePlaylistSummary[];
+  sections: Array<{
+    sectionId: string;
+    sectionTitle: string;
+    playlists: YouTubePlaylistSummary[];
+  }>;
+};
+
 export type YouTubePlaylistVideo = {
   videoId: string;
   title: string;
@@ -383,13 +392,78 @@ export async function fetchYouTubePlaylistsByChannelIdAll(
     pageToken = data.nextPageToken;
   } while (pageToken);
 
+  const visible = results.filter(
+    (playlist) =>
+      playlist.privacyStatus === 'public' ||
+      playlist.privacyStatus === 'unlisted' ||
+      playlist.privacyStatus === undefined,
+  );
+
   // Stable sort: newest first, then title.
-  return results.sort((a, b) => {
+  return visible.sort((a, b) => {
     const da = Date.parse(a.publishedAt);
     const db = Date.parse(b.publishedAt);
     if (Number.isFinite(da) && Number.isFinite(db) && da !== db) return db - da;
     return a.title.localeCompare(b.title);
   });
+}
+
+export async function fetchYouTubePlaylistDirectoryByChannelId(
+  channelId: string,
+  apiKey: string,
+  signal?: AbortSignal,
+): Promise<YouTubePlaylistDirectory> {
+  const [sections, playlists] = await Promise.all([
+    fetchYouTubeChannelSections(channelId, apiKey, signal).catch(() => []),
+    fetchYouTubePlaylistsByChannelIdAll(channelId, apiKey, signal),
+  ]);
+
+  const playlistIndex = new Map<string, YouTubePlaylistSummary>(
+    playlists.map((playlist) => [playlist.id, playlist]),
+  );
+
+  const missingIds = Array.from(
+    new Set(
+      sections.flatMap((section) => section.playlistIds).filter((id) => !playlistIndex.has(id)),
+    ),
+  );
+
+  if (missingIds.length) {
+    const missing = await fetchYouTubePlaylistsByIds(missingIds, apiKey, signal);
+    for (const playlist of missing) {
+      if (!playlistIndex.has(playlist.id)) {
+        playlistIndex.set(playlist.id, playlist);
+        playlists.push(playlist);
+      }
+    }
+  }
+
+  const sectionListings: YouTubePlaylistDirectory['sections'] = sections
+    .map((section) => {
+      const ordered = section.playlistIds
+        .map((id) => playlistIndex.get(id))
+        .filter(Boolean) as YouTubePlaylistSummary[];
+      if (!ordered.length) return null;
+      return {
+        sectionId: section.id,
+        sectionTitle: section.title,
+        playlists: ordered,
+      };
+    })
+    .filter(Boolean) as YouTubePlaylistDirectory['sections'];
+
+  if (playlistIndex.size && !sectionListings.find((section) => section.sectionId === 'all')) {
+    sectionListings.push({
+      sectionId: 'all',
+      sectionTitle: 'Playlists',
+      playlists: Array.from(playlistIndex.values()),
+    });
+  }
+
+  return {
+    playlists: Array.from(playlistIndex.values()),
+    sections: sectionListings,
+  };
 }
 
 export async function fetchYouTubePlaylistItems(
@@ -453,5 +527,3 @@ export async function fetchYouTubePlaylistItems(
 
   return { items, nextPageToken: data.nextPageToken };
 }
-
-
