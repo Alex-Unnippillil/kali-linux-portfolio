@@ -5,6 +5,49 @@ import type { ReactNode, Ref } from 'react';
 import styles from './window.module.css';
 import { WindowEditButtons, WindowTopBar } from './window';
 
+const FallbackTopBar: React.FC<{
+    title: string;
+    controls?: ReactNode;
+    onDoubleClick?: () => void;
+}> = ({ title, controls, onDoubleClick }) => (
+    <div
+        className="flex items-center justify-between bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+        role="banner"
+        onDoubleClick={onDoubleClick}
+        data-window-titlebar=""
+        data-window-drag-handle=""
+    >
+        <span className="truncate" title={title}>
+            {title}
+        </span>
+        <div className="flex items-center gap-2">{controls}</div>
+    </div>
+);
+
+const FallbackControls: React.FC<{
+    minimize?: () => void;
+    maximize?: () => void;
+    close?: () => void;
+    allowMaximize?: boolean;
+}> = ({ minimize, maximize, close, allowMaximize = true }) => (
+    <div className="flex items-center gap-2">
+        <button type="button" aria-label="Window minimize" onClick={minimize}>
+            _
+        </button>
+        {allowMaximize && (
+            <button type="button" aria-label="Window maximize" onClick={maximize}>
+                ☐
+            </button>
+        )}
+        <button type="button" aria-label="Window close" onClick={close}>
+            ×
+        </button>
+    </div>
+);
+
+const TopBarComponent = WindowTopBar || FallbackTopBar;
+const ControlsComponent = WindowEditButtons || FallbackControls;
+
 type SystemOverlayWindowProps = {
     id: string;
     title: string;
@@ -111,7 +154,7 @@ export default function SystemOverlayWindow({
                 aria-describedby={ariaDescribedBy}
                 tabIndex={-1}
             >
-                <WindowTopBar
+                <TopBarComponent
                     title={title}
                     onKeyDown={undefined}
                     onBlur={undefined}
@@ -119,7 +162,7 @@ export default function SystemOverlayWindow({
                     onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
                     controls={(
-                        <WindowEditButtons
+                        <ControlsComponent
                             minimize={handleMinimize}
                             maximize={handleMaximize}
                             isMaximised={Boolean(maximized)}

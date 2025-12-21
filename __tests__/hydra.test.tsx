@@ -47,6 +47,7 @@ describe('Hydra target validation', () => {
 
 describe('Hydra pause and resume', () => {
   beforeEach(() => {
+    localStorage.clear();
     localStorage.setItem(
       'hydraUserLists',
       JSON.stringify([{ name: 'u', content: 'a' }])

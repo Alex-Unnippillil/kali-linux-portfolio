@@ -241,6 +241,7 @@ describe('Navbar running apps tray', () => {
     });
 
     expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
+  });
   it('renders badge metadata for running apps', () => {
     render(<Navbar />);
 
