@@ -359,7 +359,7 @@ Additional guidance:
 - Before PRs, confirm the static export still loads critical screens.
 - For major UI updates, capture screenshots or short clips for reviewers.
 
-Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes.
+Accessibility and performance checks using Lighthouse or Pa11y (`pa11yci.json`) are encouraged for desktop shell changes. Install Pa11y only when running those checks (for example: `PUPPETEER_SKIP_DOWNLOAD=true yarn add -D pa11y && yarn a11y`) so Vercel builds skip the Puppeteer download; CI environments with a browser available should set `PUPPETEER_SKIP_DOWNLOAD=true` during the install step.
 
 ---
 
