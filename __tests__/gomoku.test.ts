@@ -6,6 +6,9 @@ import {
   chooseAiMove,
   createDefaultStats,
   applyResultToStats,
+  migrateGomokuStats,
+  DEFAULT_RULES,
+  GOMOKU_STATS_VERSION,
 } from '../apps/games/gomoku/logic';
 
 describe('gomoku win detection', () => {
@@ -53,6 +56,30 @@ describe('gomoku win detection', () => {
     }
     expect(isBoardFull(board)).toBe(true);
   });
+
+  it('freestyle: 6 in a row is a win', () => {
+    const board = createEmptyBoard();
+    const row = 4;
+    for (let col = 3; col <= 8; col += 1) {
+      board[row][col] = 'white';
+    }
+    const result = checkWinner(board, row, 6, 'white');
+    expect(result?.winner).toBe('white');
+    expect(result?.line).toHaveLength(DEFAULT_RULES.winLength);
+  });
+
+  it('exactFive: 6 in a row is not a win', () => {
+    const board = createEmptyBoard();
+    const row = 10;
+    for (let col = 5; col <= 10; col += 1) {
+      board[row][col] = 'black';
+    }
+    const result = checkWinner(board, row, 8, 'black', {
+      ruleSet: 'exactFive',
+      winLength: 5,
+    });
+    expect(result).toBeNull();
+  });
 });
 
 describe('gomoku AI heuristics', () => {
@@ -69,6 +96,24 @@ describe('gomoku AI heuristics', () => {
       { row, col: 3 },
       { row, col: 8 },
     ]).toContainEqual(move);
+  });
+
+  it('AI on empty board plays center', () => {
+    const board = createEmptyBoard();
+    const center = Math.floor(BOARD_SIZE / 2);
+    const move = chooseAiMove(board, 'black', 'white', 'balanced');
+    expect(move).toEqual({ row: center, col: center });
+  });
+
+  it('AI never returns an occupied cell', () => {
+    const board = createEmptyBoard();
+    board[7][7] = 'black';
+    board[7][8] = 'white';
+    const move = chooseAiMove(board, 'black', 'white', 'balanced');
+    expect(move).not.toBeNull();
+    if (move) {
+      expect(board[move.row][move.col]).toBeNull();
+    }
   });
 });
 
@@ -93,5 +138,19 @@ describe('gomoku stats persistence', () => {
     const afterLocal = applyResultToStats(stats, 'local', 'white', 'black');
     expect(afterLocal.local.whiteWins).toBe(1);
     expect(afterLocal.ai.playerWins).toBe(0);
+  });
+
+  it('migrates partial legacy stats safely', () => {
+    const legacy = {
+      ai: { playerWins: 2 },
+      blackWins: 1,
+      draws: 3,
+    };
+    const migrated = migrateGomokuStats(legacy);
+    expect(migrated).not.toBeNull();
+    expect(migrated?.ai.playerWins).toBe(2);
+    expect(migrated?.local.blackWins).toBe(1);
+    expect(migrated?.local.draws).toBe(3);
+    expect(migrated?.version).toBe(GOMOKU_STATS_VERSION);
   });
 });

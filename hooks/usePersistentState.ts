@@ -8,11 +8,13 @@ import { useState, useEffect } from 'react';
  * @param key localStorage key
  * @param initial initial value or function returning the initial value
  * @param validator optional function to validate parsed stored value
+ * @param migrate optional migration helper to salvage older shapes
  */
 export default function usePersistentState<T>(
   key: string,
   initial: T | (() => T),
   validator?: (value: unknown) => value is T,
+  migrate?: (value: unknown) => T | null,
 ) {
   const getInitial = () =>
     typeof initial === 'function' ? (initial as () => T)() : initial;
@@ -23,8 +25,10 @@ export default function usePersistentState<T>(
       const stored = window.localStorage.getItem(key);
       if (stored !== null) {
         const parsed = JSON.parse(stored);
-        if (!validator || validator(parsed)) {
-          return parsed as T;
+        if (!validator || validator(parsed)) return parsed as T;
+        if (migrate) {
+          const migrated = migrate(parsed);
+          if (migrated !== null) return migrated;
         }
       }
     } catch {
