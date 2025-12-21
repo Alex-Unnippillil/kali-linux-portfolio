@@ -16,17 +16,17 @@
 .header {
   border-bottom: 1px solid var(--kali-panel-border);
   background: color-mix(in srgb, var(--color-overlay-strong) 90%, transparent);
-  padding: 24px;
+  padding: clamp(18px, 3vw, 28px);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: clamp(12px, 2vw, 18px);
   backdrop-filter: blur(6px);
 }
 
 .headerTop {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 @media (min-width: 768px) {
@@ -115,46 +115,56 @@
   padding: 8px 12px;
 }
 
-.filterRow {
+.metaRow {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
-  align-items: center;
 }
 
-@media (min-width: 640px) {
-  .filterRow {
-    grid-template-columns: minmax(0, 1fr) auto;
+.statCard {
+  border: 1px solid var(--kali-panel-border);
+  background: color-mix(in srgb, var(--color-surface-muted) 80%, transparent);
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+}
+
+.statWide {
+  grid-column: span 2;
+}
+
+@media (max-width: 720px) {
+  .statWide {
+    grid-column: span 1;
   }
 }
 
-.searchGroup {
-  width: 100%;
-}
-
-.input {
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--kali-panel-border);
-  background: var(--color-surface-muted);
-  color: var(--color-text);
-  font-size: 14px;
-}
-
-.input::placeholder {
-  color: color-mix(in srgb, var(--color-text) 50%, transparent);
-}
-
-.input:focus-visible {
-  outline: 2px solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
-.miniStat {
+.statLabel {
+  margin: 0;
   font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: color-mix(in srgb, var(--color-text) 60%, transparent);
-  text-align: left;
+}
+
+.statValue {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.statValueText {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--color-text) 85%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hint {
@@ -188,8 +198,8 @@
   flex: 1;
   display: grid;
   grid-template-columns: 1fr;
-  gap: 24px;
-  padding: 24px;
+  gap: clamp(18px, 3vw, 28px);
+  padding: clamp(18px, 3vw, 28px);
   align-items: start;
 }
 
@@ -204,11 +214,22 @@
 }
 
 .panel {
-  background: var(--color-surface);
+  background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-surface) 88%, transparent) 0%,
+      color-mix(in srgb, var(--color-surface-muted) 92%, transparent) 100%
+    ),
+    var(--color-surface);
   border: 1px solid var(--kali-panel-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 18px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.panel:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.32);
 }
 
 .panelHeader {
@@ -307,6 +328,11 @@
 .playlistButton:hover {
   border-color: var(--kali-control);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+}
+
+.playlistButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
 }
 
 .playlistButtonActive {
@@ -458,6 +484,11 @@
   border-color: var(--kali-control);
 }
 
+.videoButton:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 .videoButtonActive {
   border-color: var(--kali-control);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
@@ -498,6 +529,10 @@
 @media (max-width: 600px) {
   .header,
   .layout {
+    padding: 16px;
+  }
+
+  .panel {
     padding: 16px;
   }
 
