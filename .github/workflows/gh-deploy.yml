@@ -16,7 +16,9 @@ jobs:
           cache-dependency-path: 'yarn.lock'
       - name: Installing Packages
         run: yarn install --immutable
-      - name: Check for duplicate dependencies
+      - name: Deduplicate dependencies
+        run: yarn dedupe
+      - name: Verify dependencies are deduped
         run: yarn dedupe --check
 
       - name: Test
