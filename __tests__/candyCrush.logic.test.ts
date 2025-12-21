@@ -1,26 +1,41 @@
 import {
+  BOARD_WIDTH,
   GEM_IDS,
   createBoard,
-  detonateColorBomb,
   findMatches,
   resolveBoard,
   scoreCascade,
   shuffleBoard,
+  makeRng,
+  hasAnyValidSwap,
+  trySwap,
+  beginResolve,
+  stepResolve,
 } from '../components/apps/candy-crush-logic';
 
-const makeBoard = (values: string[]) =>
-  values.map((gem, index) => ({ id: `cell-${index}`, gem }));
+const makeBoard = (values: string[]) => values.map((gem, index) => ({ id: `cell-${index}`, gem }));
 
 const mockRng = (values: number[]) => {
+  const rng = makeRng(1);
   let index = 0;
-  return () => {
-    const value = values[index % values.length];
-    index += 1;
-    return value;
-  };
+  Object.defineProperty(rng, 'nextFloat', {
+    value: () => {
+      const value = values[index % values.length];
+      index += 1;
+      return value;
+    },
+  });
+  return rng;
 };
 
 describe('candy crush logic helpers', () => {
+  test('createBoard avoids starting matches and ensures swap', () => {
+    const rng = makeRng(1234);
+    const board = createBoard(BOARD_WIDTH, GEM_IDS, rng, { ensurePlayable: true });
+    expect(findMatches(board)).toHaveLength(0);
+    expect(hasAnyValidSwap(board)).toBe(true);
+  });
+
   test('findMatches detects horizontal and vertical groups', () => {
     const [A, B, C, D, E] = GEM_IDS;
     const board = makeBoard([
@@ -43,44 +58,53 @@ describe('candy crush logic helpers', () => {
     ]);
 
     const matches = findMatches(board, 4);
-    const groups = matches.map((group) => group.join(','));
+    const groups = matches.map((group) => group.cells.join(','));
 
-    expect(groups).toEqual(
-      expect.arrayContaining(['0,1,2', '5,9,13', '3,7,11']),
-    );
+    expect(groups).toEqual(expect.arrayContaining(['0,1,2', '5,9,13', '3,7,11']));
   });
 
-  test('resolveBoard clears matches and fills gaps with deterministic colors', () => {
+  test('trySwap rejects non-matching swap in strict mode', () => {
     const board = makeBoard([
-      GEM_IDS[0],
-      GEM_IDS[0],
-      GEM_IDS[0],
-      GEM_IDS[1],
-      'u1',
-      'u2',
-      'u3',
-      'u4',
-      'u5',
-      'u6',
-      'u7',
-      'u8',
-      'u9',
-      'u10',
-      'u11',
-      'u12',
+      'aurora',
+      'solstice',
+      'abyss',
+      'aurora',
     ]);
-    const rng = mockRng([0, 0.5, 0.9]);
+    const result = trySwap(board, 0, 1, 'strict');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toBe('no-match');
+  });
 
-    const result = resolveBoard(board, 4, GEM_IDS, rng);
-
-    expect(result.cascades).toHaveLength(1);
-    expect(result.cleared).toBe(3);
-    expect(result.board.slice(0, 3).map((cell) => cell.gem)).toEqual([
-      GEM_IDS[0],
-      GEM_IDS[2],
-      GEM_IDS[4],
+  test('resolver steps through phases and terminates', () => {
+    const board = makeBoard([
+      'aurora',
+      'aurora',
+      'aurora',
+      'ion',
+      'pulse',
+      'solstice',
+      'abyss',
+      'ion',
+      'pulse',
+      'solstice',
+      'abyss',
+      'ion',
+      'pulse',
+      'solstice',
+      'abyss',
+      'ion',
     ]);
-    expect(result.board[3].gem).toBe(GEM_IDS[1]);
+    let state = beginResolve(board, 4);
+    const seenPhases = new Set<string>();
+    for (let i = 0; i < 20; i += 1) {
+      seenPhases.add(state.phase);
+      state = stepResolve(state, 4, GEM_IDS, makeRng(1));
+      if (state.phase === 'idle') break;
+    }
+    expect(seenPhases.has('clear')).toBe(true);
+    expect(seenPhases.has('fall')).toBe(true);
+    expect(seenPhases.has('refill')).toBe(true);
+    expect(state.phase).toBe('idle');
   });
 
   test('shuffleBoard retains the multiset of candies but changes positions', () => {
@@ -89,34 +113,6 @@ describe('candy crush logic helpers', () => {
 
     expect(shuffled.map((cell) => cell.gem).sort()).toEqual(board.map((cell) => cell.gem).sort());
     expect(shuffled).not.toEqual(board);
-  });
-
-  test('detonateColorBomb removes the most common color and returns count', () => {
-    const [a, b, c, d, e] = GEM_IDS;
-    const board = makeBoard([
-      a,
-      a,
-      b,
-      c,
-      a,
-      d,
-      b,
-      e,
-      b,
-      c,
-      d,
-      e,
-      c,
-      d,
-      e,
-      a,
-    ]);
-    const rng = mockRng([0.1, 0.4, 0.5, 0.7, 0.6]);
-
-    const result = detonateColorBomb(board, 4, GEM_IDS, rng);
-
-    expect(result.removed).toBe(4);
-    expect(result.board.filter((cell) => cell.gem === a)).toHaveLength(0);
   });
 
   test('scoreCascade applies chain multiplier and bonuses for long matches', () => {
@@ -128,4 +124,3 @@ describe('candy crush logic helpers', () => {
     expect(second).toBe(first * 2);
   });
 });
-
