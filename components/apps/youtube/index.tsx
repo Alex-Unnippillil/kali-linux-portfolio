@@ -86,7 +86,6 @@ export default function YouTubeApp({ channelId }: Props) {
 
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-  const [filter, setFilter] = useState('');
 
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -302,17 +301,7 @@ export default function YouTubeApp({ channelId }: Props) {
     void loadPlaylistItems(selectedPlaylistId, 'replace');
   }, [selectedPlaylistId, playlistItems, loadPlaylistItems]);
 
-  const filteredDirectory = useMemo(() => {
-    const term = filter.trim().toLowerCase();
-    if (!term) return directory;
-
-    return directory
-      .map((entry) => ({
-        ...entry,
-        playlists: entry.playlists.filter((p) => p.title.toLowerCase().includes(term)),
-      }))
-      .filter((entry) => entry.playlists.length > 0);
-  }, [directory, filter]);
+  const filteredDirectory = useMemo(() => directory, [directory]);
 
   const selectedPlaylist = selectedPlaylistId
     ? playlistIndex.get(selectedPlaylistId) ?? null
@@ -332,6 +321,7 @@ export default function YouTubeApp({ channelId }: Props) {
     (sum, group) => sum + group.playlists.length,
     0,
   );
+  const categoryCount = filteredDirectory.length;
 
   return (
     <div className={styles.container}>
@@ -376,24 +366,20 @@ export default function YouTubeApp({ channelId }: Props) {
           </div>
         </div>
 
-        <div className={styles.filterRow}>
-          <div className={styles.searchGroup}>
-            <label className="sr-only" htmlFor="youtube-playlist-filter">
-              Filter playlists
-            </label>
-            <input
-              id="youtube-playlist-filter"
-              aria-label="Filter playlists"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder="Search playlists"
-              className={styles.input}
-            />
+        <div className={styles.metaRow}>
+          <div className={styles.statCard}>
+            <p className={styles.statLabel}>Playlists</p>
+            <p className={styles.statValue}>{playlistCount}</p>
           </div>
-          <div className={styles.miniStat}>
-            {loadingDirectory
-              ? 'Loading directory…'
-              : `${playlistCount} playlists • ${filteredDirectory.length} categories`}
+          <div className={styles.statCard}>
+            <p className={styles.statLabel}>Categories</p>
+            <p className={styles.statValue}>{categoryCount}</p>
+          </div>
+          <div className={`${styles.statCard} ${styles.statWide}`}>
+            <p className={styles.statLabel}>Channel</p>
+            <p className={styles.statValueText}>
+              {channelSummary?.title ?? 'Channel preview'}
+            </p>
           </div>
         </div>
 
