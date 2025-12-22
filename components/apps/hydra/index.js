@@ -125,7 +125,7 @@ const HydraApp = () => {
       setSelectedUser((prev) => prev || cfg.selectedUser || userLists[0]?.name || '');
       setSelectedPass((prev) => prev || cfg.selectedPass || passLists[0]?.name || '');
     }
-  }, []);
+  }, [userLists, passLists]);
 
   useEffect(() => {
     saveWordlists('hydraUserLists', userLists);
@@ -521,22 +521,30 @@ const HydraApp = () => {
           ))}
         </div>
         <div>
-          <label className="block mb-1">Target</label>
+          <label className="block mb-1" htmlFor="hydra-target">
+            Target
+          </label>
           <input
+            id="hydra-target"
             ref={targetInputRef}
             type="text"
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Target host"
             placeholder="192.168.0.1"
           />
         </div>
         <div>
-          <label className="block mb-1">Service</label>
+          <label className="block mb-1" htmlFor="hydra-service">
+            Service
+          </label>
           <select
+            id="hydra-service"
             value={service}
             onChange={(e) => setService(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Hydra service"
           >
             {availableServices.map((s) => (
               <option key={s} value={s}>
@@ -546,11 +554,15 @@ const HydraApp = () => {
           </select>
         </div>
         <div>
-          <label className="block mb-1">User List</label>
+          <label className="block mb-1" htmlFor="hydra-user-list">
+            User List
+          </label>
           <select
+            id="hydra-user-list"
             value={selectedUser}
             onChange={(e) => setSelectedUser(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="User wordlist"
           >
             {userLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -558,7 +570,11 @@ const HydraApp = () => {
               </option>
             ))}
           </select>
+          <label className="sr-only" htmlFor="hydra-user-file">
+            Upload user list
+          </label>
           <input
+            id="hydra-user-file"
             data-testid="user-file-input"
             type="file"
             accept="text/plain"
@@ -566,6 +582,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setUserLists, userLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload user list"
           />
           <ul>
             {userLists.map((l) => (
@@ -582,11 +599,15 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Password List</label>
+          <label className="block mb-1" htmlFor="hydra-password-list">
+            Password List
+          </label>
           <select
+            id="hydra-password-list"
             value={selectedPass}
             onChange={(e) => setSelectedPass(e.target.value)}
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Password wordlist"
           >
             {passLists.map((l) => (
               <option key={l.name} value={l.name}>
@@ -594,7 +615,11 @@ const HydraApp = () => {
               </option>
             ))}
           </select>
+          <label className="sr-only" htmlFor="hydra-pass-file">
+            Upload password list
+          </label>
           <input
+            id="hydra-pass-file"
             data-testid="pass-file-input"
             type="file"
             accept="text/plain"
@@ -602,6 +627,7 @@ const HydraApp = () => {
               addWordList(e.target.files[0], setPassLists, passLists)
             }
             className="w-full p-2 rounded text-black mb-1"
+            aria-label="Upload password list"
           />
           <ul>
             {passLists.map((l) => (
@@ -618,22 +644,30 @@ const HydraApp = () => {
           </ul>
         </div>
         <div>
-          <label className="block mb-1">Charset</label>
+          <label className="block mb-1" htmlFor="hydra-charset">
+            Charset
+          </label>
           <input
+            id="hydra-charset"
             type="text"
             value={charset}
             onChange={(e) => setCharset(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Character set"
             placeholder="abc123"
           />
         </div>
         <div className="col-span-2">
-          <label className="block mb-1">Rule (min:max length)</label>
+          <label className="block mb-1" htmlFor="hydra-rule">
+            Rule (min:max length)
+          </label>
           <input
+            id="hydra-rule"
             type="text"
             value={rule}
             onChange={(e) => setRule(e.target.value)}
             className="w-full p-2 rounded text-black"
+            aria-label="Rule min to max length"
             placeholder="1:3"
           />
           <p className="mt-1 text-sm">
@@ -644,6 +678,8 @@ const HydraApp = () => {
             width="300"
             height="100"
             className="bg-gray-800 mt-2 w-full"
+            role="img"
+            aria-label="Candidate space visualization"
           ></canvas>
         </div>
         <div className="col-span-2 flex flex-wrap gap-1.5 mt-2">

@@ -60,6 +60,18 @@ function videoUrl(videoId: string) {
   return `https://www.youtube.com/watch?v=${videoId}`;
 }
 
+function sortVideosNewestFirst(videos: YouTubePlaylistVideo[]) {
+  return [...videos].sort((a, b) => {
+    const aTime = new Date(a.publishedAt ?? '').getTime();
+    const bTime = new Date(b.publishedAt ?? '').getTime();
+    const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+    const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+
+    if (safeATime === safeBTime) return 0;
+    return safeBTime - safeATime;
+  });
+}
+
 export default function YouTubeApp({ channelId }: Props) {
   const { allowNetwork, setAllowNetwork } = useSettings();
   const parsedChannelId = useMemo(() => {
@@ -306,20 +318,47 @@ export default function YouTubeApp({ channelId }: Props) {
     const term = filter.trim().toLowerCase();
     if (!term) return directory;
 
+    const matchesSearch = (playlist: YouTubePlaylistSummary) => {
+      const haystack = `${playlist.title} ${playlist.description ?? ''}`.toLowerCase();
+      return haystack.includes(term);
+    };
+
     return directory
       .map((entry) => ({
         ...entry,
-        playlists: entry.playlists.filter((p) => p.title.toLowerCase().includes(term)),
+        playlists: entry.playlists.filter(matchesSearch),
       }))
       .filter((entry) => entry.playlists.length > 0);
   }, [directory, filter]);
+
+  useEffect(() => {
+    if (!filteredDirectory.length) {
+      setSelectedPlaylistId(null);
+      setSelectedVideoId(null);
+      return;
+    }
+
+    const selectedPlaylistStillVisible = selectedPlaylistId
+      ? filteredDirectory.some((group) =>
+          group.playlists.some((playlist) => playlist.id === selectedPlaylistId),
+        )
+      : false;
+
+    if (selectedPlaylistStillVisible) return;
+
+    const firstMatch = filteredDirectory[0]?.playlists[0];
+    setSelectedPlaylistId(firstMatch?.id ?? null);
+    setSelectedVideoId(null);
+  }, [filteredDirectory, selectedPlaylistId]);
 
   const selectedPlaylist = selectedPlaylistId
     ? playlistIndex.get(selectedPlaylistId) ?? null
     : null;
 
   const selectedPlaylistVideos = useMemo(() => {
-    return selectedPlaylistId ? playlistItems[selectedPlaylistId]?.items ?? [] : [];
+    if (!selectedPlaylistId) return [];
+    const videos = playlistItems[selectedPlaylistId]?.items ?? [];
+    return sortVideosNewestFirst(videos);
   }, [playlistItems, selectedPlaylistId]);
 
   const selectedVideo = useMemo(() => {
@@ -332,6 +371,7 @@ export default function YouTubeApp({ channelId }: Props) {
     (sum, group) => sum + group.playlists.length,
     0,
   );
+  const hasSearchTerm = Boolean(filter.trim().length);
 
   return (
     <div className={styles.container}>
@@ -383,6 +423,7 @@ export default function YouTubeApp({ channelId }: Props) {
             </label>
             <input
               id="youtube-playlist-filter"
+              type="search"
               aria-label="Filter playlists"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
@@ -483,6 +524,18 @@ export default function YouTubeApp({ channelId }: Props) {
                     </ul>
                   </div>
                 ))}
+              </div>
+            ) : hasSearchTerm ? (
+              <div className={styles.placeholderCard}>
+                <p style={{ margin: 0 }}>No playlists match your search.</p>
+                <button
+                  type="button"
+                  onClick={() => setFilter('')}
+                  className={`${styles.button} ${styles.smallButton}`}
+                  style={{ marginTop: '10px' }}
+                >
+                  Clear search
+                </button>
               </div>
             ) : (
               <div className={styles.placeholderCard}>
