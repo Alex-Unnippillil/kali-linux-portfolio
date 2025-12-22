@@ -1,7 +1,7 @@
 'use client';
 
 const STACKBLITZ_EMBED_URL =
-  'https://stackblitz.com/edit/~/github.com/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md&hidedevtools=1&terminalHeight=0&ctl=1';
+  'https://stackblitz.com/~/github.com/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md&hidedevtools=1&terminalHeight=0&ctl=1';
 
 export default function VsCode() {
   return (
