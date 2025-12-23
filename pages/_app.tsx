@@ -81,6 +81,10 @@ const kaliSans = Rajdhani({
   weight: ['300', '400', '500', '600', '700'],
 });
 
+const isSpeedInsightsEnabled =
+  process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
+  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
+
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
@@ -274,7 +278,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
                 }}
               />
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              {isSpeedInsightsEnabled && <SpeedInsights />}
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>
