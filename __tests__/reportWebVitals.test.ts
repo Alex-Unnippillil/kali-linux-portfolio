@@ -1,12 +1,12 @@
-import ReactGA from 'react-ga4';
 import { reportWebVitals } from '../utils/reportWebVitals';
+import { trackEvent } from '../utils/analytics';
 
-jest.mock('react-ga4', () => ({
-  event: jest.fn(),
+jest.mock('../utils/analytics', () => ({
+  trackEvent: jest.fn(),
 }));
 
 describe('reportWebVitals', () => {
-  const mockEvent = ReactGA.event as jest.Mock;
+  const mockEvent = trackEvent as jest.Mock;
   const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
   const originalEnv = process.env;
 
