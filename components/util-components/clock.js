@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import useFocusTrap from '../../hooks/useFocusTrap'
 
 const MONTHS = [
     "Jan",
@@ -134,8 +135,8 @@ const Clock = ({
     const buttonRef = useRef(null)
     const popoverRef = useRef(null)
     const activeCellRef = useRef(null)
-    const previouslyOpenRef = useRef(false)
     const headingId = useId()
+    const descriptionId = `${headingId}-description`
     const popoverId = `${headingId}-popover`
     const [canUsePortal, setCanUsePortal] = useState(false)
     const [popoverStyles, setPopoverStyles] = useState({})
@@ -177,9 +178,6 @@ const Clock = ({
         const handleKeyDown = (event) => {
             if (event.key === 'Escape') {
                 setIsOpen(false)
-                if (buttonRef.current) {
-                    buttonRef.current.focus({ preventScroll: prefersReducedMotion })
-                }
             }
         }
         document.addEventListener('mousedown', handleClick)
@@ -190,7 +188,7 @@ const Clock = ({
             document.removeEventListener('touchstart', handleClick)
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [isOpen, prefersReducedMotion])
+    }, [isOpen])
 
     useEffect(() => {
         if (!isOpen) return
@@ -198,13 +196,6 @@ const Clock = ({
             activeCellRef.current.focus({ preventScroll: prefersReducedMotion })
         }
     }, [isOpen, viewDate, focusedDate, prefersReducedMotion])
-
-    useEffect(() => {
-        if (previouslyOpenRef.current && !isOpen && buttonRef.current) {
-            buttonRef.current.focus({ preventScroll: prefersReducedMotion })
-        }
-        previouslyOpenRef.current = isOpen
-    }, [isOpen, prefersReducedMotion])
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined
@@ -366,9 +357,6 @@ const Clock = ({
             case 'Spacebar': { // fallback for older browsers
                 event.preventDefault()
                 setIsOpen(false)
-                if (buttonRef.current) {
-                    buttonRef.current.focus({ preventScroll: prefersReducedMotion })
-                }
                 return
             }
             default:
@@ -381,7 +369,7 @@ const Clock = ({
                 setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1))
             }
         }
-    }, [prefersReducedMotion, viewDate])
+    }, [viewDate])
 
     const handleDayClick = useCallback(() => {
         setIsOpen(false)
@@ -402,6 +390,11 @@ const Clock = ({
 
     const friendlyTimeLabel = useMemo(() => (currentTime ? friendlyTimeFormatter.format(currentTime) : ''), [currentTime, friendlyTimeFormatter])
 
+    useFocusTrap(popoverRef, isOpen, {
+        initialFocusRef: activeCellRef,
+        restoreFocusRef: buttonRef
+    })
+
     const popoverStyle = isOpen
         ? {
               ...popoverStyles,
@@ -414,11 +407,15 @@ const Clock = ({
             ref={popoverRef}
             id={popoverId}
             role="dialog"
-            aria-modal="false"
-            aria-label="Calendar"
+            aria-modal="true"
+            aria-labelledby={headingId}
+            aria-describedby={descriptionId}
             className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
             style={popoverStyle}
         >
+            <p id={descriptionId} className="sr-only">
+                Use arrow keys to navigate the calendar. Press Escape to close the calendar dialog.
+            </p>
             <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
                 <div className="flex flex-col" aria-live="polite" id={headingId}>
                     <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
