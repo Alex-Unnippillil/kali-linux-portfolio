@@ -446,7 +446,10 @@ dialog {
 /* Context Menu & Panels */
 .context-menu-bg,
 .windowMainScreen {
-    background-color: color-mix(in srgb, var(--color-bg), transparent 15%); /* Fallback for unsupported browsers */
+    background-color: var(
+        --surface-menu-bg,
+        color-mix(in srgb, var(--color-bg) 88%, transparent 12%)
+    );
 }
 
 @supports ((-webkit-backdrop-filter: blur(0)) or (backdrop-filter: blur(0))) {
@@ -454,7 +457,11 @@ dialog {
     .windowMainScreen {
         -webkit-backdrop-filter: blur(10px);
         backdrop-filter: blur(10px);
-        background-color: color-mix(in srgb, var(--color-bg), transparent 60%);
+        background-color: color-mix(
+            in srgb,
+            var(--surface-menu-bg, var(--color-bg)) 88%,
+            transparent 12%
+        );
     }
 }
 
