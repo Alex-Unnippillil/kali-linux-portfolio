@@ -27,7 +27,11 @@ import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '..
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
-import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
+import {
+    useSnapSetting,
+    useSnapGridSetting,
+    useWindowGeometryStorage,
+} from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
     clampWindowPositionWithinViewport,
@@ -2435,6 +2439,137 @@ export class Desktop extends Component {
             }
         }
         return this.appMap.get(id);
+    };
+
+    normalizeWindowDimension = (value, fallback) => {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed) && parsed > 0) {
+            const rounded = Math.round(parsed);
+            return Math.min(Math.max(rounded, 1), 100);
+        }
+        const fallbackValue = Number(fallback);
+        if (Number.isFinite(fallbackValue) && fallbackValue > 0) {
+            const rounded = Math.round(fallbackValue);
+            return Math.min(Math.max(rounded, 1), 100);
+        }
+        return 60;
+    };
+
+    getDefaultWindowSize = (app) => {
+        const defaultWidth = app && Object.prototype.hasOwnProperty.call(app, 'defaultWidth')
+            ? app.defaultWidth
+            : undefined;
+        const defaultHeight = app && Object.prototype.hasOwnProperty.call(app, 'defaultHeight')
+            ? app.defaultHeight
+            : undefined;
+        return {
+            width: this.normalizeWindowDimension(defaultWidth, 60),
+            height: this.normalizeWindowDimension(defaultHeight, 85),
+        };
+    };
+
+    clampGeometryToViewport = (geometry) => {
+        const topOffset = measureWindowTopOffset();
+        if (typeof window === 'undefined') {
+            return {
+                x: Number.isFinite(geometry.x) ? geometry.x : 60,
+                y: clampWindowTopPosition(geometry.y, topOffset),
+                width: geometry.width,
+                height: geometry.height,
+            };
+        }
+
+        const visualViewport = window.visualViewport;
+        const viewportWidth = typeof visualViewport?.width === 'number'
+            ? visualViewport.width
+            : (typeof window.innerWidth === 'number' ? window.innerWidth : 0);
+        const viewportHeight = typeof visualViewport?.height === 'number'
+            ? visualViewport.height
+            : (typeof window.innerHeight === 'number' ? window.innerHeight : 0);
+        const viewportLeft = typeof visualViewport?.offsetLeft === 'number' ? visualViewport.offsetLeft : 0;
+        const viewportTop = typeof visualViewport?.offsetTop === 'number' ? visualViewport.offsetTop : 0;
+        const combinedTopOffset = viewportTop + topOffset;
+
+        const widthPx = viewportWidth ? (geometry.width / 100) * viewportWidth : 0;
+        const heightPx = viewportHeight ? (geometry.height / 100) * viewportHeight : 0;
+        const basePosition = {
+            x: Number.isFinite(geometry.x) ? geometry.x : viewportLeft,
+            y: clampWindowTopPosition(geometry.y, combinedTopOffset),
+        };
+
+        if (!viewportWidth || !viewportHeight) {
+            return {
+                ...geometry,
+                x: basePosition.x,
+                y: basePosition.y,
+            };
+        }
+
+        const clamped = clampWindowPositionWithinViewport(
+            basePosition,
+            { width: widthPx, height: heightPx },
+            { viewportWidth, viewportHeight, viewportLeft, viewportTop, topOffset },
+        );
+
+        if (!clamped) {
+            return {
+                ...geometry,
+                x: basePosition.x,
+                y: basePosition.y,
+            };
+        }
+
+        return {
+            ...geometry,
+            x: clamped.x,
+            y: clamped.y,
+        };
+    };
+
+    getStoredWindowGeometry = (id) => {
+        if (!this.props.windowGeometry || typeof this.props.windowGeometry !== 'object') {
+            return null;
+        }
+        const stored = this.props.windowGeometry[id];
+        if (!stored || typeof stored !== 'object') {
+            return null;
+        }
+        const app = this.getAppById(id);
+        const defaults = this.getDefaultWindowSize(app);
+        const width = this.normalizeWindowDimension(stored.width, defaults.width);
+        const height = this.normalizeWindowDimension(stored.height, defaults.height);
+        const x = Number(stored.x);
+        const y = Number(stored.y);
+        const baseGeometry = {
+            x: Number.isFinite(x) ? x : 60,
+            y: Number.isFinite(y) ? y : measureWindowTopOffset(),
+            width,
+            height,
+        };
+        return this.clampGeometryToViewport(baseGeometry);
+    };
+
+    persistWindowGeometry = (id) => {
+        if (typeof this.props.onStoreWindowGeometry !== 'function') {
+            return;
+        }
+        const app = this.getAppById(id);
+        if (!app) return;
+        const defaults = this.getDefaultWindowSize(app);
+        const storedSize = this.state.window_sizes?.[id];
+        const storedPosition = this.state.window_positions?.[id];
+        const width = this.normalizeWindowDimension(storedSize?.width, defaults.width);
+        const height = this.normalizeWindowDimension(storedSize?.height, defaults.height);
+        const x = Number(storedPosition?.x);
+        const y = Number(storedPosition?.y);
+        const baseGeometry = {
+            x: Number.isFinite(x) ? x : 60,
+            y: Number.isFinite(y) ? y : measureWindowTopOffset(),
+            width,
+            height,
+        };
+        const clamped = this.clampGeometryToViewport(baseGeometry);
+        this.props.onStoreWindowGeometry(id, clamped);
     };
 
     buildWindowShelfEntry = (id) => {
@@ -5084,11 +5219,29 @@ export class Desktop extends Component {
             this.closeAllAppsOverlay();
 
             setTimeout(() => {
-                const closed_windows = { ...this.state.closed_windows, [objId]: false }; // openes app's window
                 const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
-                const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
-                this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
-                    const nextState = { closed_windows, favourite_apps, minimized_windows };
+                const storedGeometry = this.getStoredWindowGeometry(objId);
+                this.setWorkspaceState((prevState) => {
+                    const closed_windows = { ...prevState.closed_windows, [objId]: false };
+                    const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+                    const partial = { closed_windows, minimized_windows };
+                    if (storedGeometry) {
+                        partial.window_positions = {
+                            ...prevState.window_positions,
+                            [objId]: { x: storedGeometry.x, y: storedGeometry.y },
+                        };
+                        partial.window_sizes = {
+                            ...(prevState.window_sizes || {}),
+                            [objId]: { width: storedGeometry.width, height: storedGeometry.height },
+                        };
+                    }
+                    return partial;
+                }, () => {
+                    const nextState = {
+                        closed_windows: { ...this.state.closed_windows, [objId]: false },
+                        favourite_apps,
+                        minimized_windows: { ...this.state.minimized_windows, [objId]: false },
+                    };
                     if (context) {
                         nextState.window_context = { ...this.state.window_context, [objId]: context };
                     }
@@ -5106,6 +5259,8 @@ export class Desktop extends Component {
             this.closeOverlay(objId);
             return;
         }
+
+        this.persistWindowGeometry(objId);
 
         // capture window snapshot
         let image = await this.captureWindowPreview(objId, 'normal');
@@ -5534,6 +5689,22 @@ export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const [windowGeometry, setWindowGeometry] = useWindowGeometryStorage();
+    const handleStoreWindowGeometry = React.useCallback(
+        (id, geometry) => {
+            if (!id) return;
+            setWindowGeometry((prev) => {
+                const next = { ...prev };
+                if (!geometry) {
+                    delete next[id];
+                } else {
+                    next[id] = geometry;
+                }
+                return next;
+            });
+        },
+        [setWindowGeometry],
+    );
     return (
         <Desktop
             {...props}
@@ -5543,6 +5714,8 @@ export default function DesktopWithSnap(props) {
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            windowGeometry={windowGeometry}
+            onStoreWindowGeometry={handleStoreWindowGeometry}
         />
     );
 }
