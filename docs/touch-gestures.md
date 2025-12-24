@@ -32,3 +32,11 @@ Testing used Chrome DevTools' device emulation to toggle `pointer: coarse`, adju
 3. Using the touch emulator (or a touchscreen) to swipe windows for snap and a three-finger upward motion to open the overview.
 
 Documenting the procedure ensures QA for actual 2-in-1 hardware can replay the steps and compare against emulated results.
+
+## Pull-to-refresh guard
+
+Disabling the browser pull-to-refresh (PTR) gesture keeps the desktop windows from being yanked off-screen on touch hardware. QA can confirm the guard on each browser by:
+
+1. Loading the portfolio on a device or simulator that exposes the PTR gesture (Chrome Android, Samsung Internet, Safari on iOS/iPadOS).
+2. Pressing and dragging downward inside the desktop workspace. The page should stay anchored with no refresh indicator, while the outer document (dragging from outside the workspace) still performs PTR.
+3. Repeating in an older WebView (or by disabling `overscroll-behavior` via DevTools) to ensure the JavaScript fallback keeps the workspace locked without blocking system-wide PTR.
