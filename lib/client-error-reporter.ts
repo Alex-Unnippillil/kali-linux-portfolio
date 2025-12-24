@@ -4,15 +4,17 @@ export interface ClientErrorPayload {
   componentStack?: string;
   url: string;
   segment: string;
+  correlationId?: string;
 }
 
-export async function reportClientError(error: Error, componentStack?: string) {
+export async function reportClientError(error: Error, componentStack?: string, correlationId?: string) {
   const payload: ClientErrorPayload = {
     message: error.message,
     stack: error.stack,
     componentStack,
     url: typeof window !== 'undefined' ? window.location.href : '',
     segment: typeof window !== 'undefined' ? window.location.pathname : '',
+    correlationId,
   };
 
   if (process.env.NODE_ENV === 'development') {
