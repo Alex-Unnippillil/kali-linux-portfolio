@@ -5,10 +5,12 @@ import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import { useColoring } from '../../../components/apps/wireshark/coloringContext';
 
 
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: Packet[];
 }
 
 const protocolColors: Record<string, string> = {
@@ -21,6 +23,19 @@ const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
+
+type RowStyle = React.CSSProperties & {
+  ['--ws-row-bg']?: string;
+  ['--ws-row-fg']?: string;
+  ['--ws-row-hover']?: string;
+};
+
+const toColorSlug = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
 
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
@@ -37,6 +52,8 @@ interface Packet {
   data: Uint8Array;
   sport?: number;
   dport?: number;
+  plaintext?: string;
+  decrypted?: string;
 }
 
 interface Layer {
@@ -234,8 +251,11 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+const PcapViewer: React.FC<PcapViewerProps> = ({
+  showLegend = true,
+  initialPackets = [],
+}) => {
+  const [packets, setPackets] = useState<Packet[]>(initialPackets);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -246,6 +266,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const { getRuleForPacket, palette } = useColoring();
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -256,6 +277,10 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [filter]);
+
+  useEffect(() => {
+    setPackets(initialPackets);
+  }, [initialPackets]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -397,45 +422,79 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((pkt, i) => (
-                    <tr
-                      key={i}
-                      className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i
-                          ? 'outline outline-2 outline-white'
-                          : protocolColors[
-                              protocolName(pkt.protocol).toString()
-                            ] || ''
-                      }`}
-                      onClick={() => setSelected(i)}
-                    >
-                      {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
-                        return (
-                          <td key={col} className="px-1 whitespace-nowrap">
-                            {val}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {filtered.map((pkt, i) => {
+                    const match = getRuleForPacket(pkt);
+                    const colorName = match?.color?.trim() ?? '';
+                    const slug = colorName
+                      ? toColorSlug(colorName)
+                      : '';
+                    const paletteEntry = slug ? palette[slug] : undefined;
+                    const rowStyle: RowStyle = {};
+                    let rowClass = 'cursor-pointer ws-row';
+
+                    if (colorName) {
+                      rowClass += ' ws-colored';
+                      if (paletteEntry) {
+                        rowStyle['--ws-row-bg'] = `var(--wireshark-color-${slug}-bg)`;
+                        rowStyle['--ws-row-fg'] = `var(--wireshark-color-${slug}-text)`;
+                        rowStyle['--ws-row-hover'] = `var(--wireshark-color-${slug}-hover)`;
+                      } else {
+                        rowStyle['--ws-row-bg'] = colorName;
+                        rowStyle['--ws-row-hover'] = colorName;
+                        rowStyle['--ws-row-fg'] = '#f9fafb';
+                      }
+                    } else {
+                      rowClass += ' ws-row--default';
+                      const protoClass =
+                        protocolColors[
+                          protocolName(pkt.protocol).toString()
+                        ] || '';
+                      if (protoClass) {
+                        rowClass += ` ${protoClass}`;
+                      }
+                    }
+
+                    if (selected === i) {
+                      rowClass += ' outline outline-2 outline-white';
+                    }
+
+                    const style = colorName ? rowStyle : undefined;
+
+                    return (
+                      <tr
+                        key={i}
+                        className={rowClass}
+                        style={style}
+                        onClick={() => setSelected(i)}
+                      >
+                        {columns.map((col) => {
+                          let val = '';
+                          switch (col) {
+                            case 'Time':
+                              val = pkt.timestamp;
+                              break;
+                            case 'Source':
+                              val = pkt.src;
+                              break;
+                            case 'Destination':
+                              val = pkt.dest;
+                              break;
+                            case 'Protocol':
+                              val = protocolName(pkt.protocol);
+                              break;
+                            case 'Info':
+                              val = pkt.info;
+                              break;
+                          }
+                          return (
+                            <td key={col} className="px-1 whitespace-nowrap">
+                              {val}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -454,6 +513,28 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           </div>
         </>
       )}
+      <style jsx>{`
+        .ws-row {
+          transition: background-color 120ms ease, color 120ms ease;
+          color: inherit;
+        }
+
+        .ws-row.ws-colored {
+          background-color: var(--ws-row-bg, transparent);
+          color: var(--ws-row-fg, inherit);
+        }
+
+        .ws-row.ws-colored:hover {
+          background-color: var(
+            --ws-row-hover,
+            var(--ws-row-bg, rgba(55, 65, 81, 1))
+          );
+        }
+
+        .ws-row--default:hover {
+          background-color: #374151;
+        }
+      `}</style>
     </div>
   );
 };
