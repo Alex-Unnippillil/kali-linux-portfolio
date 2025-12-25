@@ -373,7 +373,10 @@ Default headers are configured in [`next.config.js`](./next.config.js):
 - `Content-Security-Policy`
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`
+  - The default policy is set in [`next.config.js`](./next.config.js) and enforced in [`middleware.ts`](./middleware.ts).
+  - The QR tool at `/qr` needs camera access for live scanning, so the middleware applies a route-specific override of `camera=(self)`.
+  - If you self-host features that need additional capabilities (for example the desktop Camera or Screen Recorder apps), update the middleware to selectively opt those routes back in.
 - `X-Frame-Options: SAMEORIGIN`
 
 CSP whitelists the origins needed for embedded tools: `stackblitz.com`, `www.youtube-nocookie.com`, `open.spotify.com`, `todoist.com`, `*.twitter.com`, `embed.x.com`, `vercel.live`, `developer.mozilla.org`, `en.wikipedia.org`, and the Kali partner sites (`kali.org`, `offsec.com`, `exploit-db.com`). Update the whitelist whenever you embed a new external resource. Consider removing `'unsafe-inline'` from `style-src` once inline styles are eliminated.
