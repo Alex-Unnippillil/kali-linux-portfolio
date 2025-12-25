@@ -19,6 +19,7 @@ import styles from './youtube.module.css';
 
 const YOUTUBE_CLIENT_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 const DEFAULT_CHANNEL_ID = 'UCxPIJ3hw6AOwomUWh5B7SfQ';
+const ALL_PLAYLIST_ID = 'all-videos';
 
 type PlaylistListing = {
   sectionId: string;
@@ -168,19 +169,54 @@ export default function YouTubeApp({ channelId }: Props) {
       const map = new Map<string, YouTubePlaylistSummary>(
         playlistDirectory.playlists.map((p) => [p.id, p]),
       );
+      const aggregatedCount = playlistDirectory.playlists.reduce(
+        (sum, playlist) => sum + (playlist.itemCount ?? 0),
+        0,
+      );
+      const latestPublished = playlistDirectory.playlists.reduce<Date | null>(
+        (latest, playlist) => {
+          const current = new Date(playlist.publishedAt ?? '');
+          if (Number.isNaN(current.getTime())) return latest;
+          if (!latest) return current;
+          return current > latest ? current : latest;
+        },
+        null,
+      );
+      const fallbackThumbnail = playlistDirectory.playlists.find((p) => p.thumbnail)?.thumbnail;
+
+      const allVideosSummary: YouTubePlaylistSummary = {
+        id: ALL_PLAYLIST_ID,
+        title: 'All videos',
+        description: 'Combined feed of every playlist video.',
+        thumbnail: fallbackThumbnail ?? '',
+        itemCount: aggregatedCount,
+        publishedAt: latestPublished?.toISOString() ?? '',
+        privacyStatus: 'public',
+      };
+
+      map.set(ALL_PLAYLIST_ID, allVideosSummary);
       setPlaylistIndex(map);
 
-      const listings: PlaylistListing[] = playlistDirectory.sections.length
+      const playlistListings: PlaylistListing[] = playlistDirectory.sections.length
         ? playlistDirectory.sections
         : playlistDirectory.playlists.length
         ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
         : [];
+      const listings: PlaylistListing[] = [
+        {
+          sectionId: 'smart',
+          sectionTitle: 'Smart playlists',
+          playlists: [allVideosSummary],
+        },
+        ...playlistListings,
+      ];
 
       setDirectory(listings);
       setError(null);
 
+      const defaultPlaylist = ALL_PLAYLIST_ID;
       const firstPlaylist = listings[0]?.playlists[0]?.id;
-      setSelectedPlaylistId((prev) => prev ?? firstPlaylist ?? null);
+      setSelectedPlaylistId((prev) => prev ?? defaultPlaylist ?? firstPlaylist ?? null);
     } catch (directoryError: unknown) {
       const e = directoryError as Error;
       if (e.name === 'AbortError') return;
@@ -229,32 +265,86 @@ export default function YouTubeApp({ channelId }: Props) {
       try {
         const previous = playlistItems[playlistId];
         const pageToken = mode === 'append' ? previous?.nextPageToken : undefined;
-        const response = await (async () => {
-          try {
-            const query = new URLSearchParams({
-              playlistId,
-              maxResults: '50',
-            });
-            if (pageToken) query.set('pageToken', pageToken);
-            const resp = await fetch(`/api/youtube/playlist-items?${query.toString()}`, {
-              signal: controller.signal,
-            });
-            if (!resp.ok) {
-              const body = await resp.json().catch(() => ({}));
-              throw new Error(
-                body?.error || `YouTube playlist request failed (${resp.status} ${resp.statusText})`,
-              );
+
+        const fetchPlaylistPage = async (id: string) => {
+          const response = await (async () => {
+            try {
+              const query = new URLSearchParams({
+                playlistId: id,
+                maxResults: '50',
+              });
+              if (pageToken) query.set('pageToken', pageToken);
+              const resp = await fetch(`/api/youtube/playlist-items?${query.toString()}`, {
+                signal: controller.signal,
+              });
+              if (!resp.ok) {
+                const body = await resp.json().catch(() => ({}));
+                throw new Error(
+                  body?.error || `YouTube playlist request failed (${resp.status} ${resp.statusText})`,
+                );
+              }
+              return (await resp.json()) as Awaited<ReturnType<typeof fetchYouTubePlaylistItems>>;
+            } catch (proxyError) {
+              if (!hasClientApiKey) throw proxyError;
+              return fetchYouTubePlaylistItems(id, YOUTUBE_CLIENT_API_KEY ?? '', {
+                pageToken,
+                maxResults: 50,
+                signal: controller.signal,
+              });
             }
-            return (await resp.json()) as Awaited<ReturnType<typeof fetchYouTubePlaylistItems>>;
-          } catch (proxyError) {
-            if (!hasClientApiKey) throw proxyError;
-            return fetchYouTubePlaylistItems(playlistId, YOUTUBE_CLIENT_API_KEY ?? '', {
-              pageToken,
-              maxResults: 50,
-              signal: controller.signal,
-            });
+          })();
+
+          return response;
+        };
+
+        if (playlistId === ALL_PLAYLIST_ID) {
+          const availablePlaylists = Array.from(playlistIndex.keys()).filter(
+            (id) => id !== ALL_PLAYLIST_ID,
+          );
+          if (!availablePlaylists.length) {
+            throw new Error('No playlists available to build the combined feed.');
           }
-        })();
+
+          const results = await Promise.allSettled(
+            availablePlaylists.map((id) => fetchPlaylistPage(id)),
+          );
+          const successfulItems = results
+            .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof fetchPlaylistPage>>> =>
+              result.status === 'fulfilled',
+            )
+            .flatMap((result) => result.value.items);
+
+          if (!successfulItems.length) {
+            const errorMessage = results.find((result) => result.status === 'rejected');
+            throw new Error(
+              errorMessage && 'reason' in errorMessage
+                ? (errorMessage.reason as Error)?.message || 'Failed to load any playlist videos.'
+                : 'Failed to load any playlist videos.',
+            );
+          }
+
+          const merged = sortVideosNewestFirst(successfulItems);
+          setPlaylistItems((prev) => ({
+            ...prev,
+            [playlistId]: {
+              items: merged,
+              nextPageToken: undefined,
+              loading: false,
+              error: undefined,
+            },
+          }));
+
+          setSelectedVideoId((prev) => {
+            const candidate = merged[0]?.videoId;
+            if (!candidate) return prev;
+            if (!prev || mode === 'replace') return prev ?? candidate;
+            return prev;
+          });
+
+          return;
+        }
+
+        const response = await fetchPlaylistPage(playlistId);
 
         setPlaylistItems((prev) => {
           const existing = prev[playlistId]?.items ?? [];
@@ -307,7 +397,7 @@ export default function YouTubeApp({ channelId }: Props) {
         abortPlaylistRef.current = null;
       }
     },
-    [hasClientApiKey, playlistItems],
+    [hasClientApiKey, playlistIndex, playlistItems],
   );
 
   useEffect(() => {
