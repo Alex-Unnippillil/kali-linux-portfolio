@@ -3,7 +3,7 @@
 import React from 'react';
 import type { ReactNode, Ref } from 'react';
 import styles from './window.module.css';
-import { WindowEditButtons, WindowTopBar } from './window';
+import { WindowEditButtons } from './window';
 
 const FallbackTopBar: React.FC<{
     title: string;
@@ -45,7 +45,6 @@ const FallbackControls: React.FC<{
     </div>
 );
 
-const TopBarComponent = WindowTopBar || FallbackTopBar;
 const ControlsComponent = WindowEditButtons || FallbackControls;
 
 type SystemOverlayWindowProps = {
@@ -137,6 +136,17 @@ export default function SystemOverlayWindow({
         }
     };
 
+    const controls = (
+        <ControlsComponent
+            minimize={handleMinimize}
+            maximize={handleMaximize}
+            isMaximised={Boolean(maximized)}
+            close={handleClose}
+            id={id}
+            allowMaximize={allowMaximize}
+        />
+    );
+
     return (
         <div
             ref={overlayRef}
@@ -154,23 +164,10 @@ export default function SystemOverlayWindow({
                 aria-describedby={ariaDescribedBy}
                 tabIndex={-1}
             >
-                <TopBarComponent
+                <FallbackTopBar
                     title={title}
-                    onKeyDown={undefined}
-                    onBlur={undefined}
-                    grabbed={false}
-                    onPointerDown={undefined}
                     onDoubleClick={onMaximize ? handleMaximize : undefined}
-                    controls={(
-                        <ControlsComponent
-                            minimize={handleMinimize}
-                            maximize={handleMaximize}
-                            isMaximised={Boolean(maximized)}
-                            close={handleClose}
-                            id={id}
-                            allowMaximize={allowMaximize}
-                        />
-                    )}
+                    controls={controls}
                 />
                 <div className={bodyClasses}>{children}</div>
             </div>
