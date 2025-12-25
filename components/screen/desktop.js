@@ -21,7 +21,6 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
-import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
 import { safeLocalStorage } from '../../utils/safeStorage';
@@ -29,6 +28,7 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { sendPageView, trackEvent } from '../../utils/analytics';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -3551,7 +3551,7 @@ export class Desktop extends Component {
 
     componentDidMount() {
         // google analytics
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        sendPageView({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         if (typeof window !== 'undefined') {
             if (process.env.NODE_ENV === 'test') {
@@ -4375,28 +4375,28 @@ export class Desktop extends Component {
         const appId = target ? target.dataset.appId : null;
         switch (context) {
             case "desktop-area":
-                ReactGA.event({
+                trackEvent({
                     category: `Context Menu`,
                     action: `Opened Desktop Context Menu`
                 });
                 this.showContextMenu(e, "desktop");
                 break;
             case "app":
-                ReactGA.event({
+                trackEvent({
                     category: `Context Menu`,
                     action: `Opened App Context Menu`
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
             case "taskbar":
-                ReactGA.event({
+                trackEvent({
                     category: `Context Menu`,
                     action: `Opened Taskbar Context Menu`
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
                 break;
             default:
-                ReactGA.event({
+                trackEvent({
                     category: `Context Menu`,
                     action: `Opened Default Context Menu`
                 });
@@ -4415,19 +4415,19 @@ export class Desktop extends Component {
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
         switch (context) {
             case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
+                trackEvent({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
                 this.showContextMenu(fakeEvent, "desktop");
                 break;
             case "app":
-                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
+                trackEvent({ category: `Context Menu`, action: `Opened App Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
                 break;
             case "taskbar":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
+                trackEvent({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
                 break;
             default:
-                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
+                trackEvent({ category: `Context Menu`, action: `Opened Default Context Menu` });
                 this.showContextMenu(fakeEvent, "default");
         }
     }
@@ -5105,7 +5105,7 @@ export class Desktop extends Component {
 
 
         // google analytics
-        ReactGA.event({
+        trackEvent({
             category: `Open App`,
             action: `Opened ${objId} window`
         });

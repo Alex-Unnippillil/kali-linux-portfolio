@@ -82,10 +82,12 @@ const kaliSans = Rajdhani({
 });
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const analyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
+
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
+      if (analyticsEnabled && trackingId) {
         const { default: ReactGA } = await import('react-ga4');
         ReactGA.initialize(trackingId);
       }
@@ -184,7 +186,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       });
     }
 
-  }, []);
+  }, [analyticsEnabled]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
@@ -263,18 +265,20 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
+              {analyticsEnabled && (
+                <Analytics
+                  beforeSend={(event) => {
+                    if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+                    const evt = event as AnalyticsEventWithMetadata;
+                    if (evt.metadata && 'email' in evt.metadata) {
+                      delete evt.metadata.email;
+                    }
+                    return evt;
+                  }}
+                />
+              )}
 
-              {process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
+              {analyticsEnabled && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' && <SpeedInsights />}
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>
