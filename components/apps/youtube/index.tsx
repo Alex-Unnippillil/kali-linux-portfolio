@@ -202,14 +202,15 @@ export default function YouTubeApp({ channelId }: Props) {
         : playlistDirectory.playlists.length
         ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
         : [];
-      const listings: PlaylistListing[] = [
-        {
-          sectionId: 'smart',
-          sectionTitle: 'Smart playlists',
-          playlists: [allVideosSummary],
-        },
-        ...playlistListings,
-      ];
+
+      const listings: PlaylistListing[] = playlistListings.map((listing) =>
+        listing.sectionId === 'all'
+          ? {
+              ...listing,
+              playlists: [...listing.playlists, allVideosSummary],
+            }
+          : listing,
+      );
 
       setDirectory(listings);
       setError(null);
