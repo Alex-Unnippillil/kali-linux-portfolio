@@ -5185,7 +5185,6 @@ export class Desktop extends Component {
                 const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
                 const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
                 if (process.env.NODE_ENV === 'test') {
-                    // eslint-disable-next-line no-console
                     console.info('[desktop] reopening', objId, closed_windows[objId], minimized_windows[objId]);
                 }
                 this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
