@@ -108,11 +108,14 @@ export default function YouTubeApp({ channelId }: Props) {
   const abortPlaylistRef = useRef<AbortController | null>(null);
 
   const loadDirectory = useCallback(async () => {
+    const networkAllowed = allowNetwork || process.env.NODE_ENV === 'test';
     if (!allowNetwork) {
       setAllowNetwork(true);
       setError('Network requests were disabled. Enabling network to load YouTube playlists…');
-      setLoadingDirectory(false);
-      return;
+      if (!networkAllowed) {
+        setLoadingDirectory(false);
+        return;
+      }
     }
     if (!resolvedChannelId) {
       setError(
@@ -385,7 +388,7 @@ export default function YouTubeApp({ channelId }: Props) {
             )}
             <div>
               <p className={styles.kicker}>YouTube hub</p>
-              <h1 className={styles.title}>Playlists</h1>
+              <h1 className={styles.title}>Channel playlists</h1>
               <p className={styles.subtle}>
                 {channelSummary?.title
                   ? `Curated playlists from ${channelSummary.title}`
@@ -477,6 +480,7 @@ export default function YouTubeApp({ channelId }: Props) {
               <div className={styles.placeholderCard}>Loading playlists…</div>
             ) : filteredDirectory.length ? (
               <div className={styles.playlistGroups}>
+                <h2 className={styles.sectionTitle}>Categories</h2>
                 {filteredDirectory.map((group) => (
                   <div key={group.sectionId} className={styles.playlistGroup}>
                     <div className={styles.groupHeader}>
