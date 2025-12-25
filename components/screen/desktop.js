@@ -86,10 +86,17 @@ const persistStoredFolderContents = (contents) => {
     }
 };
 
+const resolveStorage = () => {
+    if (safeLocalStorage) return safeLocalStorage;
+    if (typeof localStorage !== 'undefined') return localStorage;
+    return undefined;
+};
+
 const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
-    if (!safeLocalStorage) return {};
+    const storage = resolveStorage();
+    if (!storage) return {};
     try {
-        const stored = safeLocalStorage.getItem(storageKey);
+        const stored = storage.getItem(storageKey);
         if (!stored) return {};
         const parsed = JSON.parse(stored);
         if (!parsed || typeof parsed !== 'object') return {};
@@ -290,6 +297,9 @@ export class Desktop extends Component {
             initialAppClosed[app.id] = app.id === 'about' ? false : true;
             initialAppMinimized[app.id] = false;
         });
+        if (process.env.NODE_ENV === 'test') {
+            initialAppClosed.about = true;
+        }
 
         const initialWindowSizes = this.loadWindowSizes();
         const storedFolderContents = loadStoredFolderContents();
@@ -1535,9 +1545,10 @@ export class Desktop extends Component {
     loadWindowSizes = () => loadStoredWindowSizes(this.windowSizeStorageKey);
 
     persistWindowSizes = (sizes) => {
-        if (!safeLocalStorage) return;
+        const storage = resolveStorage();
+        if (!storage) return;
         try {
-            safeLocalStorage.setItem(this.windowSizeStorageKey, JSON.stringify(sizes));
+            storage.setItem(this.windowSizeStorageKey, JSON.stringify(sizes));
         } catch (e) {
             // ignore write errors (storage may be unavailable)
         }
@@ -3478,10 +3489,15 @@ export class Desktop extends Component {
     broadcastWorkspaceState = () => {
         if (typeof window === 'undefined') return;
         const runningApps = this.getRunningAppSummaries();
-        if (!this.state.taskbarOrder || this.state.taskbarOrder.length === 0) {
-            const runningIds = runningApps.map((app) => app.id);
-            if (runningIds.length) {
-                this.setTaskbarOrder(runningIds);
+        const runningIds = runningApps.map((app) => app.id);
+        if (runningIds.length) {
+            const normalizedOrder = this.getNormalizedTaskbarOrder(runningIds, this.state.taskbarOrder || runningIds);
+            const currentOrder = this.state.taskbarOrder || [];
+            if (
+                normalizedOrder.length !== currentOrder.length ||
+                normalizedOrder.some((id, index) => id !== currentOrder[index])
+            ) {
+                this.setTaskbarOrder(normalizedOrder);
             }
         }
         const detail = {
@@ -3554,11 +3570,6 @@ export class Desktop extends Component {
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
         if (typeof window !== 'undefined') {
-            if (process.env.NODE_ENV === 'test') {
-                this.setState((prev) => ({
-                    closed_windows: { ...prev.closed_windows, about: true },
-                }));
-            }
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
             window.addEventListener('taskbar-command', this.handleExternalTaskbarCommand);
@@ -4736,7 +4747,8 @@ export class Desktop extends Component {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
-            const size = this.state.window_sizes?.[id];
+            const persistedSizes = this.state.window_sizes?.[id] || this.loadWindowSizes()?.[id];
+            const size = persistedSizes;
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
             const props = {
