@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" version="1.1" viewBox="0 0 384 384">
+<svg role="img" aria-labelledby="icon-clipboard-managersvg-title" xmlns="http://www.w3.org/2000/svg" width="512" height="512" version="1.1" viewBox="0 0 384 384">
+  <title id="icon-clipboard-managersvg-title">Clipboard Manager</title>
+
   <rect width="241.484" height="283.962" x="71.95" y="83.32" rx="11.046" ry="11.046" style="opacity:0.3"/>
   <rect width="241.484" height="283.962" x="71.95" y="75.82" rx="11.046" ry="11.046" style="fill:rgb(72.156%,9.019%,29.803%)"/>
   <rect style="opacity:0.3" width="196.503" height="245.014" x="94.44" y="97.42"/>

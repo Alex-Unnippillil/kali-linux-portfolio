@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg role="img" aria-labelledby="icon-flappy-birdsvg-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title id="icon-flappy-birdsvg-title">Flappy Bird</title>
+
   <circle cx="32" cy="32" r="20" fill="#f4d03f"/>
   <polygon points="44,32 60,26 60,38" fill="#e67e22"/>
   <circle cx="37" cy="25" r="3" fill="#000"/>
