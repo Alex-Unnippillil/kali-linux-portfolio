@@ -1,6 +1,7 @@
-import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
+
+import { expect, test } from './fixtures';
 
 const appDir = path.join(process.cwd(), 'pages', 'apps');
 
