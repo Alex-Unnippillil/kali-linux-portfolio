@@ -10,6 +10,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
+import { useTab } from '../../components/ui/TabbedWindow';
 import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext, CommandDefinition, getCommandList } from './commands';
 import TerminalContainer from './components/Terminal';
@@ -120,6 +121,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { supported: opfsSupported, getDir, readFile, writeFile, deleteFile } =
     useOPFS();
+  const tab = useTab();
   const dirRef = useRef<FileSystemDirectoryHandle | null>(null);
   const [overflow, setOverflow] = useState({ top: false, bottom: false });
   const ansiColors = [
@@ -534,6 +536,17 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
+  const focusTerminal = useCallback(() => {
+    if (paletteOpen || settingsOpen) return;
+    termRef.current?.focus();
+  }, [paletteOpen, settingsOpen]);
+
+  useEffect(() => {
+    if (tab?.active) {
+      focusTerminal();
+    }
+  }, [focusTerminal, tab?.active]);
+
   return (
     <div className="relative h-full w-full">
       {paletteOpen && (
@@ -618,6 +631,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                   type="checkbox"
                   checked={persistHistory}
                   onChange={(e) => setPersistHistory(e.target.checked)}
+                  aria-label="Toggle command history persistence"
                   className="mt-0.5 h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] text-[color:var(--color-accent)] focus:ring-[color:var(--color-accent)]"
                 />
                 <span>
@@ -632,6 +646,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
                   type="checkbox"
                   checked={safeMode}
                   onChange={(e) => setSafeMode(e.target.checked)}
+                  aria-label="Toggle safe mode"
                   className="mt-0.5 h-4 w-4 rounded border-[color:var(--kali-border)] bg-[color:var(--kali-overlay)] text-[color:var(--color-accent)] focus:ring-[color:var(--color-accent)]"
                 />
                 <span>
@@ -715,6 +730,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <TerminalContainer
             ref={containerRef}
             className="h-full w-full overflow-hidden font-mono"
+            tabIndex={-1}
+            onMouseDown={focusTerminal}
+            onFocus={focusTerminal}
             style={{
               fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
               lineHeight: 1.4,
