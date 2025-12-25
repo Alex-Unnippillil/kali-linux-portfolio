@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
+import { logContactFunnelStep } from '../../../utils/analytics';
 
 interface AttachmentCarouselProps {
   attachments: File[];
   onRemove: (index: number) => void;
+  analyticsSurface?: string;
 }
 
 const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
   attachments,
   onRemove,
+  analyticsSurface = 'contact-app',
 }) => {
   const [index, setIndex] = useState(0);
   const [urls, setUrls] = useState<string[]>([]);
@@ -45,7 +48,13 @@ const AttachmentCarousel: React.FC<AttachmentCarouselProps> = ({
         )}
         <button
           type="button"
-          onClick={() => onRemove(index)}
+          onClick={() => {
+            onRemove(index);
+            logContactFunnelStep('attachment_removed', {
+              surface: analyticsSurface,
+              remaining: Math.max(attachments.length - 1, 0),
+            });
+          }}
           className="absolute top-1 right-1 bg-red-600 text-white px-2 py-1 rounded"
         >
           Remove
