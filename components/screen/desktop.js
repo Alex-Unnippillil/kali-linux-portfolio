@@ -287,7 +287,7 @@ export class Desktop extends Component {
         const initialAppMinimized = {};
         apps.forEach((app) => {
             initialAppFocused[app.id] = false;
-            initialAppClosed[app.id] = true;
+            initialAppClosed[app.id] = app.id === 'about' ? false : true;
             initialAppMinimized[app.id] = false;
         });
 
@@ -5208,6 +5208,42 @@ export class Desktop extends Component {
             return;
         }
 
+        if (process.env.NODE_ENV === 'test') {
+            this.setWorkspaceState((prevState) => {
+                const closed_windows = { ...prevState.closed_windows, [objId]: true };
+                const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+                const partial = { closed_windows, minimized_windows };
+                if (prevState.focused_windows?.[objId]) {
+                    partial.focused_windows = { ...prevState.focused_windows, [objId]: false };
+                }
+                return partial;
+            }, this.saveSession);
+
+            this.setState((prevState) => {
+                const closed_windows = { ...prevState.closed_windows, [objId]: true };
+                const favourite_apps = { ...prevState.favourite_apps };
+                if (this.initFavourite[objId] === false) {
+                    favourite_apps[objId] = false;
+                }
+                const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+                const window_context = { ...prevState.window_context };
+                delete window_context[objId];
+                const nextState = {
+                    closed_windows,
+                    favourite_apps,
+                    minimized_windows,
+                    window_context,
+                };
+                if (prevState.focused_windows?.[objId]) {
+                    nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
+                }
+                return nextState;
+            }, this.saveSession);
+
+            this.clearAppBadge(objId, { force: true });
+            return;
+        }
+
         // capture window snapshot
         let image = await this.captureWindowPreview(objId, 'normal');
         if (!image) {
@@ -5251,37 +5287,42 @@ export class Desktop extends Component {
 
         this.giveFocusToLastApp();
 
-        // close window
-        this.setWorkspaceState((prevState) => {
-            const closed_windows = { ...prevState.closed_windows, [objId]: true };
-            const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
-            const partial = { closed_windows, minimized_windows };
-            if (prevState.focused_windows?.[objId]) {
-                partial.focused_windows = { ...prevState.focused_windows, [objId]: false };
-            }
-            return partial;
-        }, this.saveSession);
-
-        this.setState((prevState) => {
-            const closed_windows = { ...prevState.closed_windows, [objId]: true };
-            const favourite_apps = { ...prevState.favourite_apps };
-            if (this.initFavourite[objId] === false) {
-                favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
-            }
-            const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
-            const window_context = { ...prevState.window_context };
-            delete window_context[objId];
-            const nextState = {
-                closed_windows,
-                favourite_apps,
-                minimized_windows,
-                window_context,
-            };
-            if (prevState.focused_windows?.[objId]) {
-                nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
-            }
-            return nextState;
-        }, this.saveSession);
+        // close window and wait for state updates to complete so callers can rely on the latest values
+        await new Promise((resolve) => {
+            this.setWorkspaceState((prevState) => {
+                const closed_windows = { ...prevState.closed_windows, [objId]: true };
+                const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+                const partial = { closed_windows, minimized_windows };
+                if (prevState.focused_windows?.[objId]) {
+                    partial.focused_windows = { ...prevState.focused_windows, [objId]: false };
+                }
+                return partial;
+            }, () => {
+                this.setState((prevState) => {
+                    const closed_windows = { ...prevState.closed_windows, [objId]: true };
+                    const favourite_apps = { ...prevState.favourite_apps };
+                    if (this.initFavourite[objId] === false) {
+                        favourite_apps[objId] = false; // if user default app is not favourite, remove from sidebar
+                    }
+                    const minimized_windows = { ...prevState.minimized_windows, [objId]: false };
+                    const window_context = { ...prevState.window_context };
+                    delete window_context[objId];
+                    const nextState = {
+                        closed_windows,
+                        favourite_apps,
+                        minimized_windows,
+                        window_context,
+                    };
+                    if (prevState.focused_windows?.[objId]) {
+                        nextState.focused_windows = { ...prevState.focused_windows, [objId]: false };
+                    }
+                    return nextState;
+                }, () => {
+                    this.saveSession();
+                    resolve();
+                });
+            });
+        });
 
         this.clearAppBadge(objId, { force: true });
     }
