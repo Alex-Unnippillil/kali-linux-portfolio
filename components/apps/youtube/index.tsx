@@ -21,18 +21,45 @@ const YOUTUBE_CLIENT_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 const DEFAULT_CHANNEL_ID = 'UCxPIJ3hw6AOwomUWh5B7SfQ';
 const ALL_PLAYLIST_ID = 'all-videos';
 
-type PlaylistListing = {
+export type PlaylistListing = {
   sectionId: string;
   sectionTitle: string;
   playlists: YouTubePlaylistSummary[];
 };
 
-type PlaylistItemsState = {
+export type PlaylistItemsState = {
   items: YouTubePlaylistVideo[];
   nextPageToken?: string;
   loading: boolean;
   error?: string;
 };
+
+export function filterDirectoryBySearch(
+  directory: PlaylistListing[],
+  filter: string,
+  playlistItems: Record<string, PlaylistItemsState>,
+): PlaylistListing[] {
+  const term = filter.trim().toLowerCase();
+  if (!term) return directory;
+
+  const matchesSearch = (playlist: YouTubePlaylistSummary) => {
+    const haystack = `${playlist.title} ${playlist.description ?? ''}`.toLowerCase();
+    if (haystack.includes(term)) return true;
+
+    const items = playlistItems[playlist.id]?.items ?? [];
+    return items.some((video) => {
+      const videoHaystack = `${video.title} ${video.description ?? ''}`.toLowerCase();
+      return videoHaystack.includes(term);
+    });
+  };
+
+  return directory
+    .map((entry) => ({
+      ...entry,
+      playlists: entry.playlists.filter(matchesSearch),
+    }))
+    .filter((entry) => entry.playlists.length > 0);
+}
 
 interface Props {
   channelId?: string;
@@ -407,22 +434,10 @@ export default function YouTubeApp({ channelId }: Props) {
     void loadPlaylistItems(selectedPlaylistId, 'replace');
   }, [selectedPlaylistId, playlistItems, loadPlaylistItems]);
 
-  const filteredDirectory = useMemo(() => {
-    const term = filter.trim().toLowerCase();
-    if (!term) return directory;
-
-    const matchesSearch = (playlist: YouTubePlaylistSummary) => {
-      const haystack = `${playlist.title} ${playlist.description ?? ''}`.toLowerCase();
-      return haystack.includes(term);
-    };
-
-    return directory
-      .map((entry) => ({
-        ...entry,
-        playlists: entry.playlists.filter(matchesSearch),
-      }))
-      .filter((entry) => entry.playlists.length > 0);
-  }, [directory, filter]);
+  const filteredDirectory = useMemo(
+    () => filterDirectoryBySearch(directory, filter, playlistItems),
+    [directory, filter, playlistItems],
+  );
 
   useEffect(() => {
     if (!filteredDirectory.length) {
@@ -517,10 +532,10 @@ export default function YouTubeApp({ channelId }: Props) {
             <input
               id="youtube-playlist-filter"
               type="search"
-              aria-label="Filter playlists"
+              aria-label="Search playlists or videos"
               value={filter}
               onChange={(event) => setFilter(event.target.value)}
-              placeholder="Search playlists"
+              placeholder="Search playlists or videos"
               className={styles.input}
             />
           </div>
