@@ -1,13 +1,24 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import GameLayout from './GameLayout';
-import { evaluateColumns } from '../../games/connect-four/solver';
+import { useGameLoop } from './Games/common';
+import {
+  ROWS,
+  COLS,
+  createEmptyBoard,
+  getValidRow,
+  evaluateColumns,
+  minimax,
+  findWinningCells,
+  isBoardFull,
+} from '../../games/connect-four/solver';
+import { loadStats, recordOutcome, saveStats } from '../../games/connect-four/stats';
 
-const ROWS = 6;
-const COLS = 7;
 const CELL_SIZE = 40; // tailwind h-10 w-10
 const GAP = 4; // gap-1 => 4px
 const SLOT = CELL_SIZE + GAP;
 const BOARD_HEIGHT = ROWS * SLOT - GAP;
+const GRAVITY_PER_FRAME = 1.5;
+const MUTE_STORAGE_KEY = 'connect-four:muted';
 
 const COLORS = {
   red: 'bg-blue-500',
@@ -18,159 +29,17 @@ const COLOR_NAMES = {
   yellow: 'Orange',
 };
 
-const createEmptyBoard = () =>
-  Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-
-const getValidRow = (board, col) => {
-  for (let r = ROWS - 1; r >= 0; r -= 1) {
-    if (!board[r][col]) return r;
+const getInitialMuted = () => {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(MUTE_STORAGE_KEY) === '1';
+  } catch {
+    return false;
   }
-  return -1;
 };
 
-const checkWinner = (board, player) => {
-  const dirs = [
-    [0, 1],
-    [1, 0],
-    [1, 1],
-    [1, -1],
-  ];
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS; c += 1) {
-      if (board[r][c] !== player) continue;
-      for (const [dr, dc] of dirs) {
-        const cells = [];
-        for (let i = 0; i < 4; i += 1) {
-          const rr = r + dr * i;
-          const cc = c + dc * i;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
-          if (board[rr][cc] !== player) break;
-          cells.push({ r: rr, c: cc });
-        }
-        if (cells.length === 4) return cells;
-      }
-    }
-  }
-  return null;
-};
-
-const isBoardFull = (board) => board[0].every(Boolean);
-
-const evaluateWindow = (window, player) => {
-  const opp = player === 'red' ? 'yellow' : 'red';
-  let score = 0;
-  const playerCount = window.filter((v) => v === player).length;
-  const oppCount = window.filter((v) => v === opp).length;
-  const empty = window.filter((v) => v === null).length;
-  if (playerCount === 4) score += 100;
-  else if (playerCount === 3 && empty === 1) score += 5;
-  else if (playerCount === 2 && empty === 2) score += 2;
-  if (oppCount === 3 && empty === 1) score -= 4;
-  return score;
-};
-
-const scorePosition = (board, player) => {
-  let score = 0;
-  const center = Math.floor(COLS / 2);
-  const centerArray = board.map((row) => row[center]);
-  score += centerArray.filter((v) => v === player).length * 3;
-  for (let r = 0; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(board[r].slice(c, c + 4), player);
-    }
-  }
-  for (let c = 0; c < COLS; c += 1) {
-    for (let r = 0; r < ROWS - 3; r += 1) {
-      score += evaluateWindow(
-        [board[r][c], board[r + 1][c], board[r + 2][c], board[r + 3][c]],
-        player,
-      );
-    }
-  }
-  for (let r = 0; r < ROWS - 3; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(
-        [
-          board[r][c],
-          board[r + 1][c + 1],
-          board[r + 2][c + 2],
-          board[r + 3][c + 3],
-        ],
-        player,
-      );
-    }
-  }
-  for (let r = 3; r < ROWS; r += 1) {
-    for (let c = 0; c < COLS - 3; c += 1) {
-      score += evaluateWindow(
-        [
-          board[r][c],
-          board[r - 1][c + 1],
-          board[r - 2][c + 2],
-          board[r - 3][c + 3],
-        ],
-        player,
-      );
-    }
-  }
-  return score;
-};
-
-const getValidLocations = (board) => {
-  const locations = [];
-  for (let c = 0; c < COLS; c += 1) {
-    if (!board[0][c]) locations.push(c);
-  }
-  return locations;
-};
-
-const minimax = (board, depth, alpha, beta, maximizing) => {
-  const validLocations = getValidLocations(board);
-  const isTerminal =
-    checkWinner(board, 'red') ||
-    checkWinner(board, 'yellow') ||
-    validLocations.length === 0;
-  if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'red')) return { score: 1000000 };
-    if (checkWinner(board, 'yellow')) return { score: -1000000 };
-    return { score: scorePosition(board, 'red') };
-  }
-  if (maximizing) {
-    let value = -Infinity;
-    let column = validLocations[0];
-    for (const col of validLocations) {
-      const row = getValidRow(board, col);
-      const newBoard = board.map((r) => [...r]);
-      newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
-      if (score > value) {
-        value = score;
-        column = col;
-      }
-      alpha = Math.max(alpha, value);
-      if (alpha >= beta) break;
-    }
-    return { column, score: value };
-  }
-  let value = Infinity;
-  let column = validLocations[0];
-  for (const col of validLocations) {
-    const row = getValidRow(board, col);
-    const newBoard = board.map((r) => [...r]);
-    newBoard[row][col] = 'yellow';
-    const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
-    if (score < value) {
-      value = score;
-      column = col;
-    }
-    beta = Math.min(beta, value);
-    if (alpha >= beta) break;
-  }
-  return { column, score: value };
-};
-
-export default function ConnectFour() {
-  const [board, setBoard] = useState(createEmptyBoard());
+const ConnectFour = () => {
+  const [board, setBoard] = useState(createEmptyBoard);
   const [player, setPlayer] = useState('yellow');
   const [winner, setWinner] = useState(null);
   const [game, setGame] = useState({ history: [] });
@@ -178,38 +47,128 @@ export default function ConnectFour() {
   const [animDisc, setAnimDisc] = useState(null);
   const [winningCells, setWinningCells] = useState([]);
   const [scores, setScores] = useState(Array(COLS).fill(null));
+  const [paused, setPaused] = useState(false);
+  const [stats, setStats] = useState(() => loadStats());
+  const [muted, setMuted] = useState(getInitialMuted);
 
-  const finalizeMove = useCallback((newBoard, color) => {
-    const winCells = checkWinner(newBoard, color);
-    if (winCells) {
-      setWinner(color);
-      setWinningCells(winCells);
-    } else if (isBoardFull(newBoard)) {
-      setWinner('draw');
-    } else {
-      setPlayer(color === 'red' ? 'yellow' : 'red');
+  const boardRef = useRef(board);
+  useEffect(() => {
+    boardRef.current = board;
+  }, [board]);
+
+  useEffect(() => {
+    saveStats(stats);
+  }, [stats]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(MUTE_STORAGE_KEY, muted ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [muted]);
+
+  const audioRef = useRef(null);
+  const ensureAudio = useCallback(() => {
+    if (audioRef.current) return audioRef.current;
+    if (typeof window === 'undefined') return null;
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    try {
+      const ctx = new Ctor();
+      audioRef.current = ctx;
+      return ctx;
+    } catch {
+      return null;
     }
   }, []);
 
+  const playTone = useCallback(
+    (frequency, duration = 0.2) => {
+      if (muted) return;
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.value = frequency;
+        gain.gain.value = 0;
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const now = ctx.currentTime;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.2, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.start(now);
+        osc.stop(now + duration);
+      } catch {
+        /* ignore audio errors */
+      }
+    },
+    [ensureAudio, muted],
+  );
+
+  const playDropSound = useCallback(() => playTone(520, 0.12), [playTone]);
+  const playPlayerWin = useCallback(() => playTone(680, 0.35), [playTone]);
+  const playCpuWin = useCallback(() => playTone(260, 0.35), [playTone]);
+  const playDrawSound = useCallback(() => playTone(360, 0.3), [playTone]);
+
+  const updateStats = useCallback((outcome) => {
+    setStats((prev) => recordOutcome(prev, outcome));
+  }, []);
+
+  const finalizeMove = useCallback(
+    (newBoard, color) => {
+      const winCells = findWinningCells(newBoard, color);
+      if (winCells) {
+        setWinner(color);
+        setWinningCells(winCells.map(({ row, col }) => ({ r: row, c: col })));
+        if (color === 'yellow') {
+          updateStats('player');
+          playPlayerWin();
+        } else {
+          updateStats('cpu');
+          playCpuWin();
+        }
+      } else if (isBoardFull(newBoard)) {
+        setWinner('draw');
+        setWinningCells([]);
+        updateStats('draw');
+        playDrawSound();
+      } else {
+        setPlayer(color === 'red' ? 'yellow' : 'red');
+        playDropSound();
+      }
+    },
+    [playCpuWin, playDrawSound, playDropSound, playPlayerWin, updateStats],
+  );
+
   const dropDisc = useCallback(
     (col, color) => {
-      if (winner || animDisc) return;
-      const row = getValidRow(board, col);
+      if (winner || animDisc || paused) return;
+      const row = getValidRow(boardRef.current, col);
       if (row === -1) return;
       setAnimDisc({ col, row, color, y: -SLOT, vy: 0, target: row * SLOT });
     },
-    [winner, animDisc, board],
+    [winner, animDisc, paused],
   );
 
-  const handleClick = (col) => {
-    if (player !== 'yellow' || winner || animDisc) return;
-    setGame((g) => ({ history: [...g.history, board.map((r) => [...r])] }));
-    dropDisc(col, 'yellow');
-  };
+  const handleClick = useCallback(
+    (col) => {
+      if (player !== 'yellow' || winner || animDisc || paused) return;
+      setGame((g) => ({ history: [...g.history, board.map((r) => [...r])] }));
+      dropDisc(col, 'yellow');
+    },
+    [animDisc, board, dropDisc, paused, player, winner],
+  );
 
-  const undo = () => {
+  const undo = useCallback(() => {
     setGame((g) => {
-      if (!g.history.length || animDisc) return g;
+      if (!g.history.length || animDisc || paused || winner) return g;
       const prev = g.history[g.history.length - 1];
       setBoard(prev);
       setPlayer('yellow');
@@ -217,25 +176,43 @@ export default function ConnectFour() {
       setWinningCells([]);
       return { history: g.history.slice(0, -1) };
     });
-  };
+  }, [animDisc, paused, winner]);
+
+  const reset = useCallback(() => {
+    setBoard(createEmptyBoard());
+    setPlayer('yellow');
+    setWinner(null);
+    setGame({ history: [] });
+    setWinningCells([]);
+    setHoverCol(null);
+    setAnimDisc(null);
+    setPaused(false);
+  }, []);
+
+  const togglePause = useCallback(() => {
+    setPaused((p) => !p);
+  }, []);
+
+  const toggleMute = useCallback(() => {
+    setMuted((m) => !m);
+  }, []);
 
   useEffect(() => {
     setScores(evaluateColumns(board, player));
   }, [board, player]);
 
-  useEffect(() => {
-    if (!animDisc) return;
-    let raf;
-    const animate = () => {
+  useGameLoop(
+    (delta) => {
       setAnimDisc((d) => {
         if (!d) return d;
+        const frameScale = delta * 60;
         let { y, vy, target } = d;
-        vy += 1.5;
-        y += vy;
+        vy += GRAVITY_PER_FRAME * frameScale;
+        y += vy * frameScale;
         if (y >= target) {
           y = target;
-          if (Math.abs(vy) < 1.5) {
-            const newBoard = board.map((r) => [...r]);
+          if (Math.abs(vy) < GRAVITY_PER_FRAME * frameScale) {
+            const newBoard = boardRef.current.map((r) => [...r]);
             newBoard[d.row][d.col] = d.color;
             setBoard(newBoard);
             finalizeMove(newBoard, d.color);
@@ -245,27 +222,15 @@ export default function ConnectFour() {
         }
         return { ...d, y, vy };
       });
-      raf = requestAnimationFrame(animate);
-    };
-    raf = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(raf);
-  }, [animDisc, board, finalizeMove]);
+    },
+    Boolean(animDisc) && !paused,
+  );
 
   useEffect(() => {
-    if (player === 'red' && !winner && !animDisc) {
-      const { column } = minimax(board, 4, -Infinity, Infinity, true);
-      if (column !== undefined) dropDisc(column, 'red');
-    }
-  }, [player, winner, board, animDisc, dropDisc]);
-
-  const reset = () => {
-    setBoard(createEmptyBoard());
-    setPlayer('yellow');
-    setWinner(null);
-    setGame({ history: [] });
-    setWinningCells([]);
-    setHoverCol(null);
-  };
+    if (paused || player !== 'red' || winner || animDisc) return;
+    const { column } = minimax(board, 4, -Infinity, Infinity, true);
+    if (column !== undefined) dropDisc(column, 'red');
+  }, [animDisc, board, dropDisc, paused, player, winner]);
 
   const validScores = scores.filter((s) => s !== null);
   const minScore = validScores.length ? Math.min(...validScores) : 0;
@@ -284,19 +249,40 @@ export default function ConnectFour() {
   const boardWidth = COLS * SLOT - GAP;
 
   return (
-    <GameLayout gameId="connect-four">
+    <GameLayout
+      gameId="connect-four"
+      score={stats.playerWins}
+      highScore={stats.playerWins}
+    >
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 relative">
+        <div className="absolute top-2 right-2 flex gap-2">
+          <button
+            type="button"
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={togglePause}
+          >
+            {paused ? 'Resume' : 'Pause'}
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={reset}
+          >
+            Reset
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={toggleMute}
+          >
+            {muted ? 'Sound Off' : 'Sound On'}
+          </button>
+        </div>
         {winner && (
           <div className="mb-2 capitalize">
             {winner === 'draw' ? 'Draw!' : `${COLOR_NAMES[winner]} wins!`}
           </div>
         )}
-        <button
-          className="absolute top-2 right-2 px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
-          onClick={reset}
-        >
-          Restart
-        </button>
         <div
           className="relative"
           style={{ width: boardWidth, height: BOARD_HEIGHT }}
@@ -316,6 +302,7 @@ export default function ConnectFour() {
                   }
                   onClick={() => handleClick(cIdx)}
                   onMouseEnter={() => setHoverCol(cIdx)}
+                  disabled={paused || Boolean(winner)}
                 >
                   {cell && (
                     <div
@@ -359,13 +346,30 @@ export default function ConnectFour() {
           <button
             className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
             onClick={undo}
-            disabled={game.history.length === 0 || animDisc}
+            disabled={
+              game.history.length === 0 || animDisc || paused || Boolean(winner)
+            }
           >
             Undo
           </button>
         </div>
+        <div className="mt-4 grid grid-cols-3 gap-6 text-center text-sm">
+          <div>
+            <div className="font-semibold">Player</div>
+            <div>{stats.playerWins}</div>
+          </div>
+          <div>
+            <div className="font-semibold">AI</div>
+            <div>{stats.cpuWins}</div>
+          </div>
+          <div>
+            <div className="font-semibold">Draws</div>
+            <div>{stats.draws}</div>
+          </div>
+        </div>
       </div>
     </GameLayout>
   );
-}
+};
 
+export default ConnectFour;
