@@ -4,6 +4,7 @@ export type PlacesMenuItem = {
   id: string;
   label: string;
   icon: string;
+  description?: string;
   onSelect?: () => void;
 };
 
@@ -48,60 +49,68 @@ const resolveKaliIcon = (id: string): string | undefined => {
 
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
   return (
-    <nav aria-label={heading} className="w-56 select-none text-sm text-white">
-      <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
+    <nav
+      aria-label={heading}
+      className="flex h-[360px] w-64 select-none flex-col overflow-hidden rounded-lg border border-kali-border bg-kali-menu text-sm text-white shadow-kali-panel"
+    >
+      <header className="px-4 pt-4 pb-2 text-xs font-semibold uppercase tracking-wide text-kali-muted">
         {heading}
       </header>
-      <ul className="space-y-1">
-        {items.map((item) => {
-          const kaliIcon = resolveKaliIcon(item.id);
-          const src = kaliIcon ?? item.icon;
+      <div className="flex-1 overflow-y-auto px-2 pb-3">
+        <ul className="space-y-1">
+          {items.map((item) => {
+            const kaliIcon = resolveKaliIcon(item.id);
+            const src = kaliIcon ?? item.icon;
 
-          const handleClick = () => {
-            item.onSelect?.();
-          };
+            const handleClick = () => {
+              item.onSelect?.();
+            };
 
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
-              >
-                <img
-                  src={src}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 flex-shrink-0"
-                  data-fallback-src={item.icon}
-                  onError={(event) => {
-                    const target = event.currentTarget;
-                    if (target.getAttribute(FALLBACK_FLAG) === 'true') {
-                      return;
-                    }
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={handleClick}
+                  className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-colors duration-150 hover:bg-kali-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 flex-shrink-0"
+                    data-fallback-src={item.icon}
+                    onError={(event) => {
+                      const target = event.currentTarget;
+                      if (target.getAttribute(FALLBACK_FLAG) === 'true') {
+                        return;
+                      }
 
-                    const fallback = target.getAttribute(FALLBACK_SRC);
-                    if (!fallback) {
-                      return;
-                    }
+                      const fallback = target.getAttribute(FALLBACK_SRC);
+                      if (!fallback) {
+                        return;
+                      }
 
-                    target.setAttribute(FALLBACK_FLAG, 'true');
-                    target.src = fallback;
-                  }}
-                />
-                <span className="truncate">{item.label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                      target.setAttribute(FALLBACK_FLAG, 'true');
+                      target.src = fallback;
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{item.label}</p>
+                    {item.description ? (
+                      <p className="truncate text-xs text-kali-muted/80">{item.description}</p>
+                    ) : null}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </nav>
-
   );
 };
 
 export default PlacesMenu;
 
 export { KALI_ICON_MAP, resolveKaliIcon };
-
