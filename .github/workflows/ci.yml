@@ -54,6 +54,8 @@ jobs:
       - run: yarn install --immutable
       - run: yarn dedupe --check
       - run: yarn test --coverage
+        env:
+          CI: '1'
 
   security:
     runs-on: ubuntu-latest
