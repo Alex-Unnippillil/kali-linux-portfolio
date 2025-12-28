@@ -1,13 +1,29 @@
 "use client";
 
 import React, { Component } from 'react';
+import dynamic from 'next/dynamic';
 import BootingScreen from './screen/booting_screen';
-import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
 import ReactGA from 'react-ga4';
 import { safeLocalStorage } from '../utils/safeStorage';
+
+const DesktopFallback = () => (
+  <div
+    role="status"
+    aria-live="polite"
+    className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[#030712] text-slate-200"
+    style={{ zIndex: -10 }}
+  >
+    <span className="sr-only">Loading desktop experience</span>
+  </div>
+);
+
+const Desktop = dynamic(() => import('./screen/desktop'), {
+  ssr: false,
+  loading: () => <DesktopFallback />,
+});
 
 export default class Ubuntu extends Component {
         constructor() {
