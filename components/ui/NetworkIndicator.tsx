@@ -1,10 +1,11 @@
 "use client";
 
 import QRCode from "qrcode";
-import type { FC, MouseEvent } from "react";
+import type { Dispatch, FC, MouseEvent, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
+import { logEvent } from "../../utils/analytics";
 
 type NetworkType = "wired" | "wifi";
 type SignalStrength = "excellent" | "good" | "fair" | "weak";
@@ -219,6 +220,37 @@ interface ConnectionSummary {
   notice?: string;
 }
 
+export const getNetworkById = (id: string): Network => NETWORKS.find((network) => network.id === id) ?? NETWORKS[0];
+
+export interface NetworkControlState {
+  wifiEnabled: boolean;
+  setWifiEnabled: Dispatch<SetStateAction<boolean>>;
+  connectedId: string;
+  setConnectedId: Dispatch<SetStateAction<string>>;
+  shareLogs: ShareLogEntry[];
+  setShareLogs: Dispatch<SetStateAction<ShareLogEntry[]>>;
+}
+
+export const useNetworkControlState = (): NetworkControlState => {
+  const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
+    "status-wifi-enabled",
+    true,
+    (value): value is boolean => typeof value === "boolean",
+  );
+  const [connectedId, setConnectedId] = usePersistentState<string>(
+    "status-connected-network",
+    () => NETWORKS[0].id,
+    isValidNetworkId,
+  );
+  const [shareLogs, setShareLogs] = usePersistentState<ShareLogEntry[]>(
+    "status-network-share-log",
+    [],
+    isShareLogEntryArray,
+  );
+
+  return { wifiEnabled, setWifiEnabled, connectedId, setConnectedId, shareLogs, setShareLogs };
+};
+
 export const getConnectionSummary = ({
   allowNetwork,
   online,
@@ -379,20 +411,22 @@ interface NetworkIndicatorProps {
   className?: string;
   allowNetwork: boolean;
   online: boolean;
+  controlState?: NetworkControlState;
+  panelId?: string;
+  onPanelOpen?: () => void;
 }
 
-const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
+const NetworkIndicator: FC<NetworkIndicatorProps> = ({
+  className = "",
+  allowNetwork,
+  online,
+  controlState,
+  panelId = "network-menu",
+  onPanelOpen,
+}) => {
 
-  const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
-    "status-wifi-enabled",
-    true,
-    (value): value is boolean => typeof value === "boolean",
-  );
-  const [connectedId, setConnectedId] = usePersistentState<string>(
-    "status-connected-network",
-    () => NETWORKS[0].id,
-    isValidNetworkId,
-  );
+  const { wifiEnabled, setWifiEnabled, connectedId, setConnectedId, shareLogs, setShareLogs } =
+    controlState ?? useNetworkControlState();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const [shareTarget, setShareTarget] = useState<Network | null>(null);
@@ -400,14 +434,9 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
   const [shareConfirmed, setShareConfirmed] = useState(false);
   const [nfcStatus, setNfcStatus] = useState<string | null>(null);
   const [showLogs, setShowLogs] = useState(false);
-  const [shareLogs, setShareLogs] = usePersistentState<ShareLogEntry[]>(
-    "status-network-share-log",
-    [],
-    isShareLogEntryArray,
-  );
 
   const connectedNetwork = useMemo(
-    () => NETWORKS.find((network) => network.id === connectedId) ?? NETWORKS[0],
+    () => getNetworkById(connectedId),
     [connectedId],
   );
 
@@ -448,7 +477,14 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
 
   const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    setOpen((prev) => !prev);
+    setOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        logEvent({ category: "network", action: "open-panel", label: connectedNetwork.name });
+        onPanelOpen?.();
+      }
+      return next;
+    });
   };
 
   const handleWifiToggle = () => {
@@ -563,6 +599,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
         aria-label={summary.tooltip}
         aria-haspopup="true"
         aria-expanded={open}
+        aria-controls={panelId}
         title={summary.tooltip}
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
@@ -576,6 +613,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       </button>
       {open && (
         <div
+          id={panelId}
           className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
           role="menu"
           aria-label="Network menu"
