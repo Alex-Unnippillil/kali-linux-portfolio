@@ -145,19 +145,28 @@ const Clock = ({
         update()
         let worker
         let interval
-        if (typeof window !== 'undefined' && typeof Worker === 'function') {
-            worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url))
-            worker.onmessage = update
-            worker.postMessage({ action: 'start', interval: 10 * 1000 })
-        } else {
-            interval = setInterval(update, 10 * 1000)
+        let timeoutId
+        const startTicker = () => {
+            if (typeof window !== 'undefined' && typeof Worker === 'function') {
+                worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url))
+                worker.onmessage = update
+                worker.postMessage({ action: 'start', interval: 1000 })
+            } else {
+                interval = setInterval(update, 1000)
+            }
         }
+        const msUntilNextSecond = 1000 - (Date.now() % 1000)
+        timeoutId = setTimeout(() => {
+            update()
+            startTicker()
+        }, msUntilNextSecond)
         return () => {
             if (worker) {
                 worker.postMessage({ action: 'stop' })
                 worker.terminate()
             }
             if (interval) clearInterval(interval)
+            if (timeoutId) clearTimeout(timeoutId)
         }
     }, [])
 
