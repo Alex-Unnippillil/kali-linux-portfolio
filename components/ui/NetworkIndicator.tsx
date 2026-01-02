@@ -107,6 +107,9 @@ export const hasSecureLabel = (network: Network) =>
 const classNames = (...classes: Array<string | false | null | undefined>) =>
   classes.filter(Boolean).join(" ");
 
+const FOCUSABLE_SELECTORS =
+  'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex]:not([tabindex="-1"]), [contenteditable]';
+
 const isValidNetworkId = (value: unknown): value is string =>
   typeof value === "string" && NETWORKS.some((network) => network.id === value);
 
@@ -394,7 +397,9 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     isValidNetworkId,
   );
   const [open, setOpen] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const [shareTarget, setShareTarget] = useState<Network | null>(null);
   const [shareStatus, setShareStatus] = useState<ShareStatus>({ state: "idle" });
   const [shareConfirmed, setShareConfirmed] = useState(false);
@@ -412,27 +417,47 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
   );
 
   useEffect(() => {
-    if (!open) return undefined;
-
-    const handlePointerDown = (event: PointerEvent) => {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(event.target as Node)) {
-        setOpen(false);
+    if (!open) {
+      if (previousFocusRef.current) {
+        previousFocusRef.current.focus();
       }
-    };
+      previousFocusRef.current = null;
+      return undefined;
+    }
+
+    previousFocusRef.current = document.activeElement as HTMLElement;
+
+    const focusable = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+    (focusable && focusable[0] ? focusable[0] : panelRef.current)?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        event.preventDefault();
         setOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !panelRef.current) return;
+
+      const elements = panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+      if (!elements.length) return;
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      const active = document.activeElement as HTMLElement;
+
+      if (event.shiftKey) {
+        if (active === first) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
-    document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", handlePointerDown);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open]);
 
   useEffect(() => {
@@ -556,16 +581,17 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
   }, [appendShareLog, shareTarget]);
 
   return (
-    <div ref={rootRef} className={classNames("relative flex items-center", className)}>
+    <div className={classNames("relative flex items-center", className)}>
       <button
+        ref={triggerRef}
         type="button"
         className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
         aria-label={summary.tooltip}
-        aria-haspopup="true"
+        aria-haspopup="dialog"
         aria-expanded={open}
+        aria-controls="network-settings-panel"
         title={summary.tooltip}
         onClick={handleToggle}
-        onPointerDown={(event) => event.stopPropagation()}
       >
         <span className="relative inline-flex">
           <StatusGlyph summary={summary} network={connectedNetwork} />
@@ -576,114 +602,180 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
-          role="menu"
-          aria-label="Network menu"
-          onClick={(event) => event.stopPropagation()}
-          onPointerDown={(event) => event.stopPropagation()}
+          className="fixed inset-0 z-[90] flex items-end justify-end bg-black/50 p-4 sm:items-start sm:pt-16"
+          role="presentation"
+          onClick={() => setOpen(false)}
         >
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Network</div>
-          <div className="mb-3 rounded bg-black bg-opacity-20 p-3">
-            <div className="flex items-center justify-between text-[11px] text-gray-200">
-              <span className="uppercase">Status</span>
-              <span className="font-semibold text-white">{summary.label}</span>
-            </div>
-            <p className="mt-1 text-[11px] text-gray-300">{summary.description}</p>
-            {summary.meta && <p className="mt-1 text-[11px] text-gray-400">{summary.meta}</p>}
-          </div>
-          {summary.notice && (
-            <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
-              {summary.notice}
-            </div>
-          )}
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Wi-Fi</span>
-            <input
-              type="checkbox"
-              checked={wifiEnabled}
-              onChange={handleWifiToggle}
-              aria-label={wifiEnabled ? "Disable Wi-Fi" : "Enable Wi-Fi"}
-            />
-          </label>
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-200">Available networks</div>
-          <ul className="space-y-2" role="group" aria-label="Available networks">
-            {NETWORKS.map((network) => {
-              const connected = connectedId === network.id;
-              const disabled = network.type === "wifi" && !wifiEnabled;
-              return (
-                <li key={network.id}>
-                  <div className="flex items-start gap-2">
-                    <button
-                      type="button"
-                      className={classNames(
-                        "flex-1 rounded px-2 py-2 text-left transition",
-                        connected ? "bg-ub-blue bg-opacity-60" : "hover:bg-white hover:bg-opacity-10",
-                        disabled && "cursor-not-allowed opacity-60",
-                      )}
-                      onClick={() => !disabled && handleConnect(network)}
-                      disabled={disabled}
-                      aria-pressed={connected}
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-white">{network.name}</span>
-                        {network.type === "wifi" && network.strength && (
-                          <span className="text-[11px] text-gray-200">{SIGNAL_LABEL[network.strength]}</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-gray-300">
-                        {connected
-                          ? network.details
-                          : network.type === "wifi"
-                          ? `${hasSecureLabel(network)}${
-                              network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""
-                            }`
-                          : network.details}
-                      </div>
-                    </button>
-                    {network.type === "wifi" && (
-                      <button
-                        type="button"
-                        className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-                        onClick={() => handleShare(network)}
-                        aria-label={`Share ${network.name}`}
-                      >
-                        Share
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          <button
-            type="button"
-            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white"
-            onClick={() => setShowLogs((prev) => !prev)}
-            aria-expanded={showLogs}
+          <div
+            id="network-settings-panel"
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Network settings"
+            tabIndex={-1}
+            className="w-full max-w-xl rounded-2xl border border-white/15 bg-ub-cool-grey/95 p-4 text-sm text-white shadow-2xl backdrop-blur-lg sm:w-[480px]"
+            onClick={(event) => event.stopPropagation()}
           >
-            {showLogs ? "Hide share activity" : "Show share activity"}
-          </button>
-          {showLogs && (
-            <div className="mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-[11px] text-gray-200">
-              {shareLogs.length === 0 ? (
-                <p>No share activity recorded yet.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {shareLogs
-                    .slice()
-                    .reverse()
-                    .map((entry, index) => (
-                      <li key={`${entry.timestamp}-${index}`} className="leading-snug">
-                        <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
-                        <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
-                        {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
-                        {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
-                      </li>
-                    ))}
-                </ul>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1">
+                <p className="text-[11px] uppercase tracking-wide text-gray-300">Network status</p>
+                <div className="flex items-center gap-2 text-lg font-semibold">
+                  <StatusGlyph summary={summary} network={connectedNetwork} />
+                  <span>{summary.label}</span>
+                </div>
+                <p className="text-[13px] text-gray-100">{summary.description}</p>
+                {summary.meta && <p className="text-[12px] text-gray-300">{summary.meta}</p>}
+                <p className="text-[12px] text-gray-400">Current network: {connectedNetwork.name}</p>
+              </div>
+              <div className="flex flex-col items-end gap-2 sm:items-start">
+                <label className="flex items-center gap-2 text-[12px] uppercase tracking-wide text-gray-200">
+                  <span className="text-white">Wi-Fi</span>
+                  <input
+                    type="checkbox"
+                    checked={wifiEnabled}
+                    onChange={handleWifiToggle}
+                    aria-label={wifiEnabled ? "Disable Wi-Fi" : "Enable Wi-Fi"}
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="rounded border border-white/20 px-3 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/50 hover:text-white"
+                  onClick={() => setOpen(false)}
+                  aria-label="Close network panel"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            {summary.notice && (
+              <div className="mt-3 rounded border border-red-500/50 bg-red-900/40 p-2 text-[12px] text-red-100">
+                {summary.notice}
+              </div>
+            )}
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-200">Wireless</p>
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] text-white">
+                    {wifiEnabled ? "On" : "Off"}
+                  </span>
+                </div>
+                <p className="mt-1 text-[12px] text-gray-300">Toggle Wi-Fi radio to scan and connect to wireless networks.</p>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] uppercase tracking-wide text-gray-200">Wired</p>
+                  <WiredGlyph />
+                </div>
+                <p className="mt-1 text-[12px] text-gray-300">{NETWORKS.find((network) => network.id === "wired")?.details}</p>
+                <p className="text-[12px] text-gray-400">Always available while ethernet is plugged in.</p>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wide text-gray-200">Available networks</p>
+                <span className="text-[11px] text-gray-300">Wi-Fi is {wifiEnabled ? "on" : "off"}</span>
+              </div>
+              <ul className="mt-2 space-y-2" role="group" aria-label="Available networks">
+                {NETWORKS.map((network) => {
+                  const connected = connectedId === network.id;
+                  const disabled = network.type === "wifi" && !wifiEnabled;
+                  return (
+                    <li key={network.id}>
+                      <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-black/30 p-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+                            {network.type === "wifi" ? (
+                              <WifiGlyph strength={network.strength} muted={disabled || summary.state === "blocked"} slash={!wifiEnabled} />
+                            ) : (
+                              <WiredGlyph />
+                            )}
+                            <span>{network.name}</span>
+                            {connected && <span className="rounded-full bg-ub-blue/20 px-2 py-0.5 text-[11px] uppercase text-ub-blue">Connected</span>}
+                          </div>
+                          <div className="text-[12px] text-gray-300">
+                            {connected
+                              ? network.details
+                              : network.type === "wifi"
+                              ? `${hasSecureLabel(network)}${network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""}`
+                              : network.details}
+                          </div>
+                          {network.type === "wifi" && network.details && (
+                            <div className="text-[11px] uppercase tracking-wide text-gray-400">{network.details}</div>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end sm:justify-between">
+                          <button
+                            type="button"
+                            className={classNames(
+                              "min-w-[6rem] rounded border px-3 py-1 text-[12px] font-semibold uppercase tracking-wide transition",
+                              connected
+                                ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-100"
+                                : "border-white/25 bg-white/5 text-white hover:border-white/50",
+                              disabled && "cursor-not-allowed opacity-60",
+                            )}
+                            onClick={() => !disabled && handleConnect(network)}
+                            disabled={disabled}
+                            aria-pressed={connected}
+                            aria-label={connected ? `${network.name} connected` : `Connect to ${network.name}`}
+                          >
+                            {connected ? "Active" : "Connect"}
+                          </button>
+                          {network.type === "wifi" && (
+                            <button
+                              type="button"
+                              className="min-w-[6rem] rounded border border-white/25 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/50 hover:text-white"
+                              onClick={() => handleShare(network)}
+                              aria-label={`Share ${network.name}`}
+                            >
+                              Share
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            <div className="mt-4 space-y-2 rounded-xl border border-white/10 bg-black/30 p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] uppercase tracking-wide text-gray-200">Share controls</p>
+                <button
+                  type="button"
+                  className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/50 hover:text-white"
+                  onClick={() => setShowLogs((prev) => !prev)}
+                  aria-expanded={showLogs}
+                >
+                  {showLogs ? "Hide activity" : "Show activity"}
+                </button>
+              </div>
+              {showLogs && (
+                <div className="max-h-32 overflow-y-auto rounded border border-white/10 bg-black/40 p-2 text-[11px] text-gray-200">
+                  {shareLogs.length === 0 ? (
+                    <p>No share activity recorded yet.</p>
+                  ) : (
+                    <ul className="space-y-1">
+                      {shareLogs
+                        .slice()
+                        .reverse()
+                        .map((entry, index) => (
+                          <li key={`${entry.timestamp}-${index}`} className="leading-snug">
+                            <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
+                            <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
+                            {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
+                            {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </div>
-          )}
+          </div>
         </div>
       )}
       {shareTarget && (
