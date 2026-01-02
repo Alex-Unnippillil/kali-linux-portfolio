@@ -1,7 +1,7 @@
 "use client";
 
 import QRCode from "qrcode";
-import type { FC, MouseEvent } from "react";
+import type { FC, KeyboardEvent, MouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
@@ -399,17 +399,24 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
   const [shareStatus, setShareStatus] = useState<ShareStatus>({ state: "idle" });
   const [shareConfirmed, setShareConfirmed] = useState(false);
   const [nfcStatus, setNfcStatus] = useState<string | null>(null);
-  const [showLogs, setShowLogs] = useState(false);
+  const [shareProgress, setShareProgress] = useState<string | null>(null);
+  const [showLogs, setShowLogs] = useState(true);
   const [shareLogs, setShareLogs] = usePersistentState<ShareLogEntry[]>(
     "status-network-share-log",
     [],
     isShareLogEntryArray,
   );
+  const shareTargetRef = useRef<Network | null>(null);
+  const logItemRefs = useRef<Array<HTMLLIElement | null>>([]);
 
   const connectedNetwork = useMemo(
     () => NETWORKS.find((network) => network.id === connectedId) ?? NETWORKS[0],
     [connectedId],
   );
+
+  useEffect(() => {
+    shareTargetRef.current = shareTarget;
+  }, [shareTarget]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -484,6 +491,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     setShareStatus({ state: "idle" });
     setShareConfirmed(false);
     setNfcStatus(null);
+    setShareProgress(null);
   }, [appendShareLog, shareTarget]);
 
   const handleShare = useCallback(
@@ -492,6 +500,8 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       setShareStatus({ state: "idle" });
       setShareConfirmed(false);
       setNfcStatus(null);
+      setShowLogs(true);
+      setShareProgress(null);
       appendShareLog({ action: "open", networkId: network.id, details: "Share modal opened" });
     },
     [appendShareLog],
@@ -512,26 +522,22 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     };
   }, [closeShare, shareTarget]);
 
-  const handleConfirmShare = useCallback(async () => {
-    if (!shareTarget) return;
-
-    setShareConfirmed(true);
-    setShareStatus({ state: "pending" });
-    appendShareLog({ action: "confirm", networkId: shareTarget.id, details: "User confirmed sharing" });
-
-    const payload = createWifiPayload(shareTarget);
-
-    try {
-      const qr = await QRCode.toDataURL(payload, { width: 220, margin: 1 });
-      setShareStatus({ state: "ready", qr, payload });
-      appendShareLog({ action: "qr-generated", networkId: shareTarget.id, details: "QR code generated" });
-
+  const handleNfcPush = useCallback(
+    async (payload: string, networkId: string) => {
+      setShareProgress("Sending payload via NFC…");
       const nfcResult = await pushToNfc(payload);
+      if (!shareTargetRef.current || shareTargetRef.current.id !== networkId) {
+        setShareProgress(null);
+        return;
+      }
+
+      setShareProgress(null);
+
       if (nfcResult.attempted) {
         if (nfcResult.success) {
           appendShareLog({
             action: "nfc-success",
-            networkId: shareTarget.id,
+            networkId,
             provider: nfcResult.provider,
             details: "NFC payload pushed",
           });
@@ -539,7 +545,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
         } else {
           appendShareLog({
             action: "nfc-failure",
-            networkId: shareTarget.id,
+            networkId,
             provider: nfcResult.provider,
             details: nfcResult.message ?? "Unknown NFC failure",
           });
@@ -548,12 +554,65 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       } else {
         setNfcStatus("NFC push not available on this device.");
       }
+    },
+    [appendShareLog],
+  );
+
+  const handleConfirmShare = useCallback(async () => {
+    if (!shareTarget) return;
+
+    setShareConfirmed(true);
+    setShareStatus({ state: "pending" });
+    setShareProgress("Generating secure QR payload…");
+    appendShareLog({ action: "confirm", networkId: shareTarget.id, details: "User confirmed sharing" });
+
+    const payload = createWifiPayload(shareTarget);
+
+    try {
+      const qr = await QRCode.toDataURL(payload, { width: 220, margin: 1 });
+      setShareStatus({ state: "ready", qr, payload });
+      setShareProgress(null);
+      appendShareLog({ action: "qr-generated", networkId: shareTarget.id, details: "QR code generated" });
+
+      void handleNfcPush(payload, shareTarget.id);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to generate QR code";
       setShareStatus({ state: "error", message });
+      setShareProgress(null);
       appendShareLog({ action: "error", networkId: shareTarget.id, details: message });
     }
-  }, [appendShareLog, shareTarget]);
+  }, [appendShareLog, handleNfcPush, shareTarget]);
+
+  const visibleShareLogs = useMemo(() => shareLogs.slice().reverse(), [shareLogs]);
+
+  logItemRefs.current = visibleShareLogs.map((_, index) => logItemRefs.current[index] ?? null);
+
+  const focusLogItem = useCallback((index: number) => {
+    const node = logItemRefs.current[index];
+    if (node) {
+      node.focus();
+    }
+  }, []);
+
+  const handleLogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (visibleShareLogs.length === 0) return;
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+
+    event.preventDefault();
+    const activeIndex = logItemRefs.current.findIndex((item) => item === document.activeElement);
+    const nextIndex =
+      event.key === "ArrowDown"
+        ? Math.min(visibleShareLogs.length - 1, activeIndex >= 0 ? activeIndex + 1 : 0)
+        : Math.max(0, activeIndex >= 0 ? activeIndex - 1 : visibleShareLogs.length - 1);
+
+    focusLogItem(nextIndex);
+  };
+
+  const handleLogFocus = () => {
+    if (visibleShareLogs.length === 0) return;
+    if (logItemRefs.current.some((item) => item === document.activeElement)) return;
+    focusLogItem(0);
+  };
 
   return (
     <div ref={rootRef} className={classNames("relative flex items-center", className)}>
@@ -655,115 +714,150 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
               );
             })}
           </ul>
-          <button
-            type="button"
-            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white"
-            onClick={() => setShowLogs((prev) => !prev)}
-            aria-expanded={showLogs}
-          >
-            {showLogs ? "Hide share activity" : "Show share activity"}
-          </button>
-          {showLogs && (
-            <div className="mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-[11px] text-gray-200">
-              {shareLogs.length === 0 ? (
-                <p>No share activity recorded yet.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {shareLogs
-                    .slice()
-                    .reverse()
-                    .map((entry, index) => (
-                      <li key={`${entry.timestamp}-${index}`} className="leading-snug">
-                        <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
-                        <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
-                        {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
-                        {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-      {shareTarget && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
-          role="presentation"
-          onClick={closeShare}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Share ${shareTarget.name}`}
-            className="w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-sm text-white shadow-xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between gap-4">
+          <div className="mt-3 rounded-lg border border-white/15 bg-black/25 p-3">
+            <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="text-base font-semibold">Share {shareTarget.name}</h2>
-                <p className="mt-1 text-[11px] uppercase tracking-wide text-red-200">
+                <p className="text-[11px] uppercase tracking-wide text-gray-200">Share &amp; activity</p>
+                <p className="text-[12px] text-gray-300">
                   Privacy warning: credentials stay hidden until you confirm. All share actions are logged locally for review.
                 </p>
               </div>
-              <button
-                type="button"
-                className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-                onClick={closeShare}
-                aria-label="Close share dialog"
-              >
-                Close
-              </button>
-            </div>
-            <div className="mt-4 space-y-2 rounded border border-white/15 bg-black/30 p-3 text-[13px]">
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">SSID</span>
-                <span className="font-medium text-white">{shareTarget.credentials?.ssid ?? shareTarget.name}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Security</span>
-                <span className="text-white">{shareTarget.credentials?.security ?? "Unknown"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-300">Password</span>
-                <span className="font-mono text-white">
-                  {shareConfirmed
-                    ? shareTarget.credentials?.password ?? "Not required"
-                    : maskSecret(shareTarget.credentials?.password)}
-                </span>
-              </div>
-            </div>
-            <div className="mt-4 space-y-3">
-              {!shareConfirmed && (
+              {shareTarget ? (
                 <button
                   type="button"
-                  className="w-full rounded bg-ub-blue px-3 py-2 text-sm font-semibold text-white transition hover:bg-ub-blue/80"
-                  onClick={handleConfirmShare}
+                  className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                  onClick={closeShare}
+                  aria-label="Close share panel"
                 >
-                  Reveal &amp; Generate QR
+                  Close
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                  onClick={() => setShowLogs((prev) => !prev)}
+                  aria-expanded={showLogs}
+                  aria-label="Toggle share activity"
+                >
+                  {showLogs ? "Hide log" : "Show log"}
                 </button>
               )}
-              {shareConfirmed && shareStatus.state === "pending" && (
-                <div className="rounded border border-white/10 bg-black/40 px-3 py-2 text-center text-[13px] text-gray-200">
-                  Generating secure QR code…
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_16rem]">
+              <div className="space-y-3 rounded border border-white/10 bg-black/30 p-3 text-[13px]">
+                {shareTarget ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-sm font-semibold text-white">Share {shareTarget.name}</h2>
+                      <span className="rounded bg-white/10 px-2 py-1 text-[11px] text-gray-200">QR / NFC</span>
+                    </div>
+                    <div className="space-y-2 rounded border border-white/10 bg-black/30 p-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">SSID</span>
+                        <span className="font-medium text-white">{shareTarget.credentials?.ssid ?? shareTarget.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Security</span>
+                        <span className="text-white">{shareTarget.credentials?.security ?? "Unknown"}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-300">Password</span>
+                        <span className="font-mono text-white">
+                          {shareConfirmed
+                            ? shareTarget.credentials?.password ?? "Not required"
+                            : maskSecret(shareTarget.credentials?.password)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2" aria-live="polite" role="status">
+                      {!shareConfirmed && (
+                        <button
+                          type="button"
+                          className="w-full rounded bg-ub-blue px-3 py-2 text-sm font-semibold text-white transition hover:bg-ub-blue/80"
+                          onClick={handleConfirmShare}
+                        >
+                          Reveal &amp; Generate QR
+                        </button>
+                      )}
+                      {shareProgress && (
+                        <div className="rounded border border-white/10 bg-black/40 px-3 py-2 text-center text-[13px] text-gray-200">
+                          {shareProgress}
+                        </div>
+                      )}
+                      {shareStatus.state === "ready" && (
+                        <div className="space-y-2 text-center">
+                          <img
+                            src={shareStatus.qr}
+                            alt={`Wi-Fi share code for ${shareTarget.name}`}
+                            className="mx-auto h-40 w-40 rounded bg-white p-2"
+                          />
+                          <p className="text-[11px] text-gray-300">Payload: {shareStatus.payload}</p>
+                          {nfcStatus && <p className="text-[11px] text-gray-200">{nfcStatus}</p>}
+                        </div>
+                      )}
+                      {shareStatus.state === "error" && (
+                        <div className="rounded border border-red-500/60 bg-red-900/40 px-3 py-2 text-[13px] text-red-100">
+                          {shareStatus.message}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[13px] text-gray-300">
+                    Select a Wi-Fi network to preview masked credentials and generate QR or NFC payloads.
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2 rounded border border-white/10 bg-black/30 p-3 text-[11px] text-gray-200">
+                <div className="flex items-center justify-between">
+                  <span className="uppercase tracking-wide">Share activity</span>
+                  <button
+                    type="button"
+                    className="rounded border border-white/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
+                    onClick={() => setShowLogs((prev) => !prev)}
+                    aria-expanded={showLogs}
+                    aria-label="Toggle share activity log"
+                  >
+                    {showLogs ? "Hide" : "Show"}
+                  </button>
                 </div>
-              )}
-              {shareStatus.state === "ready" && (
-                <div className="space-y-2 text-center">
-                  <img
-                    src={shareStatus.qr}
-                    alt={`Wi-Fi share code for ${shareTarget.name}`}
-                    className="mx-auto h-40 w-40 rounded bg-white p-2"
-                  />
-                  <p className="text-[11px] text-gray-300">Payload: {shareStatus.payload}</p>
-                  {nfcStatus && <p className="text-[11px] text-gray-200">{nfcStatus}</p>}
-                </div>
-              )}
-              {shareStatus.state === "error" && (
-                <div className="rounded border border-red-500/60 bg-red-900/40 px-3 py-2 text-[13px] text-red-100">
-                  {shareStatus.message}
-                </div>
-              )}
+                {showLogs && (
+                  <div
+                    role="listbox"
+                    aria-label="Share activity log"
+                    tabIndex={0}
+                    onFocus={handleLogFocus}
+                    onKeyDown={handleLogKeyDown}
+                    className="max-h-40 overflow-y-auto rounded border border-white/10 bg-black/40 p-2 sm:max-h-52 md:max-h-64"
+                  >
+                    {visibleShareLogs.length === 0 ? (
+                      <p className="text-gray-300">No share activity recorded yet.</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {visibleShareLogs.map((entry, index) => (
+                          <li
+                            key={`${entry.timestamp}-${index}`}
+                            ref={(node) => {
+                              logItemRefs.current[index] = node;
+                            }}
+                            tabIndex={-1}
+                            role="option"
+                            className="leading-snug rounded px-1 py-1 focus:bg-white/10 focus:outline-none"
+                            aria-label={`${entry.networkId} ${entry.action}`}
+                          >
+                            <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
+                            <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
+                            {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
+                            {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
