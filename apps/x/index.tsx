@@ -2,6 +2,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   FormEvent,
@@ -14,12 +15,18 @@ import { useSettings } from '../../hooks/useSettings';
 import useScheduledTweets, {
   ScheduledTweet,
 } from './state/scheduled';
+import useSavedTweets from './state/savedTweets';
 import {
   getNextEmbedTheme,
   type EmbedTheme,
   useEmbedTheme,
 } from './state/theme';
 import { loadEmbedScript } from './embed';
+import {
+  formatTimestampInput,
+  sanitizeHandle,
+  sanitizeTweetText,
+} from './utils';
 
 const IconRefresh = (
   props: SVGProps<SVGSVGElement>,
@@ -105,6 +112,15 @@ export default function XTimeline() {
   const setPresets = timelineType === 'profile' ? setProfilePresets : setListPresets;
   const feed = timelineType === 'profile' ? profileFeed : listFeed;
   const setFeed = timelineType === 'profile' ? setProfileFeed : setListFeed;
+  const [timelineMode, setTimelineMode] = usePersistentState<'embed' | 'saved'>(
+    'x-timeline-mode',
+    'embed',
+  );
+  const [savedTweets, setSavedTweets] = useSavedTweets();
+  const [savedAuthor, setSavedAuthor] = useState('');
+  const [savedText, setSavedText] = useState('');
+  const [savedTime, setSavedTime] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [input, setInput] = useState('');
   const [tweetText, setTweetText] = useState('');
@@ -116,6 +132,13 @@ export default function XTimeline() {
   const [systemTheme, setSystemTheme] = useState<EmbedTheme>('light');
   const [hasManualTheme, setHasManualTheme] = useState(false);
   const manualThemeRef = useRef(false);
+  const randomId = useCallback(
+    () =>
+      (typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`),
+    [],
+  );
   const initialTheme: EmbedTheme =
     typeof document !== 'undefined' &&
     document.documentElement.classList.contains('dark')
@@ -127,6 +150,58 @@ export default function XTimeline() {
   const [scheduled, setScheduled] = useScheduledTweets();
   const [showSetup, setShowSetup] = useState(true);
   const isMountedRef = useRef(true);
+  const defaultAuthor = useMemo(
+    () =>
+      sanitizeHandle(
+        DOMPurify.sanitize(
+          timelineType === 'profile'
+            ? feed || profilePresets[0] || 'AUnnippillil'
+            : feed.split('/')[0] || feed || 'AUnnippillil',
+        ),
+      ) || 'AUnnippillil',
+    [feed, profilePresets, timelineType],
+  );
+  const sortedSavedTweets = useMemo(
+    () => [...savedTweets].sort((a, b) => b.timestamp - a.timestamp),
+    [savedTweets],
+  );
+
+  const upsertSavedTweet = useCallback(
+    (incoming: { id?: string; text: string; timestamp: number; author?: string }) => {
+      const text = sanitizeTweetText(incoming.text);
+      const timestamp = Number(incoming.timestamp);
+      if (!text || !Number.isFinite(timestamp)) return;
+      const author =
+        sanitizeHandle(
+          DOMPurify.sanitize(incoming.author || defaultAuthor),
+        ) || defaultAuthor;
+      const id = incoming.id || randomId();
+      setSavedTweets((prev) => {
+        const filtered = prev.filter((tweet) => tweet.id !== id);
+        return [
+          ...filtered,
+          { id, text, author, timestamp },
+        ].sort((a, b) => b.timestamp - a.timestamp);
+      });
+    },
+    [defaultAuthor, randomId, setSavedTweets],
+  );
+
+  const removeSavedTweet = useCallback(
+    (id: string) => {
+      setSavedTweets((prev) => prev.filter((tweet) => tweet.id !== id));
+      if (editingId === id) {
+        setEditingId(null);
+        setSavedText('');
+        setSavedTime('');
+      }
+    },
+    [editingId, setSavedTweets],
+  );
+
+  useEffect(() => {
+    setSavedAuthor((prev) => prev || defaultAuthor);
+  }, [defaultAuthor]);
 
   useEffect(() => () => {
     isMountedRef.current = false;
@@ -189,6 +264,12 @@ export default function XTimeline() {
             ) {
               new Notification('Tweet reminder', { body: t.text });
             }
+            upsertSavedTweet({
+              id: t.id,
+              text: t.text,
+              timestamp: Date.now(),
+              author: defaultAuthor,
+            });
             setScheduled((prev) => prev.filter((s) => s.id !== t.id));
             delete timeoutsRef.current[t.id];
           }, delay);
@@ -201,10 +282,10 @@ export default function XTimeline() {
         delete timeoutsRef.current[id];
       }
     });
-  }, [scheduled, setScheduled]);
+  }, [defaultAuthor, scheduled, setScheduled, upsertSavedTweet]);
 
   const loadTimeline = useCallback(async () => {
-    if (!feed || !timelineRef.current) return;
+    if (!feed || !timelineRef.current || timelineMode !== 'embed') return;
     setLoading(true);
     setScriptError(false);
     setTimelineLoaded(false);
@@ -244,7 +325,7 @@ export default function XTimeline() {
         setLoading(false);
       }
     }
-  }, [accent, feed, theme, timelineType]);
+  }, [accent, feed, theme, timelineMode, timelineType]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -266,13 +347,22 @@ export default function XTimeline() {
 
   const handleScheduleTweet = (e: FormEvent) => {
     e.preventDefault();
-    if (!tweetText.trim() || !tweetTime) return;
+    const sanitizedText = sanitizeTweetText(tweetText);
+    if (!sanitizedText || !tweetTime) return;
+    const timestamp = new Date(tweetTime).getTime();
+    if (!Number.isFinite(timestamp)) return;
     const newTweet: ScheduledTweet = {
-      id: Date.now().toString(),
-      text: DOMPurify.sanitize(tweetText.trim()),
-      time: new Date(tweetTime).getTime(),
+      id: randomId(),
+      text: sanitizedText,
+      time: timestamp,
     };
     setScheduled([...scheduled, newTweet]);
+    upsertSavedTweet({
+      id: newTweet.id,
+      text: newTweet.text,
+      timestamp: newTweet.time,
+      author: defaultAuthor,
+    });
     setTweetText('');
     setTweetTime('');
   };
@@ -300,6 +390,44 @@ export default function XTimeline() {
         '[data-scheduled-item]',
       ) as HTMLElement | null;
       prev?.focus();
+      e.preventDefault();
+    }
+  };
+
+  const handleSavedSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    const timestamp = savedTime ? new Date(savedTime).getTime() : Date.now();
+    if (!Number.isFinite(timestamp)) return;
+    upsertSavedTweet({
+      id: editingId ?? undefined,
+      author: savedAuthor || defaultAuthor,
+      text: savedText,
+      timestamp,
+    });
+    setSavedText('');
+    setSavedTime('');
+    setEditingId(null);
+    setTimelineMode('saved');
+  };
+
+  const handleSavedEdit = (id: string) => {
+    const tweet = savedTweets.find((t) => t.id === id);
+    if (!tweet) return;
+    setEditingId(id);
+    setSavedAuthor(tweet.author);
+    setSavedText(tweet.text);
+    setSavedTime(formatTimestampInput(tweet.timestamp));
+  };
+
+  const handleSavedKey = (
+    e: KeyboardEvent<HTMLDivElement>,
+    id: string,
+  ) => {
+    if (e.key === 'Delete') {
+      removeSavedTweet(id);
+    }
+    if (e.key === 'Enter' || e.key === ' ') {
+      handleSavedEdit(id);
       e.preventDefault();
     }
   };
@@ -372,6 +500,57 @@ export default function XTimeline() {
           </button>
         </header>
         <div className="flex-1 overflow-auto space-y-5 px-3 py-4">
+          <div
+            className="space-y-2 rounded-xl border px-4 py-3 text-sm"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            }}
+          >
+            <div className="flex flex-wrap items-center gap-2 justify-between">
+              <div className="font-semibold text-[var(--color-text)] uppercase tracking-wide text-xs">
+                Timeline mode
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setTimelineMode('embed')}
+                  aria-pressed={timelineMode === 'embed'}
+                  className={`${pillButtonClasses} ${
+                    timelineMode === 'embed'
+                      ? 'text-[var(--color-text)]'
+                      : 'bg-[var(--color-muted)] text-[var(--color-text)]'
+                  }`}
+                  style={
+                    timelineMode === 'embed' ? { backgroundColor: accent } : undefined
+                  }
+                >
+                  Embed
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimelineMode('saved')}
+                  aria-pressed={timelineMode === 'saved'}
+                  className={`${pillButtonClasses} ${
+                    timelineMode === 'saved'
+                      ? 'text-[var(--color-text)]'
+                      : 'bg-[var(--color-muted)] text-[var(--color-text)]'
+                  }`}
+                  style={
+                    timelineMode === 'saved' ? { backgroundColor: accent } : undefined
+                  }
+                >
+                  Saved
+                </button>
+              </div>
+            </div>
+            <p className="text-[var(--color-muted)] leading-6">
+              Switch to Saved to browse tweets stored on this device when live embeds are
+              blocked or unavailable. Newly posted or scheduled tweets are kept here.
+            </p>
+          </div>
           <div
             className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-xs uppercase tracking-wide text-[var(--color-muted)]"
             style={{
@@ -488,6 +667,98 @@ export default function XTimeline() {
               ))}
             </ul>
           )}
+          <form
+            onSubmit={handleSavedSubmit}
+            className="space-y-3 rounded-xl border px-4 py-3"
+            style={{
+              borderColor:
+                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+              backgroundColor:
+                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
+            }}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs uppercase tracking-wide text-[var(--color-muted)]">
+                {editingId ? 'Edit saved tweet' : 'Save a tweet locally'}
+              </div>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingId(null);
+                    setSavedText('');
+                    setSavedTime('');
+                  }}
+                  className={`${subtleButtonClasses} border`}
+                  style={{
+                    color: 'var(--color-text)',
+                    borderColor:
+                      'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+                  }}
+                >
+                  Cancel edit
+                </button>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[1fr,1fr]">
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={savedAuthor}
+                  onChange={(e) => setSavedAuthor(sanitizeHandle(e.target.value))}
+                  placeholder="Handle"
+                  aria-label="Tweet handle"
+                  className="w-full rounded-xl border bg-transparent p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                />
+                <textarea
+                  value={savedText}
+                  onChange={(e) => setSavedText(e.target.value)}
+                  placeholder="Tweet text"
+                  aria-label="Saved tweet text"
+                  className="w-full rounded-xl border bg-transparent p-3 text-sm leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                />
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="datetime-local"
+                  value={savedTime}
+                  onChange={(e) => setSavedTime(e.target.value)}
+                  aria-label="Saved tweet time"
+                  className="w-full rounded-xl border bg-transparent p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className={`${pillButtonClasses} flex-1`}
+                    style={{ backgroundColor: accent, color: 'var(--color-text)' }}
+                  >
+                    {editingId ? 'Update saved tweet' : 'Add to saved timeline'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSavedText('');
+                      setSavedTime('');
+                      setEditingId(null);
+                      setSavedAuthor(defaultAuthor);
+                    }}
+                    className={`${subtleButtonClasses} flex-1 border`}
+                    style={{
+                      color: 'var(--color-text)',
+                      borderColor:
+                        'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+                <p className="text-xs text-[var(--color-muted)] leading-5">
+                  Saved tweets live in your browser storage and update automatically when
+                  you schedule or publish from this desk.
+                </p>
+              </div>
+            </div>
+          </form>
         <div
           className="flex flex-wrap gap-2 rounded-xl border px-4 py-3"
           style={{
@@ -588,7 +859,86 @@ export default function XTimeline() {
             ))}
           </div>
         )}
-        {!loaded ? (
+        {timelineMode === 'saved' ? (
+          <div className="space-y-3">
+            {sortedSavedTweets.length === 0 ? (
+              <div
+                className="rounded-xl border px-4 py-3 text-center text-[var(--color-muted)]"
+                style={{
+                  borderColor:
+                    'color-mix(in srgb, var(--color-muted) 35%, transparent)',
+                  backgroundColor:
+                    'color-mix(in srgb, var(--color-surface) 90%, transparent)',
+                }}
+              >
+                Saved tweets will appear here when embeds are offline.
+              </div>
+            ) : (
+              <ul className="tweet-feed space-y-3">
+                {sortedSavedTweets.map((tweet) => (
+                  <li
+                    key={tweet.id}
+                    className="flex gap-3 rounded-2xl border px-4 py-3"
+                    style={{
+                      borderColor:
+                        'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+                      backgroundColor:
+                        'color-mix(in srgb, var(--color-surface) 92%, transparent)',
+                    }}
+                  >
+                    <div
+                      className="relative flex h-12 w-12 items-center justify-center rounded-full text-xs font-semibold sm:h-14 sm:w-14"
+                      style={{
+                        backgroundColor:
+                          'color-mix(in srgb, var(--color-muted) 70%, transparent)',
+                      }}
+                    >
+                      @{tweet.author}
+                      <IconBadge className="absolute -bottom-1 -right-1 h-4 w-4 text-[var(--color-muted)]" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="text-sm font-semibold text-[var(--color-text)]">
+                          @{tweet.author}
+                        </div>
+                        <div className="text-xs text-[var(--color-muted)]">
+                          {new Date(tweet.timestamp).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className="whitespace-pre-wrap text-sm leading-6">
+                        {tweet.text}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleSavedEdit(tweet.id)}
+                          onKeyDown={(e) => handleSavedKey(e, tweet.id)}
+                          tabIndex={0}
+                          className={`${subtleButtonClasses} border text-xs`}
+                          style={{
+                            color: 'var(--color-text)',
+                            borderColor:
+                              'color-mix(in srgb, var(--color-muted) 40%, transparent)',
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSavedTweet(tweet.id)}
+                          className={`${subtleButtonClasses} bg-[var(--color-muted)] text-xs text-[var(--color-text)]`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <IconShare className="h-5 w-5 text-[var(--color-muted)]" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : !loaded ? (
           <button
             type="button"
             onClick={() => {
@@ -637,9 +987,9 @@ export default function XTimeline() {
               <div className="text-center space-y-2">
                 <div>
                   Timeline failed to load. X embeds may be blocked by your browser
-                  or an ad blocker.
+                  or an ad blocker. Switch to Saved mode to keep reading.
                 </div>
-                <div className="flex justify-center gap-2">
+                <div className="flex flex-wrap justify-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -656,6 +1006,13 @@ export default function XTimeline() {
                     }}
                   >
                     Retry
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimelineMode('saved')}
+                    className={`${pillButtonClasses} bg-[var(--color-muted)] text-[var(--color-text)]`}
+                  >
+                    Open saved timeline
                   </button>
                   <a
                     href={`https://x.com/${feed}`}

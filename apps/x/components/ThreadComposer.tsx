@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import { toPng } from 'html-to-image';
 import usePersistentState from '../../../hooks/usePersistentState';
 import { useSettings } from '../../../hooks/useSettings';
 import type { ScheduledTweet } from '../state/scheduled';
+import useSavedTweets from '../state/savedTweets';
+import { sanitizeHandle, sanitizeTweetText } from '../utils';
 
 interface TweetDraft {
   text: string;
@@ -36,8 +39,22 @@ export default function ThreadComposer() {
     'x-thread-published',
     [],
   );
+  const [, setSavedTweets] = useSavedTweets();
   const previewRefs = useRef<(HTMLDivElement | null)[]>([]);
   const workerRef = useRef<Worker | null>(null);
+
+  const persistSavedTweet = (tweet: ScheduledTweet) => {
+    const text = sanitizeTweetText(DOMPurify.sanitize(tweet.text));
+    const author = sanitizeHandle('ThreadDraft') || 'ThreadDraft';
+    if (!text || !Number.isFinite(tweet.time)) return;
+    setSavedTweets((prev) => {
+      const filtered = prev.filter((t) => t.id !== tweet.id);
+      return [
+        ...filtered,
+        { id: tweet.id, text, author, timestamp: tweet.time },
+      ].sort((a, b) => b.timestamp - a.timestamp);
+    });
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -49,6 +66,7 @@ export default function ThreadComposer() {
         const tweet = data.tweet as ScheduledTweet;
         setScheduled((prev) => prev.filter((t) => t.id !== tweet.id));
         setPublished((prev) => [...prev, tweet]);
+        persistSavedTweet(tweet);
       }
     };
     worker.postMessage({ action: 'setQueue', tweets: scheduled });
@@ -102,14 +120,15 @@ export default function ThreadComposer() {
 
   const queueTweets = () => {
     const newTweets = tweets
-      .filter((t) => t.text.trim() && t.timestamp)
       .map((t, i) => ({
         id: `${Date.now()}-${i}`,
-        text: t.text.trim(),
+        text: sanitizeTweetText(DOMPurify.sanitize(t.text)),
         time: new Date(t.timestamp).getTime(),
-      }));
+      }))
+      .filter((t) => t.text && Number.isFinite(t.time));
     if (newTweets.length === 0) return;
     setScheduled((prev) => [...prev, ...newTweets]);
+    newTweets.forEach(persistSavedTweet);
     setTweets([{ text: '', timestamp: '' }]);
     previewRefs.current = [];
   };
