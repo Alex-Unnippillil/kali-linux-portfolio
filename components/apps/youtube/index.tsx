@@ -583,7 +583,9 @@ export default function YouTubeApp({ channelId }: Props) {
             </div>
 
             {loadingDirectory && !filteredDirectory.length ? (
-              <div className={styles.placeholderCard}>Loading playlists…</div>
+              <div className={styles.placeholderCard} role="status" aria-live="polite">
+                Loading playlists…
+              </div>
             ) : filteredDirectory.length ? (
               <div className={styles.playlistGroups}>
                 <h2 className={styles.sectionTitle}>Categories</h2>
@@ -737,14 +739,20 @@ export default function YouTubeApp({ channelId }: Props) {
                   <p className={styles.kicker}>Playlist videos</p>
                   <h3 className={styles.subHeading}>Queue</h3>
                 </div>
-                {playlistState?.loading && <span className={styles.loading}>Loading…</span>}
+                {playlistState?.loading && (
+                  <span className={styles.loading} role="status" aria-live="polite">
+                    Loading…
+                  </span>
+                )}
               </div>
 
               {!selectedPlaylistId ? (
                 <p className={styles.placeholderText}>Select a playlist to see videos.</p>
               ) : playlistState?.error ? (
                 <div className={styles.placeholderCard}>
-                  <p className={styles.error}>{playlistState.error}</p>
+                  <p className={styles.error} role="alert">
+                    {playlistState.error}
+                  </p>
                   <button
                     type="button"
                     onClick={() => void loadPlaylistItems(selectedPlaylistId, 'replace')}
@@ -793,7 +801,10 @@ export default function YouTubeApp({ channelId }: Props) {
                   )}
                 </>
               ) : (
-                <p className={styles.placeholderText}>
+                <p
+                  className={styles.placeholderText}
+                  {...(playlistState?.loading ? { role: 'status', 'aria-live': 'polite' } : {})}
+                >
                   {playlistState?.loading ? 'Loading videos…' : 'No videos found.'}
                 </p>
               )}
