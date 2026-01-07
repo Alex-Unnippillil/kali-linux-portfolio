@@ -232,24 +232,28 @@ const Clock = ({
 
             const viewportWidth = window.innerWidth
             const viewportHeight = window.innerHeight
+            const availableWidth = Math.max(0, viewportWidth - margin * 2)
+            const availableHeight = Math.max(0, viewportHeight - margin * 2)
+            const constrainedWidth = Math.min(popoverRect.width, availableWidth)
+            const constrainedHeight = Math.min(popoverRect.height, availableHeight)
 
             let top = buttonRect.bottom + margin
-            let left = buttonRect.right - popoverRect.width
+            let left = buttonRect.right - constrainedWidth
 
             const horizontalMargin = margin
             if (left < horizontalMargin) {
                 left = horizontalMargin
             }
-            if (left + popoverRect.width > viewportWidth - horizontalMargin) {
-                left = Math.max(horizontalMargin, viewportWidth - horizontalMargin - popoverRect.width)
+            if (left + constrainedWidth > viewportWidth - horizontalMargin) {
+                left = Math.max(horizontalMargin, viewportWidth - horizontalMargin - constrainedWidth)
             }
 
-            if (top + popoverRect.height > viewportHeight - margin) {
-                const aboveTop = buttonRect.top - margin - popoverRect.height
+            if (top + constrainedHeight > viewportHeight - margin) {
+                const aboveTop = buttonRect.top - margin - constrainedHeight
                 if (aboveTop >= margin) {
                     top = aboveTop
                 } else {
-                    top = Math.max(margin, viewportHeight - margin - popoverRect.height)
+                    top = Math.max(margin, viewportHeight - margin - constrainedHeight)
                 }
             }
 
@@ -257,7 +261,11 @@ const Clock = ({
                 position: 'fixed',
                 top,
                 left,
-                zIndex: 60
+                zIndex: 60,
+                width: constrainedWidth,
+                maxWidth: `min(20rem, calc(100vw - ${margin * 2}px))`,
+                maxHeight: `calc(100vh - ${margin * 2}px)`,
+                overflow: 'auto'
             })
         }
 
@@ -416,7 +424,7 @@ const Clock = ({
             role="dialog"
             aria-modal="false"
             aria-label="Calendar"
-            className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
+            className="fixed z-50 w-[20rem] origin-top-right overflow-auto rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
             style={popoverStyle}
         >
             <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
