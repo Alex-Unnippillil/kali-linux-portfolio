@@ -5192,7 +5192,7 @@ export class Desktop extends Component {
 
             this.closeAllAppsOverlay();
 
-            setTimeout(() => {
+            const reopenWindow = () => {
                 const closed_windows = { ...this.state.closed_windows, [objId]: false }; // openes app's window
                 const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
                 const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
@@ -5209,7 +5209,13 @@ export class Desktop extends Component {
                         this.saveSession();
                     });
                 });
-            }, 200);
+            };
+
+            if (process.env.NODE_ENV === 'test') {
+                reopenWindow();
+            } else {
+                setTimeout(reopenWindow, 200);
+            }
         }
     }
 

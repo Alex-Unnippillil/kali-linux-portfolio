@@ -339,6 +339,7 @@ describe('Desktop window state transitions', () => {
 
       const instance = desktopRef.current!;
       act(() => {
+        instance.openApp('about');
         jest.runAllTimers();
       });
 
