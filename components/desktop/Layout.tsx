@@ -41,6 +41,9 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             touch-action: manipulation;
             font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
             min-height: 100vh;
+            padding: var(--safe-area-top) var(--safe-area-right)
+              var(--safe-area-bottom) var(--safe-area-left);
+            max-width: 100vw;
           }
 
           @supports (min-height: 100svh) {
