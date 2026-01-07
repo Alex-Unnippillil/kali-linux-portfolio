@@ -311,9 +311,10 @@
 
 .playlistButtonActive {
   border-color: var(--kali-control);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.38);
+  background: color-mix(in srgb, var(--kali-control) 12%, var(--color-surface-muted));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.42);
   transform: translateY(-1px);
-  color: var(--kali-control);
+  color: var(--color-text);
 }
 
 .playlistThumb,
@@ -460,7 +461,8 @@
 
 .videoButtonActive {
   border-color: var(--kali-control);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  background: color-mix(in srgb, var(--kali-control) 10%, var(--color-surface-muted));
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.4);
   transform: translateY(-1px);
 }
 
