@@ -254,8 +254,14 @@ const Blackjack = () => {
       setTimeout(() => setShuffling(false), 500);
       gameRef.current.startRound(bet, undefined, handCount);
       ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
-      setMessage('Hit, Stand, Double, Split or Surrender');
-      setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
+      if (gameRef.current.dealerBlackjack) {
+        setMessage('Dealer blackjack. Round complete');
+      } else if (gameRef.current.playerHands.some((h) => h.blackjack)) {
+        setMessage('Blackjack!');
+      } else {
+        setMessage('Hit, Stand, Double, Split or Surrender');
+      }
+      setShowInsurance(!gameRef.current.dealerBlackjack && gameRef.current.dealerHand[0].value === 'A');
       update();
       if (['A', '10', 'J', 'Q', 'K'].includes(gameRef.current.dealerHand[0].value)) {
         setDealerPeeking(true);

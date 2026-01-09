@@ -90,9 +90,26 @@ describe('Game actions', () => {
     const deck = [card('10'), card('10'), card('A'), card('10')];
     game.startRound(100, deck);
     game.takeInsurance();
-    game.stand();
     expect(game.bankroll).toBe(1000);
     expect(game.stats.losses).toBe(1);
+  });
+
+  test('dealer blackjack resolves immediately', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('9'), card('A'), card('K')];
+    game.startRound(100, deck);
+    expect(game.bankroll).toBe(900);
+    expect(game.stats.losses).toBe(1);
+    expect(game.playerHands[0].finished).toBe(true);
+  });
+
+  test('natural blackjack settles without extra actions', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('A'), card('K'), card('10'), card('7')];
+    game.startRound(100, deck);
+    expect(game.bankroll).toBe(1150);
+    expect(game.playerHands[0].result).toBe('win');
+    expect(game.current).toBe(1);
   });
 
   test('dealer stands on soft 17 when configured', () => {
@@ -103,6 +120,22 @@ describe('Game actions', () => {
     expect(game.dealerHand.length).toBe(2);
     expect(game.bankroll).toBe(1000);
     expect(game.playerHands[0].result).toBe('push');
+  });
+
+  test('cannot double after hitting', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('9'), card('7'), card('10'), card('8'), card('2')];
+    game.startRound(100, deck);
+    game.hit();
+    expect(() => game.double()).toThrow('Can only double on first two cards');
+  });
+
+  test('cannot act on finished hand', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('7'), card('9'), card('8')];
+    game.startRound(100, deck);
+    game.stand();
+    expect(() => game.hit()).toThrow('Hand already finished');
   });
 });
 
@@ -123,7 +156,6 @@ describe('Bankroll integrity', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('A'), card('K'), card('9'), card('10')];
     game.startRound(100, deck);
-    game.stand();
     expect(game.bankroll).toBe(1150);
     expect(game.playerHands[0].result).toBe('win');
   });
@@ -132,7 +164,6 @@ describe('Bankroll integrity', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('A'), card('10'), card('9'), card('6'), card('10')];
     game.startRound(100, deck);
-    game.stand();
     expect(game.bankroll).toBe(1150);
     expect(Number.isInteger(game.bankroll)).toBe(true);
   });
