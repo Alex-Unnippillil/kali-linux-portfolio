@@ -14,13 +14,14 @@ import {
   GEM_IDS,
   createBoard,
   detonateColorBomb,
-  findMatches,
   initialBoosters,
+  beginResolve,
   isAdjacent,
-  resolveBoard,
+  makeRng,
   scoreCascade,
   shuffleBoard,
-  swapCandies,
+  stepResolve,
+  trySwap,
   useCandyCrushStats,
 } from './candy-crush-logic';
 import usePersistentState from '../../hooks/usePersistentState';
@@ -206,8 +207,12 @@ const GemSprite = ({ cell, gem, streak, colorblindMode }) => {
 };
 
 const CandyCrush = () => {
-  const rngRef = useRef(() => Math.random());
-  const [board, setBoard] = useState(() => createBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
+  const [seed, setSeed] = useState(() => Date.now() >>> 0);
+  const rngRef = useRef(makeRng(seed));
+  const [board, setBoard] = useState(() =>
+    createBoard(BOARD_WIDTH, GEM_IDS, rngRef.current, { allowStartingMatches: false, ensurePlayable: true }),
+  );
+  const [resolver, setResolver] = useState(() => beginResolve(board, BOARD_WIDTH));
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -302,6 +307,10 @@ const CandyCrush = () => {
   }, [score, streak, updateStats]);
 
   useEffect(() => {
+    setBoard(resolver.board);
+  }, [resolver]);
+
+  useEffect(() => {
     if (!comboBanner) return;
     const timer = setTimeout(() => setComboBanner(null), 1600);
     return () => clearTimeout(timer);
@@ -328,97 +337,62 @@ const CandyCrush = () => {
   }, [movesLeft, levelComplete, levelFailed, score, targetScore]);
 
   const step = useCallback(() => {
-    let cascadeDetails = null;
-    setBoard((current) => {
-      const result = resolveBoard(current, BOARD_WIDTH, GEM_IDS, rngRef.current);
-      if (result.cascades.length === 0) {
-        return current;
+    setResolver((current) => {
+      if (current.phase === 'idle') return current;
+      const next = stepResolve(current, BOARD_WIDTH, GEM_IDS, rngRef.current);
+      if (current.phase === 'clear' && current.clearedLast.length > 0) {
+        const cascade = { matches: current.pendingMatches.map((match) => match.cells) };
+        const chain = current.chain + 1;
+        const totalPoints = scoreCascade(cascade, chain);
+        const positions = current.clearedLast;
+        const colors = positions.map((index) => current.board[index]?.gem ?? GEM_IDS[0]);
+        setScore((prev) => prev + totalPoints);
+        const shouldAnnounce = cascadeSource.current === 'player' || started.current;
+        if (shouldAnnounce) {
+          setLastCascade({ chain, cleared: positions.length, points: totalPoints, positions });
+          setMessage(
+            chain > 1
+              ? `Chain x${chain}! Cleared ${positions.length} gems (+${totalPoints}).`
+              : `Cleared ${positions.length} gems (+${totalPoints}).`,
+          );
+          setComboBanner({ id: `${Date.now()}-${chain}`, chain, points: totalPoints });
+          queueBurst({ id: `${Date.now()}-${chain}`, positions, colors });
+          playMatchSound();
+          setStreak((prev) => prev + 1);
+        }
       }
-      const totalPoints = result.cascades.reduce(
-        (total, cascade, index) => total + scoreCascade(cascade, index + 1),
-        0,
-      );
-      const uniquePositions = Array.from(
-        new Set(result.cascades.flatMap((cascade) => cascade.matches.flat())),
-      );
-      cascadeDetails = {
-        totalPoints,
-        cleared: result.cleared,
-        chain: result.cascades.length,
-        positions: uniquePositions,
-        colors: uniquePositions.map((index) => current[index]?.gem ?? GEM_IDS[0]),
-        triggeredByPlayer: cascadeSource.current === 'player',
-      };
-      return result.board;
+      if (next.phase === 'idle') {
+        cascadeSource.current = 'auto';
+      }
+      return next;
     });
-
-    if (!cascadeDetails) {
-      return;
-    }
-
-    const { chain, cleared, totalPoints, positions, colors, triggeredByPlayer } = cascadeDetails;
-
-    if (totalPoints > 0) {
-      setScore((prev) => prev + totalPoints);
-      const shouldAnnounce = triggeredByPlayer || started.current;
-      if (shouldAnnounce) {
-        setLastCascade({ chain, cleared, points: totalPoints, positions });
-        setMessage(
-          chain > 1
-            ? `Chain x${chain}! Cleared ${cleared} gems (+${totalPoints}).`
-            : `Cleared ${cleared} gems (+${totalPoints}).`,
-        );
-        setComboBanner({ id: `${Date.now()}-${chain}`, chain, points: totalPoints });
-        queueBurst({ id: `${Date.now()}-${Math.random()}`, positions, colors });
-        playMatchSound();
-      }
-    }
-
-    if (triggeredByPlayer && totalPoints > 0) {
-      setStreak((prev) => prev + 1);
-    }
-
-    cascadeSource.current = 'auto';
   }, [playMatchSound, queueBurst]);
 
   useGameLoop(step, !paused);
 
   const attemptSwap = useCallback(
     (from, to) => {
-      if (!isAdjacent(from, to, BOARD_WIDTH)) {
-        setSelected(to);
-        setMessage('Choose an adjacent gem to swap.');
-        return;
-      }
-
-      let matched = false;
-      let shouldBuzz = false;
-
       setBoard((current) => {
-        const next = swapCandies(current, from, to);
-        const matches = findMatches(next, BOARD_WIDTH);
-        if (matches.length === 0) {
-          shouldBuzz = true;
+        const result = trySwap(current, from, to, 'strict');
+        setSelected(null);
+        if (!result.ok) {
+          setStreak(0);
+          setMessage(
+            result.reason === 'not-adjacent'
+              ? 'Choose an adjacent gem to swap.'
+              : 'No match. Streak reset.',
+          );
+          if (result.reason === 'no-match') playFailSound();
           return current;
         }
-        matched = true;
         cascadeSource.current = 'player';
-        return next;
+        started.current = true;
+        setMoves((prev) => prev + 1);
+        setMovesLeft((prev) => Math.max(0, prev - 1));
+        setMessage('Match found! Cascade incoming.');
+        setResolver(beginResolve(result.board, BOARD_WIDTH));
+        return result.board;
       });
-
-      setSelected(null);
-
-      if (!matched) {
-        setStreak(0);
-        setMessage('No match. Streak reset.');
-        if (shouldBuzz) playFailSound();
-        return;
-      }
-
-      started.current = true;
-      setMoves((prev) => prev + 1);
-      setMovesLeft((prev) => Math.max(0, prev - 1));
-      setMessage('Match found! Cascade incoming.');
     },
     [playFailSound],
   );
@@ -475,7 +449,11 @@ const CandyCrush = () => {
     }
     started.current = true;
     cascadeSource.current = 'player';
-    setBoard((current) => shuffleBoard(current, rngRef.current));
+    setBoard((current) => {
+      const next = shuffleBoard(current, rngRef.current);
+      setResolver(beginResolve(next, BOARD_WIDTH));
+      return next;
+    });
     setMoves((prev) => prev + 1);
     setMovesLeft((prev) => Math.max(0, prev - 1));
     setMessage('Grid reconfigured. Seek new breaches.');
@@ -508,6 +486,7 @@ const CandyCrush = () => {
       if (removed > 0) {
         cascadeSource.current = 'player';
         started.current = true;
+        setResolver(beginResolve(result.board, BOARD_WIDTH));
         return result.board;
       }
       return current;
@@ -534,7 +513,15 @@ const CandyCrush = () => {
 
   const resetBoardState = useCallback(
     (nextLevel) => {
-      setBoard(createBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
+      const newSeed = Date.now() >>> 0;
+      setSeed(newSeed);
+      rngRef.current = makeRng(newSeed);
+      const nextBoard = createBoard(BOARD_WIDTH, GEM_IDS, rngRef.current, {
+        allowStartingMatches: false,
+        ensurePlayable: true,
+      });
+      setBoard(nextBoard);
+      setResolver(beginResolve(nextBoard, BOARD_WIDTH));
       setScore(0);
       setStreak(0);
       setMoves(0);
