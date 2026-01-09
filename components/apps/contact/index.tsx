@@ -5,10 +5,6 @@ import FormError from '../../ui/FormError';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
-import AttachmentUploader, {
-  MAX_TOTAL_ATTACHMENT_SIZE,
-} from '../../../apps/contact/components/AttachmentUploader';
-import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
 
 const sanitize = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
@@ -125,26 +121,11 @@ const deleteDraft = async () => {
   }
 };
 
-const uploadAttachments = async (files: File[]) => {
-  if (!files.length) return;
-  const form = new FormData();
-  files.forEach((f) => form.append('files', f));
-  try {
-    await fetch('/api/contact/attachments', {
-      method: 'POST',
-      body: form,
-    });
-  } catch {
-    /* ignore */
-  }
-};
-
 const ContactApp: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [honeypot, setHoneypot] = useState('');
-  const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState('');
   const [banner, setBanner] = useState<
     { type: 'success' | 'error'; message: string } | null
@@ -215,17 +196,6 @@ const ContactApp: React.FC = () => {
       setSubmitting(false);
       return;
     }
-    const totalSize = attachments.reduce((s, f) => s + f.size, 0);
-    if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
-      setError(
-        `Attachments exceed the ${
-          MAX_TOTAL_ATTACHMENT_SIZE / (1024 * 1024)
-        }MB total limit.`
-      );
-      setBanner({ type: 'error', message: 'Failed to send' });
-      setSubmitting(false);
-      return;
-    }
     let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     let shouldFallback = fallback;
@@ -256,8 +226,6 @@ const ContactApp: React.FC = () => {
       setEmail('');
       setMessage('');
       setHoneypot('');
-      await uploadAttachments(attachments);
-      setAttachments([]);
       void deleteDraft();
     } else {
       const msg = result.error || 'Submission failed';
@@ -320,6 +288,7 @@ const ContactApp: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            aria-label="Name"
             placeholder=" "
           />
           <label
@@ -339,6 +308,7 @@ const ContactApp: React.FC = () => {
             required
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
+            aria-label="Email"
             placeholder=" "
           />
           <label
@@ -363,6 +333,7 @@ const ContactApp: React.FC = () => {
             required
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
+            aria-label="Message"
             placeholder=" "
           />
           <label
@@ -377,17 +348,6 @@ const ContactApp: React.FC = () => {
             </FormError>
           )}
         </div>
-        <AttachmentUploader
-          attachments={attachments}
-          setAttachments={setAttachments}
-          onError={setError}
-        />
-        <AttachmentCarousel
-          attachments={attachments}
-          onRemove={(i) =>
-            setAttachments((prev) => prev.filter((_, idx) => idx !== i))
-          }
-        />
         <input
           type="text"
           value={honeypot}
@@ -395,6 +355,7 @@ const ContactApp: React.FC = () => {
           className="hidden"
           tabIndex={-1}
           autoComplete="off"
+          aria-label="Leave blank"
         />
         {error && <FormError className="mt-3">{error}</FormError>}
         <button
