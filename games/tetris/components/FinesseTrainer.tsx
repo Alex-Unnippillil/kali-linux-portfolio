@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import usePersistentState from "../../../hooks/usePersistentState";
+import { PieceGenerator } from "../logic";
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -16,8 +17,6 @@ const TETROMINOS: Record<string, { shape: number[][]; color: string }> = {
   T: { shape: [[0, 1, 0], [1, 1, 1]], color: "#a855f7" },
   Z: { shape: [[1, 1, 0], [0, 1, 1]], color: "#ef4444" },
 };
-
-const PIECES = Object.keys(TETROMINOS) as (keyof typeof TETROMINOS)[];
 
 type Piece = {
   shape: number[][];
@@ -39,6 +38,8 @@ const createPiece = (type: keyof typeof TETROMINOS): Piece => {
 };
 
 const FinesseTrainer = () => {
+  const [seed, setSeed] = useState(() => Date.now() >>> 0);
+  const generatorRef = React.useRef(new PieceGenerator("seven-bag", seed));
   const [piece, setPiece] = useState<Piece | null>(null);
   const [spawnX, setSpawnX] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -50,7 +51,7 @@ const FinesseTrainer = () => {
   });
 
   const spawn = useCallback(() => {
-    const type = PIECES[Math.floor(Math.random() * PIECES.length)];
+    const type = generatorRef.current.next();
     const p = createPiece(type);
     const x = Math.floor(WIDTH / 2 - p.shape[0].length / 2);
     p.x = x;
@@ -90,6 +91,13 @@ const FinesseTrainer = () => {
     spawn();
   }, [piece, spawnX, moves, spawn, setStats]);
 
+  const newSeed = useCallback(() => {
+    const nextSeed = Date.now() >>> 0;
+    setSeed(nextSeed);
+    generatorRef.current.setSeed(nextSeed);
+    spawn();
+  }, [spawn]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "ArrowLeft") {
@@ -112,6 +120,14 @@ const FinesseTrainer = () => {
 
   return (
     <div className="flex flex-col items-center text-white">
+      <div className="mb-2 text-xs text-gray-300">Seed: {seed}</div>
+      <button
+        className="mb-2 rounded bg-slate-700 px-3 py-1 text-xs hover:bg-slate-600"
+        onClick={newSeed}
+        type="button"
+      >
+        New seed
+      </button>
       <div className="mb-2 h-6" aria-live="polite">
         {feedback}
       </div>

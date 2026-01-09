@@ -222,10 +222,14 @@ const defaultKeys = {
 const Tetris = () => {
   const canvasRef = useRef(null);
   const generatorRef = useRef(new PieceGenerator());
+  const [seed, setSeed] = useState(() => Date.now() >>> 0);
   const [useBag, setUseBag] = usePersistentState('tetris-use-bag', true);
   useEffect(() => {
     generatorRef.current.setMode(useBag ? 'seven-bag' : 'true-random');
   }, [useBag]);
+  useEffect(() => {
+    generatorRef.current.setSeed(seed);
+  }, [seed]);
   const getPiece = useCallback(
     () => createPiece(generatorRef.current.next()),
     []
@@ -377,6 +381,9 @@ const Tetris = () => {
 
   const resetGame = useCallback(
     (m = mode) => {
+      const newSeed = Date.now() >>> 0;
+      setSeed(newSeed);
+      generatorRef.current.setSeed(newSeed);
       setBoard(createBoard());
       generatorRef.current.setMode(useBag ? 'seven-bag' : 'true-random');
       setPiece(getPiece());
