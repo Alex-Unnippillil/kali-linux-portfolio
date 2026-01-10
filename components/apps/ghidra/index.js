@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
+import Pseudo from './Pseudo';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
@@ -269,16 +270,7 @@ export default function GhidraApp() {
             Drop a binary file here
           </div>
         ) : (
-          <pre className="flex-1 overflow-auto p-2 whitespace-pre">
-            {instructions
-              .map(
-                (i) =>
-                  `${i.address.toString(16).padStart(8, '0')}: ${Array.from(i.bytes)
-                    .map((b) => b.toString(16).padStart(2, '0'))
-                    .join(' ')}\t${i.mnemonic} ${i.opStr}`
-              )
-              .join('\n')}
-          </pre>
+          <Pseudo instructions={instructions} />
         )}
       </div>
     );
@@ -308,11 +300,16 @@ export default function GhidraApp() {
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
           <div className="p-2">
+            <label htmlFor="ghidra-symbol-search" className="sr-only">
+              Search symbols
+            </label>
             <input
+              id="ghidra-symbol-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
+              aria-label="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
             />
           </div>
@@ -368,6 +365,7 @@ export default function GhidraApp() {
               <div key={idx} className="flex items-start">
                 <div className="flex-1">{codeElem}</div>
                 <input
+                  aria-label={`Note for ${selected || 'function'} line ${idx + 1}`}
                   value={note}
                   onChange={(e) =>
                     setLineNotes({
@@ -416,24 +414,31 @@ export default function GhidraApp() {
         />
       </div>
       <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
+        <label htmlFor="ghidra-function-notes" className="block text-sm mb-1">
           Notes for {selected || 'function'}
         </label>
         <textarea
+          id="ghidra-function-notes"
           value={funcNotes[selected] || ''}
           onChange={(e) =>
             setFuncNotes({ ...funcNotes, [selected]: e.target.value })
           }
+          aria-label={`Notes for ${selected || 'function'}`}
           className="w-full h-16 p-1 rounded text-black"
         />
       </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
         <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
+          <label htmlFor="ghidra-string-search" className="sr-only">
+            Search strings
+          </label>
           <input
+            id="ghidra-string-search"
             type="text"
             value={stringQuery}
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
+            aria-label="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
           />
           <ul className="text-sm space-y-1">
@@ -452,12 +457,13 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label htmlFor="ghidra-string-notes" className="block text-sm mb-1">
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
           </label>
           <textarea
+            id="ghidra-string-notes"
             value={stringNotes[selectedString] || ''}
             onChange={(e) =>
               setStringNotes({
@@ -465,6 +471,9 @@ export default function GhidraApp() {
                 [selectedString]: e.target.value,
               })
             }
+            aria-label={`Notes for ${
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }`}
             className="w-full h-full p-1 rounded text-black"
           />
         </div>
