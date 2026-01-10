@@ -1,0 +1,72 @@
+name: Preview Release Cycle
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release-cycle:
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: http://127.0.0.1:3000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --immutable --immutable-cache
+
+      - name: Pull preview environment
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ] && [ -n "${{ secrets.VERCEL_ORG_ID }}" ] && [ -n "${{ secrets.VERCEL_PROJECT_ID }}" ]; then
+            export VERCEL_TOKEN="${{ secrets.VERCEL_TOKEN }}"
+            export VERCEL_ORG_ID="${{ secrets.VERCEL_ORG_ID }}"
+            export VERCEL_PROJECT_ID="${{ secrets.VERCEL_PROJECT_ID }}"
+            npx vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
+          else
+            echo "Skipping Vercel preview pull; secrets are not configured.";
+          fi
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Type check
+        run: yarn tsc --noEmit
+
+      - name: Build preview bundle
+        env:
+          NEXT_PUBLIC_VERCEL_ENV: preview
+        run: yarn build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Validate preview update and rollback
+        env:
+          NEXT_PUBLIC_VERCEL_ENV: preview
+        run: |
+          yarn start -p 3000 > preview-server.log 2>&1 &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID" EXIT
+          npx wait-on "$BASE_URL"
+          npx playwright test tests/release-cycle.spec.ts || (cat preview-server.log && exit 1)
+
+      - name: Build stable bundle
+        env:
+          NEXT_PUBLIC_VERCEL_ENV: stable
+        run: yarn build
+
+      - name: Smoke test stable build
+        env:
+          NEXT_PUBLIC_VERCEL_ENV: stable
+        run: |
+          yarn start -p 3000 > stable-server.log 2>&1 &
+          SERVER_PID=$!
+          trap "kill $SERVER_PID" EXIT
+          npx wait-on "$BASE_URL"
+          yarn smoke || (cat stable-server.log && exit 1)
