@@ -13363,6 +13363,7 @@ __metadata:
     jspdf: "npm:^3.0.2"
     kaitai-struct: "npm:^0.10.0"
     leaflet: "npm:^1.9.4"
+    lru-cache: "npm:^10.4.3"
     magic-string: "npm:0.30.18"
     marked: "npm:^16.2.1"
     mathjs: "npm:^14.6.0"
