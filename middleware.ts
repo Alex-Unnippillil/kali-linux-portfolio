@@ -1,5 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { joinDocSlugSegments, slugifyDocSegment } from './lib/docs/slug';
+
 function nonce() {
   const arr = new Uint8Array(16);
   crypto.getRandomValues(arr);
@@ -43,5 +45,17 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+
+  const legacyDocMatch = req.nextUrl.pathname.match(/^\/docs\/(.+)\.(md|mdx|txt)$/i);
+  if (legacyDocMatch) {
+    const normalizedSlug = joinDocSlugSegments(
+      legacyDocMatch[1].split('/').map((segment) => slugifyDocSegment(segment))
+    );
+    if (normalizedSlug) {
+      const destination = `/docs/latest/${normalizedSlug}`;
+      return NextResponse.redirect(new URL(destination, req.url));
+    }
+  }
+
   return res;
 }

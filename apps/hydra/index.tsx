@@ -3,6 +3,7 @@
 import React, { useRef } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import HydraApp from '../../components/apps/hydra';
+import { buildDocsLatestPath } from '../../lib/docs/urls';
 import StrategyTrainer from './components/StrategyTrainer';
 
 const HydraPreview: React.FC = () => {
@@ -50,11 +51,11 @@ const HydraPreview: React.FC = () => {
               </p>
               <a
                 className="mt-3 inline-flex items-center text-xs font-medium text-[color:var(--kali-control)] underline decoration-[color:color-mix(in_srgb,var(--kali-control)_65%,transparent)] transition-colors hover:text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-                href="/docs/app-ecosystem-roadmap.md"
+                href={buildDocsLatestPath('app-ecosystem-roadmap')}
                 target="_blank"
                 rel="noreferrer"
               >
-                Simulation scope &amp; fixtures (docs/app-ecosystem-roadmap.md)
+                Simulation scope &amp; fixtures (latest docs)
               </a>
             </div>
           </section>
@@ -74,11 +75,11 @@ const HydraPreview: React.FC = () => {
               </p>
               <a
                 className="mt-3 inline-flex items-center text-xs font-medium text-[color:var(--kali-control)] underline decoration-[color:color-mix(in_srgb,var(--kali-control)_65%,transparent)] transition-colors hover:text-[color:color-mix(in_srgb,var(--kali-control)_85%,var(--kali-text))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-                href="/docs/tasks.md"
+                href={buildDocsLatestPath('tasks')}
                 target="_blank"
                 rel="noreferrer"
               >
-                Lab planning checklist (docs/tasks.md)
+                Lab planning checklist (latest docs)
               </a>
             </div>
           </aside>
