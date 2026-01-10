@@ -212,7 +212,6 @@
   height: clamp(22px, 4.2vw, 24px);
   border-radius: clamp(4px, 1.2vw, 6px);
   border: 1px solid transparent;
-  outline: none;
   box-shadow: none;
   background-color: rgba(148, 163, 184, 0.08);
   color: rgba(226, 232, 240, 0.85);
@@ -244,8 +243,19 @@
 }
 
 .windowControlButton:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.75);
+  outline: var(--focus-ring-width, 2px) solid
+    var(--focus-ring-color, rgba(125, 211, 252, 0.95));
+  outline-offset: var(--focus-ring-offset, 2px);
+  box-shadow: var(
+      --focus-ring-shadow,
+      0 0 0 calc(var(--focus-ring-width, 2px) + var(--focus-ring-offset, 2px))
+        color-mix(
+          in srgb,
+          var(--focus-ring-color, rgba(125, 211, 252, 0.95)) 55%,
+          transparent
+        )
+    ),
+    0 0 0 2px rgba(125, 211, 252, 0.75);
 }
 
 .windowControlButton:disabled,
