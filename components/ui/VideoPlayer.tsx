@@ -7,12 +7,14 @@ interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  ariaLabel?: string;
 }
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
   className = "",
+  ariaLabel = "Video player",
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
@@ -114,6 +116,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
             max={1}
             step={0.05}
             value={vol}
+            aria-label="Volume"
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               setVol(v);
@@ -129,25 +132,40 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
 
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
-      {pipSupported && (
-        <button
-          type="button"
-          onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          {isPip ? "Exit PiP" : "PiP"}
-        </button>
-      )}
-      {docPipSupported && (
-        <button
-          type="button"
-          onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          Doc-PiP
-        </button>
-      )}
+      <div className="relative w-full overflow-hidden rounded-lg bg-black aspect-video">
+        <video
+          ref={videoRef}
+          src={src}
+          poster={poster}
+          controls
+          aria-label={ariaLabel}
+          className="absolute inset-0 h-full w-full object-contain"
+        />
+        {(pipSupported || docPipSupported) && (
+          <div className="pointer-events-none absolute top-3 right-3 flex max-w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+            {pipSupported && (
+              <button
+                type="button"
+                onClick={togglePiP}
+                aria-label={isPip ? "Exit picture-in-picture" : "Start picture-in-picture"}
+                className="pointer-events-auto rounded-md bg-black/70 px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black sm:px-3 sm:py-1.5 sm:text-xs"
+              >
+                {isPip ? "Exit PiP" : "PiP"}
+              </button>
+            )}
+            {docPipSupported && (
+              <button
+                type="button"
+                onClick={openDocPip}
+                aria-label="Open document picture-in-picture controls"
+                className="pointer-events-auto rounded-md bg-black/70 px-4 py-2 text-sm font-medium text-white shadow-lg transition hover:bg-black/80 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black sm:px-3 sm:py-1.5 sm:text-xs"
+              >
+                Doc-PiP
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
