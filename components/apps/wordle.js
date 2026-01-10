@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import {
   getWordOfTheDay,
   buildResultMosaic,
   dictionaries as wordleDictionaries,
 } from '../../utils/wordle';
-
-// Determine today's puzzle key for local storage
-const todayKey = new Date().toISOString().split('T')[0];
+import { useGameSettings, useGamePersistence } from './useGameControls';
 
 const dictionaries = wordleDictionaries;
 
@@ -63,21 +67,39 @@ const evaluateGuess = (guess, answer) => {
 
 const Wordle = () => {
   const [dictName, setDictName] = usePersistentState('wordle-dictionary', 'common');
+  const [dayKey, setDayKey] = useState(() =>
+    new Date().toISOString().split('T')[0]
+  );
+  const currentDate = useMemo(
+    () => new Date(`${dayKey}T00:00:00Z`),
+    [dayKey]
+  );
   const wordList = dictionaries[dictName];
-  const solution = useMemo(() => getWordOfTheDay(dictName), [dictName]);
+  const solution = useMemo(
+    () => getWordOfTheDay(dictName, currentDate),
+    [dictName, currentDate]
+  );
+  const { paused, togglePause, muted, toggleMute } = useGameSettings('wordle');
+  const { getHighScore, setHighScore: persistHighScore } =
+    useGamePersistence('wordle');
+  const audioContextRef = useRef(null);
+  const [highScore, setHighScore] = useState(0);
 
   // guesses for today are stored under a daily key so a new game starts each day
+  const defaultGuesses = useMemo(() => [], [dictName, dayKey]);
   const [guesses, setGuesses] = usePersistentState(
-    `wordle-guesses-${dictName}-${todayKey}`,
-    []
+    `wordle-guesses-${dictName}-${dayKey}`,
+    defaultGuesses
   );
+  const defaultHistory = useMemo(() => ({}), [dictName]);
   const [history, setHistory] = usePersistentState(
     `wordle-history-${dictName}`,
-    {}
+    defaultHistory
   );
+  const defaultStreak = useMemo(() => ({ current: 0, max: 0 }), [dictName]);
   const [streak, setStreak] = usePersistentState(
     `wordle-streak-${dictName}`,
-    { current: 0, max: 0 }
+    defaultStreak
   );
   const defaultStats = useMemo(
     () => ({
@@ -111,7 +133,33 @@ const Wordle = () => {
     setMessage('');
     setAnalysis('');
     setRevealMap({});
-  }, [dictName]);
+  }, [dictName, dayKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const now = new Date();
+    const next = new Date(now);
+    next.setUTCHours(24, 0, 0, 0);
+    const timeout = setTimeout(() => {
+      setDayKey(new Date().toISOString().split('T')[0]);
+    }, Math.max(0, next.getTime() - now.getTime()));
+    return () => clearTimeout(timeout);
+  }, [dayKey]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setHighScore(getHighScore());
+  }, [getHighScore]);
+
+  useEffect(() => {
+    return () => {
+      const ctx = audioContextRef.current;
+      if (ctx && ctx.state !== 'closed' && typeof ctx.close === 'function') {
+        ctx.close().catch(() => {});
+      }
+      audioContextRef.current = null;
+    };
+  }, []);
 
   const colors = colorBlind
     ? {
@@ -166,30 +214,81 @@ const Wordle = () => {
     }, 0);
   };
 
-  const updateStreaks = (hist) => {
-    const dates = Object.keys(hist).sort();
-    let curr = 0;
-    let max = 0;
-    let prev = null;
-    dates.forEach((d) => {
-      const entry = hist[d];
-      if (entry.success) {
-        if (prev && new Date(prev).getTime() + 86400000 === new Date(d).getTime()) {
-          curr += 1;
+  const applyStreaks = useCallback(
+    (hist) => {
+      const dates = Object.keys(hist).sort();
+      let curr = 0;
+      let max = 0;
+      let prev = null;
+      dates.forEach((d) => {
+        const entry = hist[d];
+        if (entry.success) {
+          if (
+            prev &&
+            new Date(prev).getTime() + 86400000 === new Date(d).getTime()
+          ) {
+            curr += 1;
+          } else {
+            curr = 1;
+          }
+          prev = d;
+          if (curr > max) max = curr;
         } else {
-          curr = 1;
+          curr = 0;
+          prev = d;
         }
-        prev = d;
-        if (curr > max) max = curr;
-      } else {
-        curr = 0;
-        prev = d;
+      });
+      const nextStreak = { current: curr, max };
+      setStreak(nextStreak);
+      setHighScore((prev) => Math.max(prev, max));
+      persistHighScore(max);
+    },
+    [persistHighScore]
+  );
+
+  useEffect(() => {
+    applyStreaks(history);
+  }, [applyStreaks, history]);
+
+  const resetPuzzle = useCallback(() => {
+    setGuesses([]);
+    setGuess('');
+    setMessage('');
+    setAnalysis('');
+    setRevealMap({});
+  }, [setGuesses]);
+
+  const playTone = useCallback(
+    (frequency) => {
+      if (muted || typeof window === 'undefined') return;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      try {
+        const ctx = audioContextRef.current || new Ctx();
+        audioContextRef.current = ctx;
+        if (typeof ctx.resume === 'function') {
+          ctx.resume().catch(() => {});
+        }
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+      } catch {
+        /* ignore audio errors */
       }
-    });
-    setStreak({ current: curr, max });
-  };
+    },
+    [muted]
+  );
 
   const handleAnalyze = () => {
+    if (paused) return;
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
     if (!wordList.includes(upper)) {
@@ -206,6 +305,7 @@ const Wordle = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (isGameOver) return;
+    if (paused) return;
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
 
@@ -273,14 +373,14 @@ const Wordle = () => {
     if (upper === solution || next.length === 6) {
       const newHistory = {
         ...history,
-        [todayKey]: {
+        [dayKey]: {
           guesses: next.length,
           solution,
           success: upper === solution,
         },
       };
       setHistory(newHistory);
-      updateStreaks(newHistory);
+      applyStreaks(newHistory);
 
       const newStats = {
         ...stats,
@@ -290,10 +390,14 @@ const Wordle = () => {
       };
       if (upper === solution) {
         newStats.guessDist[next.length] += 1;
+        playTone(880);
       } else {
         newStats.guessDist.fail += 1;
+        playTone(220);
       }
       setStats(newStats);
+    } else {
+      playTone(440);
     }
   };
 
@@ -400,8 +504,45 @@ const Wordle = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
+    <div className="relative h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
+      {paused && (
+        <div className="absolute inset-0 bg-black bg-opacity-70 z-50 flex flex-col items-center justify-center space-y-3">
+          <div className="text-lg font-semibold">Paused</div>
+          <button
+            type="button"
+            onClick={togglePause}
+            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          >
+            Resume
+          </button>
+        </div>
+      )}
       <h1 className="text-xl font-bold">Wordle</h1>
+
+      <div className="flex space-x-2">
+        <button
+          type="button"
+          onClick={togglePause}
+          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          {paused ? 'Resume' : 'Pause'}
+        </button>
+        <button
+          type="button"
+          onClick={resetPuzzle}
+          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+          disabled={paused || (!guesses.length && !message && !analysis)}
+        >
+          Reset
+        </button>
+        <button
+          type="button"
+          onClick={toggleMute}
+          className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+        >
+          {muted ? 'Sound Off' : 'Sound On'}
+        </button>
+      </div>
 
       <div className="flex space-x-4">
         <label className="flex items-center space-x-1 text-sm">
@@ -461,10 +602,12 @@ const Wordle = () => {
             onChange={(e) => setGuess(e.target.value.toUpperCase())}
             className="w-32 p-2 text-black text-center uppercase"
             placeholder="Guess"
+            disabled={paused}
           />
           <button
             type="submit"
             className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            disabled={paused}
           >
             Submit
           </button>
@@ -472,6 +615,7 @@ const Wordle = () => {
             type="button"
             onClick={handleAnalyze}
             className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            disabled={paused}
           >
             Analyze
           </button>
@@ -523,6 +667,9 @@ const Wordle = () => {
         </div>
         <div className="text-sm">
           Current streak: {streak.current} (max: {streak.max})
+        </div>
+        <div className="text-sm">
+          Personal best streak: {highScore}
         </div>
         <Calendar history={history} />
       </div>
