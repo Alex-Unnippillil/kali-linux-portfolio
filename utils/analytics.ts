@@ -1,6 +1,11 @@
 import ReactGA from 'react-ga4';
+import { getAttributionMetadata } from './attribution';
 
 type EventInput = Parameters<typeof ReactGA.event>[0];
+
+type EventWithAttribution = EventInput & {
+  attribution?: ReturnType<typeof getAttributionMetadata>;
+};
 
 const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
   try {
@@ -14,7 +19,9 @@ const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
 };
 
 export const logEvent = (event: EventInput): void => {
-  safeEvent(event);
+  const attribution = getAttributionMetadata();
+  const enriched: EventWithAttribution = attribution ? { ...event, attribution } : event;
+  safeEvent(enriched);
 };
 
 export const logGameStart = (game: string): void => {
