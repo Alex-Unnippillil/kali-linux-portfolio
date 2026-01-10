@@ -20,6 +20,7 @@ import DesktopMenu from '../context-menus/desktop-menu';
 import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
+import DockMenu from '../context-menus/dock-menu';
 import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
@@ -322,6 +323,7 @@ export class Desktop extends Component {
                 default: false,
                 app: false,
                 taskbar: false,
+                dock: false,
             },
             context_app: null,
             showNameBar: false,
@@ -4399,6 +4401,13 @@ export class Desktop extends Component {
                 });
                 this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
                 break;
+            case "dock":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Dock Context Menu`
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(e, "dock"));
+                break;
             case "taskbar":
                 ReactGA.event({
                     category: `Context Menu`,
@@ -4433,6 +4442,10 @@ export class Desktop extends Component {
                 ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
                 break;
+            case "dock":
+                ReactGA.event({ category: `Context Menu`, action: `Opened Dock Context Menu` });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "dock"));
+                break;
             case "taskbar":
                 ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
                 this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
@@ -4446,6 +4459,8 @@ export class Desktop extends Component {
     showContextMenu = (e, menuName /* context menu name */) => {
         let { posx, posy } = this.getMenuPosition(e);
         let contextMenu = document.getElementById(`${menuName}-menu`);
+
+        if (!contextMenu) return;
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
@@ -5570,6 +5585,21 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
         const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const contextAppId = this.state.context_app;
+        const pinnedContextIds = new Set(this.getPinnedAppIds());
+        const contextIsPinned = contextAppId ? pinnedContextIds.has(contextAppId) : false;
+        const contextIsOverlay = contextAppId ? this.isOverlayId(contextAppId) : false;
+        const contextOverlayState = contextIsOverlay ? overlayWindows[contextAppId] : null;
+        const contextIsRunning = contextAppId
+            ? (contextIsOverlay
+                ? Boolean(contextOverlayState?.open)
+                : this.state.closed_windows?.[contextAppId] === false)
+            : false;
+        const contextIsMinimized = contextAppId
+            ? (contextIsOverlay
+                ? Boolean(contextOverlayState?.minimized)
+                : Boolean(this.state.minimized_windows?.[contextAppId]))
+            : false;
         return (
             <main
                 id="desktop"
@@ -5613,6 +5643,52 @@ export class Desktop extends Component {
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
+                />
+                <DockMenu
+                    active={this.state.context_menus.dock}
+                    canQuit={contextIsRunning}
+                    canToggleMinimize={contextIsRunning}
+                    isMinimized={contextIsMinimized}
+                    canNewWindow={Boolean(contextAppId)}
+                    canUnpin={contextIsPinned}
+                    onQuit={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        if (this.isOverlayId(id)) {
+                            this.closeOverlay(id);
+                        } else {
+                            this.closeApp(id);
+                        }
+                    }}
+                    onToggleMinimize={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        if (this.isOverlayId(id)) {
+                            const overlayState = this.state.overlayWindows?.[id];
+                            if (overlayState?.minimized) {
+                                this.openOverlay(id, { transitionState: 'entered' });
+                            } else if (overlayState?.open) {
+                                this.minimizeOverlay(id);
+                            }
+                        } else {
+                            if (this.state.minimized_windows[id]) {
+                                this.openApp(id);
+                            } else if (this.state.closed_windows[id] === false) {
+                                this.hasMinimised(id);
+                            }
+                        }
+                    }}
+                    onNewWindow={() => {
+                        const id = this.state.context_app;
+                        if (!id) return;
+                        if (this.isOverlayId(id)) {
+                            this.openOverlay(id, { transitionState: 'entered' });
+                        } else {
+                            this.openApp(id);
+                        }
+                    }}
+                    onUnpin={() => this.unpinApp(this.state.context_app)}
+                    onCloseMenu={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
