@@ -72,6 +72,22 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn npm audit --severity high
 
+  playwright-regression:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - run: npx playwright install --with-deps
+      - run: |
+          yarn dev &
+          npx wait-on http://localhost:3000
+      - run: npx playwright test playwright/tests/http-client.spec.ts
+
   vercel-preview:
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.head.repo.fork && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
