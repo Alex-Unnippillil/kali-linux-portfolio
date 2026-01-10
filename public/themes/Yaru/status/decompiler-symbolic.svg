@@ -1,4 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1">
+<svg role="img" aria-labelledby="icon-decompiler-symbolicsvg-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1">
+  <title id="icon-decompiler-symbolicsvg-title">Decompiler Symbolic</title>
+
   <rect x="1" y="3" width="4" height="10" />
   <path d="M6 8h8" />
   <path d="M11 5l3 3-3 3" />

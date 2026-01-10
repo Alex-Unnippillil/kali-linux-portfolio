@@ -1,4 +1,6 @@
-<svg width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg role="img" aria-labelledby="icon-project-gallerysvg-title" width="512" height="512" version="1.1" viewBox="0 0 384 384" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <title id="icon-project-gallerysvg-title">Project Gallery</title>
+
   <defs>
     <clipPath>
       <rect width="384" height="384" />

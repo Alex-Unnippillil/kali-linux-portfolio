@@ -1,4 +1,6 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+<svg role="img" aria-labelledby="icon-tetrissvg-title" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title id="icon-tetrissvg-title">Tetris</title>
+
   <rect width="64" height="64" fill="#2e3436"/>
   <rect x="8" y="8" width="16" height="16" fill="#4caf50"/>
   <rect x="24" y="8" width="16" height="16" fill="#4caf50"/>

@@ -1,3 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg role="img" aria-labelledby="icon-bluetoothsvg-title" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title id="icon-bluetoothsvg-title">Bluetooth</title>
+
   <path d="M32 4v56l16-16-16-16 16-16L32 4zm0 0" fill="#4a90e2"/>
 </svg>
