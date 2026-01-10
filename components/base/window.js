@@ -1685,6 +1685,8 @@ export class Window extends Component {
                     <div
                         data-testid="snap-preview"
                         className={`fixed pointer-events-none z-40 transition-opacity ${styles.snapPreview} ${styles.snapPreviewGlass}`}
+                        aria-hidden="true"
+                        role="presentation"
                         style={{
                             left: `${this.state.snapPreview.left}px`,
                             top: `${this.state.snapPreview.top}px`,
