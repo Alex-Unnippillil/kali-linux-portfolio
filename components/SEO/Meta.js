@@ -1,11 +1,13 @@
 import React from 'react'
 import Head from 'next/head';
+import Script from 'next/script';
 import { getCspNonce } from '../../utils/csp';
 
 export default function Meta() {
     const nonce = getCspNonce();
     return (
-        <Head>
+        <>
+            <Head>
             {/* Primary Meta Tags */}
              <title>Alex Unnippillil&apos;s Portfolio </title>
             <meta charSet="utf-8" />
@@ -50,9 +52,12 @@ export default function Meta() {
             <link rel="canonical" href="https://unnippillil.com/" />
             <link rel="icon" href="images/logos/fevicon.svg" />
             <link rel="apple-touch-icon" href="images/logos/logo.png" />
-            <script
+            </Head>
+            <Script
+                id="meta-structured-data"
                 type="application/ld+json"
                 nonce={nonce}
+                strategy="beforeInteractive"
                 dangerouslySetInnerHTML={{
                     __html: JSON.stringify({
                         "@context": "https://schema.org",
@@ -62,6 +67,6 @@ export default function Meta() {
                     }),
                 }}
             />
-        </Head>
+        </>
     )
 }
