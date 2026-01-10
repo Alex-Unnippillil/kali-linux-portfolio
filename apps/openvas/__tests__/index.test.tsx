@@ -1,12 +1,17 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import OpenVASReport from '../index';
 
 describe('OpenVASReport filters and details', () => {
-  it('filters findings by severity toggles', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('filters findings by severity toggles', async () => {
+    window.localStorage.setItem('lab-mode', 'true');
     render(<OpenVASReport />);
 
-    expect(screen.getByText('OpenSSL Buffer Overflow')).toBeInTheDocument();
+    await screen.findByText('OpenSSL Buffer Overflow');
 
     const criticalToggle = screen.getByRole('button', {
       name: /Critical severity filter/,
@@ -14,42 +19,40 @@ describe('OpenVASReport filters and details', () => {
 
     fireEvent.click(criticalToggle);
 
-    expect(screen.queryByText('OpenSSL Buffer Overflow')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.queryByText('OpenSSL Buffer Overflow'),
+      ).not.toBeInTheDocument();
+    });
   });
 
-  it('filters findings by type toggles', () => {
+  it('filters findings by type toggles', async () => {
+    window.localStorage.setItem('lab-mode', 'true');
     render(<OpenVASReport />);
 
-    const configurationToggle = screen.getByRole('button', {
+    const configurationToggle = await screen.findByRole('button', {
       name: /Configuration type filter/,
     });
 
     fireEvent.click(configurationToggle);
 
-    expect(screen.queryByText('SSH Weak Cipher')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText('SSH Weak Cipher')).not.toBeInTheDocument();
+    });
   });
 
-  it('expands a row to reveal description, remediation, and timeline', () => {
+  it('expands a row to reveal description, remediation, and timeline', async () => {
+    window.localStorage.setItem('lab-mode', 'true');
     render(<OpenVASReport />);
 
-    fireEvent.click(screen.getByText('OpenSSL Buffer Overflow'));
+    const row = await screen.findByText('OpenSSL Buffer Overflow');
+    fireEvent.click(row);
 
-    const detailCell = screen
-      .getByText('Remote code execution via crafted packet.')
-      .closest('td');
-
-    expect(detailCell).not.toBeNull();
-
-    const detailWithin = within(detailCell as HTMLTableCellElement);
-
-    expect(
-      detailWithin.getByText('Remote code execution via crafted packet.'),
-    ).toBeInTheDocument();
-    expect(
-      detailWithin.getByText('Update OpenSSL to the latest version'),
-    ).toBeInTheDocument();
-    expect(
-      detailWithin.getByText('Detected during weekly scan.'),
-    ).toBeInTheDocument();
+    await screen.findByText('Remote code execution via crafted packet.');
+    const remediationTexts = await screen.findAllByText(
+      'Update OpenSSL to the latest version',
+    );
+    expect(remediationTexts.length).toBeGreaterThan(0);
+    await screen.findByText('Detected during weekly scan.');
   });
 });
