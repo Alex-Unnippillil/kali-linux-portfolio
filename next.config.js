@@ -78,13 +78,13 @@ const rawBuildId =
 
 const resolvedBuildId = sanitizeBuildId(rawBuildId);
 
-if (resolvedBuildId) {
-  process.env.NEXT_PUBLIC_BUILD_ID = resolvedBuildId;
-}
+const effectiveBuildId = resolvedBuildId ?? `local-${require('crypto').randomBytes(6).toString('hex')}`;
+
+process.env.NEXT_PUBLIC_BUILD_ID = effectiveBuildId;
 
 // Prefix Workbox-managed caches with the build identifier so new deployments
 // invalidate old cache groups automatically.
-const workboxCacheId = resolvedBuildId ? `kali-portfolio-${resolvedBuildId}` : undefined;
+const workboxCacheId = `kali-portfolio-${effectiveBuildId}`;
 
 const {
   default: withPWAInit,
@@ -93,7 +93,7 @@ const {
 
 function buildAwareCacheName(name) {
   if (!name) return name;
-  return resolvedBuildId ? `${name}-${resolvedBuildId}` : name;
+  return `${name}-${effectiveBuildId}`;
 }
 
 const normalizedBasePath = (() => {
@@ -151,6 +151,9 @@ const withPWA = withPWAInit({
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
+    skipWaiting: true,
+    clientsClaim: true,
+    cleanupOutdatedCaches: true,
     additionalManifestEntries: [
       { url: '/', revision: null },
       { url: '/feeds', revision: null },
