@@ -1,11 +1,83 @@
-<!-- Minesweeper application icon -->
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <rect x="8" y="8" width="48" height="48" fill="#cccccc"/>
-  <line x1="24" y1="8" x2="24" y2="56" stroke="#ffffff" stroke-width="2"/>
-  <line x1="40" y1="8" x2="40" y2="56" stroke="#ffffff" stroke-width="2"/>
-  <line x1="8" y1="24" x2="56" y2="24" stroke="#ffffff" stroke-width="2"/>
-  <line x1="8" y1="40" x2="56" y2="40" stroke="#ffffff" stroke-width="2"/>
-  <circle cx="32" cy="32" r="6" fill="#d32f2f"/>
-  <circle cx="32" cy="32" r="3" fill="#000000"/>
+<!-- Custom Minesweeper application icon created for Kali Linux Portfolio. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">Minesweeper Icon</title>
+  <desc id="desc">A minesweeper grid with bombs, a flag, and numbered tiles.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#24313b"/>
+      <stop offset="1" stop-color="#161c22"/>
+    </linearGradient>
+    <linearGradient id="board" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#f2f5f7"/>
+      <stop offset="1" stop-color="#d4d8dc"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="16" fill="url(#bg)"/>
+  <g transform="translate(16 16)">
+    <rect width="96" height="96" rx="12" fill="url(#board)"/>
+    <rect width="96" height="96" rx="12" fill="url(#shadow)" opacity="0.12"/>
+    <g stroke="#bac3c9" stroke-width="2">
+      <line x1="24" y1="0" x2="24" y2="96"/>
+      <line x1="48" y1="0" x2="48" y2="96"/>
+      <line x1="72" y1="0" x2="72" y2="96"/>
+      <line x1="0" y1="24" x2="96" y2="24"/>
+      <line x1="0" y1="48" x2="96" y2="48"/>
+      <line x1="0" y1="72" x2="96" y2="72"/>
+    </g>
+    <g transform="translate(36 12)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#3a4f5c"/>
+      <g fill="#1b2329" stroke="#1b2329" stroke-width="2" stroke-linecap="round">
+        <line x1="0" y1="-12" x2="0" y2="8"/>
+        <line x1="-10" y1="-2" x2="10" y2="-2"/>
+        <line x1="-6" y1="-8" x2="6" y2="4"/>
+        <line x1="-6" y1="4" x2="6" y2="-8"/>
+      </g>
+      <circle r="6" fill="#0f151a"/>
+      <circle r="2.8" fill="#3bd4ff" opacity="0.8"/>
+    </g>
+    <g transform="translate(60 60)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#3a4f5c"/>
+      <g fill="#1b2329" stroke="#1b2329" stroke-width="2" stroke-linecap="round">
+        <line x1="0" y1="-12" x2="0" y2="8"/>
+        <line x1="-10" y1="-2" x2="10" y2="-2"/>
+        <line x1="-6" y1="-8" x2="6" y2="4"/>
+        <line x1="-6" y1="4" x2="6" y2="-8"/>
+      </g>
+      <circle r="6" fill="#0f151a"/>
+      <circle r="2.8" fill="#3bd4ff" opacity="0.8"/>
+    </g>
+    <g transform="translate(84 36)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#3a4f5c"/>
+      <g fill="#1b2329" stroke="#1b2329" stroke-width="2" stroke-linecap="round">
+        <line x1="0" y1="-12" x2="0" y2="8"/>
+        <line x1="-10" y1="-2" x2="10" y2="-2"/>
+        <line x1="-6" y1="-8" x2="6" y2="4"/>
+        <line x1="-6" y1="4" x2="6" y2="-8"/>
+      </g>
+      <circle r="6" fill="#0f151a"/>
+      <circle r="2.8" fill="#3bd4ff" opacity="0.8"/>
+    </g>
+    <g transform="translate(12 12)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#ffffff"/>
+      <path d="M-2 -8 L4 -8 L4 8 L-2 8 L-2 -2 L-6 0 L-6 -6 L-2 -8 Z" fill="#2362d3"/>
+    </g>
+    <g transform="translate(12 60)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#ffffff"/>
+      <path d="M-6 6 C-2 9 4 9 6 6 C8 4 8 2 6 0 C5 -1 3 -2 1 -3 C-1 -4 -2 -5 -2 -6 C-2 -7 -1 -8 1 -8 C3 -8 4 -7 5 -6 L8 -8 C6 -10 3 -12 0 -12 C-5 -12 -8 -9 -8 -6 C-8 -3 -6 -1 -3 0 C0 2 2 3 2 4 C2 6 0 7 -2 7 C-4 7 -5 6 -6 5 L-8 7 C-6 9 -3 10 0 10 C4 10 7 9 8 6 C9 3 8 1 5 -1 C3 -3 0 -4 -1 -5 C-3 -6 -4 -7 -4 -8 C-4 -10 -2 -11 0 -11 C2 -11 4 -10 5 -8 L7 -10 C5 -12 3 -13 0 -13 C-4 -13 -7 -11 -8 -8 C-9 -5 -8 -2 -5 0 C-2 2 1 3 1 5 C1 7 -1 8 -3 8 C-5 8 -6 7 -7 6 L-9 8 C-7 10 -4 11 0 11 C4 11 7 10 9 8" fill="#2a9c3b"/>
+    </g>
+    <g transform="translate(60 12)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#ffffff"/>
+      <path d="M-7 8 H7 V4 H-1 C4 0 7 -4 7 -8 C7 -12 3 -14 -2 -14 C-5 -14 -8 -13 -10 -11 L-7 -8 C-6 -9 -4 -10 -2 -10 C1 -10 2 -8 0 -5 L-7 0 V8 Z" fill="#c83b32"/>
+    </g>
+    <g transform="translate(84 84)">
+      <rect x="-10" y="-12" width="20" height="20" rx="4" fill="#ffffff"/>
+      <polygon points="-6 -10 0 -10 0 -8 6 -8 6 8 -6 8" fill="#f0c419"/>
+      <polygon points="0 -8 6 -4 0 0" fill="#d84040"/>
+      <rect x="-6" y="-10" width="2" height="18" fill="#343a40"/>
+    </g>
+  </g>
 </svg>
