@@ -3,8 +3,12 @@
 import { isBrowser } from '../../utils/env';
 import { getDb } from '../../utils/safeIDB';
 
+const SHARE_CACHE_KEY = 'sticky-notes-share-cache';
+const TOAST_TIMEOUT = 5000;
+
 let notesContainer = null;
 let addNoteBtn = null;
+let toastTimer = null;
 
 function initDom() {
   if (!isBrowser) return;
@@ -13,6 +17,52 @@ function initDom() {
 }
 
 initDom();
+
+function ensureToastElement() {
+  if (!isBrowser) return null;
+  let el = document.querySelector('.sticky-notes-toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'sticky-notes-toast';
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.setAttribute('data-visible', 'false');
+    document.body.appendChild(el);
+  }
+  return el;
+}
+
+function showToast(message, tone = 'info') {
+  const el = ensureToastElement();
+  if (!el) return;
+  el.textContent = message;
+  el.setAttribute('data-tone', tone);
+  el.setAttribute('data-visible', 'true');
+  if (toastTimer) {
+    window.clearTimeout(toastTimer);
+  }
+  toastTimer = window.setTimeout(() => {
+    if (el) {
+      el.setAttribute('data-visible', 'false');
+    }
+  }, TOAST_TIMEOUT);
+}
+
+function consumeShareCache() {
+  if (!isBrowser) return null;
+  try {
+    const raw = window.sessionStorage?.getItem(SHARE_CACHE_KEY);
+    if (!raw) return null;
+    window.sessionStorage?.removeItem(SHARE_CACHE_KEY);
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.text === 'string') {
+      return parsed.text;
+    }
+  } catch (err) {
+    console.warn('Failed to read sticky notes share cache', err);
+  }
+  return null;
+}
 
 const DEFAULT_NOTE_COLOR_TOKEN = '--sticky-note-surface';
 const LEGACY_DEFAULT_COLOR = '#fffa65';
@@ -348,9 +398,12 @@ async function init() {
     notes.forEach(createNoteElement);
 
     const params = new URLSearchParams(location.search);
+    const queuedShare = consumeShareCache();
     const sharedText = params.get('text');
-    if (sharedText) {
-      addNote(sharedText);
+    const payload = sharedText || queuedShare;
+    if (payload) {
+      addNote(payload);
+      showToast('Shared content saved to Sticky Notes.');
       history.replaceState(null, '', location.pathname);
     }
   } catch (err) {
