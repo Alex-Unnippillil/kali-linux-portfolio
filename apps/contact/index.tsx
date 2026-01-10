@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import FormError from "../../components/ui/FormError";
 import Toast from "../../components/ui/Toast";
 import { processContactForm } from "../../components/apps/contact";
 import { contactSchema } from "../../utils/contactSchema";
 import { copyToClipboard } from "../../utils/clipboard";
 import { openMailto } from "../../utils/mailto";
-import { trackEvent } from "@/lib/analytics-client";
+import { logContactFunnelStep } from "../../utils/analytics";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
@@ -51,8 +51,25 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [emailError, setEmailError] = useState("");
   const [messageError, setMessageError] = useState("");
+  const hasStartedFormRef = useRef(false);
+  const loggedFallbackReasons = useRef<Set<string>>(new Set());
+
+  const surfaceDetails = useMemo(() => ({ surface: "apps-contact" as const }), []);
+
+  const markFormStarted = () => {
+    if (hasStartedFormRef.current) return;
+    hasStartedFormRef.current = true;
+    logContactFunnelStep("form_started", surfaceDetails);
+  };
+
+  const logFallback = (reason: string) => {
+    if (loggedFallbackReasons.current.has(reason)) return;
+    loggedFallbackReasons.current.add(reason);
+    logContactFunnelStep("fallback_presented", { ...surfaceDetails, reason });
+  };
 
   useEffect(() => {
+    logContactFunnelStep("view_contact_entry", surfaceDetails);
     const saved = localStorage.getItem(DRAFT_KEY);
     if (saved) {
       try {
@@ -60,6 +77,7 @@ const ContactApp: React.FC = () => {
         setName(draft.name || "");
         setEmail(draft.email || "");
         setMessage(draft.message || "");
+        logContactFunnelStep("draft_restored", surfaceDetails);
       } catch {
         /* ignore */
       }
@@ -96,6 +114,7 @@ const ContactApp: React.FC = () => {
       return;
     }
     if (submitting) return;
+    markFormStarted();
     setSubmitting(true);
     setError("");
     setSuccessMessage("");
@@ -108,15 +127,26 @@ const ContactApp: React.FC = () => {
     if (!emailResult.success) {
       setEmailError("Invalid email");
       hasValidationError = true;
+      logContactFunnelStep("validation_error", {
+        ...surfaceDetails,
+        field: "email",
+      });
     }
     if (!messageResult.success) {
       setMessageError("1-1000 chars");
       hasValidationError = true;
+      logContactFunnelStep("validation_error", {
+        ...surfaceDetails,
+        field: "message",
+      });
     }
     if (hasValidationError) {
       setSubmitting(false);
       setError("Please fix the errors above and try again.");
-      trackEvent("contact_submit_error", { method: "form" });
+      logContactFunnelStep("submission_failure", {
+        ...surfaceDetails,
+        reason: "validation",
+      });
       return;
     }
 
@@ -125,7 +155,15 @@ const ContactApp: React.FC = () => {
     if (!recaptchaToken) {
       setError("Captcha verification failed. Please try again.");
       setSubmitting(false);
-      trackEvent("contact_submit_error", { method: "form" });
+      logFallback("captcha_unavailable");
+      logContactFunnelStep("captcha_error", {
+        ...surfaceDetails,
+        reason: "token_unavailable",
+      });
+      logContactFunnelStep("submission_failure", {
+        ...surfaceDetails,
+        reason: "captcha",
+      });
       return;
     }
 
@@ -148,17 +186,44 @@ const ContactApp: React.FC = () => {
         setMessage("");
         setHoneypot("");
         localStorage.removeItem(DRAFT_KEY);
-        trackEvent("contact_submit", { method: "form" });
+        logContactFunnelStep("submission_success", surfaceDetails);
+        logContactFunnelStep("draft_cleared", surfaceDetails);
       } else {
         setError(result.error || "Submission failed");
-        trackEvent("contact_submit_error", { method: "form" });
+        logContactFunnelStep("submission_failure", {
+          ...surfaceDetails,
+          reason: result.code || "server",
+        });
+        if (result.error?.toLowerCase().includes("captcha")) {
+          logContactFunnelStep("captcha_error", {
+            ...surfaceDetails,
+            reason: "server_response",
+          });
+        }
       }
     } catch {
       setError("Submission failed");
-      trackEvent("contact_submit_error", { method: "form" });
+      logContactFunnelStep("submission_failure", {
+        ...surfaceDetails,
+        reason: "network",
+      });
     }
     setSubmitting(false);
   };
+
+  const handleCopyEmail = () => {
+    copyToClipboard(EMAIL);
+    logContactFunnelStep("cta_copy_email", {
+      ...surfaceDetails,
+      channel: "primary", 
+    });
+  };
+
+  const handleOpenMail = () => {
+    openMailto(EMAIL);
+    logContactFunnelStep("cta_open_mail_client", surfaceDetails);
+  };
+
 
   return (
     <div className="min-h-screen bg-kali-backdrop p-4 text-[color:var(--kali-text)]">
@@ -245,14 +310,14 @@ const ContactApp: React.FC = () => {
               <div className="mt-1 flex flex-wrap gap-3 text-sm">
                 <button
                   type="button"
-                  onClick={() => copyToClipboard(EMAIL)}
+                  onClick={handleCopyEmail}
                   className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] px-3 py-1 font-medium text-[color:var(--kali-control)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_18%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
                 >
                   Copy address
                 </button>
                 <button
                   type="button"
-                  onClick={() => openMailto(EMAIL)}
+                  onClick={handleOpenMail}
                   className="rounded-md border border-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] px-3 py-1 font-medium text-[color:var(--kali-control)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_18%,transparent)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)]"
                 >
                   Open email app
@@ -276,7 +341,11 @@ const ContactApp: React.FC = () => {
                     id="contact-name"
                     className="h-11 w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] pl-10 pr-3 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => {
+                      markFormStarted();
+                      setName(e.target.value);
+                    }}
+                    onFocus={markFormStarted}
                     required
                     aria-labelledby="contact-name-label"
                   />
@@ -313,7 +382,11 @@ const ContactApp: React.FC = () => {
                     type="email"
                     className="h-11 w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] pl-10 pr-3 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      markFormStarted();
+                      setEmail(e.target.value);
+                    }}
+                    onFocus={markFormStarted}
                     required
                     aria-invalid={!!emailError}
                     aria-describedby={emailError ? "contact-email-error" : undefined}
@@ -358,7 +431,11 @@ const ContactApp: React.FC = () => {
                     className="w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-3 pl-11 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     rows={4}
                     value={message}
-                    onChange={(e) => setMessage(e.target.value)}
+                    onChange={(e) => {
+                      markFormStarted();
+                      setMessage(e.target.value);
+                    }}
+                    onFocus={markFormStarted}
                     required
                     aria-invalid={!!messageError}
                     aria-describedby={messageError ? "contact-message-error" : undefined}
