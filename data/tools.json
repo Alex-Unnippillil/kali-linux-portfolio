@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "name": "Nmap",
+    "description": "Network scanner and mapper",
+    "tags": ["network", "recon"]
+  },
+  {
+    "id": 2,
+    "name": "Wireshark",
+    "description": "Packet analyzer",
+    "tags": ["network", "analysis", "gui"]
+  },
+  {
+    "id": 3,
+    "name": "Metasploit",
+    "description": "Penetration testing framework",
+    "tags": ["exploit", "framework"]
+  },
+  {
+    "id": 4,
+    "name": "Hydra",
+    "description": "Parallelized login cracker",
+    "tags": ["password", "network"]
+  }
+]
