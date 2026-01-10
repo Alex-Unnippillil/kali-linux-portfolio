@@ -285,6 +285,8 @@ export class Desktop extends Component {
         this.desktopPadding = { ...this.baseDesktopPadding };
         this.latestViewportWidth = initialViewportWidth;
         this.viewportResizeObserver = null;
+        this.pendingViewportSync = null;
+        this.pendingViewportSyncTimeout = null;
 
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
@@ -1169,6 +1171,114 @@ export class Desktop extends Component {
         if (changed) {
             this.setWorkspaceState({ window_positions: nextPositions }, this.saveSession);
         }
+    };
+
+    getLauncherTransitionDuration = () => {
+        if (typeof window === 'undefined') return 0;
+        const overlay = this.allAppsOverlayRef?.current;
+        if (!overlay || typeof window.getComputedStyle !== 'function') {
+            return 240;
+        }
+
+        try {
+            const computed = window.getComputedStyle(overlay);
+            if (!computed) return 240;
+
+            const parseTimeList = (value) => {
+                if (!value || typeof value !== 'string') return [];
+                return value
+                    .split(',')
+                    .map((token) => {
+                        const text = token.trim();
+                        if (!text) return 0;
+                        if (text.endsWith('ms')) {
+                            const parsed = parseFloat(text.slice(0, -2));
+                            return Number.isFinite(parsed) ? parsed : 0;
+                        }
+                        if (text.endsWith('s')) {
+                            const parsed = parseFloat(text.slice(0, -1));
+                            return Number.isFinite(parsed) ? parsed * 1000 : 0;
+                        }
+                        const parsed = parseFloat(text);
+                        return Number.isFinite(parsed) ? parsed * 1000 : 0;
+                    })
+                    .filter((duration) => Number.isFinite(duration) && duration >= 0);
+            };
+
+            const durations = parseTimeList(computed.transitionDuration);
+            const delays = parseTimeList(computed.transitionDelay);
+            const totalCount = Math.max(durations.length, delays.length);
+            if (!totalCount) {
+                return 240;
+            }
+
+            let longest = 0;
+            for (let index = 0; index < totalCount; index += 1) {
+                const duration = durations[index] ?? durations[durations.length - 1] ?? 0;
+                const delay = delays[index] ?? delays[delays.length - 1] ?? 0;
+                const total = duration + delay;
+                if (total > longest) {
+                    longest = total;
+                }
+            }
+
+            if (!Number.isFinite(longest) || longest <= 0) {
+                return 240;
+            }
+
+            return Math.min(longest, 1200);
+        } catch (error) {
+            return 240;
+        }
+    };
+
+    scheduleDesktopViewportSync = () => {
+        if (typeof window === 'undefined') {
+            this.handleViewportResize();
+            return;
+        }
+
+        if (this.pendingViewportSync !== null && typeof window.cancelAnimationFrame === 'function') {
+            window.cancelAnimationFrame(this.pendingViewportSync);
+            this.pendingViewportSync = null;
+        }
+
+        if (this.pendingViewportSyncTimeout !== null) {
+            clearTimeout(this.pendingViewportSyncTimeout);
+            this.pendingViewportSyncTimeout = null;
+        }
+
+        const run = () => {
+            this.pendingViewportSync = null;
+            this.handleViewportResize();
+        };
+
+        if (typeof window.requestAnimationFrame === 'function') {
+            this.pendingViewportSync = window.requestAnimationFrame(run);
+        } else {
+            run();
+        }
+
+        const prefersReducedMotion =
+            typeof window.matchMedia === 'function'
+                ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                : false;
+
+        if (prefersReducedMotion) {
+            return;
+        }
+
+        const transitionDuration = this.getLauncherTransitionDuration();
+        const delay = Math.min(Math.max(transitionDuration + 60, 220), 1400);
+
+        if (delay <= 0) {
+            return;
+        }
+
+        this.pendingViewportSyncTimeout = window.setTimeout(() => {
+            this.pendingViewportSyncTimeout = null;
+            this.handleViewportResize();
+        }, delay);
     };
 
     computeTouchCentroid = (touchList) => {
@@ -3661,9 +3771,13 @@ export class Desktop extends Component {
         if (!launcherWasOpen && launcherIsOpen) {
             this.activateAllAppsFocusTrap();
             this.focusAllAppsSearchInput();
+            this.scheduleDesktopViewportSync();
         } else if (launcherWasOpen && !launcherIsOpen) {
             this.deactivateAllAppsFocusTrap();
             this.restoreFocusToPreviousElement();
+            this.scheduleDesktopViewportSync();
+        } else if (prevLauncher?.transitionState !== nextLauncher?.transitionState) {
+            this.scheduleDesktopViewportSync();
         }
     }
 
@@ -3697,6 +3811,14 @@ export class Desktop extends Component {
         if (this.allAppsEnterRaf && typeof cancelAnimationFrame === 'function') {
             cancelAnimationFrame(this.allAppsEnterRaf);
             this.allAppsEnterRaf = null;
+        }
+        if (this.pendingViewportSync !== null && typeof cancelAnimationFrame === 'function') {
+            cancelAnimationFrame(this.pendingViewportSync);
+            this.pendingViewportSync = null;
+        }
+        if (this.pendingViewportSyncTimeout !== null) {
+            clearTimeout(this.pendingViewportSyncTimeout);
+            this.pendingViewportSyncTimeout = null;
         }
         this.deactivateAllAppsFocusTrap();
     }
@@ -5558,6 +5680,7 @@ export class Desktop extends Component {
         const desktopStyle = {
             paddingTop: `calc(var(--desktop-navbar-height, ${baseNavbarHeight}px) + ${windowTopSpacing}px)`,
             minHeight: '100dvh',
+            height: '100%',
             '--desktop-accent': accentColor,
             '--desktop-wallpaper': wallpaperCss,
             '--desktop-overlay': overlayValue,
@@ -5575,7 +5698,7 @@ export class Desktop extends Component {
                 id="desktop"
                 role="main"
                 ref={this.desktopRef}
-                className={" min-h-screen h-full w-full flex flex-col items-end justify-start content-start flex-wrap-reverse bg-transparent relative overflow-hidden overscroll-none window-parent"}
+                className="relative flex h-full w-full min-h-screen flex-col items-stretch justify-start overflow-hidden overscroll-none bg-transparent window-parent"
                 style={desktopStyle}
             >
 
