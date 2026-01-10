@@ -7,6 +7,10 @@ import HashcatApp, {
 import progressInfo from '../components/apps/hashcat/progress.json';
 
 describe('HashcatApp', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
   it('auto-detects hash types', () => {
     expect(detectHashType('d41d8cd98f00b204e9800998ecf8427e')).toBe('0');
     expect(detectHashType('da39a3ee5e6b4b0d3255bfef95601890afd80709')).toBe('100');
@@ -115,6 +119,40 @@ describe('HashcatApp', () => {
     expect(
       getByText(/\/usr\/share\/wordlists\/rockyou\.txt/)
     ).toBeInTheDocument();
+  });
+
+  it('persists custom wordlists to localStorage', () => {
+    const { getByLabelText, getByText } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Wordlist Name'), {
+      target: { value: 'custom-list.txt' },
+    });
+    fireEvent.change(getByLabelText('Wordlist Entries (one per line)'), {
+      target: { value: 'alpha\nbeta' },
+    });
+    fireEvent.click(getByText('Add Wordlist'));
+
+    const stored = JSON.parse(
+      window.localStorage.getItem('hashcatWordlists') || '[]'
+    ) as Array<{ name?: string }>;
+    expect(stored.some((entry) => entry.name === 'custom-list.txt')).toBe(
+      true
+    );
+  });
+
+  it('restores custom wordlists from localStorage', () => {
+    window.localStorage.setItem(
+      'hashcatWordlists',
+      JSON.stringify([
+        { id: 'custom-1', name: 'persisted.txt', entries: 2, size: 12 },
+      ])
+    );
+
+    const { getByLabelText, getByTestId } = render(<HashcatApp />);
+    fireEvent.change(getByLabelText('Wordlist:'), {
+      target: { value: 'custom-1' },
+    });
+
+    expect(getByTestId('wordlist-meta').textContent).toContain('persisted.txt');
   });
 
   it('displays GPU requirement notice', () => {
