@@ -1,4 +1,5 @@
 import Document, { Html, Head, Main, NextScript } from 'next/document';
+import { Children, cloneElement, isValidElement } from 'react';
 
 class MyDocument extends Document {
   /**
@@ -7,7 +8,11 @@ class MyDocument extends Document {
   static async getInitialProps(ctx) {
     const initial = await Document.getInitialProps(ctx);
     const nonce = ctx?.res?.getHeader?.('x-csp-nonce');
-    return { ...initial, nonce };
+    const styles = Children.map(initial.styles, (child) => {
+      if (!isValidElement(child)) return child;
+      return cloneElement(child, { nonce });
+    });
+    return { ...initial, styles, nonce };
   }
 
   render() {
@@ -18,7 +23,7 @@ class MyDocument extends Document {
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
-          <script nonce={nonce} src="/theme.js" />
+          <script nonce={nonce} src="/theme.js" defer />
         </Head>
         <body>
           <Main />
