@@ -4444,21 +4444,43 @@ export class Desktop extends Component {
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
-        let { posx, posy } = this.getMenuPosition(e);
-        let contextMenu = document.getElementById(`${menuName}-menu`);
+        const contextMenu = document.getElementById(`${menuName}-menu`);
+        if (!contextMenu) {
+            return;
+        }
+
+        const { posx: initialX, posy: initialY } = this.getMenuPosition(e);
+
+        const previousDisplay = contextMenu.style.display;
+        const previousVisibility = contextMenu.style.visibility;
+
+        contextMenu.style.visibility = 'hidden';
+        contextMenu.style.display = 'block';
 
         const menuWidth = contextMenu.offsetWidth;
         const menuHeight = contextMenu.offsetHeight;
-        if (posx + menuWidth > window.innerWidth) posx -= menuWidth;
-        if (posy + menuHeight > window.innerHeight) posy -= menuHeight;
 
-        posx = posx.toString() + "px";
-        posy = posy.toString() + "px";
+        let posx = initialX;
+        let posy = initialY;
 
-        contextMenu.style.left = posx;
-        contextMenu.style.top = posy;
+        if (posx + menuWidth > window.innerWidth) posx = Math.max(0, posx - menuWidth);
+        if (posy + menuHeight > window.innerHeight) posy = Math.max(0, posy - menuHeight);
 
-        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } });
+        contextMenu.style.left = `${posx}px`;
+        contextMenu.style.top = `${posy}px`;
+
+        contextMenu.style.display = previousDisplay;
+        contextMenu.style.visibility = previousVisibility;
+
+        this.setState({ context_menus: { ...this.state.context_menus, [menuName]: true } }, () => {
+            requestAnimationFrame(() => {
+                const activeMenu = document.getElementById(`${menuName}-menu`);
+                if (activeMenu) {
+                    activeMenu.style.left = `${posx}px`;
+                    activeMenu.style.top = `${posy}px`;
+                }
+            });
+        });
     }
 
     hideAllContextMenu = () => {
