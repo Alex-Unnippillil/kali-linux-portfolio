@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import MimikatzApp from '../../components/apps/mimikatz';
 import ExposureExplainer from './components/ExposureExplainer';
+import { KALI_SITES } from '@/src/config/kaliSites';
 
-const disclaimerUrl = 'https://www.kali.org/docs/policy/disclaimer/';
+const disclaimerUrl = `${KALI_SITES.BASE}/docs/policy/disclaimer/`;
 
 const MimikatzPage: React.FC = () => {
   const [confirmed, setConfirmed] = useState(false);

@@ -1,6 +1,7 @@
 import React from 'react';
 import WorkflowCard from '../components/WorkflowCard';
 import { WindowMainScreen } from '../components/base/window';
+import { KALI_SITES } from '@/src/config/kaliSites';
 
 interface FrameProps {
   title: string;
@@ -36,12 +37,12 @@ const SecurityEducation = () => (
         <div className="grid gap-4 p-4 md:grid-cols-2">
           <InfoFrame
             title="What"
-            link="https://www.kali.org/docs/introduction/what-is-kali-linux/"
+            link={`${KALI_SITES.BASE}/docs/introduction/what-is-kali-linux/`}
             description="Overview of Kali Linux and its purpose."
           />
           <InfoFrame
             title="Why"
-            link="https://www.kali.org/docs/introduction/should-i-use-kali-linux/"
+            link={`${KALI_SITES.BASE}/docs/introduction/should-i-use-kali-linux/`}
             description="Reasons to use Kali Linux for authorized security assessments."
           />
           <InfoFrame
