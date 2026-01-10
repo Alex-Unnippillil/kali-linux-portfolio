@@ -1,0 +1,35 @@
+{
+  "name": "Kali Linux Portfolio",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20.19.5",
+      "installYarn": true
+    },
+    "ghcr.io/devcontainers/features/playwright:1": {
+      "version": "1.55.0",
+      "installDeps": true,
+      "installBrowsers": true
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "updateRemoteUserUID": true,
+  "remoteUser": "vscode",
+  "workspaceFolder": "/workspaces/kali-linux-portfolio",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspaces/kali-linux-portfolio,type=bind,consistency=cached"
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "streetsidesoftware.code-spell-checker",
+        "ms-playwright.playwright"
+      ]
+    }
+  },
+  "forwardPorts": [3000],
+  "postCreateCommand": "yarn install && npx playwright install --with-deps"
+}

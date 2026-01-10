@@ -9,6 +9,7 @@ A desktop-style portfolio built with Next.js and Tailwind that recreates the loo
 ## Table of Contents
 1. [Legal Notice & Risk Overview](#legal-notice--risk-overview)
 2. [Quick Start](#quick-start)
+   - [Dev Container](#dev-container)
 3. [Project Architecture](#project-architecture)
 4. [Desktop UX](#desktop-ux)
 5. [App Catalog](#app-catalog)
@@ -40,6 +41,15 @@ Always run experiments inside a controlled lab and obtain written permission bef
 - **Node.js 20.19.5** (tracked in [`.nvmrc`](./.nvmrc)); install via `nvm install`.
 - **Yarn** (the repo ships with `yarn.lock`). Other package managers are not supported by CI.
 - Copy `.env.local.example` to `.env.local` and fill in any keys for the features you intend to test.
+
+### Dev Container
+The repository ships with a [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json) that provisions Node.js 20.19.5, Playwright 1.55, and the Ubuntu system dependencies required to run browser tests. Launch it from VS Code (or GitHub Codespaces) via **Command Palette → Dev Containers: Reopen in Container**. The default workflow performs the following on first boot:
+
+1. Installs workspace dependencies with `yarn install`.
+2. Downloads Playwright browsers with `npx playwright install --with-deps` so `yarn lint`, `yarn test`, and `npx playwright test` succeed without extra steps.
+3. Publishes common port forwards (e.g., `3000`) for `yarn dev`.
+
+Recommended extensions (ESLint, Prettier, Tailwind CSS IntelliSense, Playwright, and Code Spell Checker) load automatically inside the container. Start `yarn dev` in the integrated terminal and attach VS Code’s JavaScript debugger via the **Run and Debug** panel or a JavaScript Debug Terminal. Playwright tests are available from **Testing → Playwright: Test Explorer** once the container finishes provisioning.
 
 ### Install & Run (Development)
 ```bash
