@@ -2,7 +2,7 @@ import React, { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import Ubuntu from '../components/ubuntu';
 
-jest.mock('../components/screen/desktop', () => function DesktopMock() {
+jest.mock('../components/desktop/Desktop', () => function DesktopMock() {
   return <div data-testid="desktop" />;
 });
 jest.mock('../components/screen/navbar', () => function NavbarMock() {
