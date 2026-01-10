@@ -1,0 +1,22 @@
+{
+  "rootMainBytes": 362500,
+  "toleranceBytes": 2048,
+  "files": [
+    {
+      "file": "static/chunks/webpack-1d81fe7f512aa706.js",
+      "bytes": 16709
+    },
+    {
+      "file": "static/chunks/4bd1b696-182b6b13bdad92e3.js",
+      "bytes": 173025
+    },
+    {
+      "file": "static/chunks/1457-14b333531562c96a.js",
+      "bytes": 172610
+    },
+    {
+      "file": "static/chunks/main-app-73c32ad9c96bf141.js",
+      "bytes": 156
+    }
+  ]
+}
