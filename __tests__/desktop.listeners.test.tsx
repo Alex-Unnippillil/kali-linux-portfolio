@@ -181,6 +181,18 @@ describe('Desktop event listeners', () => {
     expect(docAddSpy).toHaveBeenCalled();
     expect(pointerListener).toEqual(expect.any(Function));
 
+    expect(docAddSpy.mock.calls).toEqual(
+      expect.arrayContaining([
+        ['contextmenu', instance.checkContextMenu],
+        ['click', instance.hideAllContextMenu],
+        ['keydown', instance.handleContextKey],
+        ['pointerdown', instance.handleContextPointerDown],
+        ['pointermove', instance.handleContextPointerMove],
+        ['pointerup', instance.handleContextPointerUp, true],
+        ['pointercancel', instance.handleContextPointerUp, true],
+      ])
+    );
+
     unmount();
 
     expect(winRemoveSpy.mock.calls).toEqual(
@@ -199,6 +211,10 @@ describe('Desktop event listeners', () => {
         ['contextmenu', instance.checkContextMenu],
         ['click', instance.hideAllContextMenu],
         ['keydown', instance.handleContextKey],
+        ['pointerdown', instance.handleContextPointerDown],
+        ['pointermove', instance.handleContextPointerMove],
+        ['pointerup', instance.handleContextPointerUp, true],
+        ['pointercancel', instance.handleContextPointerUp, true],
       ])
     );
     expect(gestureRemoveSpy.mock.calls).toEqual(

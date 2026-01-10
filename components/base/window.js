@@ -1811,6 +1811,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onBlur={onBlur}
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
+            data-context="window"
             data-window-titlebar=""
             data-window-drag-handle=""
         >
