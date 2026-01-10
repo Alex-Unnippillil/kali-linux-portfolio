@@ -70,6 +70,8 @@ const percentOf = (value, total) => {
     return (value / total) * 100;
 };
 
+let windowTitleSequence = 0;
+
 const SNAP_LABELS = {
     left: 'Snap left half',
     right: 'Snap right half',
@@ -207,7 +209,8 @@ export class Window extends Component {
 
     constructor(props) {
         super(props);
-        this.id = null;
+        this.id = typeof props.id === 'string' ? props.id : null;
+        this.titleElementId = this.id ? `${this.id}-title` : `window-title-${++windowTitleSequence}`;
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         const isPortrait = viewportHeight > viewportWidth;
         const initialTopInset = typeof window !== 'undefined'
@@ -246,6 +249,8 @@ export class Window extends Component {
             minWidth,
             minHeight,
             resizing: null,
+            tabTitle: null,
+            customTitle: null,
         };
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -271,6 +276,9 @@ export class Window extends Component {
     componentDidMount() {
         this._isUnmounted = false;
         this.id = this.props.id;
+        if (this.id && (!this.titleElementId || !this.titleElementId.startsWith(`${this.id}-`))) {
+            this.titleElementId = `${this.id}-title`;
+        }
         this.setDefaultWindowDimenstion();
 
         // google analytics
@@ -283,6 +291,7 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('desktop-window-tab-title', this.handleTabTitleEvent);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
@@ -292,62 +301,63 @@ export class Window extends Component {
     }
 
     componentDidUpdate(prevProps) {
-        if (prevProps.minWidth === this.props.minWidth && prevProps.minHeight === this.props.minHeight) {
-            return;
+        if (prevProps.id !== this.props.id && typeof this.props.id === 'string') {
+            this.id = this.props.id;
+            this.titleElementId = `${this.props.id}-title`;
         }
 
-        const minWidth = normalizePercentageDimension(this.props.minWidth, DEFAULT_MIN_WIDTH);
-        const minHeight = normalizePercentageDimension(this.props.minHeight, DEFAULT_MIN_HEIGHT);
+        if (prevProps.minWidth !== this.props.minWidth || prevProps.minHeight !== this.props.minHeight) {
+            const minWidth = normalizePercentageDimension(this.props.minWidth, DEFAULT_MIN_WIDTH);
+            const minHeight = normalizePercentageDimension(this.props.minHeight, DEFAULT_MIN_HEIGHT);
 
-        const minWidthChanged = this.state.minWidth !== minWidth;
-        const minHeightChanged = this.state.minHeight !== minHeight;
-        const widthNeedsUpdate = this.state.width < minWidth;
-        const heightNeedsUpdate = this.state.height < minHeight;
-        const lastSizeNeedsUpdate = this.state.lastSize
-            ? (this.state.lastSize.width < minWidth || this.state.lastSize.height < minHeight)
-            : false;
-        const preBoundsNeedsUpdate = this.state.preMaximizeBounds
-            ? (this.state.preMaximizeBounds.width < minWidth || this.state.preMaximizeBounds.height < minHeight)
-            : false;
+            const minWidthChanged = this.state.minWidth !== minWidth;
+            const minHeightChanged = this.state.minHeight !== minHeight;
+            const widthNeedsUpdate = this.state.width < minWidth;
+            const heightNeedsUpdate = this.state.height < minHeight;
+            const lastSizeNeedsUpdate = this.state.lastSize
+                ? (this.state.lastSize.width < minWidth || this.state.lastSize.height < minHeight)
+                : false;
+            const preBoundsNeedsUpdate = this.state.preMaximizeBounds
+                ? (this.state.preMaximizeBounds.width < minWidth || this.state.preMaximizeBounds.height < minHeight)
+                : false;
 
-        if (!minWidthChanged && !minHeightChanged && !widthNeedsUpdate && !heightNeedsUpdate && !lastSizeNeedsUpdate && !preBoundsNeedsUpdate) {
-            return;
+            if (minWidthChanged || minHeightChanged || widthNeedsUpdate || heightNeedsUpdate || lastSizeNeedsUpdate || preBoundsNeedsUpdate) {
+                this.setState((prevState) => {
+                    const updates = {};
+                    if (minWidthChanged) {
+                        updates.minWidth = minWidth;
+                    }
+                    if (minHeightChanged) {
+                        updates.minHeight = minHeight;
+                    }
+                    if (widthNeedsUpdate) {
+                        updates.width = Math.max(prevState.width, minWidth);
+                    }
+                    if (heightNeedsUpdate) {
+                        updates.height = Math.max(prevState.height, minHeight);
+                    }
+                    if (lastSizeNeedsUpdate && prevState.lastSize) {
+                        updates.lastSize = {
+                            width: Math.max(prevState.lastSize.width, minWidth),
+                            height: Math.max(prevState.lastSize.height, minHeight),
+                        };
+                    }
+                    if (preBoundsNeedsUpdate && prevState.preMaximizeBounds) {
+                        updates.preMaximizeBounds = {
+                            ...prevState.preMaximizeBounds,
+                            width: Math.max(prevState.preMaximizeBounds.width, minWidth),
+                            height: Math.max(prevState.preMaximizeBounds.height, minHeight),
+                        };
+                    }
+                    return updates;
+                }, () => {
+                    this.resizeBoundries();
+                    if (widthNeedsUpdate || heightNeedsUpdate) {
+                        this.notifySizeChange();
+                    }
+                });
+            }
         }
-
-        this.setState((prevState) => {
-            const updates = {};
-            if (minWidthChanged) {
-                updates.minWidth = minWidth;
-            }
-            if (minHeightChanged) {
-                updates.minHeight = minHeight;
-            }
-            if (widthNeedsUpdate) {
-                updates.width = Math.max(prevState.width, minWidth);
-            }
-            if (heightNeedsUpdate) {
-                updates.height = Math.max(prevState.height, minHeight);
-            }
-            if (lastSizeNeedsUpdate && prevState.lastSize) {
-                updates.lastSize = {
-                    width: Math.max(prevState.lastSize.width, minWidth),
-                    height: Math.max(prevState.lastSize.height, minHeight),
-                };
-            }
-            if (preBoundsNeedsUpdate && prevState.preMaximizeBounds) {
-                updates.preMaximizeBounds = {
-                    ...prevState.preMaximizeBounds,
-                    width: Math.max(prevState.preMaximizeBounds.width, minWidth),
-                    height: Math.max(prevState.preMaximizeBounds.height, minHeight),
-                };
-            }
-            return updates;
-        }, () => {
-            this.resizeBoundries();
-            if (widthNeedsUpdate || heightNeedsUpdate) {
-                this.notifySizeChange();
-            }
-        });
     }
 
     componentWillUnmount() {
@@ -359,6 +369,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('desktop-window-tab-title', this.handleTabTitleEvent);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -373,6 +384,45 @@ export class Window extends Component {
         this._pendingDragUpdate = null;
         this.cancelResizeSession();
         this._resizeSession = null;
+    }
+
+    handleTabTitleEvent = (event) => {
+        if (!event || typeof event !== 'object') {
+            return;
+        }
+        const detail = event.detail || {};
+        const customTitle = typeof detail.title === 'string' && detail.title.trim().length > 0
+            ? detail.title.trim()
+            : null;
+        const tabTitle = !customTitle && typeof detail.tabTitle === 'string' && detail.tabTitle.trim().length > 0
+            ? detail.tabTitle.trim()
+            : (customTitle && typeof detail.tabTitle === 'string' && detail.tabTitle.trim().length > 0
+                ? detail.tabTitle.trim()
+                : null);
+
+        this.setState((prevState) => {
+            const sameCustom = prevState.customTitle === customTitle;
+            const sameTab = prevState.tabTitle === tabTitle;
+            if (sameCustom && sameTab) {
+                return null;
+            }
+            return {
+                customTitle,
+                tabTitle,
+            };
+        });
+    }
+
+    getDisplayTitle = () => {
+        const baseTitle = typeof this.props.title === 'string' ? this.props.title : '';
+        if (this.state.customTitle) {
+            return this.state.customTitle;
+        }
+        const tabTitle = this.state.tabTitle;
+        if (tabTitle && baseTitle) {
+            return `${baseTitle} — ${tabTitle}`;
+        }
+        return tabTitle || baseTitle;
     }
 
     setDefaultWindowDimenstion = () => {
@@ -1679,6 +1729,10 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const windowId = this.props.id || this.id;
+        const titleElementId = this.titleElementId;
+        const displayTitle = this.getDisplayTitle();
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -1744,11 +1798,12 @@ export class Window extends Component {
                             this.state.maximized ? styles.windowFrameMaximized : '',
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
-                        id={this.id}
+                        id={windowId}
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
-                        aria-label={this.props.title}
+                        aria-labelledby={titleElementId || undefined}
+                        aria-label={titleElementId ? undefined : displayTitle}
                         tabIndex={0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
@@ -1767,7 +1822,8 @@ export class Window extends Component {
                             </>
                         )}
                         <WindowTopBar
-                            title={this.props.title}
+                            title={displayTitle}
+                            titleId={titleElementId}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
                             grabbed={this.state.grabbed}
@@ -1779,7 +1835,7 @@ export class Window extends Component {
                                     maximize={this.maximizeWindow}
                                     isMaximised={this.state.maximized}
                                     close={this.closeWindow}
-                                    id={this.id}
+                                    id={windowId}
                                     allowMaximize={this.props.allowMaximize !== false}
                                 />
                             )}
@@ -1800,7 +1856,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ title, titleId, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
     return (
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
@@ -1815,7 +1871,13 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             data-window-drag-handle=""
         >
             <span className={styles.windowTitleBalancer} aria-hidden="true" />
-            <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>
+            <div
+                className={`${styles.windowTitle} text-sm font-bold`}
+                title={title}
+                id={titleId}
+                role="heading"
+                aria-level={2}
+            >
                 {title}
             </div>
             {controls}
