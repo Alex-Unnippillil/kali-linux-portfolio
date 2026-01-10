@@ -1,18 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
-
-const formatEvent = (e: KeyboardEvent) => {
-  const parts = [
-    e.ctrlKey ? 'Ctrl' : '',
-    e.altKey ? 'Alt' : '',
-    e.shiftKey ? 'Shift' : '',
-    e.metaKey ? 'Meta' : '',
-    e.key.length === 1 ? e.key.toUpperCase() : e.key,
-  ];
-  return parts.filter(Boolean).join('+');
-};
+import { formatKeybinding } from '@/src/system/shortcuts';
 
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
@@ -29,9 +19,8 @@ const ShortcutOverlay: React.FC = () => {
         (target as HTMLElement).isContentEditable;
       if (isInput) return;
       const show =
-        shortcuts.find((s) => s.description === 'Show keyboard shortcuts')?.keys ||
-        '?';
-      if (formatEvent(e) === show) {
+        shortcuts.find((s) => s.id === 'show-shortcuts')?.keys || '?';
+      if (formatKeybinding(e) === show) {
         e.preventDefault();
         toggle();
       } else if (e.key === 'Escape' && open) {
@@ -44,7 +33,11 @@ const ShortcutOverlay: React.FC = () => {
   }, [open, toggle, shortcuts]);
 
   const handleExport = () => {
-    const data = JSON.stringify(shortcuts, null, 2);
+    const data = JSON.stringify(
+      shortcuts.map(({ id, action, keys }) => ({ id, action, keys })),
+      null,
+      2
+    );
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -55,16 +48,6 @@ const ShortcutOverlay: React.FC = () => {
   };
 
   if (!open) return null;
-
-  const keyCounts = shortcuts.reduce<Map<string, number>>((map, s) => {
-    map.set(s.keys, (map.get(s.keys) || 0) + 1);
-    return map;
-  }, new Map());
-  const conflicts = new Set(
-    Array.from(keyCounts.entries())
-      .filter(([, count]) => count > 1)
-      .map(([key]) => key)
-  );
 
   return (
     <div
@@ -91,18 +74,23 @@ const ShortcutOverlay: React.FC = () => {
           Export JSON
         </button>
         <ul className="space-y-1">
-          {shortcuts.map((s, i) => (
+          {shortcuts.map((s) => (
             <li
-              key={i}
-              data-conflict={conflicts.has(s.keys) ? 'true' : 'false'}
+              key={s.id}
+              data-conflict={s.conflict ? 'true' : 'false'}
               className={
-                conflicts.has(s.keys)
+                s.conflict
                   ? 'flex justify-between bg-red-600/70 px-2 py-1 rounded'
                   : 'flex justify-between px-2 py-1'
               }
             >
               <span className="font-mono mr-4">{s.keys}</span>
-              <span className="flex-1">{s.description}</span>
+              <span className="flex-1">
+                <span className="block">{s.action}</span>
+                {s.description && (
+                  <span className="text-xs text-ubt-grey">{s.description}</span>
+                )}
+              </span>
             </li>
           ))}
         </ul>
