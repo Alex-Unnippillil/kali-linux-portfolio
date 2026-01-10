@@ -1,14 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useBlobUrl } from '@/utils/blobManager';
 
 function ScreenRecorder() {
     const [recording, setRecording] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
+    const videoUrl = useBlobUrl(videoBlob);
 
     const startRecording = async () => {
         try {
+            setVideoBlob(null);
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: true,
                 audio: true,
@@ -21,8 +24,7 @@ function ScreenRecorder() {
             };
             recorder.onstop = () => {
                 const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                setVideoUrl(url);
+                setVideoBlob(blob);
                 stream.getTracks().forEach((t) => t.stop());
             };
             recorder.start();
@@ -39,8 +41,8 @@ function ScreenRecorder() {
     };
 
     const saveRecording = async () => {
-        if (!videoUrl) return;
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        if (!videoBlob || !videoUrl) return;
+        const blob = videoBlob;
         if ('showSaveFilePicker' in window) {
             try {
                 const handle = await (window as any).showSaveFilePicker({
