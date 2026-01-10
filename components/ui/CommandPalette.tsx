@@ -1,20 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { CommandPaletteItem, CommandPaletteItemType } from '../../utils/commandPalette/types';
+import {
+  SECTION_METADATA,
+  filterAndRankSections,
+  normalizeItems,
+  type SearchSection,
+  type SearchableSourceItem,
+  type SectionSource,
+} from '../../utils/commandPalette/indexing';
+import { readRecentSelections } from '../../utils/recentStorage';
 
-type CommandPaletteItemType = 'app' | 'window' | 'action';
-
-type BasicItem = {
+export type BasicItem = {
   id: string;
   title: string;
   subtitle?: string;
   icon?: string;
   keywords?: string[];
+  href?: string;
   data?: Record<string, unknown>;
-};
-
-export type CommandPaletteItem = BasicItem & {
-  type: CommandPaletteItemType;
 };
 
 type CommandPaletteProps = {
@@ -26,11 +31,30 @@ type CommandPaletteProps = {
   onClose: () => void;
 };
 
-const SECTION_METADATA: Record<CommandPaletteItemType, { label: string }> = {
-  window: { label: 'Recent Windows' },
-  app: { label: 'Applications' },
-  action: { label: 'Settings & Actions' },
+type WorkerResultMessage = {
+  type: 'result';
+  requestId: number;
+  sections: SearchSection[];
 };
+
+type WorkerReadyMessage = {
+  type: 'ready';
+};
+
+type WorkerErrorMessage = {
+  type: 'error';
+};
+
+type WorkerMessage = WorkerResultMessage | WorkerReadyMessage | WorkerErrorMessage;
+
+let workerUrl: URL | undefined;
+try {
+  if (typeof window !== 'undefined') {
+    workerUrl = new URL('../../workers/commandPaletteIndex.worker.ts', import.meta.url);
+  }
+} catch (error) {
+  workerUrl = undefined;
+}
 
 const isMacLike = (): boolean => {
   if (typeof navigator === 'undefined') return false;
@@ -41,27 +65,13 @@ const isMacLike = (): boolean => {
 
 const modifierHint = isMacLike() ? '⌘' : 'Ctrl';
 
-const normalizeIconPath = (icon?: string): string | undefined => {
-  if (!icon || typeof icon !== 'string') return undefined;
-  if (/^(https?:|data:)/i.test(icon)) return icon;
-  const sanitized = icon.replace(/^\.\//, '').replace(/^\/+/, '');
-  return sanitized ? `/${sanitized}` : undefined;
-};
+const buildSection = (items: BasicItem[], type: CommandPaletteItemType): SectionSource => ({
+  type,
+  items: normalizeItems(items, type),
+});
 
-const matchesQuery = (item: CommandPaletteItem, query: string): boolean => {
-  if (!query) return true;
-  const haystack = [item.title, item.subtitle, ...(item.keywords || [])]
-    .filter(Boolean)
-    .map((value) => value!.toString().toLowerCase());
-  return haystack.some((value) => value.includes(query));
-};
-
-const buildItems = (items: BasicItem[], type: CommandPaletteItemType): CommandPaletteItem[] =>
-  items.map((item) => ({
-    ...item,
-    icon: normalizeIconPath(item.icon),
-    type,
-  }));
+const flattenItems = (sections: SearchSection[]): CommandPaletteItem[] =>
+  sections.flatMap((section) => section.items);
 
 export default function CommandPalette({
   open,
@@ -72,36 +82,28 @@ export default function CommandPalette({
   onClose,
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
+  const [sections, setSections] = useState<SearchSection[]>([]);
+  const [useWorker, setUseWorker] = useState(true);
+  const [staticSections, setStaticSections] = useState<SectionSource[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const workerRef = useRef<Worker | null>(null);
+  const requestIdRef = useRef(0);
+  const recentSelectionsRef = useRef<SearchableSourceItem[]>([]);
 
-  const sections = useMemo(() => {
-    return [
-      { type: 'window' as const, label: SECTION_METADATA.window.label, items: buildItems(recentWindows, 'window') },
-      { type: 'app' as const, label: SECTION_METADATA.app.label, items: buildItems(apps, 'app') },
-      { type: 'action' as const, label: SECTION_METADATA.action.label, items: buildItems(settingsActions, 'action') },
-    ];
-  }, [apps, recentWindows, settingsActions]);
+  const baseSources = useMemo<SectionSource[]>(() => [
+    buildSection(recentWindows, 'window'),
+    buildSection(apps, 'app'),
+    buildSection(settingsActions, 'action'),
+  ], [apps, recentWindows, settingsActions]);
 
-  const filteredSections = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    return sections.map((section) => ({
-      ...section,
-      items: section.items.filter((item) => matchesQuery(item, term)),
-    }));
-  }, [query, sections]);
+  const fallbackSections = useMemo(
+    () => filterAndRankSections([...baseSources, ...staticSections], query, recentSelectionsRef.current),
+    [baseSources, query, staticSections]
+  );
 
-  const flatItems = useMemo(() => {
-  const list: CommandPaletteItem[] = [];
-  filteredSections.forEach((section) => {
-    section.items.forEach((item) => {
-      list.push(item);
-    });
-  });
-  return list;
-}, [filteredSections]);
+  const flatItems = useMemo(() => flattenItems(sections.length ? sections : fallbackSections), [sections, fallbackSections]);
 
   const indexLookup = useMemo(() => {
     const map = new Map<string, number>();
@@ -111,12 +113,166 @@ export default function CommandPalette({
     return map;
   }, [flatItems]);
 
+  const ensureWorker = useCallback(() => {
+    if (!useWorker) return null;
+    if (typeof window === 'undefined') return null;
+    if (!workerUrl) return null;
+    if (typeof Worker === 'undefined') {
+      setUseWorker(false);
+      return null;
+    }
+    if (!workerRef.current) {
+      try {
+        const worker = new Worker(workerUrl, { type: 'module' });
+        worker.addEventListener('message', (event: MessageEvent<WorkerMessage>) => {
+          const message = event.data;
+          if (!message || typeof message !== 'object') return;
+          if (message.type === 'error') {
+            setUseWorker(false);
+            return;
+          }
+          if (message.type === 'result') {
+            if (message.requestId !== requestIdRef.current) return;
+            setSections(message.sections);
+          }
+        });
+        worker.addEventListener('error', () => {
+          setUseWorker(false);
+        });
+        workerRef.current = worker;
+      } catch (error) {
+        console.warn('Failed to start command palette worker:', error);
+        setUseWorker(false);
+        workerRef.current = null;
+      }
+    }
+    return workerRef.current;
+  }, [useWorker]);
+
+  const loadStaticSections = useCallback(async (): Promise<SectionSource[]> => {
+    if (staticSections.length) {
+      return staticSections;
+    }
+    if (typeof window === 'undefined' || typeof fetch !== 'function') return [];
+
+    const sections: SectionSource[] = [];
+
+    try {
+      const response = await fetch('/docs/index.json', { cache: 'force-cache' });
+      if (response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          const docsItems = data.map((entry: any) => ({
+            id: entry.id,
+            title: entry.title ?? entry.id,
+            subtitle: entry.summary,
+            href: entry.path,
+            keywords: [entry.title, entry.summary, entry.path].filter(Boolean),
+          }));
+          sections.push({ type: 'doc', items: normalizeItems(docsItems, 'doc') });
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load docs manifest for command palette fallback', error);
+    }
+
+    try {
+      const response = await fetch('/sitemap.xml', { cache: 'force-cache' });
+      if (response.ok) {
+        const xml = await response.text();
+        const matches = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)];
+        const paths = new Set<string>();
+        matches.forEach((match) => {
+          const value = match[1];
+          try {
+            const url = new URL(value, window.location.origin);
+            if (url.pathname) {
+              paths.add(url.pathname);
+            }
+          } catch {
+            if (value.startsWith('/')) {
+              paths.add(value);
+            }
+          }
+        });
+        const routeItems = Array.from(paths).map((path) => ({
+          id: path || '/',
+          title: path && path !== '/' ? path.replace(/\//g, ' / ').replace(/\s+/g, ' ').trim() || path : 'Home',
+          subtitle: 'Site page',
+          href: path || '/',
+          keywords: path.split('/').filter(Boolean),
+        }));
+        sections.push({ type: 'route', items: normalizeItems(routeItems, 'route') });
+      }
+    } catch (error) {
+      console.warn('Failed to load sitemap for command palette fallback', error);
+    }
+
+    setStaticSections(sections);
+    return sections;
+  }, [staticSections]);
+
   useEffect(() => {
     if (!open) {
       setQuery('');
       setActiveIndex(0);
+      setSections([]);
       return;
     }
+
+    const recentSelections = readRecentSelections();
+    recentSelectionsRef.current = recentSelections.map((item) => ({
+      ...item,
+      type: item.type as CommandPaletteItemType,
+    }));
+
+    const worker = ensureWorker();
+    if (!worker) {
+      loadStaticSections();
+      setSections(fallbackSections);
+      return;
+    }
+
+    worker.postMessage({
+      type: 'warm',
+      payload: {
+        sections: baseSources,
+        docsManifestUrl: '/docs/index.json',
+        sitemapUrl: '/sitemap.xml',
+        recentSelections: recentSelectionsRef.current,
+      },
+    });
+  }, [open, baseSources, ensureWorker, fallbackSections, loadStaticSections]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!useWorker) {
+      loadStaticSections();
+      setSections(fallbackSections);
+      return;
+    }
+
+    const worker = ensureWorker();
+    if (!worker) {
+      loadStaticSections();
+      setSections(fallbackSections);
+      return;
+    }
+
+    const requestId = ++requestIdRef.current;
+    worker.postMessage({
+      type: 'search',
+      payload: {
+        requestId,
+        query,
+        sections: baseSources,
+        recentSelections: recentSelectionsRef.current,
+      },
+    });
+  }, [query, baseSources, fallbackSections, open, ensureWorker, useWorker, loadStaticSections]);
+
+  useEffect(() => {
+    if (!open) return;
     const raf = window.requestAnimationFrame(() => {
       searchInputRef.current?.focus({ preventScroll: true });
     });
@@ -144,10 +300,21 @@ export default function CommandPalette({
     }
   }, [activeIndex, flatItems]);
 
+  useEffect(() => () => {
+    workerRef.current?.terminate();
+    workerRef.current = null;
+  }, []);
+
   const handleSelect = (index: number) => {
     const item = flatItems[index];
     if (!item) return;
     onSelect(item);
+    setTimeout(() => {
+      recentSelectionsRef.current = readRecentSelections().map((entry) => ({
+        ...entry,
+        type: entry.type as CommandPaletteItemType,
+      }));
+    }, 0);
   };
 
   const handleKeyNavigation = (event: KeyboardEvent<HTMLElement>) => {
@@ -165,17 +332,10 @@ export default function CommandPalette({
 
     if (key === 'ArrowDown') {
       event.preventDefault();
-      setActiveIndex((current) => {
-        const next = current + 1;
-        if (next >= length) return 0;
-        return next;
-      });
+      setActiveIndex((current) => (current + 1 >= length ? 0 : current + 1));
     } else if (key === 'ArrowUp') {
       event.preventDefault();
-      setActiveIndex((current) => {
-        if (current <= 0) return length - 1;
-        return current - 1;
-      });
+      setActiveIndex((current) => (current <= 0 ? length - 1 : current - 1));
     } else if (key === 'Home') {
       event.preventDefault();
       setActiveIndex(0);
@@ -199,15 +359,7 @@ export default function CommandPalette({
   };
 
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    const navigationKeys = new Set([
-      'ArrowDown',
-      'ArrowUp',
-      'Home',
-      'End',
-      'Enter',
-      'Escape',
-    ]);
-
+    const navigationKeys = new Set(['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', 'Escape']);
     if (navigationKeys.has(event.key)) {
       handleKeyNavigation(event);
     }
@@ -227,7 +379,7 @@ export default function CommandPalette({
       <header className="space-y-2">
         <h2 className="text-xl font-semibold tracking-wide">Command Palette</h2>
         <p className="text-sm text-white/70">
-          Search across applications, recent windows, and settings. Use the arrow keys to navigate and Enter to run a command.
+          Search across applications, open windows, documentation, and site pages. Use the arrow keys to navigate and Enter to launch.
         </p>
       </header>
 
@@ -243,7 +395,7 @@ export default function CommandPalette({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search apps, windows, and settings"
+            placeholder="Search apps, windows, docs, and pages"
             autoComplete="off"
             spellCheck={false}
             className="w-full rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm text-white shadow-inner focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
@@ -251,13 +403,12 @@ export default function CommandPalette({
           />
           <span className="pointer-events-none absolute inset-y-0 right-2 hidden items-center gap-1 rounded-md border border-white/10 bg-black/40 px-2 text-xs font-medium text-white/60 sm:flex">
             <kbd className="font-sans text-[10px] uppercase tracking-wide text-white/60">{modifierHint}</kbd>
-            <kbd className="font-sans text-[10px] uppercase tracking-wide text-white/60">Space</kbd>
+            <kbd className="font-sans text-[10px] uppercase tracking-wide text-white/60">K</kbd>
           </span>
         </div>
       </div>
 
       <div
-        ref={listRef}
         role="listbox"
         aria-label="Command palette results"
         aria-activedescendant={activeOptionId}
@@ -268,7 +419,7 @@ export default function CommandPalette({
         {flatItems.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm text-white/60">No matching commands.</p>
         ) : (
-          filteredSections.map((section) => {
+          (sections.length ? sections : fallbackSections).map((section) => {
             if (!section.items.length) return null;
             return (
               <div key={section.type} className="mb-4 last:mb-0">
@@ -327,6 +478,8 @@ export default function CommandPalette({
                           <span className="truncate font-medium text-white">{item.title}</span>
                           {item.subtitle ? (
                             <span className="truncate text-xs text-white/60">{item.subtitle}</span>
+                          ) : item.href ? (
+                            <span className="truncate text-xs text-white/50">{item.href}</span>
                           ) : null}
                         </span>
                         <span className="text-[11px] font-medium uppercase tracking-wider text-white/40">

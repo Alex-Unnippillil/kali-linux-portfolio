@@ -25,7 +25,7 @@ import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
 import { safeLocalStorage } from '../../utils/safeStorage';
-import { addRecentApp } from '../../utils/recentStorage';
+import { addRecentApp, addRecentSelection } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
@@ -2099,6 +2099,7 @@ export class Desktop extends Component {
                 icon: this.normalizePaletteIconPath(app.icon),
                 subtitle: undefined,
                 keywords: [app.id, app.title].filter(Boolean),
+                href: `/apps/${app.id}`,
             }));
     };
 
@@ -2204,10 +2205,10 @@ export class Desktop extends Component {
     isCommandPaletteShortcut = (event) => {
         if (!event || typeof event !== 'object') return false;
         if (event.repeat) return false;
-        const key = event.key || '';
+        const key = (event.key || '').toLowerCase();
         const code = event.code || '';
-        const isSpace = key === ' ' || key === 'Spacebar' || key === 'Space' || code === 'Space';
-        if (!isSpace) return false;
+        const isK = key === 'k' || code === 'KeyK';
+        if (!isK) return false;
         if (event.altKey || event.shiftKey) return false;
         if (this.commandPaletteUsesMeta) {
             return Boolean(event.metaKey);
@@ -2243,6 +2244,18 @@ export class Desktop extends Component {
         }
         if (item.id) {
             this.openApp(item.id);
+        }
+        try {
+            addRecentSelection({
+                id: item.id,
+                type: item.type,
+                title: item.title,
+                subtitle: item.subtitle,
+                icon: item.icon,
+                href: item.href || (item.data && item.data.href ? String(item.data.href) : undefined),
+            });
+        } catch (error) {
+            console.warn('Failed to persist recent command palette selection', error);
         }
         this.closeCommandPalette();
     };

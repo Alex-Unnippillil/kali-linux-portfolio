@@ -2,36 +2,46 @@ import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Desktop } from '../../components/screen/desktop';
 
+function createMockComponent(testId: string) {
+  const MockComponent = () => <div data-testid={testId} />;
+  MockComponent.displayName = `Mock${testId}`;
+  return MockComponent;
+}
+
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../../components/util-components/background-image', () => () => <div data-testid="background" />);
+jest.mock('../../components/util-components/background-image', () => createMockComponent('background'));
 jest.mock('../../components/base/window', () => ({
   __esModule: true,
-  default: () => <div data-testid="window" />,
-  WindowTopBar: () => <div data-testid="window-top-bar" />,
-  WindowEditButtons: () => <div data-testid="window-edit-buttons" />,
+  default: createMockComponent('window'),
+  WindowTopBar: createMockComponent('window-top-bar'),
+  WindowEditButtons: createMockComponent('window-edit-buttons'),
 }));
-jest.mock('../../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
-jest.mock('../../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
-jest.mock('../../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
-jest.mock('../../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
+jest.mock('../../components/base/ubuntu_app', () => createMockComponent('ubuntu-app'));
+jest.mock('../../components/screen/all-applications', () => createMockComponent('all-apps'));
+jest.mock('../../components/screen/shortcut-selector', () => createMockComponent('shortcut-selector'));
+jest.mock('../../components/screen/window-switcher', () => createMockComponent('window-switcher'));
 jest.mock('../../components/context-menus/desktop-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="desktop-menu" />,
+  default: createMockComponent('desktop-menu'),
 }));
 jest.mock('../../components/context-menus/default', () => ({
   __esModule: true,
-  default: () => <div data-testid="default-menu" />,
+  default: createMockComponent('default-menu'),
 }));
 jest.mock('../../components/context-menus/app-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="app-menu" />,
+  default: createMockComponent('app-menu'),
 }));
 jest.mock('../../components/context-menus/taskbar-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="taskbar-menu" />,
+  default: createMockComponent('taskbar-menu'),
 }));
-jest.mock('../../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
+jest.mock('../../utils/recentStorage', () => ({
+  addRecentApp: jest.fn(),
+  addRecentSelection: jest.fn(),
+  readRecentSelections: jest.fn(() => []),
+}));
 
 describe('Desktop command palette integration', () => {
   const COMMAND_ID = 'overlay-command-palette';
@@ -83,9 +93,7 @@ describe('Desktop command palette integration', () => {
         value: originalMatchMedia,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-expect-error clean up mock
-      delete window.matchMedia;
+      delete (window as typeof window & { matchMedia?: typeof window.matchMedia }).matchMedia;
     }
     document.body.innerHTML = '';
     jest.clearAllMocks();
@@ -111,7 +119,7 @@ describe('Desktop command palette integration', () => {
     return { desktopRef, ...utils };
   };
 
-  it('opens and closes the command palette with Ctrl+Space', async () => {
+  it('opens and closes the command palette with Ctrl+K', async () => {
     const { desktopRef } = renderDesktop();
     await waitFor(() => {
       expect(desktopRef.current).not.toBeNull();
@@ -121,7 +129,7 @@ describe('Desktop command palette integration', () => {
     expect(instance.state.overlayWindows[COMMAND_ID]?.open).toBeFalsy();
 
     act(() => {
-      fireEvent.keyDown(document, { key: ' ', code: 'Space', ctrlKey: true });
+      fireEvent.keyDown(document, { key: 'k', code: 'KeyK', ctrlKey: true });
     });
 
     await waitFor(() => {
@@ -129,7 +137,7 @@ describe('Desktop command palette integration', () => {
     });
 
     act(() => {
-      fireEvent.keyDown(document, { key: ' ', code: 'Space', ctrlKey: true });
+      fireEvent.keyDown(document, { key: 'k', code: 'KeyK', ctrlKey: true });
     });
 
     await waitFor(() => {
@@ -141,7 +149,7 @@ describe('Desktop command palette integration', () => {
     renderDesktop();
 
     act(() => {
-      fireEvent.keyDown(document, { key: ' ', code: 'Space', ctrlKey: true });
+      fireEvent.keyDown(document, { key: 'k', code: 'KeyK', ctrlKey: true });
     });
 
     const searchInput = await screen.findByRole('textbox', { name: /search commands/i });
@@ -168,7 +176,7 @@ describe('Desktop command palette integration', () => {
 
     try {
       act(() => {
-        fireEvent.keyDown(document, { key: ' ', code: 'Space', ctrlKey: true });
+        fireEvent.keyDown(document, { key: 'k', code: 'KeyK', ctrlKey: true });
       });
 
       const searchInput = await screen.findByRole('textbox', { name: /search commands/i });
@@ -182,6 +190,13 @@ describe('Desktop command palette integration', () => {
 
       await waitFor(() => {
         expect(openAppSpy).toHaveBeenCalledWith('terminal');
+      });
+
+      await waitFor(() => {
+        const { addRecentSelection } = require('../../utils/recentStorage');
+        expect(addRecentSelection).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'terminal', type: 'app' })
+        );
       });
 
       await waitFor(() => {

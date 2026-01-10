@@ -1,0 +1,212 @@
+[
+  {
+    "id": "app-ecosystem-roadmap.md",
+    "title": "App Ecosystem Roadmap",
+    "summary": "This roadmap consolidates the dynamic app registry and the open task backlog so the desktop shell, simulations, and games progress toward an \"OS-ready\" state. Update it whenever `apps.config.js` or `docs/tasks.md` changes so stakeholders can track ownership, dependencies, and status.",
+    "path": "/docs/app-ecosystem-roadmap.md"
+  },
+  {
+    "id": "architecture.md",
+    "title": "Architecture",
+    "summary": "The project is a desktop-style portfolio built with Next.js.",
+    "path": "/docs/architecture.md"
+  },
+  {
+    "id": "bare-fs-dependency.md",
+    "title": "bare-fs dependency rationale",
+    "summary": "The project surfaces an installation warning for `bare-fs`. Running `yarn why bare-fs` shows the package is pulled in via the optional dependency chain `@puppeteer/browsers` → `tar-fs` → `bare-fs`.",
+    "path": "/docs/bare-fs-dependency.md"
+  },
+  {
+    "id": "best-practices/typeof-undefined.md",
+    "title": "Handling `typeof === 'undefined'` Checks",
+    "summary": "This note captures a recurring theme from recent code reviews: ensuring we guard browser-only APIs without scattering raw `typeof window === 'undefined'` checks throughout the code base.",
+    "path": "/docs/best-practices/typeof-undefined.md"
+  },
+  {
+    "id": "candy-crush-boosters.md",
+    "title": "Candy Crush Booster Guide",
+    "summary": "The Candy Crush desktop app now runs on the shared game loop with pause, mute, and reset controls exposed through the overlay. Two boosters help clear stubborn boards without breaking the match-three pacing.",
+    "path": "/docs/candy-crush-boosters.md"
+  },
+  {
+    "id": "captive-portal-service.md",
+    "title": "Captive Portal Detection Service",
+    "summary": "The captive portal detector polls the same endpoints that major operating systems use to confirm unrestricted internet access. When one of the probes is intercepted, the service launches a sandboxed WebKit session so the sign-in flow cannot touch the user's primary browser profile.",
+    "path": "/docs/captive-portal-service.md"
+  },
+  {
+    "id": "command-palette.md",
+    "title": "Command palette search behaviour",
+    "summary": "The desktop command palette is designed to be a fast way to jump between applications, open windows, documentation and static pages. The search runs in a dedicated web worker so the UI thread stays responsive even as the index grows.",
+    "path": "/docs/command-palette.md"
+  },
+  {
+    "id": "component-planning-template.md",
+    "title": "Component Planning Template",
+    "summary": "This guide tracks the long-term plan for each major code area noted in the project README. Every section follows the same structure so contributors can record the current implementation status, outstanding risks, upcoming feature work, and the validation steps that keep regressions out of production.",
+    "path": "/docs/component-planning-template.md"
+  },
+  {
+    "id": "deauth-mitigation.md",
+    "title": "Deauthentication Attack Mitigation",
+    "summary": "Deauthentication floods send forged management frames to disconnect wireless clients. Use the following hardening steps:",
+    "path": "/docs/deauth-mitigation.md"
+  },
+  {
+    "id": "desktop-layout-landmarks.md",
+    "title": "Desktop Layout Landmarks",
+    "summary": "The desktop shell renders a single semantic landmark for assistive technology:",
+    "path": "/docs/desktop-layout-landmarks.md"
+  },
+  {
+    "id": "desktop-shell-plan.md",
+    "title": "`components/screen/desktop.js`",
+    "summary": "- Declares overlay metadata (launcher, shortcut selector, window switcher, command palette) and manages normalized state maps so each overlay tracks `open`, `minimized`, `maximized`, `focused`, and launcher transition state flags.【F:components/screen/desktop.js†L108-L158】",
+    "path": "/docs/desktop-shell-plan.md"
+  },
+  {
+    "id": "getting-started.md",
+    "title": "Getting Started",
+    "summary": "This project is built with [Next.js](https://nextjs.org/).",
+    "path": "/docs/getting-started.md"
+  },
+  {
+    "id": "gomoku.md",
+    "title": "Overview",
+    "summary": "The Gomoku app simulates a 15×15 board where players place black and white stones on the intersections. The goal is to be the first to form an unbroken line of five stones horizontally, vertically, or diagonally.",
+    "path": "/docs/gomoku.md"
+  },
+  {
+    "id": "internal-layouts.md",
+    "title": "Internal Layouts",
+    "summary": "This project provides Tailwind utilities that mimic Bootstrap's 12-column grid. Use them to create internal layouts without relying on Bootstrap itself.",
+    "path": "/docs/internal-layouts.md"
+  },
+  {
+    "id": "john-lab-fixtures.md",
+    "title": "John the Ripper lab fixtures",
+    "summary": "The simulator now ships a cohesive fixture pack that powers the lab-mode experience for John the Ripper. The data set covers trimmed wordlists, command scenarios, and interpretation cards. Everything lives alongside the UI so training content works offline and during static exports.",
+    "path": "/docs/john-lab-fixtures.md"
+  },
+  {
+    "id": "john-placeholder-audit.md",
+    "title": "John the Ripper placeholder audit",
+    "summary": "This note tracks all hard-coded placeholders that back the John simulators so we can keep demo data consistent across both the desktop window (`components/apps/john/index.js`) and the Next.js training hub (`apps/john`).",
+    "path": "/docs/john-placeholder-audit.md"
+  },
+  {
+    "id": "keyboard-only-test-plan.md",
+    "title": "Resizing",
+    "summary": "1. Open any window.",
+    "path": "/docs/keyboard-only-test-plan.md"
+  },
+  {
+    "id": "kismet-fixtures.md",
+    "title": "Kismet Fixture Reference",
+    "summary": "The Kismet simulator ships with local JSON datasets so the app can operate entirely offline during demos and static exports. Thi",
+    "path": "/docs/kismet-fixtures.md"
+  },
+  {
+    "id": "mimikatz-offline-datasets.md",
+    "title": "Mimikatz Offline Dataset Packaging",
+    "summary": "The **Mimikatz Offline Workbench** ships with synthetic datasets so incident response drills can run entirely without network",
+    "path": "/docs/mimikatz-offline-datasets.md"
+  },
+  {
+    "id": "new-app-checklist.md",
+    "title": "New App Checklist",
+    "summary": "Use this checklist when adding a new app to the portfolio.",
+    "path": "/docs/new-app-checklist.md"
+  },
+  {
+    "id": "nmap-nse-walkthrough.md",
+    "title": "Nmap NSE Walkthrough (Simulation)",
+    "summary": "> ⚠️ For educational use in authorized lab environments only.",
+    "path": "/docs/nmap-nse-walkthrough.md"
+  },
+  {
+    "id": "os-roadmap.md",
+    "title": "Current Shell Capabilities",
+    "summary": "- **Boot and session entry** – `Ubuntu` orchestrates boot screen transitions, lock state, and shutdown recovery while persisting user choices (wallpaper, lock state, boot flag) in safe local storage.【F:components/ubuntu.js†L3-L177】",
+    "path": "/docs/os-roadmap.md"
+  },
+  {
+    "id": "phaser-listeners.md",
+    "title": "Phaser Event Listeners",
+    "summary": "This document records active event listeners in the Phaser Matter demo after profiling and cleanup.",
+    "path": "/docs/phaser-listeners.md"
+  },
+  {
+    "id": "pip-portal.md",
+    "title": "Pip Portal",
+    "summary": "The `PipPortal` component provides a simple API for rendering React",
+    "path": "/docs/pip-portal.md"
+  },
+  {
+    "id": "reconng.md",
+    "title": "Recon-ng Simulation",
+    "summary": "> ⚠️ For educational use in authorized lab environments only.",
+    "path": "/docs/reconng.md"
+  },
+  {
+    "id": "reviews/pinball-controls.md",
+    "title": "Pinball Controls Cheat Sheet",
+    "summary": "The Pinball simulation follows the shared game overlay rules so all inputs are",
+    "path": "/docs/reviews/pinball-controls.md"
+  },
+  {
+    "id": "reviews/quick-settings-polish.md",
+    "title": "Overview",
+    "summary": "The `QuickSettings` panel update introduces richer styling, theme toggles, and persistent preferences. Accessibility and interaction polish are central to this component, so the review focused on keyboard reachability and semantic structure in addition to general UX regressions.",
+    "path": "/docs/reviews/quick-settings-polish.md"
+  },
+  {
+    "id": "snake-control-schemes.md",
+    "title": "Snake Control Schemes",
+    "summary": "This guide summarizes every input path the Snake app exposes so testers can",
+    "path": "/docs/snake-control-schemes.md"
+  },
+  {
+    "id": "ssh-command-builder.md",
+    "title": "SSH Command Builder presets",
+    "summary": "The SSH Command Builder app ships with a small library of reusable host presets to save typing during demos. Each preset is",
+    "path": "/docs/ssh-command-builder.md"
+  },
+  {
+    "id": "system-services-roadmap.md",
+    "title": "System Services Roadmap",
+    "summary": "This document establishes a shared roadmap for the desktop shell services that power the simulated Ubuntu/Kali experience. It clarifies existing responsibilities, defines forward-looking features, and documents the data, observability, and resilience standards required for new work.",
+    "path": "/docs/system-services-roadmap.md"
+  },
+  {
+    "id": "TASKS_UI_POLISH.md",
+    "title": "UI Polish Task List",
+    "summary": "This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experience. Each item includes acceptance criteria and file hints.",
+    "path": "/docs/TASKS_UI_POLISH.md"
+  },
+  {
+    "id": "tasks.md",
+    "title": "Application Task List",
+    "summary": "This document tracks planned improvements and new features for the desktop portfolio apps.",
+    "path": "/docs/tasks.md"
+  },
+  {
+    "id": "template-glossary.md",
+    "title": "Template glossary",
+    "summary": "This glossary covers common terms used in the Nessus sample templates. For full details see the Tenable documentation.",
+    "path": "/docs/template-glossary.md"
+  },
+  {
+    "id": "touch-gestures.md",
+    "title": "Touch gestures and tablet support",
+    "summary": "The desktop shell now exposes responsive breakpoints and gesture affordances so it remains usable on convertible laptops and tablets.",
+    "path": "/docs/touch-gestures.md"
+  },
+  {
+    "id": "weather-widget.md",
+    "title": "Weather Widget Notes",
+    "summary": "The Weather Widget is a compact companion to the full Weather utility. It shares",
+    "path": "/docs/weather-widget.md"
+  }
+]
