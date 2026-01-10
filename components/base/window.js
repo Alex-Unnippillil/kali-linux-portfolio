@@ -2114,20 +2114,9 @@ export function WindowEditButtons(props) {
 
 // Window's Main Screen
 export class WindowMainScreen extends Component {
-    constructor() {
-        super();
-        this.state = {
-            setDarkBg: false,
-        }
-    }
-    componentDidMount() {
-        setTimeout(() => {
-            this.setState({ setDarkBg: true });
-        }, 3000);
-    }
     render() {
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className="w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen bg-ub-drk-abrgn transition-colors duration-300">
                 {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
             </div>
         )
