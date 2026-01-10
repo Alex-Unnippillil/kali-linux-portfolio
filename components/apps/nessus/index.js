@@ -4,41 +4,12 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
-
-// helpers for persistent storage of jobs and false positives
-export const loadJobDefinitions = () => {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem('nessusJobs') || '[]');
-  } catch {
-    return [];
-  }
-};
-
-export const saveJobDefinition = (job) => {
-  if (typeof window === 'undefined') return [];
-  const jobs = loadJobDefinitions();
-  const updated = [...jobs, job];
-  localStorage.setItem('nessusJobs', JSON.stringify(updated));
-  return updated;
-};
-
-export const loadFalsePositives = () => {
-  if (typeof window === 'undefined') return [];
-  try {
-    return JSON.parse(localStorage.getItem('nessusFalsePositives') || '[]');
-  } catch {
-    return [];
-  }
-};
-
-export const recordFalsePositive = (findingId, reason) => {
-  if (typeof window === 'undefined') return [];
-  const fps = loadFalsePositives();
-  const updated = [...fps, { findingId, reason }];
-  localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));
-  return updated;
-};
+import {
+  loadJobDefinitions,
+  saveJobDefinition,
+  loadFalsePositives,
+  recordFalsePositive,
+} from './storage';
 
 const Nessus = () => {
   const [url, setUrl] = useState('https://localhost:8834');
