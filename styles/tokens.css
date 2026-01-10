@@ -47,6 +47,48 @@
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
 
+  /* Chess palette tokens derived from the shared game palette */
+  --chess-app-surface: color-mix(in srgb, var(--color-bg) 86%, var(--game-color-secondary) 8%);
+  --chess-panel-surface: color-mix(in srgb, var(--color-bg) 82%, var(--game-color-secondary) 12%);
+  --chess-panel-border: color-mix(in srgb, var(--game-color-secondary) 38%, transparent 62%);
+  --chess-board-light: color-mix(in srgb, var(--game-color-secondary) 18%, #f4f7fb);
+  --chess-board-dark: color-mix(in srgb, var(--game-color-secondary) 72%, #050a12);
+  --chess-board-sheen-top: color-mix(in srgb, #ffffff 12%, transparent);
+  --chess-board-sheen-bottom: color-mix(in srgb, #000000 18%, transparent);
+  --chess-board-last-move: color-mix(in srgb, var(--game-color-warning) 84%, transparent 16%);
+  --chess-board-selection: color-mix(in srgb, var(--game-color-secondary) 76%, transparent 24%);
+  --chess-board-move-hint: color-mix(in srgb, var(--game-color-secondary) 66%, transparent 34%);
+  --chess-board-cursor: color-mix(in srgb, var(--color-text) 68%, transparent 32%);
+  --chess-board-mate: color-mix(in srgb, var(--game-color-secondary) 56%, transparent 44%);
+  --chess-board-hover-inner: color-mix(in srgb, var(--color-text) 24%, transparent);
+  --chess-board-hover-outer: color-mix(in srgb, var(--game-color-warning) 44%, transparent 56%);
+  --chess-board-hover-outline: color-mix(in srgb, var(--game-color-warning) 68%, transparent 32%);
+  --chess-piece-light: color-mix(in srgb, #0b0f18 55%, #111111 45%);
+  --chess-piece-dark: color-mix(in srgb, var(--color-text) 95%, #ffffff 5%);
+  --chess-arrow: color-mix(in srgb, var(--game-color-warning) 78%, transparent 22%);
+  --chess-spark: color-mix(in srgb, var(--game-color-warning) 88%, transparent 12%);
+  --chess-timer-surface: color-mix(in srgb, var(--color-bg) 80%, var(--game-color-secondary) 14%);
+  --chess-timer-border: color-mix(in srgb, var(--game-color-secondary) 34%, transparent 66%);
+  --chess-log-surface: color-mix(in srgb, var(--color-bg) 76%, var(--game-color-secondary) 16%);
+  --chess-log-border: color-mix(in srgb, var(--game-color-secondary) 36%, transparent 64%);
+  --chess-log-highlight: color-mix(in srgb, var(--game-color-secondary) 72%, var(--color-text) 28%);
+  --chess-eval-track: color-mix(in srgb, var(--color-bg) 78%, #030712 22%);
+  --chess-eval-positive-gradient: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--game-color-success) 80%, #ffffff 20%),
+    color-mix(in srgb, var(--game-color-success) 62%, transparent)
+  );
+  --chess-eval-negative-gradient: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--game-color-danger) 82%, #ffffff 18%),
+    color-mix(in srgb, var(--game-color-danger) 64%, transparent)
+  );
+  --chess-control-surface: color-mix(in srgb, var(--color-bg) 84%, var(--game-color-secondary) 10%);
+  --chess-control-border: color-mix(in srgb, var(--game-color-secondary) 38%, transparent 62%);
+  --chess-control-text: color-mix(in srgb, var(--color-text) 90%, #ffffff 10%);
+  --chess-control-hover: color-mix(in srgb, var(--chess-control-surface) 75%, var(--game-color-secondary) 25%);
+  --chess-focus-ring: color-mix(in srgb, var(--game-color-secondary) 78%, transparent 22%);
+
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -107,6 +149,38 @@
   --game-color-success: #00ffff;
   --game-color-warning: #ff00ff;
   --game-color-danger: #ff0000;
+  --chess-app-surface: #000000;
+  --chess-panel-surface: #000000;
+  --chess-panel-border: #ffffff;
+  --chess-board-light: #ffffff;
+  --chess-board-dark: #000000;
+  --chess-board-sheen-top: rgba(255, 255, 255, 0.12);
+  --chess-board-sheen-bottom: rgba(0, 0, 0, 0.25);
+  --chess-board-last-move: #ffff00;
+  --chess-board-selection: #00ffff;
+  --chess-board-move-hint: #00ffff;
+  --chess-board-cursor: #ffffff;
+  --chess-board-mate: rgba(0, 255, 255, 0.6);
+  --chess-board-hover-inner: rgba(255, 255, 255, 0.45);
+  --chess-board-hover-outer: rgba(255, 255, 0, 0.4);
+  --chess-board-hover-outline: #ffff00;
+  --chess-piece-light: #000000;
+  --chess-piece-dark: #ffffff;
+  --chess-arrow: #ffff00;
+  --chess-spark: #ffff00;
+  --chess-timer-surface: #000000;
+  --chess-timer-border: #ffffff;
+  --chess-log-surface: #000000;
+  --chess-log-border: #ffffff;
+  --chess-log-highlight: #00ffff;
+  --chess-eval-track: #111111;
+  --chess-eval-positive-gradient: linear-gradient(90deg, #00ffff, #00ffff);
+  --chess-eval-negative-gradient: linear-gradient(90deg, #ff00ff, #ff00ff);
+  --chess-control-surface: #000000;
+  --chess-control-border: #ffffff;
+  --chess-control-text: #ffffff;
+  --chess-control-hover: #111111;
+  --chess-focus-ring: #ffff00;
 }
 
 /* Dyslexia-friendly fonts */

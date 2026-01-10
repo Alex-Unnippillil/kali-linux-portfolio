@@ -42,6 +42,162 @@ const spritePaths = {
   [KING]: { [WHITE]: "/pieces/wK.svg", [BLACK]: "/pieces/bK.svg" },
 };
 
+const defaultMoveDuration = 260;
+
+const defaultChessPalette = {
+  boardLight: "#dee7f5",
+  boardDark: "#1a2634",
+  boardSheenTop: "rgba(255,255,255,0.08)",
+  boardSheenBottom: "rgba(0,0,0,0.18)",
+  lastMoveOutline: "rgba(255, 217, 102, 0.9)",
+  selectionOutline: "rgba(102, 204, 255, 0.9)",
+  moveHintOutline: "rgba(102, 204, 255, 0.7)",
+  cursorOutline: "rgba(255, 255, 255, 0.6)",
+  mateHint: "rgba(64, 160, 255, 0.45)",
+  hoverInner: "rgba(255,255,255,0.35)",
+  hoverOuter: "rgba(255,213,128,0.18)",
+  hoverOutline: "rgba(255, 223, 128, 0.9)",
+  pieceLight: "#111111",
+  pieceDark: "#f8f8f8",
+  arrow: "#ffc850",
+  captureSpark: "#ffd700",
+  panelSurface: "rgba(17, 27, 36, 0.85)",
+  panelBorder: "rgba(94, 129, 172, 0.4)",
+  timerSurface: "rgba(17, 27, 36, 0.72)",
+  timerBorder: "rgba(94, 129, 172, 0.35)",
+  logSurface: "rgba(17, 27, 36, 0.6)",
+  logBorder: "rgba(94, 129, 172, 0.38)",
+  logHighlight: "#7dd3fc",
+  evalTrack: "rgba(15,23,42,0.7)",
+  evalPositive: "linear-gradient(90deg,#34d399,#059669)",
+  evalNegative: "linear-gradient(90deg,#f87171,#dc2626)",
+  controlSurface: "rgba(17, 27, 36, 0.7)",
+  controlBorder: "rgba(94, 129, 172, 0.4)",
+  controlText: "#e2e8f0",
+  controlHover: "rgba(30, 41, 59, 0.88)",
+  focusRing: "#38bdf8",
+  appSurface: "#111b24",
+};
+
+const paletteVarMap = {
+  boardLight: "--chess-board-light",
+  boardDark: "--chess-board-dark",
+  boardSheenTop: "--chess-board-sheen-top",
+  boardSheenBottom: "--chess-board-sheen-bottom",
+  lastMoveOutline: "--chess-board-last-move",
+  selectionOutline: "--chess-board-selection",
+  moveHintOutline: "--chess-board-move-hint",
+  cursorOutline: "--chess-board-cursor",
+  mateHint: "--chess-board-mate",
+  hoverInner: "--chess-board-hover-inner",
+  hoverOuter: "--chess-board-hover-outer",
+  hoverOutline: "--chess-board-hover-outline",
+  pieceLight: "--chess-piece-light",
+  pieceDark: "--chess-piece-dark",
+  arrow: "--chess-arrow",
+  captureSpark: "--chess-spark",
+  panelSurface: "--chess-panel-surface",
+  panelBorder: "--chess-panel-border",
+  timerSurface: "--chess-timer-surface",
+  timerBorder: "--chess-timer-border",
+  logSurface: "--chess-log-surface",
+  logBorder: "--chess-log-border",
+  logHighlight: "--chess-log-highlight",
+  evalTrack: "--chess-eval-track",
+  evalPositive: "--chess-eval-positive-gradient",
+  evalNegative: "--chess-eval-negative-gradient",
+  controlSurface: "--chess-control-surface",
+  controlBorder: "--chess-control-border",
+  controlText: "--chess-control-text",
+  controlHover: "--chess-control-hover",
+  focusRing: "--chess-focus-ring",
+  appSurface: "--chess-app-surface",
+};
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const parseRgbColor = (color) => {
+  if (!color) return null;
+  const value = color.trim();
+  if (!value) return null;
+  if (value.startsWith("#")) {
+    const hex = value.slice(1);
+    if (hex.length === 3) {
+      const r = parseInt(hex[0] + hex[0], 16);
+      const g = parseInt(hex[1] + hex[1], 16);
+      const b = parseInt(hex[2] + hex[2], 16);
+      return { r, g, b };
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.slice(0, 2), 16);
+      const g = parseInt(hex.slice(2, 4), 16);
+      const b = parseInt(hex.slice(4, 6), 16);
+      return { r, g, b };
+    }
+    return null;
+  }
+  const rgbMatch = value.match(/rgba?\(([^)]+)\)/i);
+  if (rgbMatch) {
+    const parts = rgbMatch[1].split(",").map((part) => Number.parseFloat(part.trim()));
+    if (parts.length >= 3) {
+      return { r: parts[0], g: parts[1], b: parts[2] };
+    }
+  }
+  return null;
+};
+
+const rgbToCss = (rgb) => `rgb(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)})`;
+
+const mixRgb = (a, b, amount) => ({
+  r: a.r + (b.r - a.r) * amount,
+  g: a.g + (b.g - a.g) * amount,
+  b: a.b + (b.b - a.b) * amount,
+});
+
+const lightenRgb = (rgb, amount) => mixRgb(rgb, { r: 255, g: 255, b: 255 }, clamp(amount, 0, 1));
+
+const blendRgb = (a, b, amount) => mixRgb(a, b, clamp(amount, 0, 1));
+
+const withAlpha = (color, alpha) => {
+  const rgb = parseRgbColor(color);
+  if (!rgb) return color;
+  return `rgba(${Math.round(rgb.r)}, ${Math.round(rgb.g)}, ${Math.round(rgb.b)}, ${alpha})`;
+};
+
+const readChessPalette = () => {
+  if (typeof window === "undefined") return defaultChessPalette;
+  const styles = getComputedStyle(document.documentElement);
+  const palette = { ...defaultChessPalette };
+  for (const [key, cssVar] of Object.entries(paletteVarMap)) {
+    const value = styles.getPropertyValue(cssVar).trim();
+    if (value) palette[key] = value;
+  }
+  return palette;
+};
+
+const palettesEqual = (a, b) => {
+  for (const key of Object.keys(a)) {
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+};
+
+const parseDurationToken = (token, fallback = defaultMoveDuration) => {
+  if (!token) return fallback;
+  const value = token.trim();
+  if (!value) return fallback;
+  if (value.endsWith("ms")) {
+    const num = Number.parseFloat(value.slice(0, -2));
+    return Number.isFinite(num) ? num : fallback;
+  }
+  if (value.endsWith("s")) {
+    const num = Number.parseFloat(value.slice(0, -1));
+    return Number.isFinite(num) ? num * 1000 : fallback;
+  }
+  const numeric = Number.parseFloat(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+};
+
 const SIZE = 512; // internal canvas resolution for crisp rendering
 const SQ = SIZE / 8;
 
@@ -314,6 +470,7 @@ const ChessGame = () => {
   const animRef = useRef(null);
   const trailsRef = useRef([]);
   const animationsRef = useRef([]);
+  const moveDurationRef = useRef(defaultMoveDuration);
   const [evalScore, setEvalScore] = useState(0);
   const [displayEval, setDisplayEval] = useState(0);
   const reduceMotionRef = useRef(false);
@@ -327,6 +484,7 @@ const ChessGame = () => {
   const [boardPixelSize, setBoardPixelSize] = useState(SIZE);
   const [hoverSquare, setHoverSquare] = useState(null);
   const [showArrows, setShowArrows] = useState(true);
+  const [chessPalette, setChessPalette] = useState(defaultChessPalette);
   const [orientation, setOrientation] = useState("white");
   const clockRef = useRef({
     white: 0,
@@ -375,10 +533,28 @@ const ChessGame = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reduceMotionRef.current = mq.matches;
-    const handler = () => (reduceMotionRef.current = mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const syncReducedMotion = () => {
+      reduceMotionRef.current =
+        mq.matches || document.documentElement.classList.contains("reduced-motion");
+    };
+    syncReducedMotion();
+    mq.addEventListener("change", syncReducedMotion);
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes") {
+          syncReducedMotion();
+          break;
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => {
+      mq.removeEventListener("change", syncReducedMotion);
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -433,6 +609,35 @@ const ChessGame = () => {
     spritesRef.current = imgs;
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateTokens = () => {
+      const next = readChessPalette();
+      setChessPalette((prev) => (palettesEqual(prev, next) ? prev : next));
+      const styles = getComputedStyle(document.documentElement);
+      const medium = styles.getPropertyValue("--motion-medium");
+      moveDurationRef.current = parseDurationToken(medium, defaultMoveDuration);
+    };
+    updateTokens();
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes") {
+          updateTokens();
+          break;
+        }
+      }
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class"],
+    });
+    window.addEventListener("themechange", updateTokens);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("themechange", updateTokens);
+    };
+  }, []);
+
   const updateEval = () => setEvalScore(evaluate(boardRef.current));
 
   useEffect(() => {
@@ -477,7 +682,7 @@ const ChessGame = () => {
       from,
       to,
       start: now,
-      duration: 260,
+      duration: moveDurationRef.current,
     });
   };
 
@@ -522,6 +727,10 @@ const ChessGame = () => {
     const canvas = canvasRef.current;
     if (!canvas) return undefined;
     const ctx = canvas.getContext("2d");
+    const lightRgb =
+      parseRgbColor(chessPalette.boardLight) ?? parseRgbColor(defaultChessPalette.boardLight);
+    const darkRgb =
+      parseRgbColor(chessPalette.boardDark) ?? parseRgbColor(defaultChessPalette.boardDark);
     const render = () => {
       ctx.clearRect(0, 0, SIZE, SIZE);
       const now =
@@ -548,23 +757,23 @@ const ChessGame = () => {
         for (let f = 0; f < 8; f++) {
           const x = f * SQ;
           const y = (7 - r) * SQ;
-          const light = (r + f) % 2 === 0;
+          const isLight = (r + f) % 2 === 0;
           const dx = f - 3.5;
           const dy = r - 3.5;
           const dist = Math.sqrt(dx * dx + dy * dy);
           const ambient = Math.max(0, 1 - dist / 4.2);
-          if (light) {
-            const tone = Math.round(224 + ambient * 22);
-            ctx.fillStyle = `rgb(${tone},${tone},${tone + 6})`;
+          if (isLight) {
+            const tone = lightenRgb(lightRgb, ambient * 0.2);
+            ctx.fillStyle = rgbToCss(tone);
           } else {
-            const base = Math.round(58 + ambient * 45);
-            ctx.fillStyle = `rgb(${base},${base + 8},${base + 22})`;
+            const tone = blendRgb(darkRgb, lightRgb, ambient * 0.18);
+            ctx.fillStyle = rgbToCss(tone);
           }
           ctx.fillRect(x, y, SQ, SQ);
 
           const sheen = ctx.createLinearGradient(x, y, x, y + SQ);
-          sheen.addColorStop(0, "rgba(255,255,255,0.08)");
-          sheen.addColorStop(1, "rgba(0,0,0,0.18)");
+          sheen.addColorStop(0, chessPalette.boardSheenTop);
+          sheen.addColorStop(1, chessPalette.boardSheenBottom);
           ctx.fillStyle = sheen;
           ctx.fillRect(x, y, SQ, SQ);
 
@@ -573,26 +782,26 @@ const ChessGame = () => {
             lastMoveRef.current &&
             (sq === lastMoveRef.current.from || sq === lastMoveRef.current.to)
           ) {
-            ctx.strokeStyle = "rgba(255, 217, 102, 0.9)";
+            ctx.strokeStyle = chessPalette.lastMoveOutline;
             ctx.lineWidth = 3;
             ctx.strokeRect(x + 1.5, y + 1.5, SQ - 3, SQ - 3);
           }
 
           if (selected === sq) {
-            ctx.strokeStyle = "rgba(102, 204, 255, 0.9)";
+            ctx.strokeStyle = chessPalette.selectionOutline;
             ctx.lineWidth = 2.5;
             ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
           } else {
             const move = moves.find((m) => m.to === sq);
             if (move) {
-              ctx.strokeStyle = "rgba(102, 204, 255, 0.7)";
+              ctx.strokeStyle = chessPalette.moveHintOutline;
               ctx.lineWidth = 2;
               ctx.strokeRect(x + 4, y + 4, SQ - 8, SQ - 8);
             }
           }
 
           if (cursor === sq) {
-            ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+            ctx.strokeStyle = chessPalette.cursorOutline;
             ctx.lineWidth = 2;
             ctx.strokeRect(x + 3, y + 3, SQ - 6, SQ - 6);
           }
@@ -600,7 +809,7 @@ const ChessGame = () => {
           if (mateSquares.includes(sq)) {
             ctx.beginPath();
             ctx.arc(x + SQ / 2, y + SQ / 2, SQ / 6, 0, Math.PI * 2);
-            ctx.fillStyle = "rgba(64, 160, 255, 0.45)";
+            ctx.fillStyle = chessPalette.mateHint;
             ctx.fill();
           }
 
@@ -613,11 +822,11 @@ const ChessGame = () => {
               y + SQ / 2,
               SQ / 2,
             );
-            highlight.addColorStop(0, "rgba(255,255,255,0.35)");
-            highlight.addColorStop(1, "rgba(255,213,128,0.18)");
+            highlight.addColorStop(0, chessPalette.hoverInner);
+            highlight.addColorStop(1, chessPalette.hoverOuter);
             ctx.fillStyle = highlight;
             ctx.fillRect(x, y, SQ, SQ);
-            ctx.strokeStyle = "rgba(255, 223, 128, 0.9)";
+            ctx.strokeStyle = chessPalette.hoverOutline;
             ctx.lineWidth = 2;
             ctx.strokeRect(x + 1, y + 1, SQ - 2, SQ - 2);
           }
@@ -636,7 +845,8 @@ const ChessGame = () => {
               ctx.font = `${SQ - 10}px serif`;
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
-              ctx.fillStyle = piece > 0 ? "#111" : "#f8f8f8";
+              ctx.fillStyle =
+                piece > 0 ? chessPalette.pieceLight : chessPalette.pieceDark;
               ctx.fillText(
                 pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
                 x + SQ / 2,
@@ -652,7 +862,7 @@ const ChessGame = () => {
         for (const t of trailsRef.current) {
           const age = (now - t.t) / 1000;
           const alpha = reduceMotionRef.current ? 0.5 : Math.max(0, 1 - age);
-          ctx.strokeStyle = `rgba(255, 200, 80, ${alpha})`;
+          ctx.strokeStyle = withAlpha(chessPalette.arrow, alpha);
           ctx.lineWidth = 4;
           ctx.beginPath();
           ctx.moveTo(t.fx, t.fy);
@@ -671,7 +881,7 @@ const ChessGame = () => {
             t.ty - head * Math.sin(angle + Math.PI / 6),
           );
           ctx.closePath();
-          ctx.fillStyle = `rgba(255, 200, 80, ${alpha})`;
+          ctx.fillStyle = withAlpha(chessPalette.arrow, alpha);
           ctx.fill();
         }
       } else {
@@ -686,7 +896,7 @@ const ChessGame = () => {
         const px = p.x + p.vx * age;
         const py = p.y + p.vy * age;
         const alpha = reduceMotionRef.current ? 0.7 : Math.max(0, 1 - age * 2);
-        ctx.fillStyle = `rgba(255,215,0,${alpha})`;
+        ctx.fillStyle = withAlpha(chessPalette.captureSpark, alpha);
         ctx.beginPath();
         ctx.arc(px, py, 3.5, 0, Math.PI * 2);
         ctx.fill();
@@ -720,7 +930,8 @@ const ChessGame = () => {
           ctx.font = `${SQ - 10}px serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = anim.piece > 0 ? "#111" : "#f8f8f8";
+          ctx.fillStyle =
+            anim.piece > 0 ? chessPalette.pieceLight : chessPalette.pieceDark;
           ctx.fillText(
             pieceUnicode[Math.abs(anim.piece)][
               anim.piece > 0 ? WHITE : BLACK
@@ -744,6 +955,7 @@ const ChessGame = () => {
     pieceSet,
     hoverSquare,
     showArrows,
+    chessPalette,
   ]);
 
   const endGame = (result) => {
@@ -1097,20 +1309,20 @@ const ChessGame = () => {
   }
 
   const statusTone = status.includes("Checkmate")
-    ? "bg-red-600/80 text-white"
+    ? "bg-[color:color-mix(in_srgb,var(--game-color-danger)_78%,transparent)] text-[color:var(--color-text)]"
     : status.includes("Check")
-      ? "bg-amber-400/80 text-slate-900"
-      : "bg-slate-800/70 text-slate-100";
+      ? "bg-[color:color-mix(in_srgb,var(--game-color-warning)_72%,var(--chess-panel-surface))] text-[color:var(--color-bg)]"
+      : "bg-[color:var(--chess-panel-surface)] text-[color:var(--color-text)]";
   const whiteClock = formatClock(clockDisplay.white);
   const blackClock = formatClock(clockDisplay.black);
   const orientationLabel = orientation === "white" ? "White" : "Black";
   const formattedEval = (evalScore / 100).toFixed(2);
   const engineSuggestions = analysisMoves.slice(0, 5);
   const buttonClass =
-    "rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-1.5 font-semibold uppercase tracking-wide text-slate-200 transition-colors duration-150 hover:border-sky-400 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-400";
+    "rounded-full border border-[color:var(--chess-control-border)] bg-[color:var(--chess-control-surface)] px-3 py-1.5 font-semibold uppercase tracking-wide text-[color:var(--chess-control-text)] transition-colors duration-150 hover:bg-[color:var(--chess-control-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--chess-focus-ring)]";
 
   return (
-    <div className="h-full w-full select-none bg-ub-cool-grey p-2 text-white">
+    <div className="h-full w-full select-none bg-[color:var(--chess-app-surface)] p-2 text-[color:var(--color-text)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:flex-row">
         <div className="flex flex-1 flex-col items-center gap-4">
           <div ref={boardWrapperRef} className="w-full">
@@ -1125,7 +1337,7 @@ const ChessGame = () => {
                 onKeyDown={handleKey}
                 tabIndex={0}
                 aria-label="Chess board"
-                className="rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 via-slate-900 to-black shadow-[0_30px_60px_rgba(0,0,0,0.45)] outline-none transition-transform duration-500 ease-out focus:ring-2 focus:ring-sky-400"
+                className="rounded-2xl border border-[color:var(--chess-panel-border)] bg-[color:var(--chess-panel-surface)] shadow-[0_30px_60px_rgba(0,0,0,0.45)] outline-none transition-transform duration-500 ease-out focus-visible:ring-2 focus-visible:ring-[color:var(--chess-focus-ring)]"
                 style={{
                   width: boardPixelSize,
                   height: boardPixelSize,
@@ -1158,10 +1370,10 @@ const ChessGame = () => {
             </button>
           </div>
         </div>
-        <aside className="w-full flex-shrink-0 rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 p-5 shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md lg:w-80">
+        <aside className="w-full flex-shrink-0 rounded-2xl border border-[color:var(--chess-panel-border)] bg-[color:var(--chess-panel-surface)] p-5 text-[color:var(--color-text)] shadow-[0_20px_45px_rgba(0,0,0,0.55)] backdrop-blur-md lg:w-80">
           <div className="space-y-6">
             <section>
-              <h2 className="flex items-center gap-2 text-lg font-semibold uppercase tracking-wide text-slate-200">
+              <h2 className="flex items-center gap-2 text-lg font-semibold uppercase tracking-wide text-[color:var(--color-text)]">
                 <span aria-hidden>♟️</span>
                 <span>Game State</span>
               </h2>
@@ -1171,60 +1383,67 @@ const ChessGame = () => {
               >
                 {status}
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-200">
-                <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-3 shadow-inner">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-[color:var(--color-text)]">
+                <div className="rounded-xl border border-[color:var(--chess-timer-border)] bg-[color:var(--chess-timer-surface)] p-3 shadow-inner">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                     <span aria-hidden>🕊️</span>
                     <span>White</span>
                   </div>
-                  <div className="mt-1 text-2xl font-mono text-slate-100">
+                  <div className="mt-1 text-2xl font-mono text-[color:var(--color-text)]">
                     {whiteClock}
                   </div>
                 </div>
-                <div className="rounded-xl border border-slate-700/60 bg-slate-900/50 p-3 shadow-inner">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-slate-400">
+                <div className="rounded-xl border border-[color:var(--chess-timer-border)] bg-[color:var(--chess-timer-surface)] p-3 shadow-inner">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                     <span aria-hidden>🗡️</span>
                     <span>Black</span>
                   </div>
-                  <div className="mt-1 text-2xl font-mono text-slate-100">
+                  <div className="mt-1 text-2xl font-mono text-[color:var(--color-text)]">
                     {blackClock}
                   </div>
                 </div>
               </div>
-              <div className="mt-3 text-xs text-slate-400">
-                Orientation: <span className="font-semibold text-slate-200">{orientationLabel}</span>
+              <div className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
+                Orientation: <span className="font-semibold text-[color:var(--color-text)]">{orientationLabel}</span>
               </div>
             </section>
             <section>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-200">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-[color:var(--color-text)]">
                 <span aria-hidden>📈</span>
                 <span>Evaluation</span>
               </h2>
               <div
-                className="mt-3 h-3 w-full overflow-hidden rounded-full bg-slate-800/60"
+                className="mt-3 h-3 w-full overflow-hidden rounded-full"
                 role="progressbar"
                 aria-label="Evaluation score"
                 aria-valuemin={0}
                 aria-valuemax={100}
                 aria-valuenow={Number(evalPercent.toFixed(0))}
+                style={{ background: chessPalette.evalTrack }}
               >
                 <div
-                  className={`h-full ${displayEval >= 0 ? "bg-emerald-400" : "bg-rose-400"}`}
-                  style={{ width: `${evalPercent}%` }}
+                  className="h-full"
+                  style={{
+                    width: `${evalPercent}%`,
+                    background:
+                      displayEval >= 0
+                        ? chessPalette.evalPositive
+                        : chessPalette.evalNegative,
+                  }}
                 />
               </div>
-              <div className="mt-2 flex items-center justify-between text-xs text-slate-300">
+              <div className="mt-2 flex items-center justify-between text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
                 <span>Score {formattedEval}</span>
                 <span>ELO {elo}</span>
               </div>
             </section>
             <section>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-200">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-[color:var(--color-text)]">
                 <span aria-hidden>📋</span>
                 <span>Move List</span>
               </h2>
               <div
-                className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-slate-700/60 bg-slate-900/40 p-3 text-sm leading-relaxed shadow-inner"
+                className="mt-2 max-h-40 overflow-y-auto rounded-xl border border-[color:var(--chess-log-border)] bg-[color:var(--chess-log-surface)] p-3 text-sm leading-relaxed shadow-inner"
                 aria-label="Move list"
               >
                 {moveLines.length > 0 ? (
@@ -1232,39 +1451,40 @@ const ChessGame = () => {
                     {moveLines.map((line, idx) => (
                       <li
                         key={idx}
-                        className={`font-mono ${
+                        className="font-mono"
+                        style={
                           idx === moveLines.length - 1
-                            ? "text-sky-300"
-                            : "text-slate-200"
-                        }`}
+                            ? { color: chessPalette.logHighlight }
+                            : undefined
+                        }
                       >
                         {line}
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <p className="text-xs italic text-slate-400">
+                  <p className="text-xs italic text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                     No moves yet — make your first move to begin the story.
                   </p>
                 )}
               </div>
             </section>
             <section>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-200">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-[color:var(--color-text)]">
                 <span aria-hidden>💡</span>
                 <span>Engine Tips</span>
               </h2>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                 Use the embedded engine for on-demand guidance. Higher depths explore more replies.
               </p>
               <label
-                className="mt-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-slate-400"
+                className="mt-3 flex items-center gap-3 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]"
                 htmlFor="chess-depth"
               >
                 <span>Depth</span>
                 <select
                   id="chess-depth"
-                  className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="rounded-lg border border-[color:var(--chess-control-border)] bg-[color:var(--chess-control-surface)] px-2 py-1 text-sm text-[color:var(--chess-control-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--chess-focus-ring)]"
                   value={analysisDepth}
                   onChange={(e) => setAnalysisDepth(parseInt(e.target.value, 10))}
                 >
@@ -1286,33 +1506,36 @@ const ChessGame = () => {
                   Load PGN
                 </button>
               </div>
-              <ul className="mt-3 space-y-2 text-sm text-slate-200" aria-live="polite">
+              <ul className="mt-3 space-y-2 text-sm text-[color:var(--color-text)]" aria-live="polite">
                 {engineSuggestions.length > 0 ? (
                   engineSuggestions.map((m, idx) => (
                     <li
                       key={`${m.san}-${idx}`}
-                      className="flex items-center justify-between rounded-xl border border-slate-700/60 bg-slate-900/50 px-3 py-2 shadow-inner"
+                      className="flex items-center justify-between rounded-xl border border-[color:var(--chess-log-border)] bg-[color:var(--chess-log-surface)] px-3 py-2 shadow-inner"
                     >
                       <span className="flex items-center gap-2">
-                        <span className="text-sky-300" aria-hidden>
+                        <span
+                          aria-hidden
+                          style={{ color: chessPalette.logHighlight }}
+                        >
                           ⚡
                         </span>
                         <span>{m.san}</span>
                       </span>
-                      <span className="font-mono text-xs text-slate-300">
+                      <span className="font-mono text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
                         {(m.evaluation / 100).toFixed(2)}
                       </span>
                     </li>
                   ))
                 ) : (
-                  <li className="text-xs italic text-slate-400">
+                  <li className="text-xs italic text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                     Run analysis to reveal tactical ideas.
                   </li>
                 )}
               </ul>
             </section>
             <section>
-              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-200">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-[color:var(--color-text)]">
                 <span aria-hidden>⚙️</span>
                 <span>Options</span>
               </h2>
