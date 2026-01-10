@@ -30,15 +30,37 @@ const rushHour = params.get('mode') === 'rush';
 // --- Game state -----------------------------------------------------------
 const frog = { x: Math.floor(WIDTH / 2), y: HEIGHT - 1 };
 
+function range(min, max) {
+  return min + rng() * (max - min);
+}
+
 const lanes = [
-  { y: 5, dir: 1, speed: 2, spawn: 2, variance: 0.4, length: 1 },
-  { y: 6, dir: -1, speed: 2.5, spawn: 1.5, variance: 0.3, length: 1 },
+  // Water lanes
+  {
+    y: 1,
+    dir: 1,
+    speed: [1, 2],
+    spawn: [2, 4],
+    length: 2,
+    type: 'log',
+    sink: { interval: [3, 6], duration: 1 },
+  },
+  {
+    y: 2,
+    dir: -1,
+    speed: [1, 2.2],
+    spawn: [1.5, 3],
+    length: 1,
+    type: 'turtle',
+    sink: { interval: [2, 5], duration: 1 },
+  },
+  // Road lanes
+  { y: 5, dir: 1, speed: [2, 3], spawn: [1.5, 3], length: 1, type: 'car' },
+  { y: 6, dir: -1, speed: [2, 3.5], spawn: [1, 2.5], length: 1, type: 'car' },
 ];
 lanes.forEach((l) => {
-  l.baseSpeed = l.speed;
-  l.baseSpawn = l.spawn;
   l.entities = [];
-  l.next = l.spawn * (0.5 + rng());
+  l.next = range(l.spawn[0], l.spawn[1]);
 });
 let difficulty = 0; // used for rush hour scaling
 
@@ -113,31 +135,76 @@ function pollGamepad(dt) {
 function update(dt) {
   pollGamepad(dt);
   if (rushHour) difficulty += dt * 0.1;
+  let frogSafe = true;
   lanes.forEach((l) => {
-    if (rushHour) {
-      l.spawn = Math.max(0.3, l.baseSpawn / (1 + difficulty));
-      l.speed = l.baseSpeed * (1 + difficulty);
-    }
     l.next -= dt;
     if (l.next <= 0) {
-      const speedMult = 1 + (rng() - 0.5) * l.variance;
-      l.entities.push({
+      const speed = range(l.speed[0], l.speed[1]) * (rushHour ? 1 + difficulty : 1);
+      const entity = {
         x: l.dir === 1 ? -l.length : WIDTH,
-        speed: l.speed * speedMult,
-      });
-      l.next = l.spawn * (0.5 + rng());
+        speed,
+      };
+      if (l.sink) {
+        entity.sinkTimer = range(l.sink.interval[0], l.sink.interval[1]);
+        entity.sinkDur = l.sink.duration;
+        entity.sinking = false;
+      }
+      l.entities.push(entity);
+      l.next = range(l.spawn[0], l.spawn[1]) / (rushHour ? 1 + difficulty : 1);
     }
     l.entities.forEach((e) => {
       e.x += e.speed * l.dir * dt;
-    });
-    l.entities = l.entities.filter((e) => e.x + l.length > -1 && e.x < WIDTH + 1);
-    l.entities.forEach((e) => {
-      if (l.y === frog.y && frog.x < e.x + l.length && frog.x + 1 > e.x) {
-        resetFrog();
-        shake(0.3, 5);
+      if (e.sinkTimer !== undefined) {
+        e.sinkTimer -= dt;
+        if (e.sinkTimer <= 0) {
+          e.sinking = !e.sinking;
+          e.sinkTimer = e.sinking
+            ? e.sinkDur
+            : range(l.sink.interval[0], l.sink.interval[1]);
+        }
       }
     });
+    l.entities = l.entities.filter((e) => e.x + l.length > -1 && e.x < WIDTH + 1);
+
+    if (l.y === frog.y) {
+      let onEntity = false;
+      l.entities.forEach((e) => {
+        const frogBox = {
+          x: frog.x + 0.1,
+          y: frog.y + 0.1,
+          w: 0.8,
+          h: 0.8,
+        };
+        const entBox = {
+          x: e.x + 0.05,
+          y: l.y + 0.05,
+          w: l.length - 0.1,
+          h: 0.9,
+        };
+        const hit =
+          frogBox.x < entBox.x + entBox.w &&
+          frogBox.x + frogBox.w > entBox.x &&
+          frogBox.y < entBox.y + entBox.h &&
+          frogBox.y + frogBox.h > entBox.y;
+        if (hit && l.type === 'car') {
+          resetFrog();
+          shake(0.3, 5);
+        }
+        if (hit && l.type !== 'car' && !e.sinking) {
+          onEntity = true;
+          frog.x += e.speed * l.dir * dt;
+        }
+      });
+      if (l.type !== 'car') {
+        frogSafe = frogSafe && onEntity;
+      }
+    }
   });
+  if (!frogSafe) {
+    resetFrog();
+    shake(0.3, 5);
+  }
+  if (frog.x < -1 || frog.x > WIDTH) resetFrog();
   if (camera.shakeTime > 0) camera.shakeTime -= dt;
 }
 
@@ -148,14 +215,15 @@ function draw() {
   ctx.clearRect(-sx, -sy, canvas.width, canvas.height);
   ctx.fillStyle = '#222';
   ctx.fillRect(-sx, -sy, canvas.width, canvas.height);
-  ctx.fillStyle = '#555';
   lanes.forEach((l) => {
+    ctx.fillStyle = l.type === 'car' ? '#555' : '#224';
     ctx.fillRect(0, l.y * TILE, canvas.width, TILE);
-    ctx.fillStyle = '#f00';
     l.entities.forEach((e) => {
+      if (e.sinking) return;
+      ctx.fillStyle =
+        l.type === 'car' ? '#f00' : l.type === 'log' ? '#a52a2a' : '#0ff';
       ctx.fillRect(e.x * TILE, l.y * TILE, l.length * TILE, TILE);
     });
-    ctx.fillStyle = '#555';
   });
   ctx.fillStyle = '#0f0';
   ctx.fillRect(frog.x * TILE, frog.y * TILE, TILE, TILE);
