@@ -12,7 +12,7 @@ interface Props {
 
 const transitionDurationMs = 200;
 
-const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
+const QuickSettings = ({ open }: Props) => {
   const { theme: activeTheme, setTheme: updateTheme } = useTheme();
   const [sound, setSound] = usePersistentState('qs-sound', true);
   const [online, setOnline] = usePersistentState('qs-online', true);
