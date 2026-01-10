@@ -2,6 +2,12 @@
 
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
+  --qs-brightness: 75;
+  --qs-volume: 70;
+  accent-color: var(--color-control-accent);
+}
+
+:root:not(.high-contrast) {
   /* Base colors */
   --color-bg: #0b121a; /* kali background */
   --color-text: #f5faff; /* text on dark backgrounds */
@@ -42,9 +48,6 @@
   --kali-control: var(--color-control-accent);
   --kali-control-surface: color-mix(in srgb, var(--kali-control) 18%, var(--kali-surface));
   --kali-control-overlay: color-mix(in srgb, var(--kali-control) 24%, var(--kali-overlay));
-  --qs-brightness: 75;
-  --qs-volume: 70;
-  accent-color: var(--color-control-accent);
 }
 
 body {
@@ -52,6 +55,12 @@ body {
   color: var(--kali-text);
   filter: brightness(calc(0.65 + (var(--qs-brightness, 75) / 100) * 0.35));
   transition: filter 200ms ease-out;
+}
+
+.high-contrast body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  filter: none;
 }
 
 body::after {
@@ -65,8 +74,16 @@ body::after {
   z-index: 50;
 }
 
+.high-contrast body::after {
+  background: transparent;
+}
+
+.high-contrast .desktop-shell {
+  color: var(--color-text);
+}
+
 /* Dark theme */
-html[data-theme='dark'] {
+html[data-theme='dark']:not(.high-contrast) {
   --color-bg: #000000;
   --color-text: #e5e5e5;
   --color-primary: #1e88e5;
@@ -91,7 +108,7 @@ html[data-theme='dark'] {
 }
 
 /* Neon theme */
-html[data-theme='neon'] {
+html[data-theme='neon']:not(.high-contrast) {
   --color-bg: #000000;
   --color-text: #ffffff;
   --color-primary: #39ff14;
@@ -116,7 +133,7 @@ html[data-theme='neon'] {
 }
 
 /* Matrix theme */
-html[data-theme='matrix'] {
+html[data-theme='matrix']:not(.high-contrast) {
   --color-bg: #000000;
   --color-text: #00ff00;
   --color-primary: #00ff00;

@@ -233,6 +233,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
+    if (highContrast) {
+      document.documentElement.dataset.contrast = 'high';
+    } else {
+      document.documentElement.dataset.contrast = 'standard';
+    }
     saveHighContrast(highContrast);
   }, [highContrast]);
 

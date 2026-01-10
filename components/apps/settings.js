@@ -175,7 +175,7 @@ export function Settings() {
                         className="mr-2"
                         aria-label="Enable high contrast mode"
                     />
-                    High Contrast
+                    High Contrast (WCAG AA)
                 </label>
             </div>
             <div className="flex justify-center my-4">
