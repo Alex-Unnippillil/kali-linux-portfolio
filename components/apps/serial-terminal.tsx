@@ -1,20 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import FormError from '../ui/FormError';
 
-interface SerialPort {
-  readonly readable: ReadableStream<Uint8Array> | null;
-  open(options: { baudRate: number }): Promise<void>;
-  close(): Promise<void>;
-}
-
-interface Serial {
-  requestPort(): Promise<SerialPort>;
-  addEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-  removeEventListener(type: 'disconnect', listener: (ev: Event & { readonly target: SerialPort }) => void): void;
-}
-
-type NavigatorSerial = Navigator & { serial: Serial };
-
 const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
   const [port, setPort] = useState<SerialPort | null>(null);
@@ -24,16 +10,16 @@ const SerialTerminalApp: React.FC = () => {
 
   useEffect(() => {
     if (!supported) return;
-    const handleDisconnect = (e: Event & { readonly target: SerialPort }) => {
-      if (e.target === port) {
+    const handleDisconnect = (e: Event) => {
+      const target = e.target as SerialPort | null;
+      if (target && target === port) {
         setError('Device disconnected.');
         setPort(null);
       }
     };
-    const nav = navigator as NavigatorSerial;
-    nav.serial.addEventListener('disconnect', handleDisconnect);
+    navigator.serial.addEventListener('disconnect', handleDisconnect);
     return () => {
-      nav.serial.removeEventListener('disconnect', handleDisconnect);
+      navigator.serial.removeEventListener('disconnect', handleDisconnect);
     };
   }, [supported, port]);
 
@@ -60,7 +46,7 @@ const SerialTerminalApp: React.FC = () => {
     if (!supported) return;
     setError('');
     try {
-      const p = await (navigator as NavigatorSerial).serial.requestPort();
+      const p = await navigator.serial.requestPort();
       await p.open({ baudRate: 9600 });
       setPort(p);
       readLoop(p);

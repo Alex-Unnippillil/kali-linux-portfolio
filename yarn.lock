@@ -3719,6 +3719,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/w3c-web-serial@npm:^1.0.8":
+  version: 1.0.8
+  resolution: "@types/w3c-web-serial@npm:1.0.8"
+  checksum: 10c0/d8d0974996da8396457aaf41f0925058d60796303e260d6702dcc1788e4148ca4dfa472b5416f226b8c8ab459461c19f8c96f29f4c84492bd555c6aa23ee336b
+  languageName: node
+  linkType: hard
+
 "@types/warning@npm:^3.0.3":
   version: 3.0.3
   resolution: "@types/warning@npm:3.0.3"
@@ -13321,6 +13328,7 @@ __metadata:
     "@types/react-transition-group": "npm:^4"
     "@types/seedrandom": "npm:^3"
     "@types/three": "npm:^0.179.0"
+    "@types/w3c-web-serial": "npm:^1.0.8"
     "@types/web-bluetooth": "npm:^0.0.21"
     "@types/wicg-file-system-access": "npm:^2023.10.6"
     "@vercel/analytics": "npm:^1.5.0"
