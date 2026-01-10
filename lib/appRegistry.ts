@@ -10,6 +10,7 @@ type AppEntry = {
   id: string;
   title: string;
   icon?: string;
+  categories?: string[];
 };
 
 const DEFAULT_KEYBOARD_HINTS = [
