@@ -10,6 +10,15 @@ import {
   ServiceData,
   CharacteristicData,
 } from '../../utils/bleProfiles';
+import {
+  createProfileExport,
+  readProfileExport,
+  InvalidProfilePasswordError,
+  ProfileChecksumMismatchError,
+  UnsupportedProfileExportVersionError,
+  ProfileExportError,
+  ProfileExportFormatError,
+} from '../../lib/profileExport';
 
 type BluetoothDevice = any;
 type BluetoothRemoteGATTServer = any;
@@ -23,9 +32,13 @@ const BleSensor: React.FC = () => {
   const [deviceName, setDeviceName] = useState('');
   const [services, setServices] = useState<ServiceData[]>([]);
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
   const [busy, setBusy] = useState(false);
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const bcRef = useRef<BroadcastChannel | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const EXPORT_SCHEMA = 'ble-profiles';
 
   const refreshProfiles = async () => setProfiles(await loadProfiles());
 
@@ -57,9 +70,14 @@ const BleSensor: React.FC = () => {
     throw lastError;
   };
 
+  const clearMessages = () => {
+    setError('');
+    setStatus('');
+  };
+
   const handleScan = async () => {
     if (!supported || busy) return;
-    setError('');
+    clearMessages();
     setBusy(true);
 
     const consent = window.confirm(
@@ -130,6 +148,106 @@ const BleSensor: React.FC = () => {
     }
   };
 
+  const friendlyMessage = (err: unknown): string => {
+    if (err instanceof InvalidProfilePasswordError) {
+      return 'Incorrect password. Unable to decrypt export.';
+    }
+    if (err instanceof ProfileChecksumMismatchError) {
+      return 'Export integrity check failed. The file may be corrupted.';
+    }
+    if (err instanceof UnsupportedProfileExportVersionError) {
+      return 'This export was created with an unsupported version.';
+    }
+    if (err instanceof ProfileExportFormatError) {
+      return err.message;
+    }
+    if (err instanceof ProfileExportError) {
+      return err.message;
+    }
+    if (err instanceof Error) {
+      return err.message;
+    }
+    return 'An unexpected error occurred.';
+  };
+
+  const handleExportProfiles = async () => {
+    clearMessages();
+    if (profiles.length === 0) {
+      setError('No profiles available to export.');
+      return;
+    }
+    const password = window.prompt('Enter a password to encrypt the export:');
+    if (password === null) return;
+    if (!password.trim()) {
+      setError('A password is required to export profiles.');
+      return;
+    }
+
+    try {
+      const payload = await createProfileExport(
+        { schema: EXPORT_SCHEMA, profiles },
+        password,
+        { schema: EXPORT_SCHEMA, profileCount: profiles.length },
+      );
+      const blob = new Blob([payload], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      link.download = `ble-profiles-${timestamp}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setStatus('Profiles exported successfully.');
+    } catch (err) {
+      setError(friendlyMessage(err));
+    }
+  };
+
+  const handleImportProfiles = async (file: File) => {
+    clearMessages();
+    const password = window.prompt('Enter the password used to encrypt the export:');
+    if (password === null) return;
+    if (!password.trim()) {
+      setError('A password is required to import profiles.');
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      const result = await readProfileExport<{ schema: string; profiles: SavedProfile[] }>(
+        content,
+        password,
+      );
+
+      if (result.data.schema !== EXPORT_SCHEMA) {
+        throw new ProfileExportError('Export does not contain BLE sensor profiles.');
+      }
+      const imported = result.data.profiles;
+      if (!Array.isArray(imported)) {
+        throw new ProfileExportError('Invalid profile data in export.');
+      }
+      for (const profile of imported) {
+        if (
+          !profile ||
+          typeof profile.deviceId !== 'string' ||
+          typeof profile.name !== 'string' ||
+          !Array.isArray(profile.services)
+        ) {
+          throw new ProfileExportError('Encountered an invalid profile entry.');
+        }
+        await saveProfile(profile.deviceId, {
+          name: profile.name,
+          services: profile.services,
+        });
+      }
+      bcRef.current?.postMessage('update');
+      await refreshProfiles();
+      setStatus('Profiles imported successfully.');
+    } catch (err) {
+      setError(friendlyMessage(err));
+    }
+  };
+
   return (
     <div className="h-full w-full bg-black p-4 text-white">
       {!supported && (
@@ -147,10 +265,31 @@ const BleSensor: React.FC = () => {
       </button>
 
       {error && <FormError className="mt-0 mb-4">{error}</FormError>}
+      {!error && status && (
+        <p className="mb-4 text-sm text-green-400" role="status">
+          {status}
+        </p>
+      )}
 
       {profiles.length > 0 && (
         <div className="mb-4">
           <p className="mb-2 font-bold">Saved Profiles</p>
+          <div className="mb-3 flex flex-wrap gap-2 text-sm">
+            <button
+              onClick={handleExportProfiles}
+              className="rounded bg-blue-700 px-3 py-1"
+              type="button"
+            >
+              Export Profiles
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="rounded bg-blue-700 px-3 py-1"
+              type="button"
+            >
+              Import Profiles
+            </button>
+          </div>
           <ul className="space-y-1">
             {profiles.map((p) => (
               <li key={p.deviceId} className="flex items-center space-x-2">
@@ -178,6 +317,19 @@ const BleSensor: React.FC = () => {
           </ul>
         </div>
       )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/json"
+        className="hidden"
+        onChange={async (event) => {
+          const file = event.target.files && event.target.files[0];
+          if (!file) return;
+          await handleImportProfiles(file);
+          event.target.value = '';
+        }}
+      />
 
       {deviceName && <p className="mb-2">Connected to: {deviceName}</p>}
 
