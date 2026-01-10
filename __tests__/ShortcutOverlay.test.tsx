@@ -11,18 +11,23 @@ describe('ShortcutOverlay', () => {
     window.localStorage.setItem(
       'keymap',
       JSON.stringify({
-        'Show keyboard shortcuts': 'A',
-        'Open settings': 'A',
+        'shortcutOverlay.toggle': 'A',
+        'settings.open': 'A',
       })
     );
     render(<ShortcutOverlay />);
     fireEvent.keyDown(window, { key: 'a' });
+    const showRow = screen
+      .getByText('Show keyboard shortcuts')
+      .closest('li');
+    const settingsRow = screen.getByText('Open settings').closest('li');
+    if (!showRow || !settingsRow) {
+      throw new Error('Expected conflict rows to be rendered');
+    }
+    expect(showRow).toHaveAttribute('data-conflict', 'true');
+    expect(settingsRow).toHaveAttribute('data-conflict', 'true');
     expect(
-      screen.getByText('Show keyboard shortcuts')
+      screen.getAllByText(/Conflicts with .*Open settings/)[0]
     ).toBeInTheDocument();
-    expect(screen.getByText('Open settings')).toBeInTheDocument();
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveAttribute('data-conflict', 'true');
-    expect(items[1]).toHaveAttribute('data-conflict', 'true');
   });
 });
