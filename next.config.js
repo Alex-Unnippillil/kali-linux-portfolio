@@ -213,6 +213,10 @@ module.exports = withBundleAnalyzer(
     // (e.g. AV scanners locking `.next/trace`).
     distDir: process.env.NEXT_DIST_DIR || '.next',
     webpack: configureWebpack,
+    serverExternalPackages: [
+      '@supabase/supabase-js',
+      '@tinyhttp/cookie-signature',
+    ],
 
     // Temporarily ignore ESLint during builds; use only when a separate lint step runs in CI
     eslint: {
