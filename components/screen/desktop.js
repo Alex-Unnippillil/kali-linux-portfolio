@@ -5558,6 +5558,7 @@ export class Desktop extends Component {
         const desktopStyle = {
             paddingTop: `calc(var(--desktop-navbar-height, ${baseNavbarHeight}px) + ${windowTopSpacing}px)`,
             minHeight: '100dvh',
+            boxSizing: 'border-box',
             '--desktop-accent': accentColor,
             '--desktop-wallpaper': wallpaperCss,
             '--desktop-overlay': overlayValue,
