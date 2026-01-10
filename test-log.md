@@ -37,3 +37,9 @@ Attempted to load each route under `/apps` in Chromium, Firefox, and WebKit. All
 
 - Development middleware now appends `'unsafe-eval'` to `script-src` when `NODE_ENV !== 'production'` so the Next.js dev bundle can run inside headless browsers (e.g., Playwright) and capture screenshots.
 - Removed the manual note that explained screenshots were unavailable due to the stricter dev CSP; the automation workaround is no longer needed.
+
+## Touch gesture QA checklist
+
+- [ ] On a touch-capable device, open any desktop window and perform a quick downward swipe to confirm it minimizes.
+- [ ] With a maximized window focused, perform a swift upward swipe to trigger the restore animation and return to the previous size.
+- [ ] Open multiple windows, trigger the three-finger overview gesture, and ensure a one-finger vertical swipe does not activate the overview.

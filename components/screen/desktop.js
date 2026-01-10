@@ -1256,17 +1256,41 @@ export class Desktop extends Component {
         if (!gesture.windowId) return;
         const deltaX = gesture.lastX - gesture.startX;
         const deltaY = gesture.lastY - gesture.startY;
-        const distance = Math.abs(deltaX);
-        const verticalDrift = Math.abs(deltaY);
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
         const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
         const duration = now - gesture.startTime;
-        if (distance < 120 || verticalDrift > 90 || duration > 600) {
+        const velocityX = absX / Math.max(duration, 1);
+        const velocityY = absY / Math.max(duration, 1);
+        const isVerticalDominant = absY > absX * 1.1;
+
+        const verticalEligible =
+            isVerticalDominant &&
+            absY >= 140 &&
+            absX <= 80 &&
+            duration <= 700 &&
+            velocityY >= 0.45;
+
+        if (verticalEligible) {
+            const command = deltaY > 0 ? 'minimizeWindow' : 'restoreWindow';
+            const dispatched = this.dispatchWindowCommand(gesture.windowId, command);
+            if (dispatched && command === 'restoreWindow') {
+                this.focus(gesture.windowId);
+            }
             return;
         }
-        const velocity = distance / Math.max(duration, 1);
-        if (velocity < 0.35) {
+
+        const verticalDrift = absY;
+        const horizontalEligible =
+            absX >= 120 &&
+            verticalDrift <= 90 &&
+            duration <= 600 &&
+            velocityX >= 0.35;
+
+        if (!horizontalEligible) {
             return;
         }
+
         const direction = deltaX > 0 ? 'ArrowRight' : 'ArrowLeft';
         const dispatched = this.dispatchWindowCommand(gesture.windowId, direction);
         if (dispatched) {
