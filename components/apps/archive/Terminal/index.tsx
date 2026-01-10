@@ -38,11 +38,14 @@ const TerminalPaneInner = (
     const suggestionsRef = useRef<string[]>([]);
     const suggestionIndexRef = useRef(0);
     const showingSuggestionsRef = useRef(false);
-    const ariaLiveRef = useRef<HTMLDivElement | null>(null);
+    const ariaLiveRef = useRef<HTMLSpanElement | null>(null);
     const suggestionLiveRef = useRef<HTMLDivElement | null>(null);
     const hintRef = useRef('');
     const rafRef = useRef<any>(null);
     const fontSizeRef = useRef(14);
+    const liveQueueRef = useRef<string[]>([]);
+    const flushTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const isPausedRef = useRef(false);
     const [revSearch, setRevSearch] = useState({
       active: false,
       query: '',
@@ -54,14 +57,101 @@ const TerminalPaneInner = (
       revSearchRef.current = revSearch;
     }, [revSearch]);
 
-    const updateLive = useCallback((msg: string) => {
-      if (ariaLiveRef.current) ariaLiveRef.current.textContent = msg;
+    const flushLiveQueue = useCallback(() => {
+      if (isPausedRef.current) return;
+      if (!ariaLiveRef.current) return;
+      if (liveQueueRef.current.length === 0) return;
+      if (typeof window === 'undefined') return;
+
+      const batchSize = 3;
+      const batch = liveQueueRef.current.splice(0, batchSize);
+      const announcement = batch.join(' • ');
+
+      const region = ariaLiveRef.current;
+      region.textContent = '';
+      const setMessage = () => {
+        if (!ariaLiveRef.current) return;
+        ariaLiveRef.current.textContent = announcement;
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(setMessage);
+      } else {
+        setTimeout(setMessage, 0);
+      }
+
+      if (liveQueueRef.current.length > 0) {
+        if (flushTimeoutRef.current !== null) {
+          if (typeof window !== 'undefined') {
+            window.clearTimeout(flushTimeoutRef.current);
+          } else {
+            clearTimeout(flushTimeoutRef.current);
+          }
+          flushTimeoutRef.current = null;
+        }
+        flushTimeoutRef.current = window.setTimeout(() => {
+          flushTimeoutRef.current = null;
+          flushLiveQueue();
+        }, 600);
+      }
     }, []);
+
+    const scheduleFlush = useCallback(() => {
+      if (isPausedRef.current) return;
+      if (flushTimeoutRef.current !== null) return;
+      if (typeof window === 'undefined') return;
+
+      flushTimeoutRef.current = window.setTimeout(() => {
+        flushTimeoutRef.current = null;
+        flushLiveQueue();
+      }, 250);
+    }, [flushLiveQueue]);
+
+    const updateLive = useCallback(
+      (msg: string) => {
+        liveQueueRef.current.push(msg);
+        scheduleFlush();
+      },
+      [scheduleFlush],
+    );
 
     const updateSuggestionsLive = useCallback((msg: string) => {
       if (suggestionLiveRef.current)
         suggestionLiveRef.current.textContent = msg;
     }, []);
+
+    const pauseAnnouncements = useCallback(() => {
+      isPausedRef.current = true;
+      if (flushTimeoutRef.current !== null) {
+        if (typeof window !== 'undefined') {
+          window.clearTimeout(flushTimeoutRef.current);
+        } else {
+          clearTimeout(flushTimeoutRef.current);
+        }
+        flushTimeoutRef.current = null;
+      }
+    }, []);
+
+    const resumeAnnouncements = useCallback(() => {
+      const wasPaused = isPausedRef.current;
+      isPausedRef.current = false;
+      if (!wasPaused) return;
+      if (flushTimeoutRef.current !== null) {
+        if (typeof window !== 'undefined') {
+          window.clearTimeout(flushTimeoutRef.current);
+        } else {
+          clearTimeout(flushTimeoutRef.current);
+        }
+        flushTimeoutRef.current = null;
+      }
+      if (liveQueueRef.current.length > 0) {
+        if (typeof window !== 'undefined') {
+          flushTimeoutRef.current = window.setTimeout(() => {
+            flushTimeoutRef.current = null;
+            flushLiveQueue();
+          }, 150);
+        }
+      }
+    }, [flushLiveQueue]);
 
     const clearSuggestions = useCallback(() => {
       suggestionsRef.current = [];
@@ -501,6 +591,10 @@ const TerminalPaneInner = (
         window.removeEventListener('resize', handleResize);
         resizeObserver?.disconnect();
         workerRef.current?.terminate();
+        if (flushTimeoutRef.current !== null) {
+          window.clearTimeout(flushTimeoutRef.current);
+          flushTimeoutRef.current = null;
+        }
         if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
         term.dispose();
       };
@@ -517,6 +611,34 @@ const TerminalPaneInner = (
       clearSuggestions,
       updateSearch,
     ]);
+
+    useEffect(() => {
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return;
+      }
+
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          pauseAnnouncements();
+        } else {
+          resumeAnnouncements();
+        }
+      };
+
+      const handleFocus = () => {
+        resumeAnnouncements();
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      window.addEventListener('focus', handleFocus);
+      window.addEventListener('blur', pauseAnnouncements);
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        window.removeEventListener('focus', handleFocus);
+        window.removeEventListener('blur', pauseAnnouncements);
+      };
+    }, [pauseAnnouncements, resumeAnnouncements]);
 
     useImperativeHandle(
       ref,
@@ -537,7 +659,9 @@ const TerminalPaneInner = (
           data-testid="xterm-container"
           aria-label="Terminal"
         />
-        <div ref={ariaLiveRef} aria-live="polite" className="sr-only" />
+        <div aria-live="polite" className="sr-only" role="status">
+          <span ref={ariaLiveRef} />
+        </div>
         <div ref={suggestionLiveRef} aria-live="polite" className="sr-only" />
         {revSearch.active && (
           <div className="absolute bottom-0 left-0 w-full bg-black bg-opacity-90 text-green-400 text-sm px-2 pointer-events-none">
