@@ -7,6 +7,8 @@ import { loadEmbedScript } from '../../apps/x/embed';
 const sanitizeHandle = (handle) =>
   handle.replace(/[^A-Za-z0-9_]/g, '').slice(0, 15);
 
+const DEFAULT_FEED_USER = 'AUnnippillil';
+
 export default function XApp() {
   const [theme, setTheme] = useState('light');
   const [systemTheme, setSystemTheme] = useState('light');
@@ -19,8 +21,10 @@ export default function XApp() {
   const manualThemeRef = useRef(false);
 
   const [feedInput, setFeedInput] = useState('');
-  const [feedUser, setFeedUser] = useState('AUnnippillil');
+  const [feedUser, setFeedUser] = useState(DEFAULT_FEED_USER);
   const [feedPresets, setFeedPresets] = useState([]);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [lastRemovedPreset, setLastRemovedPreset] = useState(null);
 
   // Load presets from localStorage
   useEffect(() => {
@@ -31,7 +35,7 @@ export default function XApp() {
       const current =
         sanitizeHandle(localStorage.getItem('x-feed-user') || '') ||
         presets[0] ||
-        'AUnnippillil';
+        DEFAULT_FEED_USER;
       setFeedPresets(presets);
       setFeedUser(current);
     }
@@ -56,6 +60,50 @@ export default function XApp() {
       localStorage.setItem('x-feed-presets', JSON.stringify(updated));
     }
     setFeedInput('');
+    setLastRemovedPreset(null);
+    setStatusMessage(`Saved preset @${sanitized}`);
+  };
+
+  const handleRemovePreset = (handle) => {
+    const index = feedPresets.indexOf(handle);
+    if (index === -1) return;
+    const updated = feedPresets.filter((preset) => preset !== handle);
+    setFeedPresets(updated);
+    setLastRemovedPreset({ handle, index });
+    setStatusMessage(`Removed preset @${handle}`);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('x-feed-presets', JSON.stringify(updated));
+    }
+    setFeedUser((current) => {
+      if (current !== handle) return current;
+      if (updated.length > 0) {
+        return updated[0];
+      }
+      return DEFAULT_FEED_USER;
+    });
+  };
+
+  const handleRestorePreset = () => {
+    if (!lastRemovedPreset) return;
+    let restored = false;
+    setFeedPresets((current) => {
+      if (current.includes(lastRemovedPreset.handle)) {
+        return current;
+      }
+      const updated = [...current];
+      const insertIndex = Math.min(lastRemovedPreset.index, updated.length);
+      updated.splice(insertIndex, 0, lastRemovedPreset.handle);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('x-feed-presets', JSON.stringify(updated));
+      }
+      restored = true;
+      return updated;
+    });
+    if (restored) {
+      setFeedUser(lastRemovedPreset.handle);
+      setStatusMessage(`Restored preset @${lastRemovedPreset.handle}`);
+      setLastRemovedPreset(null);
+    }
   };
 
   // Sync theme with system preference
@@ -147,11 +195,18 @@ export default function XApp() {
     <div className="h-full w-full overflow-auto bg-ub-cool-grey flex flex-col tweet-container">
       <div className="p-2 flex flex-col gap-2 border-b border-gray-600 bg-gray-900 text-gray-100">
         <form onSubmit={handleAddFeed} className="flex gap-2">
+          <label htmlFor="x-handle-input" className="sr-only">
+            Feed handle
+          </label>
           <input
             type="text"
             value={feedInput}
             onChange={(e) => setFeedInput(e.target.value)}
             placeholder="Add feed handle"
+            id="x-handle-input"
+            aria-label="Feed handle"
+            aria-describedby="feed-handle-guidance"
+            title="Handles are cleaned to letters, numbers, and underscores (15 characters max)."
             className="flex-1 p-2 rounded bg-gray-800 text-gray-100 placeholder-gray-400"
           />
           <button
@@ -162,21 +217,61 @@ export default function XApp() {
             Add
           </button>
         </form>
+        <p id="feed-handle-guidance" className="text-xs text-gray-400">
+          Handles keep letters, numbers, and underscores only, and are trimmed to 15 characters.
+        </p>
+        <div aria-live="polite" className="sr-only">
+          {statusMessage}
+        </div>
+        {statusMessage && (
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-300">
+            <span>{statusMessage}</span>
+            {lastRemovedPreset && (
+              <button
+                type="button"
+                onClick={handleRestorePreset}
+                className="underline text-blue-400 hover:text-blue-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
+              >
+                Undo
+              </button>
+            )}
+          </div>
+        )}
         {feedPresets.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {feedPresets.map((h) => (
-              <button
+              <div
                 key={h}
-                type="button"
-                onClick={() => setFeedUser(h)}
-                className={`px-2 py-1 rounded-full text-sm ${
+                className={`flex items-center rounded-full text-sm border border-transparent focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-blue-500 ${
                   feedUser === h
                     ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-100 hover:bg-gray-600'
+                    : 'bg-gray-700 text-gray-100'
                 }`}
               >
-                {h}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => setFeedUser(h)}
+                  className={`px-2 py-1 rounded-full text-sm ${
+                    feedUser === h
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-100 hover:bg-gray-600'
+                  }`}
+                >
+                  {h}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRemovePreset(h)}
+                  aria-label={`Remove ${h} preset`}
+                  className={`px-1 py-1 text-xs font-semibold transition-colors ${
+                    feedUser === h
+                      ? 'text-blue-100 hover:text-white'
+                      : 'text-gray-200 hover:text-white'
+                  }`}
+                >
+                  ×
+                </button>
+              </div>
             ))}
           </div>
         )}
