@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -26,6 +27,9 @@ const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
+const BLUR_PLACEHOLDER =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIxNSI+PHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjE1IiBmaWxsPSIjMmQzNDNlIi8+PHJlY3QgeD0iMiIgeT0iMiIgd2lkdGg9IjE2IiBoZWlnaHQ9IjExIiByeD0iMyIgZmlsbD0iIzRmNTk2YyIvPjwvc3ZnPg==';
+
 const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const projects: Project[] = projectsData as Project[];
   const [search, setSearch] = useState('');
@@ -34,6 +38,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [type, setType] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [loadedImages, setLoadedImages] = useState<Record<number, boolean>>({});
   const [selected, setSelected] = useState<Project[]>([]);
 
   const readFilters = async () => {
@@ -257,14 +262,34 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
             key={project.id}
             className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
           >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
+            <div className="flex flex-col md:flex-row md:h-48">
+              <div className="relative w-full md:w-1/2 md:h-full">
+                <div className="relative aspect-[4/3] min-h-[12rem] md:aspect-auto md:h-full">
+                  {!loadedImages[project.id] && (
+                    <div
+                      data-testid={`thumbnail-skeleton-${project.id}`}
+                      className="absolute inset-0 animate-pulse bg-gray-700"
+                    />
+                  )}
+                  <Image
+                    src={project.thumbnail}
+                    alt={project.title}
+                    fill
+                    className={`object-cover transition-opacity duration-300 ${
+                      loadedImages[project.id] ? 'opacity-100' : 'opacity-0'
+                    }`}
+                    loading="lazy"
+                    sizes="(min-width: 768px) 50vw, 100vw"
+                    placeholder="blur"
+                    blurDataURL={BLUR_PLACEHOLDER}
+                    data-loaded={loadedImages[project.id] ? 'true' : 'false'}
+                    onLoadingComplete={() =>
+                      setLoadedImages((prev) => ({ ...prev, [project.id]: true }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="w-full md:w-1/2 h-48 md:h-full">
                 <Editor
                   height="100%"
                   theme="vs-dark"

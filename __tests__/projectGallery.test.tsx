@@ -6,6 +6,26 @@ jest.mock('react-ga4', () => ({ event: jest.fn() }));
 jest.mock('@monaco-editor/react', () => function MonacoEditorMock() {
   return <div />;
 });
+jest.mock('next/image', () => {
+  const React = require('react');
+  return React.forwardRef(({ onLoadingComplete, src, alt, ...props }: any, ref) => {
+    const { blurDataURL, placeholder, fill, ...rest } = props;
+    return (
+      <img
+        {...rest}
+        src={src}
+        alt={alt}
+        ref={ref}
+        onLoad={(event) => {
+          rest.onLoad?.(event);
+          if (onLoadingComplete) {
+            onLoadingComplete(event.currentTarget as HTMLImageElement);
+          }
+        }}
+      />
+    );
+  });
+});
 
 describe('ProjectGallery', () => {
   beforeEach(() => {
@@ -50,6 +70,23 @@ describe('ProjectGallery', () => {
     expect(screen.getByText(/Showing/)).toHaveTextContent(
       'Showing 1 project with tags frontend'
     );
+  });
+
+  it('renders skeletons until thumbnails finish loading', async () => {
+    render(<ProjectGallery />);
+    const skeleton = await screen.findByTestId('thumbnail-skeleton-1');
+    expect(skeleton).toBeInTheDocument();
+
+    const image = screen.getByAltText('Alpha');
+    expect(image).toHaveAttribute('loading', 'lazy');
+    expect(image).toHaveAttribute('data-loaded', 'false');
+
+    fireEvent.load(image);
+
+    await waitFor(() =>
+      expect(screen.queryByTestId('thumbnail-skeleton-1')).not.toBeInTheDocument()
+    );
+    await waitFor(() => expect(image).toHaveAttribute('data-loaded', 'true'));
   });
 
   it('persists filter selection to localStorage', async () => {
