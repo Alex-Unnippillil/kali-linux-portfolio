@@ -1,0 +1,9 @@
+/*
+Overlay usage notes
+====================
+- Use the helpers in `utils/scrollLock` to keep the page from jumping when an overlay (modal, sheet, notification flyout, etc.) opens.
+- Call `lockScroll()` when the overlay mounts or becomes visible and `unlockScroll()` in the cleanup handler when it closes.
+- The helper compensates for scrollbar width so layout stays stable even on pages with vertical scrollbars.
+- Helpers are reference-counted which means multiple overlays can be open simultaneously without fighting for scroll state.
+- Future overlay components should wire these helpers via `useEffect` or their mounting lifecycle so the behaviour stays consistent across the desktop shell.
+*/
