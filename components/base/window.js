@@ -259,6 +259,9 @@ export class Window extends Component {
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
         this._isUnmounted = false;
+        this._dragStartRect = null;
+        this._dragStartCoordinates = null;
+        this._lastDragRect = null;
     }
 
     notifySizeChange = () => {
@@ -371,6 +374,7 @@ export class Window extends Component {
             this._dragFrame = null;
         }
         this._pendingDragUpdate = null;
+        this.resetDragTracking();
         this.cancelResizeSession();
         this._resizeSession = null;
     }
@@ -559,15 +563,22 @@ export class Window extends Component {
             }
             const transform = node.style?.transform;
             if ((x === null || y === null) && typeof transform === 'string' && transform.includes('translate')) {
-                const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform);
-                if (match) {
-                    const parsedX = parseFloat(match[1]);
-                    const parsedY = parseFloat(match[2]);
-                    if (x === null && Number.isFinite(parsedX)) {
-                        x = parsedX;
+                let parsed = null;
+                const match3d = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/i.exec(transform);
+                if (match3d) {
+                    parsed = { x: parseFloat(match3d[1]), y: parseFloat(match3d[2]) };
+                } else {
+                    const match2d = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform);
+                    if (match2d) {
+                        parsed = { x: parseFloat(match2d[1]), y: parseFloat(match2d[2]) };
                     }
-                    if (y === null && Number.isFinite(parsedY)) {
-                        y = parsedY;
+                }
+                if (parsed) {
+                    if (x === null && Number.isFinite(parsed.x)) {
+                        x = parsed.x;
+                    }
+                    if (y === null && Number.isFinite(parsed.y)) {
+                        y = parsed.y;
                     }
                 }
             }
@@ -918,6 +929,92 @@ export class Window extends Component {
         }
     }
 
+    resetDragTracking = () => {
+        this._dragStartRect = null;
+        this._dragStartCoordinates = null;
+    }
+
+    handleDragStart = (event, dragData) => {
+        this.changeCursorToMove();
+        if (this._dragFrame !== null) {
+            cancelScheduledAnimationFrame(this._dragFrame);
+            this._dragFrame = null;
+        }
+        this._pendingDragUpdate = null;
+        const node = dragData?.node || this.getWindowNode();
+        const rect = this.readNodeRect(node) || this._lastDragRect;
+        if (rect) {
+            this._dragStartRect = rect;
+            this._lastDragRect = rect;
+        } else {
+            this._dragStartRect = null;
+        }
+
+        const coordinates = this.resolveDragCoordinates(dragData, node);
+        this._dragStartCoordinates = {
+            x: coordinates.x,
+            y: coordinates.y,
+        };
+    }
+
+    estimateDragRect = (node, dragData) => {
+        if (!node) return null;
+
+        const baseRect = this._dragStartRect;
+        const baseCoordinates = this._dragStartCoordinates;
+        const currentX = typeof dragData?.x === 'number' && Number.isFinite(dragData.x) ? dragData.x : null;
+        const currentY = typeof dragData?.y === 'number' && Number.isFinite(dragData.y) ? dragData.y : null;
+
+        if (
+            baseRect &&
+            baseCoordinates &&
+            Number.isFinite(baseCoordinates.x) &&
+            Number.isFinite(baseCoordinates.y) &&
+            currentX !== null &&
+            currentY !== null
+        ) {
+            const deltaX = currentX - baseCoordinates.x;
+            const deltaY = currentY - baseCoordinates.y;
+            const left = baseRect.left + deltaX;
+            const top = baseRect.top + deltaY;
+            const width = baseRect.width;
+            const height = baseRect.height;
+            return {
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+                width,
+                height,
+            };
+        }
+
+        const lastRect = this._lastDragRect || baseRect;
+        const deltaX = typeof dragData?.deltaX === 'number' && Number.isFinite(dragData.deltaX)
+            ? dragData.deltaX
+            : null;
+        const deltaY = typeof dragData?.deltaY === 'number' && Number.isFinite(dragData.deltaY)
+            ? dragData.deltaY
+            : null;
+
+        if (lastRect && deltaX !== null && deltaY !== null) {
+            const left = lastRect.left + deltaX;
+            const top = lastRect.top + deltaY;
+            const width = lastRect.width;
+            const height = lastRect.height;
+            return {
+                left,
+                top,
+                right: left + width,
+                bottom: top + height,
+                width,
+                height,
+            };
+        }
+
+        return this.readNodeRect(node);
+    }
+
     checkSnapPreview = (nodeOverride, rectOverride) => {
         if (this._isUnmounted) return;
         const node = nodeOverride || this.getWindowNode();
@@ -993,7 +1090,10 @@ export class Window extends Component {
         if (!node) {
             this._pendingDragUpdate = null;
             const fallbackNode = this.getWindowNode();
-            const rect = this.readNodeRect(fallbackNode);
+            const rect = this._lastDragRect || this.readNodeRect(fallbackNode);
+            if (rect) {
+                this._lastDragRect = rect;
+            }
             this.checkSnapPreview(fallbackNode, rect);
             return;
         }
@@ -1003,9 +1103,19 @@ export class Window extends Component {
             node,
             x: coordinates.x,
             y: coordinates.y,
+            deltaX: typeof dragData?.deltaX === 'number' && Number.isFinite(dragData.deltaX)
+                ? dragData.deltaX
+                : null,
+            deltaY: typeof dragData?.deltaY === 'number' && Number.isFinite(dragData.deltaY)
+                ? dragData.deltaY
+                : null,
         };
         this._pendingDragUpdate = update;
         this.applyEdgeResistance(node, update);
+        const immediateRect = this.estimateDragRect(node, update);
+        if (immediateRect) {
+            this._lastDragRect = immediateRect;
+        }
 
         if (this._dragFrame !== null) {
             return;
@@ -1019,7 +1129,10 @@ export class Window extends Component {
                 return;
             }
             this.applyEdgeResistance(pending.node, pending);
-            const rect = this.readNodeRect(pending.node);
+            const rect = this.estimateDragRect(pending.node, pending) || this.readNodeRect(pending.node);
+            if (rect) {
+                this._lastDragRect = rect;
+            }
             this.checkSnapPreview(pending.node, rect);
         });
     }
@@ -1035,7 +1148,10 @@ export class Window extends Component {
             return;
         }
         this.applyEdgeResistance(pending.node, pending);
-        const rect = this.readNodeRect(pending.node);
+        const rect = this.estimateDragRect(pending.node, pending) || this.readNodeRect(pending.node);
+        if (rect) {
+            this._lastDragRect = rect;
+        }
         this.checkSnapPreview(pending.node, rect);
     }
 
@@ -1044,6 +1160,12 @@ export class Window extends Component {
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
+        if (typeof x !== 'number' || !Number.isFinite(x)) {
+            x = 0;
+        }
+        if (typeof y !== 'number' || !Number.isFinite(y)) {
+            y = 0;
+        }
         const viewportLeft = this.state.viewportOffset?.left ?? 0;
         const viewportTop = this.state.viewportOffset?.top ?? 0;
         const topBound = viewportTop + (this.state.safeAreaTop ?? 0);
@@ -1061,7 +1183,17 @@ export class Window extends Component {
 
         x = resist(x, viewportLeft, maxX);
         y = resist(y, topBound, maxY);
-        const nextTransform = `translate(${x}px, ${y}px)`;
+        data.x = x;
+        data.y = y;
+        const formattedX = `${x}px`;
+        const formattedY = `${y}px`;
+        if (node.style.getPropertyValue('--window-transform-x') !== formattedX) {
+            node.style.setProperty('--window-transform-x', formattedX);
+        }
+        if (node.style.getPropertyValue('--window-transform-y') !== formattedY) {
+            node.style.setProperty('--window-transform-y', formattedY);
+        }
+        const nextTransform = `translate3d(${formattedX}, ${formattedY}, 0)`;
         if (node.style.transform !== nextTransform) {
             node.style.transform = nextTransform;
         }
@@ -1072,8 +1204,14 @@ export class Window extends Component {
         this.flushPendingDragUpdate();
     }
 
-    handleStop = () => {
+    handleStop = (event, dragData) => {
         this.flushPendingDragUpdate();
+        if (dragData && dragData.node) {
+            const finalRect = this.estimateDragRect(dragData.node, dragData) || this.readNodeRect(dragData.node);
+            if (finalRect) {
+                this._lastDragRect = finalRect;
+            }
+        }
         this.changeCursorToDefault();
         const snapPos = this.state.snapPosition;
         if (snapPos) {
@@ -1081,6 +1219,7 @@ export class Window extends Component {
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.resetDragTracking();
     }
 
     beginResize = (direction, event) => {
@@ -1710,7 +1849,7 @@ export class Window extends Component {
                     cancel={`.${styles.windowControls}`}
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
