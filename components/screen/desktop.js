@@ -5427,6 +5427,32 @@ export class Desktop extends Component {
         this.updateAppsData();
     }
 
+    sendToEmail = (app_id) => {
+        const app = apps.find(app => app.id === app_id);
+        if (app) {
+            window.alert(`Mock email sent for ${app.title}`);
+        }
+    }
+
+    sendToArchive = (app_id) => {
+        const app = apps.find(app => app.id === app_id);
+        if (!app) return;
+        let archive = [];
+        try { archive = JSON.parse(safeLocalStorage?.getItem('window-archive') || '[]'); } catch (e) { archive = []; }
+        archive.unshift({ id: app.id, title: app.title, icon: app.icon?.replace('./', '/'), archivedAt: Date.now() });
+        safeLocalStorage?.setItem('window-archive', JSON.stringify(archive));
+    }
+
+    sendToTrash = (app_id) => {
+        const app = apps.find(app => app.id === app_id);
+        if (!app) return;
+        let trash = [];
+        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        trash.unshift({ id: app.id, title: app.title, icon: app.icon?.replace('./', '/'), closedAt: Date.now() });
+        safeLocalStorage?.setItem('window-trash', JSON.stringify(trash));
+        this.updateTrashIcon();
+    }
+
     checkForAppShortcuts = () => {
         const shortcuts = safeLocalStorage?.getItem('app_shortcuts');
         if (!shortcuts) {
@@ -5612,6 +5638,10 @@ export class Desktop extends Component {
                     pinned={this.initFavourite[this.state.context_app]}
                     pinApp={() => this.pinApp(this.state.context_app)}
                     unpinApp={() => this.unpinApp(this.state.context_app)}
+                    sendToDesktop={() => this.addShortcutToDesktop(this.state.context_app)}
+                    sendToEmail={() => this.sendToEmail(this.state.context_app)}
+                    sendToArchive={() => this.sendToArchive(this.state.context_app)}
+                    sendToTrash={() => this.sendToTrash(this.state.context_app)}
                     onClose={this.hideAllContextMenu}
                 />
                 <TaskbarMenu
