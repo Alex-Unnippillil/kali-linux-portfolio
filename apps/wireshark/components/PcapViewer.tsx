@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import TopTalkersPanel from './TopTalkersPanel';
 
 
 interface PcapViewerProps {
@@ -246,6 +247,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [showTopTalkers, setShowTopTalkers] = useState(true);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,16 +291,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
+  const filtered = useMemo(() => {
+    if (!filter) {
+      return packets;
+    }
     const term = filter.toLowerCase();
-    return (
+    return packets.filter((p) =>
       p.src.toLowerCase().includes(term) ||
       p.dest.toLowerCase().includes(term) ||
       protocolName(p.protocol).toLowerCase().includes(term) ||
       (p.info || '').toLowerCase().includes(term)
     );
-  });
+  }, [filter, packets]);
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -331,6 +335,15 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
         >
           Sample sources
         </a>
+        {packets.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowTopTalkers((prev) => !prev)}
+            className="px-2 py-1 bg-gray-700 rounded text-xs"
+          >
+            {showTopTalkers ? 'Hide top talkers' : 'Show top talkers'}
+          </button>
+        )}
       </div>
       {packets.length > 0 && (
         <>
@@ -370,87 +383,90 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             </div>
           )}
           <div className="flex flex-1 overflow-hidden space-x-2">
-            <div className="overflow-auto flex-1">
-              <table className="text-xs w-full font-mono">
-                <thead>
-                  <tr className="bg-gray-800">
-                    {columns.map((col) => (
-                      <th
-                        key={col}
-                        draggable
-                        onDragStart={() => setDragCol(col)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => {
-                          if (!dragCol || dragCol === col) return;
-                          const updated = [...columns];
-                          const from = updated.indexOf(dragCol);
-                          const to = updated.indexOf(col);
-                          updated.splice(from, 1);
-                          updated.splice(to, 0, dragCol);
-                          setColumns(updated);
-                        }}
-                        className="px-1 text-left cursor-move"
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((pkt, i) => (
-                    <tr
-                      key={i}
-                      className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i
-                          ? 'outline outline-2 outline-white'
-                          : protocolColors[
-                              protocolName(pkt.protocol).toString()
-                            ] || ''
-                      }`}
-                      onClick={() => setSelected(i)}
-                    >
-                      {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
-                        return (
-                          <td key={col} className="px-1 whitespace-nowrap">
-                            {val}
-                          </td>
-                        );
-                      })}
+            <div className="flex flex-1 overflow-hidden space-x-2 min-w-0">
+              <div className="overflow-auto flex-1">
+                <table className="text-xs w-full font-mono">
+                  <thead>
+                    <tr className="bg-gray-800">
+                      {columns.map((col) => (
+                        <th
+                          key={col}
+                          draggable
+                          onDragStart={() => setDragCol(col)}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={() => {
+                            if (!dragCol || dragCol === col) return;
+                            const updated = [...columns];
+                            const from = updated.indexOf(dragCol);
+                            const to = updated.indexOf(col);
+                            updated.splice(from, 1);
+                            updated.splice(to, 0, dragCol);
+                            setColumns(updated);
+                          }}
+                          className="px-1 text-left cursor-move"
+                        >
+                          {col}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filtered.map((pkt, i) => (
+                      <tr
+                        key={i}
+                        className={`cursor-pointer hover:bg-gray-700 ${
+                          selected === i
+                            ? 'outline outline-2 outline-white'
+                            : protocolColors[
+                                protocolName(pkt.protocol).toString()
+                              ] || ''
+                        }`}
+                        onClick={() => setSelected(i)}
+                      >
+                        {columns.map((col) => {
+                          let val = '';
+                          switch (col) {
+                            case 'Time':
+                              val = pkt.timestamp;
+                              break;
+                            case 'Source':
+                              val = pkt.src;
+                              break;
+                            case 'Destination':
+                              val = pkt.dest;
+                              break;
+                            case 'Protocol':
+                              val = protocolName(pkt.protocol);
+                              break;
+                            case 'Info':
+                              val = pkt.info;
+                              break;
+                          }
+                          return (
+                            <td key={col} className="px-1 whitespace-nowrap">
+                              {val}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
+                {selected !== null ? (
+                  <>
+                    {decodePacketLayers(filtered[selected]).map((layer, i) => (
+                      <LayerView key={i} name={layer.name} fields={layer.fields} />
+                    ))}
+                    <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  </>
+                ) : (
+                  'Select a packet'
+                )}
+              </div>
             </div>
-            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
-                <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
-                  ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
-                </>
-              ) : (
-                'Select a packet'
-              )}
-            </div>
+            <TopTalkersPanel packets={filtered} isVisible={showTopTalkers} />
           </div>
         </>
       )}
