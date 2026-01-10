@@ -103,7 +103,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | --- | --- | --- | --- | --- |
 | tictactoe | Tic Tac Toe | Core maintainers | **Needs polish** – confirm canvas loop & OS alignment | Canvas loop, localStorage |
 | chess | Chess | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| connect-four | Connect Four | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| connect-four | Connect Four | Core maintainers | **Ready** – standardized loop, controls, persistence | Game engine |
 | hangman | Hangman | Core maintainers | **In progress** – add word list, timer, difficulty | Word list data |
 | frogger | Frogger | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | flappy-bird | Flappy Bird | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
