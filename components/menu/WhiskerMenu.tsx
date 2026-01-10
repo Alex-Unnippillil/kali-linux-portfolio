@@ -494,6 +494,11 @@ const WhiskerMenu: React.FC = () => {
     }
   };
 
+  const activeCategory = categoryConfigs[categoryHighlight];
+  const activeCategoryDescendantId = activeCategory
+    ? `whisker-category-${activeCategory.id}`
+    : undefined;
+
   return (
     <div className="relative inline-flex">
       <button
@@ -541,6 +546,7 @@ const WhiskerMenu: React.FC = () => {
               role="listbox"
               aria-label="Application categories"
               aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
+              aria-activedescendant={activeCategoryDescendantId}
               tabIndex={0}
               onKeyDown={handleCategoryKeyDown}
               style={{
@@ -556,6 +562,7 @@ const WhiskerMenu: React.FC = () => {
                   ref={(el) => {
                     categoryButtonRefs.current[index] = el;
                   }}
+                  id={`whisker-category-${cat.id}`}
                   type="button"
                   className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${
                     category === cat.id
