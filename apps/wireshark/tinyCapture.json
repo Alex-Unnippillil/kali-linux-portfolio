@@ -1,44 +1,99 @@
 [
   {
-    "timestamp": "1000",
-    "src": "10.0.0.1",
-    "dest": "10.0.0.2",
-    "sport": 12345,
+    "timestamp": "1686176642.000001",
+    "src": "10.0.0.10",
+    "dest": "93.184.216.34",
+    "sport": 49512,
     "dport": 80,
     "protocol": 6,
-    "info": "TCP handshake",
+    "info": "TCP 49512 → 80 [SYN] Seq=0 Win=64240 Len=0 MSS=1460 SACK_PERM=1",
     "layers": {
-      "eth": { "src": "aa:bb:cc:dd:ee:ff", "dest": "ff:ee:dd:cc:bb:aa" },
-      "ip": { "src": "10.0.0.1", "dest": "10.0.0.2" },
-      "tcp": { "sport": 12345, "dport": 80, "flags": "SYN" }
-    }
+      "eth": {
+        "src": "00:16:3e:7f:8a:6b",
+        "dest": "00:16:3e:7f:8a:6c",
+        "type": "IPv4"
+      },
+      "ip": {
+        "src": "10.0.0.10",
+        "dest": "93.184.216.34",
+        "id": "0x1c46"
+      },
+      "tcp": { "sport": 49512, "dport": 80, "flags": "SYN" }
+    },
+    "dataHex": "00163e7f8a6b00163e7f8a6c0800450000341c4640004006b1e60a00000a5db8d822c168005000000000a0027210000000000204050000000000000"
   },
   {
-    "timestamp": "1500",
-    "src": "10.0.0.2",
-    "dest": "10.0.0.1",
+    "timestamp": "1686176642.000152",
+    "src": "93.184.216.34",
+    "dest": "10.0.0.10",
     "sport": 80,
-    "dport": 12345,
+    "dport": 49512,
     "protocol": 6,
-    "info": "TCP response",
+    "info": "TCP 80 → 49512 [SYN, ACK] Seq=0 Ack=1 Win=65535 Len=0",
     "layers": {
-      "eth": { "src": "ff:ee:dd:cc:bb:aa", "dest": "aa:bb:cc:dd:ee:ff" },
-      "ip": { "src": "10.0.0.2", "dest": "10.0.0.1" },
-      "tcp": { "sport": 80, "dport": 12345, "flags": "SYN-ACK" }
-    }
+      "eth": {
+        "src": "00:16:3e:7f:8a:6c",
+        "dest": "00:16:3e:7f:8a:6b",
+        "type": "IPv4"
+      },
+      "ip": {
+        "src": "93.184.216.34",
+        "dest": "10.0.0.10",
+        "id": "0x3b12"
+      },
+      "tcp": { "sport": 80, "dport": 49512, "flags": "SYN-ACK" }
+    },
+    "dataHex": "00163e7f8a6c00163e7f8a6b0800450000343b1240004006f50d5db8d8220a00000ac168005013579bcd0000000012017210000000000204050000000000000"
   },
   {
-    "timestamp": "3000",
-    "src": "10.0.0.1",
-    "dest": "10.0.0.2",
-    "sport": 33333,
-    "dport": 53,
-    "protocol": 17,
-    "info": "UDP packet",
+    "timestamp": "1686176642.000256",
+    "src": "10.0.0.10",
+    "dest": "93.184.216.34",
+    "sport": 49512,
+    "dport": 80,
+    "protocol": 6,
+    "info": "TCP 49512 → 80 [ACK] Seq=1 Ack=1 Win=64240 Len=0",
     "layers": {
-      "eth": { "src": "aa:bb:cc:dd:ee:ff", "dest": "ff:ee:dd:cc:bb:aa" },
-      "ip": { "src": "10.0.0.1", "dest": "10.0.0.2" },
-      "udp": { "sport": 33333, "dport": 53 }
-    }
+      "eth": {
+        "src": "00:16:3e:7f:8a:6b",
+        "dest": "00:16:3e:7f:8a:6c",
+        "type": "IPv4"
+      },
+      "ip": {
+        "src": "10.0.0.10",
+        "dest": "93.184.216.34",
+        "id": "0x1c47"
+      },
+      "tcp": { "sport": 49512, "dport": 80, "flags": "ACK" }
+    },
+    "dataHex": "00163e7f8a6b00163e7f8a6c0800450000281c4740004006b1f20a00000a5db8d822c1680050013579bce000000001001721000000000"
+  },
+  {
+    "timestamp": "1686176642.001500",
+    "src": "10.0.0.10",
+    "dest": "93.184.216.34",
+    "sport": 49512,
+    "dport": 80,
+    "protocol": 6,
+    "info": "HTTP GET /index.html",
+    "layers": {
+      "eth": {
+        "src": "00:16:3e:7f:8a:6b",
+        "dest": "00:16:3e:7f:8a:6c",
+        "type": "IPv4"
+      },
+      "ip": {
+        "src": "10.0.0.10",
+        "dest": "93.184.216.34",
+        "id": "0x1c48"
+      },
+      "tcp": { "sport": 49512, "dport": 80, "flags": "PSH-ACK" },
+      "http": {
+        "method": "GET",
+        "path": "/index.html",
+        "host": "example.com"
+      }
+    },
+    "dataHex": "00163e7f8a6b00163e7f8a6c0800450000501c4840004006b1c40a00000a5db8d822c1680050013579bce0000000501801f500000000474554202f696e6465782e68746d6c20485454502f312e310d0a486f73743a206578616d706c652e636f6d0d0a557365722d4167656e743a204c61624c61622053696d0d0a0d0a"
   }
 ]
