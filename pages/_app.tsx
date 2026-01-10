@@ -14,6 +14,7 @@ import '@xterm/xterm/css/xterm.css';
 import 'leaflet/dist/leaflet.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
+import { FirstRunToast } from '../components/ui/Toast';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
@@ -267,6 +268,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
+              <FirstRunToast />
               <Analytics
                 beforeSend={(event) => {
                   if (event.url.includes('/admin') || event.url.includes('/private')) return null;
