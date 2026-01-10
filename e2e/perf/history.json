@@ -1,0 +1,22 @@
+{
+  "runs": [
+    {
+      "timestamp": "2025-02-01T00:00:00.000Z",
+      "gitRef": "baseline",
+      "scenarios": {
+        "desktop-load": {
+          "lcp": 2800,
+          "inp": 180,
+          "cls": 0.08,
+          "memory": 190000000
+        },
+        "apps-catalog-heavy": {
+          "lcp": 3200,
+          "inp": 220,
+          "cls": 0.1,
+          "memory": 210000000
+        }
+      }
+    }
+  ]
+}
