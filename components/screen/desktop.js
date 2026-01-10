@@ -2759,12 +2759,29 @@ export class Desktop extends Component {
     };
 
     applyKeyboardSelection = (appId, modifiers = {}) => {
-        const selection = this.calculateSelectionForState(this.state, appId, modifiers);
-        if (!selection) return;
-        if (!selection.shouldUpdate) return;
-        this.setState({
-            selectedIcons: selection.nextSelected,
-            selectionAnchorId: selection.nextSelected.size ? selection.anchorId : null,
+        let prevSelectedSet = null;
+        let nextSelectedSet = null;
+        let changed = false;
+        this.setState((prevState) => {
+            const selection = this.calculateSelectionForState(prevState, appId, modifiers);
+            if (!selection || !selection.shouldUpdate) {
+                return null;
+            }
+            if (selection.changed) {
+                prevSelectedSet = prevState.selectedIcons instanceof Set
+                    ? new Set(prevState.selectedIcons)
+                    : new Set();
+                nextSelectedSet = selection.nextSelected;
+                changed = true;
+            }
+            return {
+                selectedIcons: selection.nextSelected,
+                selectionAnchorId: selection.nextSelected.size ? selection.anchorId : null,
+            };
+        }, () => {
+            if (changed && prevSelectedSet && nextSelectedSet) {
+                this.announceSelectionChange(prevSelectedSet, nextSelectedSet);
+            }
         });
     };
 
@@ -3162,6 +3179,62 @@ export class Desktop extends Component {
         this.announce(`Cancelled moving ${title}.`);
     };
 
+    announceSelectionChange = (previousSelection, nextSelection) => {
+        const prevSet = previousSelection instanceof Set
+            ? previousSelection
+            : new Set(previousSelection || []);
+        const nextSet = nextSelection instanceof Set
+            ? nextSelection
+            : new Set(nextSelection || []);
+
+        if (this.areSetsEqual(prevSet, nextSet)) {
+            return;
+        }
+
+        const added = [];
+        const removed = [];
+
+        nextSet.forEach((id) => {
+            if (!prevSet.has(id)) {
+                added.push(id);
+            }
+        });
+
+        prevSet.forEach((id) => {
+            if (!nextSet.has(id)) {
+                removed.push(id);
+            }
+        });
+
+        const describeIds = (ids) => ids.map((id) => {
+            const app = this.getAppById(id);
+            if (!app) return id;
+            return app.title || app.name || id;
+        }).filter(Boolean);
+
+        const addedNames = describeIds(added);
+        const removedNames = describeIds(removed);
+
+        let actionMessage = '';
+        if (addedNames.length === 1 && removedNames.length === 0) {
+            actionMessage = `${addedNames[0]} selected.`;
+        } else if (addedNames.length > 1 && removedNames.length === 0) {
+            actionMessage = `${addedNames.length} items added to selection.`;
+        } else if (removedNames.length === 1 && addedNames.length === 0) {
+            actionMessage = `${removedNames[0]} removed from selection.`;
+        } else if (removedNames.length > 1 && addedNames.length === 0) {
+            actionMessage = `${removedNames.length} items removed from selection.`;
+        } else if (addedNames.length || removedNames.length) {
+            actionMessage = 'Selection updated.';
+        }
+
+        const count = nextSet.size;
+        const countMessage = `${count} icon${count === 1 ? '' : 's'} selected.`;
+
+        const message = [actionMessage, countMessage].filter(Boolean).join(' ');
+        this.announce(message || countMessage);
+    };
+
     handleIconPointerEnter = (appId) => {
         this.setState((prevState) => {
             if (prevState.hoveredIconId === appId) return null;
@@ -3203,7 +3276,10 @@ export class Desktop extends Component {
 
         if (!isAdditive && !isRange) {
             if (baseSelectionArray.length > 0) {
-                this.setState({ selectedIcons: new Set(), selectionAnchorId: null });
+                const previousSelection = new Set(baseSelectionArray);
+                this.setState({ selectedIcons: new Set(), selectionAnchorId: null }, () => {
+                    this.announceSelectionChange(previousSelection, new Set());
+                });
             }
         }
 
@@ -3266,11 +3342,23 @@ export class Desktop extends Component {
 
         selectionState.container?.releasePointerCapture?.(selectionState.pointerId);
 
+        const moved = Boolean(selectionState.moved);
+        const baseSelection = Array.isArray(selectionState.baseSelection)
+            ? selectionState.baseSelection
+            : [];
+
         this.desktopSelectionState = null;
 
         this.setState((prevState) => {
             if (!prevState.marqueeSelection) return null;
             return { marqueeSelection: null };
+        }, () => {
+            if (!moved) return;
+            const previousSelection = new Set(baseSelection);
+            const nextSelection = this.state.selectedIcons instanceof Set
+                ? new Set(this.state.selectedIcons)
+                : new Set();
+            this.announceSelectionChange(previousSelection, nextSelection);
         });
     };
 
@@ -3308,6 +3396,8 @@ export class Desktop extends Component {
             range: event.shiftKey,
         };
         let selectionChangedFlag = false;
+        let previousSelectionForAnnouncement = null;
+        let nextSelectionForAnnouncement = null;
         this.setState((prevState) => {
             const partial = { draggingIconId: appId };
             if (prevState.keyboardMoveState) {
@@ -3317,11 +3407,21 @@ export class Desktop extends Component {
             if (selection) {
                 selectionChangedFlag = selection.changed;
                 if (selection.shouldUpdate) {
+                    if (selection.changed) {
+                        previousSelectionForAnnouncement = prevState.selectedIcons instanceof Set
+                            ? new Set(prevState.selectedIcons)
+                            : new Set();
+                        nextSelectionForAnnouncement = selection.nextSelected;
+                    }
                     partial.selectedIcons = selection.nextSelected;
                     partial.selectionAnchorId = selection.nextSelected.size ? selection.anchorId : null;
                 }
             }
             return partial;
+        }, () => {
+            if (selectionChangedFlag && previousSelectionForAnnouncement && nextSelectionForAnnouncement) {
+                this.announceSelectionChange(previousSelectionForAnnouncement, nextSelectionForAnnouncement);
+            }
         });
         let startPosition = null;
         const positions = this.state.desktop_icon_positions || {};
