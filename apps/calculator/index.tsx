@@ -180,15 +180,23 @@ export default function Calculator() {
             const expr = display.value;
             try {
               const result = evaluate(expr);
+              display.classList.remove('error');
               setHistory((prev) =>
                 [{ expr, result }, ...prev].slice(0, HISTORY_LIMIT),
               );
               display.value = result;
+              const caret = display.value.length;
+              display.setSelectionRange(caret, caret);
+              display.focus();
             } catch (e: any) {
-              const idx = e.index || 0;
+              const exprLength = expr.length;
+              const idx = typeof e?.index === 'number' ? e.index : exprLength;
+              const len = typeof e?.length === 'number' && e.length > 0 ? e.length : 1;
+              const start = Math.min(Math.max(idx, 0), exprLength);
+              const end = Math.min(exprLength, start + len);
               display.classList.add('error');
               display.focus();
-              display.setSelectionRange(idx, idx + 1);
+              display.setSelectionRange(start, end);
             }
             return;
           }

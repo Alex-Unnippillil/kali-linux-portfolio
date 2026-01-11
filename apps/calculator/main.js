@@ -7,6 +7,28 @@ let currentBase = 10;
 let lastResult = 0;
 let memory = 0;
 
+function createParseError(message, start, length = 1) {
+  const err = new Error(message);
+  err.index = Math.max(0, start ?? 0);
+  err.length = Math.max(1, length || 1);
+  return err;
+}
+
+function attachTokenLocation(err, token) {
+  if (err && typeof err === 'object') {
+    if (typeof err.index !== 'number') {
+      err.index = token?.start ?? 0;
+    }
+    if (typeof err.length !== 'number') {
+      const len = token && typeof token.end === 'number'
+        ? Math.max(1, token.end - token.start)
+        : 1;
+      err.length = len;
+    }
+  }
+  return err;
+}
+
 function setPreciseMode(on) {
   preciseMode = on;
   if (typeof math !== 'undefined') {
@@ -46,81 +68,108 @@ function formatBase(value, base = currentBase) {
 function tokenize(expr) {
   const tokens = [];
   let i = 0;
+  const pushToken = (token) => {
+    tokens.push(token);
+  };
   while (i < expr.length) {
     const ch = expr[i];
     if (/\s/.test(ch)) {
       i++;
       continue;
     }
-    if (
-      ch === '-' &&
-      (tokens.length === 0 ||
-        tokens[tokens.length - 1].type === 'operator' ||
-        tokens[tokens.length - 1].value === '(')
-    ) {
+    const prev = tokens[tokens.length - 1];
+    const canBeUnary =
+      !prev || prev.type === 'operator' || (prev.type === 'paren' && prev.value === '(');
+    if (ch === '-' && canBeUnary) {
       const next = expr[i + 1];
       if (/\d|\./.test(next)) {
         let num = '-';
         const start = i;
+        let dotCount = 0;
         i++;
         while (i < expr.length && /[0-9.]/.test(expr[i])) {
+          if (expr[i] === '.') {
+            dotCount++;
+            if (dotCount > 1) {
+              throw createParseError('Invalid number literal', i, 1);
+            }
+          }
           num += expr[i];
           i++;
         }
-        tokens.push({ type: 'number', value: num, start });
+        if (num === '-' || num === '-.') {
+          throw createParseError('Invalid number literal', start, num.length);
+        }
+        const end = i;
+        pushToken({ type: 'number', value: num, start, end });
         let unit = '';
+        const unitStart = i;
         while (i < expr.length && /[A-Za-z]/.test(expr[i])) {
           unit += expr[i];
           i++;
         }
-        if (unit) tokens.push({ type: 'unit', value: unit, start: i - unit.length });
+        if (unit) pushToken({ type: 'unit', value: unit, start: unitStart, end: i });
         continue;
       }
-      tokens.push({ type: 'number', value: '0', start: i });
-      tokens.push({ type: 'operator', value: '-', start: i });
+      pushToken({ type: 'number', value: '0', start: i, end: i + 1 });
+      pushToken({ type: 'operator', value: '-', start: i, end: i + 1 });
       i++;
       continue;
     }
     if (/[0-9.]/.test(ch)) {
       let num = ch;
       const start = i;
+      let dotCount = ch === '.' ? 1 : 0;
       i++;
       while (i < expr.length && /[0-9.]/.test(expr[i])) {
+        if (expr[i] === '.') {
+          dotCount++;
+          if (dotCount > 1) {
+            throw createParseError('Invalid number literal', i, 1);
+          }
+        }
         num += expr[i];
         i++;
       }
-      tokens.push({ type: 'number', value: num, start });
+      if (num === '.' || num === '-.') {
+        throw createParseError('Invalid number literal', start, num.length);
+      }
+      const end = i;
+      pushToken({ type: 'number', value: num, start, end });
       let unit = '';
+      const unitStart = i;
       while (i < expr.length && /[A-Za-z]/.test(expr[i])) {
         unit += expr[i];
         i++;
       }
-      if (unit) tokens.push({ type: 'unit', value: unit, start: i - unit.length });
+      if (unit) pushToken({ type: 'unit', value: unit, start: unitStart, end: i });
       continue;
     }
     if (/[A-Za-z]/.test(ch)) {
       const start = i;
-      const id = expr.slice(i).match(/^[A-Za-z]+/)[0];
+      const idMatch = expr.slice(i).match(/^[A-Za-z]+/);
+      const id = idMatch ? idMatch[0] : ch;
       i += id.length;
+      const end = i;
       if (expr[i] === '(') {
-        tokens.push({ type: 'func', value: id, start });
+        pushToken({ type: 'func', value: id, start, end });
       } else {
-        tokens.push({ type: 'id', value: id, start });
+        pushToken({ type: 'id', value: id, start, end });
       }
       continue;
     }
     if ('+-*/^(),'.includes(ch)) {
-      tokens.push({
+      const token = {
         type: ch === '(' || ch === ')' ? 'paren' : ch === ',' ? 'comma' : 'operator',
         value: ch,
         start: i,
-      });
+        end: i + 1,
+      };
+      pushToken(token);
       i++;
       continue;
     }
-    const err = new Error(`Unexpected '${ch}'`);
-    err.index = i;
-    throw err;
+    throw createParseError(`Unexpected '${ch}'`, i, 1);
   }
   return tokens;
 }
@@ -159,9 +208,7 @@ function toRPN(tokens) {
         output.push(ops.pop());
       }
       if (!ops.length) {
-        const err = new Error('Mismatched parenthesis');
-        err.index = token.start;
-        throw err;
+        throw createParseError('Mismatched parenthesis', token.start, token.end - token.start);
       }
       ops.pop();
       if (ops.length && ops[ops.length - 1].type === 'func') {
@@ -172,9 +219,7 @@ function toRPN(tokens) {
   while (ops.length) {
     const op = ops.pop();
     if (op.type === 'paren') {
-      const err = new Error('Mismatched parenthesis');
-      err.index = op.start;
-      throw err;
+      throw createParseError('Mismatched parenthesis', op.start, op.end - op.start);
     }
     output.push(op);
   }
@@ -200,13 +245,30 @@ function evalRPN(rpn, vars = {}) {
         stack.push(0);
       }
     } else if (token.type === 'unit') {
+      if (!stack.length) {
+        throw createParseError('Missing value for unit', token.start, token.end - token.start);
+      }
       const a = stack.pop();
-      stack.push(math.multiply(a, math.unit(1, token.value)));
+      try {
+        stack.push(math.multiply(a, math.unit(1, token.value)));
+      } catch (err) {
+        throw attachTokenLocation(err, token);
+      }
     } else if (token.type === 'func') {
+      if (!stack.length) {
+        throw createParseError('Missing argument', token.start, token.end - token.start);
+      }
       const a = stack.pop();
       const fn = math[token.value];
-      stack.push(fn ? fn(a) : a);
+      try {
+        stack.push(fn ? fn(a) : a);
+      } catch (err) {
+        throw attachTokenLocation(err, token);
+      }
     } else if (token.type === 'operator') {
+      if (stack.length < 2) {
+        throw createParseError('Missing operand', token.start, token.end - token.start);
+      }
       const b = stack.pop();
       const a = stack.pop();
       let res;
@@ -227,8 +289,16 @@ function evalRPN(rpn, vars = {}) {
           res = math.pow(a, b);
           break;
       }
-      stack.push(res);
+      try {
+        stack.push(res);
+      } catch (err) {
+        throw attachTokenLocation(err, token);
+      }
     }
+  }
+  if (stack.length !== 1) {
+    const last = rpn[rpn.length - 1];
+    throw createParseError('Invalid expression', last ? last.start : 0, last ? last.end - last.start : 1);
   }
   return stack.pop();
 }
