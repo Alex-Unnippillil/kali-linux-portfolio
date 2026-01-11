@@ -1,4 +1,5 @@
 import React, {
+  Dispatch,
   createContext,
   useCallback,
   useEffect,
@@ -47,11 +48,15 @@ interface NotificationsContextValue {
   dismissNotification: (appId: string, id: string) => void;
   clearNotifications: (appId?: string) => void;
   markAllRead: (appId?: string) => void;
+  doNotDisturb: boolean;
+  setDoNotDisturb: Dispatch<React.SetStateAction<boolean>>;
+  toggleDoNotDisturb: () => void;
 }
 
 export const NotificationsContext = createContext<NotificationsContextValue | null>(null);
 
 const createId = () => `ntf-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const DO_NOT_DISTURB_STORAGE_KEY = 'notifications:doNotDisturb';
 
 const PRIORITY_WEIGHT: Record<NotificationPriority, number> = {
   critical: 0,
@@ -64,9 +69,29 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
   const [notificationsByApp, setNotificationsByApp] = useState<
     Record<string, AppNotification[]>
   >({});
+  const [doNotDisturb, setDoNotDisturb] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const storedValue = window.localStorage.getItem(DO_NOT_DISTURB_STORAGE_KEY);
+    if (storedValue === 'true') setDoNotDisturb(true);
+    if (storedValue === 'false') setDoNotDisturb(false);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(
+      DO_NOT_DISTURB_STORAGE_KEY,
+      doNotDisturb ? 'true' : 'false',
+    );
+  }, [doNotDisturb]);
 
   const pushNotification = useCallback((input: PushNotificationInput) => {
     const id = createId();
+    if (doNotDisturb) {
+      return id;
+    }
+
     const timestamp = input.timestamp ?? Date.now();
     const classification = classifyNotification({
       appId: input.appId,
@@ -96,7 +121,7 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
     });
 
     return id;
-  }, []);
+  }, [doNotDisturb]);
 
   const dismissNotification = useCallback((appId: string, id: string) => {
     setNotificationsByApp(prev => {
@@ -174,6 +199,10 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
     }
   }, [unreadCount]);
 
+  const toggleDoNotDisturb = useCallback(() => {
+    setDoNotDisturb(prev => !prev);
+  }, []);
+
   return (
     <NotificationsContext.Provider
       value={{
@@ -184,6 +213,9 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         dismissNotification,
         clearNotifications,
         markAllRead,
+        doNotDisturb,
+        setDoNotDisturb,
+        toggleDoNotDisturb,
       }}
     >
       {children}
