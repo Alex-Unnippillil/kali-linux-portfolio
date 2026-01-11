@@ -25,4 +25,35 @@ describe('ShortcutOverlay', () => {
     expect(items[0]).toHaveAttribute('data-conflict', 'true');
     expect(items[1]).toHaveAttribute('data-conflict', 'true');
   });
+
+  it('focuses the close button on open and restores focus after closing', () => {
+    render(
+      <>
+        <button type="button">Invoker</button>
+        <ShortcutOverlay />
+      </>
+    );
+
+    const invoker = screen.getByRole('button', { name: 'Invoker' });
+    invoker.focus();
+
+    fireEvent.keyDown(invoker, { key: '?', shiftKey: true });
+
+    const closeButton = screen.getByRole('button', { name: /close/i });
+    expect(closeButton).toHaveFocus();
+
+    fireEvent.click(closeButton);
+    expect(invoker).toHaveFocus();
+  });
+
+  it('closes with Escape and surfaces touch hints', () => {
+    render(<ShortcutOverlay />);
+
+    fireEvent.keyDown(document.body, { key: '?', shiftKey: true });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText('Touch equivalents')).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
