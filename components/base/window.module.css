@@ -439,3 +439,8 @@
   left: 0;
   cursor: nesw-resize;
 }
+
+.windowBody {
+  content-visibility: auto;
+  contain: layout paint style;
+}

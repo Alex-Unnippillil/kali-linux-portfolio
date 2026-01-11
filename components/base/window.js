@@ -2126,8 +2126,14 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const backgroundClass = this.state.setDarkBg ? 'bg-ub-drk-abrgn' : 'bg-ub-cool-grey';
+        const bodyClasses = [
+            'w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen',
+            backgroundClass,
+            styles.windowBody,
+        ].join(' ');
         return (
-            <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
+            <div className={bodyClasses}>
                 {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
             </div>
         )
