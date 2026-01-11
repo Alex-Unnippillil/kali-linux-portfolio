@@ -356,6 +356,9 @@ SUPABASE_SERVICE_ROLE_KEY=
 | `yarn smoke` | Manual smoke runner that opens each `/apps/*` route in a headless browser. |
 | `npx playwright test` | Playwright end-to-end suite (optional locally, required in E2E CI runs). |
 
+Playwright executes against the desktop profile and two mobile viewport projects (360×640 and 414×896). Expect runs to take a bit
+longer while each project boots the development server and exercises launcher, window management, and offline flows.
+
 Additional guidance:
 - Fix lint and type issues instead of silencing rules.
 - Co-locate new tests with related code under `__tests__/` or feature folders.
