@@ -1,29 +1,38 @@
 import { Desktop } from '../components/screen/desktop';
 
+const withDisplayName = <P,>(component: React.ComponentType<P>, name: string) => {
+  component.displayName = name;
+  return component;
+};
+
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../components/util-components/background-image', () => () => null);
-jest.mock('../components/base/window', () => () => null);
-jest.mock('../components/base/ubuntu_app', () => () => null);
-jest.mock('../components/screen/all-applications', () => () => null);
-jest.mock('../components/screen/shortcut-selector', () => () => null);
-jest.mock('../components/screen/window-switcher', () => () => null);
-jest.mock('../components/context-menus/desktop-menu', () => ({
-  __esModule: true,
-  default: () => null,
-}));
-jest.mock('../components/context-menus/default', () => ({
-  __esModule: true,
-  default: () => null,
-}));
-jest.mock('../components/context-menus/app-menu', () => ({
-  __esModule: true,
-  default: () => null,
-}));
-jest.mock('../components/context-menus/taskbar-menu', () => ({
-  __esModule: true,
-  default: () => null,
-}));
+jest.mock('../components/util-components/background-image', () => withDisplayName(() => null, 'BackgroundImageMock'));
+jest.mock('../components/base/window', () => withDisplayName(() => null, 'WindowMock'));
+jest.mock('../components/base/ubuntu_app', () => withDisplayName(() => null, 'UbuntuAppMock'));
+jest.mock('../components/screen/all-applications', () => withDisplayName(() => null, 'AllAppsMock'));
+jest.mock('../components/screen/shortcut-selector', () => withDisplayName(() => null, 'ShortcutSelectorMock'));
+jest.mock('../components/screen/window-switcher', () => withDisplayName(() => null, 'WindowSwitcherMock'));
+jest.mock('../components/context-menus/desktop-menu', () => {
+  const DesktopMenuMock = withDisplayName(() => null, 'DesktopMenuMock');
+  return { __esModule: true, default: DesktopMenuMock };
+});
+jest.mock('../components/context-menus/default', () => {
+  const DefaultMenuMock = withDisplayName(() => null, 'DefaultMenuMock');
+  return { __esModule: true, default: DefaultMenuMock };
+});
+jest.mock('../components/context-menus/app-menu', () => {
+  const AppMenuMock = withDisplayName(() => null, 'AppMenuMock');
+  return { __esModule: true, default: AppMenuMock };
+});
+jest.mock('../components/context-menus/taskbar-menu', () => {
+  const TaskbarMenuMock = withDisplayName(() => null, 'TaskbarMenuMock');
+  return { __esModule: true, default: TaskbarMenuMock };
+});
+jest.mock('../components/context-menus/window-menu', () => {
+  const WindowMenuMock = withDisplayName(() => null, 'WindowMenuMock');
+  return { __esModule: true, default: WindowMenuMock };
+});
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
 const createTestDesktop = () => {
