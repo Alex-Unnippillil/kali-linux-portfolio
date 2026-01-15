@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
+import Toast from '../../ui/Toast';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
@@ -152,6 +153,8 @@ const ContactApp: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
+  const [toast, setToast] = useState('');
+  const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
 
@@ -196,25 +199,38 @@ const ContactApp: React.FC = () => {
     setSubmitting(true);
     setError('');
     setBanner(null);
+    setToast('');
+    setNameError('');
     setEmailError('');
     setMessageError('');
 
-    const emailResult = contactSchema.shape.email.safeParse(email);
-    const messageResult = contactSchema.shape.message.safeParse(message);
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedMessage = message.trim();
+
+    const emailResult = contactSchema.shape.email.safeParse(trimmedEmail);
     let hasValidationError = false;
+    if (!trimmedName || trimmedName.length > 100) {
+      setNameError('1-100 chars');
+      hasValidationError = true;
+    }
     if (!emailResult.success) {
       setEmailError('Invalid email');
       hasValidationError = true;
     }
-    if (!messageResult.success) {
+    if (!trimmedMessage || trimmedMessage.length > 1000) {
       setMessageError('1-1000 chars');
       hasValidationError = true;
     }
     if (hasValidationError) {
-      setBanner({ type: 'error', message: 'Failed to send' });
+      setBanner({ type: 'error', message: 'Please fix the errors above.' });
+      setError('Please fix the errors above and try again.');
       setSubmitting(false);
       return;
     }
+    if (trimmedName !== name) setName(trimmedName);
+    if (trimmedEmail !== email) setEmail(trimmedEmail);
+    if (trimmedMessage !== message) setMessage(trimmedMessage);
     const totalSize = attachments.reduce((s, f) => s + f.size, 0);
     if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
       setError(
@@ -238,20 +254,21 @@ const ContactApp: React.FC = () => {
     if (shouldFallback) {
       setFallback(true);
       setError('Email service unavailable. Use the options above.');
-      setBanner({ type: 'error', message: 'Failed to send' });
+      setBanner({ type: 'error', message: 'Email service unavailable.' });
       setSubmitting(false);
       return;
     }
     const result = await processContactForm({
-      name,
-      email,
-      message,
+      name: trimmedName,
+      email: trimmedEmail,
+      message: trimmedMessage,
       honeypot,
       csrfToken,
       recaptchaToken,
     });
     if (result.success) {
       setBanner({ type: 'success', message: 'Message sent' });
+      setToast('Message sent');
       setName('');
       setEmail('');
       setMessage('');
@@ -312,7 +329,11 @@ const ContactApp: React.FC = () => {
           </button>
         </p>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+      <form
+        onSubmit={handleSubmit}
+        noValidate
+        className="space-y-6 max-w-md"
+      >
         <div className="relative">
           <input
             id="contact-name"
@@ -320,6 +341,8 @@ const ContactApp: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
+            aria-invalid={!!nameError}
+            aria-describedby={nameError ? 'contact-name-error' : undefined}
             placeholder=" "
           />
           <label
@@ -328,6 +351,11 @@ const ContactApp: React.FC = () => {
           >
             Name
           </label>
+          {nameError && (
+            <FormError id="contact-name-error" className="mt-3">
+              {nameError}
+            </FormError>
+          )}
         </div>
         <div className="relative">
           <input
@@ -400,15 +428,19 @@ const ContactApp: React.FC = () => {
         <button
           type="submit"
           disabled={submitting}
-          className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
+          className="flex items-center justify-center gap-2 rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
         >
           {submitting ? (
-            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <>
+              <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" aria-hidden />
+              <span>Sending...</span>
+            </>
           ) : (
             'Send'
           )}
         </button>
       </form>
+      {toast && <Toast message={toast} onClose={() => setToast('')} />}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import Image from 'next/image';
 import ReactGA from 'react-ga4';
 import emailjs from '@emailjs/browser';
 import ProgressBar from '../ui/ProgressBar';
+import Toast from '../ui/Toast';
 import { createDisplay } from '../../utils/createDynamicApp';
 
 export class Gedit extends Component {
@@ -17,9 +18,13 @@ export class Gedit extends Component {
             subject: '',
             message: '',
             nameError: false,
+            subjectError: false,
             messageError: false,
             nameTouched: false,
+            subjectTouched: false,
             messageTouched: false,
+            formError: '',
+            toast: '',
             location: null,
             timezone: '',
             localTime: '',
@@ -82,6 +87,7 @@ export class Gedit extends Component {
     }
 
     sendMessage = async () => {
+        if (this.state.sending) return;
         let { name, subject, message } = this.state;
 
         name = name.trim();
@@ -95,13 +101,27 @@ export class Gedit extends Component {
             error = true;
         }
 
+        if (subject.length === 0) {
+            this.setState({ subject: '', subjectError: true, subjectTouched: true });
+            error = true;
+        }
+
         if (message.length === 0) {
             this.setState({ message: '', messageError: true, messageTouched: true });
             error = true;
         }
-        if (error) return;
+        if (error) {
+            this.setState({ formError: 'Please fix the highlighted fields.' });
+            return;
+        }
 
-        this.setState({ sending: true, showProgress: false, progress: 0 });
+        this.setState({
+            sending: true,
+            showProgress: false,
+            progress: 0,
+            formError: '',
+            toast: '',
+        });
 
         this.progressTimer = setTimeout(() => {
             this.setState({ showProgress: true });
@@ -120,18 +140,33 @@ export class Gedit extends Component {
 
         try {
             await emailjs.send(serviceID, templateID, templateParams);
-            this.setState({ name: '', subject: '', message: '' });
+            this.setState({
+                name: '',
+                subject: '',
+                message: '',
+                nameTouched: false,
+                subjectTouched: false,
+                messageTouched: false,
+                nameError: false,
+                subjectError: false,
+                messageError: false,
+                toast: 'Message sent',
+            });
             ReactGA.event({
                 category: "contact",
                 action: "submit_success",
             });
+            document.getElementById('close-gedit')?.click();
         } catch {
-            // ignore errors
+            ReactGA.event({
+                category: "contact",
+                action: "submit_error",
+            });
+            this.setState({ formError: 'Unable to send message. Please try again.' });
         } finally {
             if (this.progressTimer) clearTimeout(this.progressTimer);
             if (this.progressInterval) clearInterval(this.progressInterval);
             this.setState({ progress: 100 });
-            document.getElementById('close-gedit')?.click();
             setTimeout(() => this.setState({ sending: false, showProgress: false, progress: 0 }), 300);
         }
 
@@ -140,6 +175,8 @@ export class Gedit extends Component {
     render() {
         const nameValid = this.state.nameTouched && !this.state.nameError;
         const nameInvalid = this.state.nameTouched && this.state.nameError;
+        const subjectValid = this.state.subjectTouched && !this.state.subjectError;
+        const subjectInvalid = this.state.subjectTouched && this.state.subjectError;
         const messageValid = this.state.messageTouched && !this.state.messageError;
         const messageInvalid = this.state.messageTouched && this.state.messageError;
         return (
@@ -147,7 +184,14 @@ export class Gedit extends Component {
                 <div className="flex items-center justify-between w-full bg-ub-gedit-light bg-opacity-60 border-b border-t border-blue-400 text-sm">
                     <span className="font-bold ml-2">Send a Message to Me</span>
                     <div className="flex">
-                        <div onClick={this.sendMessage} className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80">Send</div>
+                        <button
+                            type="button"
+                            onClick={this.sendMessage}
+                            disabled={this.state.sending}
+                            className="border border-black bg-black bg-opacity-50 px-3 py-0.5 my-1 mx-1 rounded hover:bg-opacity-80 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            {this.state.sending ? 'Sending…' : 'Send'}
+                        </button>
                     </div>
                 </div>
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
@@ -160,8 +204,11 @@ export class Gedit extends Component {
                         </p>
                     </div>
                     <div className="relative">
-                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} onBlur={this.handleBlur('subject')} aria-invalid={subjectInvalid} aria-describedby="subject-status" className={` w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent ${subjectInvalid ? 'border border-red-500' : subjectValid ? 'border border-emerald-500' : ''}`} placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold  text-sm text-ubt-gedit-blue">2</span>
+                        <p id="subject-status" className={`text-xs mt-1 ${subjectInvalid ? 'text-red-400' : subjectValid ? 'text-emerald-400' : 'sr-only'}`} aria-live="polite">
+                            {subjectInvalid ? 'Subject must not be empty' : subjectValid ? 'Looks good' : ''}
+                        </p>
                     </div>
                     <div className="relative flex-grow">
                         <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} onBlur={this.handleBlur('message')} aria-invalid={messageInvalid} aria-describedby="message-status" className={`w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent ${messageInvalid ? 'border border-red-500' : messageValid ? 'border border-emerald-500' : ''}`} placeholder="Message" spellCheck="false" autoComplete="none" type="text" />
@@ -170,6 +217,11 @@ export class Gedit extends Component {
                             {messageInvalid ? 'Message must not be empty' : messageValid ? 'Looks good' : ''}
                         </p>
                     </div>
+                    {this.state.formError && (
+                        <p className="px-6 pb-2 text-xs text-red-400" role="alert">
+                            {this.state.formError}
+                        </p>
+                    )}
                 </div>
                 {
                     this.state.location &&
@@ -205,6 +257,7 @@ export class Gedit extends Component {
                         </div>
                     )
                 }
+                {this.state.toast && <Toast message={this.state.toast} onClose={() => this.setState({ toast: '' })} />}
             </div>
         )
     }
