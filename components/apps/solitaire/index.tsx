@@ -1405,6 +1405,12 @@ const Solitaire = () => {
           animation: sol-confetti-fall 1.8s linear infinite;
           z-index: 45;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .sol-card-shuffle .sol-card-inner,
+          .sol-confetti {
+            animation: none;
+          }
+        }
         .sol-victory-overlay {
           position: absolute;
           inset: 0;

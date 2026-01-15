@@ -1044,6 +1044,26 @@ const Battleship = () => {
           border-radius: 2px;
           animation: confettiFall var(--duration) linear var(--delay) infinite;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .shot-trail,
+          .shot-impact-hit,
+          .shot-impact-miss,
+          .shot-particles .particle,
+          .confetti-piece {
+            animation: none !important;
+          }
+          .shot-trail {
+            display: none;
+          }
+          .shot-impact,
+          .shot-particles .particle {
+            opacity: 0;
+            transform: none;
+          }
+          .confetti-field {
+            display: none;
+          }
+        }
         @keyframes shotTrail {
           0% { transform: translateY(-120%) scaleY(0.3); opacity: 0.8; }
           100% { transform: translateY(0) scaleY(1); opacity: 0; }
