@@ -39,6 +39,17 @@
   --kali-terminal-green: #45ff9a;
   --kali-terminal-text: #f8fafc;
   --kali-border: rgba(15, 148, 210, 0.18);
+  --surface-menu: #132031;
+  --surface-menu-border: rgba(56, 189, 248, 0.3);
+  --surface-menu-text: #f5faff;
+  --surface-menu-shadow: 0 24px 48px rgba(2, 10, 20, 0.55);
+  --surface-toast: #132238;
+  --surface-toast-border: rgba(56, 189, 248, 0.35);
+  --surface-toast-text: #f5faff;
+  --surface-toast-shadow: 0 18px 44px rgba(2, 10, 20, 0.58);
+  --taskbar-badge-bg-default: #3b82f6;
+  --taskbar-badge-fg-default: #020817;
+  --taskbar-badge-track-default: rgba(8, 15, 26, 0.92);
   --color-error: #ff4d6d;
 
   /* Game palette tokens */
