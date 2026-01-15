@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
+import { useSettings, ACCENT_OPTIONS, UI_SCALE_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
-    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme } = useSettings();
+    const { accent, setAccent, wallpaper, setWallpaper, useKaliWallpaper, setUseKaliWallpaper, density, setDensity, reducedMotion, setReducedMotion, largeHitAreas, setLargeHitAreas, fontScale, setFontScale, highContrast, setHighContrast, pongSpin, setPongSpin, allowNetwork, setAllowNetwork, haptics, setHaptics, theme, setTheme, uiScaleMode, setUiScaleMode } = useSettings();
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
@@ -141,6 +141,21 @@ export function Settings() {
                     className="kali-slider focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
                     aria-label="Adjust font scale"
                 />
+            </div>
+            <div className="flex justify-center my-4">
+                <label htmlFor="ui-scale-select" className="mr-2 text-kali-text/80">Interface Scale:</label>
+                <select
+                    id="ui-scale-select"
+                    value={uiScaleMode}
+                    onChange={(e) => setUiScaleMode(e.target.value)}
+                    className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
+                >
+                    {UI_SCALE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                            {option.label}
+                        </option>
+                    ))}
+                </select>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-kali-text/80 flex items-center">
@@ -292,6 +307,7 @@ export function Settings() {
                         setAllowNetwork(defaults.allowNetwork);
                         setHaptics(defaults.haptics);
                         setTheme('default');
+                        setUiScaleMode(defaults.uiScaleMode);
                     }}
                     className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
@@ -319,6 +335,7 @@ export function Settings() {
                         if (parsed.allowNetwork !== undefined) setAllowNetwork(parsed.allowNetwork);
                         if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
                         if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+                        if (parsed.uiScaleMode !== undefined) setUiScaleMode(parsed.uiScaleMode);
                         if (parsed.theme !== undefined) { setTheme(parsed.theme); }
                     } catch (err) {
                         console.error('Invalid settings', err);
