@@ -143,6 +143,62 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window chrome interactions', () => {
+  it('maximizes and restores when the title bar is double clicked', () => {
+    render(
+      <Window
+        id="double-click-window"
+        title="Double Click"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const titleBar = screen.getByRole('button', { name: /double click/i });
+    const frame = document.getElementById('double-click-window');
+    expect(frame).not.toBeNull();
+    expect(frame?.dataset.windowState).toBe('active');
+
+    fireEvent.dblClick(titleBar);
+
+    expect(frame?.dataset.windowState).toBe('maximized');
+    expect(frame?.classList.contains('cursor-move')).toBe(false);
+    expect(titleBar).toHaveAttribute('aria-grabbed', 'false');
+
+    fireEvent.dblClick(titleBar);
+
+    expect(frame?.dataset.windowState).toBe('active');
+  });
+
+  it('ignores title bar double click when maximize is disabled', () => {
+    render(
+      <Window
+        id="dialog-window"
+        title="Dialog"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        allowMaximize={false}
+      />
+    );
+
+    const titleBar = screen.getByRole('button', { name: /dialog/i });
+    const frame = document.getElementById('dialog-window');
+    expect(frame).not.toBeNull();
+    expect(frame?.dataset.windowState).toBe('active');
+
+    fireEvent.dblClick(titleBar);
+
+    expect(frame?.dataset.windowState).toBe('active');
+    expect(titleBar).toHaveAttribute('aria-grabbed', 'false');
+  });
+});
+
 describe('Window snap grid configuration', () => {
   it('applies custom grid to draggable when snapping is enabled', () => {
     render(
