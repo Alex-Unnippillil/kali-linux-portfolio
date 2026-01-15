@@ -1,2 +1,6 @@
 body { font-family: sans-serif; padding: 2rem; text-align: center; }
+.actions { display: flex; justify-content: center; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap; }
+button { cursor: pointer; padding: 0.75rem 1.5rem; border-radius: 0.5rem; border: 1px solid #0ea5e9; background: #0ea5e9; color: #fff; font-weight: 600; }
+button:last-child { background: transparent; color: #0ea5e9; }
+button:focus { outline: 3px solid rgba(14, 165, 233, 0.35); outline-offset: 2px; }
 ul { list-style: none; padding: 0; }

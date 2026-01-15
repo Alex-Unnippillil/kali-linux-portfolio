@@ -17,6 +17,7 @@ import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
+import { trackEvent } from '../lib/analytics-client';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
@@ -87,6 +88,28 @@ const isSpeedInsightsEnabled =
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const key = 'offlineFallbackUsed';
+      try {
+        const raw = window.localStorage?.getItem(key);
+        if (raw) {
+          window.localStorage?.removeItem(key);
+          const details = JSON.parse(raw) as { source?: string; path?: string };
+          trackEvent('offline_fallback_used', {
+            source: details?.source ?? 'unknown',
+            ...(details?.path ? { path: details.path } : {}),
+          });
+        }
+      } catch (err) {
+        console.error('Failed to report offline fallback usage', err);
+        try {
+          window.localStorage?.removeItem(key);
+        } catch {
+          // ignore secondary errors
+        }
+      }
+    }
+
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
