@@ -204,6 +204,11 @@
   flex-shrink: 0;
 }
 
+.windowControlsSimplified {
+  gap: clamp(0.35rem, 1.2vw, 0.55rem);
+  padding: 0 clamp(0.35rem, 1.2vw, 0.5rem);
+}
+
 .windowControlButton {
   display: inline-flex;
   align-items: center;
@@ -320,6 +325,35 @@
   .windowControls {
     padding: 0 clamp(0.2rem, 1.6vw, 0.3rem);
     gap: clamp(0.2rem, 1.6vw, 0.35rem);
+  }
+}
+
+@media (pointer: coarse) {
+  .windowTitlebar {
+    height: 44px;
+    min-height: 44px;
+    padding: 0.5rem 0.85rem;
+    column-gap: 0.5rem;
+  }
+
+  .windowTitleBalancer {
+    display: none;
+  }
+
+  .windowTitle {
+    text-align: left;
+    margin-inline: 0;
+  }
+
+  .windowControlButton {
+    width: 32px;
+    height: 30px;
+    border-radius: 8px;
+  }
+
+  .windowControlIcon {
+    width: 16px;
+    height: 16px;
   }
 }
 
