@@ -97,6 +97,13 @@ const normalizeRightCornerSnap = (candidate, regions) => {
     return candidate;
 };
 
+const simplifySnapPosition = (position, isCoarsePointer) => {
+    if (!isCoarsePointer || !position) return position;
+    if (position === 'top-left' || position === 'bottom-left') return 'left';
+    if (position === 'top-right' || position === 'bottom-right') return 'right';
+    return position;
+};
+
 const computeSnapRegions = (
     viewportWidth,
     viewportHeight,
@@ -246,6 +253,7 @@ export class Window extends Component {
             minWidth,
             minHeight,
             resizing: null,
+            isCoarsePointer: false,
         };
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -258,6 +266,8 @@ export class Window extends Component {
         this._lastViewportMetrics = null;
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
+        this._pointerMedia = null;
+        this._pointerMediaListener = null;
         this._isUnmounted = false;
     }
 
@@ -272,6 +282,7 @@ export class Window extends Component {
         this._isUnmounted = false;
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        this.setupPointerMediaWatcher();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -354,6 +365,7 @@ export class Window extends Component {
         this._isUnmounted = true;
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.teardownPointerMediaWatcher();
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
@@ -374,6 +386,41 @@ export class Window extends Component {
         this.cancelResizeSession();
         this._resizeSession = null;
     }
+
+    setupPointerMediaWatcher = () => {
+        if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+            this.setState({ isCoarsePointer: false });
+            return;
+        }
+
+        const query = window.matchMedia('(pointer: coarse)');
+        this._pointerMedia = query;
+        const listener = (event) => {
+            if (this._isUnmounted) return;
+            this.setState({ isCoarsePointer: event.matches });
+        };
+        this._pointerMediaListener = listener;
+        this.setState({ isCoarsePointer: query.matches });
+        if (typeof query.addEventListener === 'function') {
+            query.addEventListener('change', listener);
+        } else if (typeof query.addListener === 'function') {
+            query.addListener(listener);
+        }
+    };
+
+    teardownPointerMediaWatcher = () => {
+        if (!this._pointerMedia) return;
+        const listener = this._pointerMediaListener;
+        if (listener) {
+            if (typeof this._pointerMedia.removeEventListener === 'function') {
+                this._pointerMedia.removeEventListener('change', listener);
+            } else if (typeof this._pointerMedia.removeListener === 'function') {
+                this._pointerMedia.removeListener(listener);
+            }
+        }
+        this._pointerMedia = null;
+        this._pointerMediaListener = null;
+    };
 
     setDefaultWindowDimenstion = () => {
         if (typeof this.props.defaultHeight === 'number' && typeof this.props.defaultWidth === 'number') {
@@ -802,9 +849,13 @@ export class Window extends Component {
     }
 
     snapWindow = (position) => {
-        const resolvedPosition = (position === 'top-right' || position === 'bottom-right')
-            ? 'right'
-            : position;
+        const simplifiedPosition = simplifySnapPosition(position, this.state.isCoarsePointer);
+        const resolvedPosition = simplifySnapPosition(
+            (simplifiedPosition === 'top-right' || simplifiedPosition === 'bottom-right')
+                ? 'right'
+                : simplifiedPosition,
+            this.state.isCoarsePointer,
+        );
         this.setWinowsPosition();
         this.focusWindow();
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = this.getCachedViewportMetrics();
@@ -953,23 +1004,35 @@ export class Window extends Component {
         const nearRight = rightEdge - rect.right <= horizontalThreshold;
 
         let candidate = null;
-        if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
-            candidate = { position: 'top-left', preview: regions['top-left'] };
-        } else if (nearTop && nearRight && regions['top-right'].width > 0 && regions['top-right'].height > 0) {
-            candidate = { position: 'top-right', preview: regions['top-right'] };
-        } else if (nearBottom && nearLeft && regions['bottom-left'].width > 0 && regions['bottom-left'].height > 0) {
-            candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
-        } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
-            candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
-        } else if (nearTop && regions.top.height > 0) {
-            candidate = { position: 'top', preview: regions.top };
-        } else if (nearLeft && regions.left.width > 0) {
-            candidate = { position: 'left', preview: regions.left };
-        } else if (nearRight && regions.right.width > 0) {
-            candidate = { position: 'right', preview: regions.right };
+        if (this.state.isCoarsePointer) {
+            if (nearTop && regions.top.height > 0) {
+                candidate = { position: 'top', preview: regions.top };
+            } else if (nearLeft && regions.left.width > 0) {
+                candidate = { position: 'left', preview: regions.left };
+            } else if (nearRight && regions.right.width > 0) {
+                candidate = { position: 'right', preview: regions.right };
+            }
+        } else {
+            if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
+                candidate = { position: 'top-left', preview: regions['top-left'] };
+            } else if (nearTop && nearRight && regions['top-right'].width > 0 && regions['top-right'].height > 0) {
+                candidate = { position: 'top-right', preview: regions['top-right'] };
+            } else if (nearBottom && nearLeft && regions['bottom-left'].width > 0 && regions['bottom-left'].height > 0) {
+                candidate = { position: 'bottom-left', preview: regions['bottom-left'] };
+            } else if (nearBottom && nearRight && regions['bottom-right'].width > 0 && regions['bottom-right'].height > 0) {
+                candidate = { position: 'bottom-right', preview: regions['bottom-right'] };
+            } else if (nearTop && regions.top.height > 0) {
+                candidate = { position: 'top', preview: regions.top };
+            } else if (nearLeft && regions.left.width > 0) {
+                candidate = { position: 'left', preview: regions.left };
+            } else if (nearRight && regions.right.width > 0) {
+                candidate = { position: 'right', preview: regions.right };
+            }
         }
 
-        const resolvedCandidate = normalizeRightCornerSnap(candidate, regions);
+        const resolvedCandidate = this.state.isCoarsePointer
+            ? candidate
+            : normalizeRightCornerSnap(candidate, regions);
         if (resolvedCandidate) {
             const { position, preview } = resolvedCandidate;
             const samePosition = this.state.snapPosition === position;
@@ -1664,6 +1727,7 @@ export class Window extends Component {
             : (this.props.isFocused ? 30 : 20);
 
         const snapGrid = this.getSnapGrid();
+        const isCoarsePointer = this.state.isCoarsePointer;
 
         const viewportLeft = this.state.viewportOffset?.left ?? 0;
         const viewportTop = this.state.viewportOffset?.top ?? 0;
@@ -1754,7 +1818,7 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && !this.state.maximized && (
+                        {this.props.resizable !== false && !this.state.maximized && !isCoarsePointer && (
                             <>
                                 <WindowEdgeHandle direction="n" onResizeStart={this.beginResize} active={this.state.resizing === 'n'} />
                                 <WindowEdgeHandle direction="s" onResizeStart={this.beginResize} active={this.state.resizing === 's'} />
@@ -1781,6 +1845,7 @@ export class Window extends Component {
                                     close={this.closeWindow}
                                     id={this.id}
                                     allowMaximize={this.props.allowMaximize !== false}
+                                    simplified={isCoarsePointer}
                                 />
                             )}
                         />
@@ -1896,6 +1961,8 @@ export function WindowCornerHandle({ direction, onResizeStart, active }) {
 export function WindowEditButtons(props) {
     const allowMaximize = props.allowMaximize !== false;
     const isMaximized = Boolean(props.isMaximised);
+    const isSimplified = Boolean(props.simplified);
+    const showMaximize = allowMaximize && !isSimplified;
     const minimizeAriaLabel = 'Window minimize';
     const maximizeAriaLabel = isMaximized ? 'Restore window size' : 'Window maximize';
     const closeAriaLabel = 'Window close';
@@ -2051,7 +2118,10 @@ export function WindowEditButtons(props) {
     return (
         <div
             ref={controlsRef}
-            className={styles.windowControls}
+            className={[
+                styles.windowControls,
+                isSimplified ? styles.windowControlsSimplified : '',
+            ].filter(Boolean).join(' ')}
             role="group"
             aria-label="Window controls"
             onPointerDown={(event) => event.stopPropagation()}
@@ -2073,26 +2143,28 @@ export function WindowEditButtons(props) {
             >
                 <MinimizeIcon />
             </button>
-            <button
-                type="button"
-                aria-label={maximizeAriaLabel}
-                title={isMaximized ? 'Restore' : 'Maximize'}
-                className={[
-                    styles.windowControlButton,
-                    allowMaximize ? '' : styles.windowControlButtonDisabled,
-                    pressedControl === 'maximize' ? styles.windowControlButtonPressed : '',
-                ].filter(Boolean).join(' ')}
-                onClick={handleButtonClick(handleMaximize)}
-                disabled={!allowMaximize}
-                aria-disabled={!allowMaximize}
-                onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
-                onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
-                onPointerLeave={resetPressedControl}
-                onPointerCancel={resetPressedControl}
-                onBlur={resetPressedControl}
-            >
-                {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
-            </button>
+            {showMaximize && (
+                <button
+                    type="button"
+                    aria-label={maximizeAriaLabel}
+                    title={isMaximized ? 'Restore' : 'Maximize'}
+                    className={[
+                        styles.windowControlButton,
+                        allowMaximize ? '' : styles.windowControlButtonDisabled,
+                        pressedControl === 'maximize' ? styles.windowControlButtonPressed : '',
+                    ].filter(Boolean).join(' ')}
+                    onClick={handleButtonClick(handleMaximize)}
+                    disabled={!allowMaximize}
+                    aria-disabled={!allowMaximize}
+                    onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
+                    onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
+                    onPointerLeave={resetPressedControl}
+                    onPointerCancel={resetPressedControl}
+                    onBlur={resetPressedControl}
+                >
+                    {isMaximized ? <RestoreIcon /> : <MaximizeIcon />}
+                </button>
+            )}
             <button
                 type="button"
                 id={`close-${props.id}`}
