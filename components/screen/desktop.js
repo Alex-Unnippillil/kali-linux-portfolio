@@ -5606,7 +5606,14 @@ export class Desktop extends Component {
                     setIconSizePreset={this.setIconSizePreset}
                     clearSession={() => { this.props.clearSession(); window.location.reload(); }}
                 />
-                <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
+                <DefaultMenu
+                    active={this.state.context_menus.default}
+                    onClose={this.hideAllContextMenu}
+                    addNewFolder={this.addNewFolder}
+                    openShortcutSelector={this.openShortcutSelector}
+                    openApp={this.openApp}
+                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                />
                 <AppMenu
                     active={this.state.context_menus.app}
                     pinned={this.initFavourite[this.state.context_app]}
