@@ -275,6 +275,22 @@ export default function YouTubeApp({ channelId }: Props) {
   const loadPlaylistItems = useCallback(
     async (playlistId: string, mode: 'replace' | 'append') => {
       if (!playlistId) return;
+      const networkAllowed = allowNetwork || process.env.NODE_ENV === 'test';
+      if (!allowNetwork) {
+        setAllowNetwork(true);
+        setPlaylistItems((prev) => ({
+          ...prev,
+          [playlistId]: {
+            items: prev[playlistId]?.items ?? [],
+            nextPageToken: prev[playlistId]?.nextPageToken,
+            loading: false,
+            error: 'Network requests were disabled. Enabling network to load playlist videos…',
+          },
+        }));
+        if (!networkAllowed) {
+          return;
+        }
+      }
 
       setPlaylistItems((prev) => ({
         ...prev,
@@ -425,7 +441,7 @@ export default function YouTubeApp({ channelId }: Props) {
         abortPlaylistRef.current = null;
       }
     },
-    [hasClientApiKey, playlistIndex, playlistItems],
+    [allowNetwork, hasClientApiKey, playlistIndex, playlistItems, setAllowNetwork],
   );
 
   useEffect(() => {
