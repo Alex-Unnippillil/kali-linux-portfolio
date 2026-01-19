@@ -20,6 +20,8 @@ const FlappyBird = () => {
   const birdFrames = useRef([]);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
+  const [pauseReason, setPauseReason] = useState(null);
+  const pauseReasonRef = useRef(pauseReason);
   const startGameRef = useRef(null);
   const scoreRef = useRef(0);
   const bestRef = useRef(0);
@@ -34,12 +36,14 @@ const FlappyBird = () => {
   const resumeGame = useCallback(() => {
     pausedRef.current = false;
     setPaused(false);
+    setPauseReason(null);
     setGameState("running");
   }, []);
 
-  const pauseGame = useCallback(() => {
+  const pauseGame = useCallback((reason = "user") => {
     pausedRef.current = true;
     setPaused(true);
+    setPauseReason(reason);
     setGameState("paused");
   }, []);
 
@@ -118,6 +122,30 @@ const FlappyBird = () => {
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+
+  useEffect(() => {
+    pauseReasonRef.current = pauseReason;
+  }, [pauseReason]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleBlur = () => {
+      if (!started || gameState !== "running") return;
+      pauseGame("auto");
+    };
+    const handleFocus = () => {
+      if (!started || pauseReasonRef.current !== "auto") return;
+      if (gameState === "paused") {
+        resumeGame();
+      }
+    };
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [gameState, pauseGame, resumeGame, started]);
 
   useEffect(() => {
     try {
