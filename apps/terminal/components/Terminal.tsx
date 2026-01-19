@@ -11,10 +11,11 @@ const Terminal = forwardRef<HTMLDivElement, TerminalContainerProps>(
       data-testid="xterm-container"
       className={`text-white ${className}`}
       style={{
-        background: 'var(--kali-bg)',
+        background: '#000',
         backdropFilter: 'blur(4px)',
         border: '1px solid var(--color-border)',
-        fontFamily: 'monospace',
+        fontFamily:
+          '"Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
         fontSize: 'clamp(1rem, 0.6vw + 1rem, 1.1rem)',
         lineHeight: 1.4,
         ...style,
