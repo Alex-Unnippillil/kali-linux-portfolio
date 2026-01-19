@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import { PieceGenerator } from '../../games/tetris/logic';
+import HelpOverlay from './HelpOverlay';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -245,6 +246,7 @@ const Tetris = () => {
   const [maxLevel, setMaxLevel] = usePersistentState('tetris-max-level', 1);
   const [keyBindings, setKeyBindings] = usePersistentState('tetris-keys', defaultKeys);
   const [showSettings, setShowSettings] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = usePersistentState('tetris-sound', true);
   const [tSpin, setTSpin] = useState('');
@@ -1332,12 +1334,20 @@ const Tetris = () => {
                 >
                   Edit Controls
                 </button>
+                <button
+                  type="button"
+                  className="rounded-full border border-slate-700 bg-slate-800/70 px-3 py-2 font-semibold text-slate-100 transition hover:border-slate-500 hover:text-white"
+                  onClick={() => setShowHelp(true)}
+                >
+                  Help
+                </button>
               </div>
               <p className="mt-3 text-xs text-slate-400">Audio cues, DAS, ARR, and bindings can be tuned without leaving your run.</p>
             </section>
           </aside>
         </div>
       </div>
+      {showHelp && <HelpOverlay gameId="tetris" onClose={() => setShowHelp(false)} />}
       {showSettings && (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur">
           <div className="w-full max-w-lg rounded-2xl border border-slate-700/70 bg-slate-900/95 p-6 shadow-2xl">
@@ -1417,4 +1427,3 @@ const Tetris = () => {
 };
 
 export default Tetris;
-

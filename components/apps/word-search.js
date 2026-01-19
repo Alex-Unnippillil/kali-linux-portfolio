@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import seedrandom from "seedrandom";
 import useOPFS from "../../hooks/useOPFS.js";
+import HelpOverlay from "./HelpOverlay";
 
 // Approximate pixel size of each grid cell for SVG overlay calculations
 const CELL_SIZE = 32;
@@ -250,6 +251,7 @@ const WordSearch = () => {
   const [foundCells, setFoundCells] = useState([]);
   const [time, setTime] = useState(challenge ? timeLimit : 0);
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [start, setStart] = useState(null);
   const [end, setEnd] = useState(null);
   const [selecting, setSelecting] = useState(false);
@@ -502,7 +504,7 @@ const WordSearch = () => {
   }
 
   return (
-    <div className="h-full w-full flex items-start justify-center bg-ub-cool-grey text-white p-4 select-none">
+    <div className="relative h-full w-full flex items-start justify-center bg-ub-cool-grey text-white p-4 select-none">
       <div className="flex">
         <div
           className="relative mr-4"
@@ -627,6 +629,12 @@ const WordSearch = () => {
               onClick={() => setSound((s) => !s)}
             >
               {sound ? "Sound Off" : "Sound On"}
+            </button>
+            <button
+              className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
+              onClick={() => setShowHelp(true)}
+            >
+              Help
             </button>
             <label className="flex items-center gap-1">
               <input
@@ -759,6 +767,7 @@ const WordSearch = () => {
       <div aria-live="polite" className="sr-only">
         {announcement}
       </div>
+      {showHelp && <HelpOverlay gameId="word-search" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

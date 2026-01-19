@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactGA from 'react-ga4';
 import { vibrate } from './Games/common/haptics';
+import HelpOverlay from './HelpOverlay';
 import {
   generateLaneConfig,
   SKINS,
@@ -164,6 +165,7 @@ const Frogger = () => {
   const pausedRef = useRef(paused);
   const [sound, setSound] = useState(true);
   const soundRef = useRef(sound);
+  const [showHelp, setShowHelp] = useState(false);
   const [highScore, setHighScore] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
   const reduceMotionRef = useRef(reduceMotion);
@@ -899,7 +901,7 @@ const Frogger = () => {
   ];
 
   return (
-    <div id="frogger-container" className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <div id="frogger-container" className="relative h-full w-full overflow-auto bg-ub-cool-grey text-white">
       <div className="mx-auto flex h-full w-full max-w-4xl flex-col items-center gap-5 px-4 py-6">
         <div className="w-full">
           <div className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-black/50 shadow-2xl">
@@ -983,6 +985,9 @@ const Frogger = () => {
             </button>
             <button type="button" onClick={() => setShowHitboxes((h) => !h)} className={buttonClasses}>
               Hitboxes: {showHitboxes ? 'On' : 'Off'}
+            </button>
+            <button type="button" onClick={() => setShowHelp(true)} className={buttonClasses}>
+              Help
             </button>
             <label
               htmlFor="frogger-difficulty"
@@ -1079,6 +1084,7 @@ const Frogger = () => {
           )}
         </div>
       </div>
+      {showHelp && <HelpOverlay gameId="frogger" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

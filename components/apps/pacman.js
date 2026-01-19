@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import HelpOverlay from './HelpOverlay';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -112,6 +113,7 @@ const Pacman = () => {
   const [pelletCount, setPelletCount] = useState(0);
   const [highScore, setHighScore] = useState(0);
   const [started, setStarted] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const fruitRef = useRef({ active: false, x: 7, y: 3, timer: 0 });
   const fruitTimesRef = useRef([]);
@@ -758,10 +760,15 @@ const Pacman = () => {
 
   if (!started) {
     return (
-      <div className="flex flex-col items-center">
-        <button className="px-2 py-1 bg-ub-grey rounded" onClick={startGame}>
-          Start
-        </button>
+      <div className="relative flex flex-col items-center">
+        <div className="flex items-center gap-2">
+          <button className="px-2 py-1 bg-ub-grey rounded" onClick={startGame}>
+            Start
+          </button>
+          <button className="px-2 py-1 bg-ub-grey rounded" onClick={() => setShowHelp(true)}>
+            Help
+          </button>
+        </div>
         {leaderboard.length > 0 && (
           <div className="mt-4 text-left">
             <h3 className="font-bold">Top Scores</h3>
@@ -774,13 +781,13 @@ const Pacman = () => {
             </ol>
           </div>
         )}
+        {showHelp && <HelpOverlay gameId="pacman" onClose={() => setShowHelp(false)} />}
       </div>
     );
   }
 
   return (
-
-  <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+    <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
       <div className="mb-2 w-full max-w-xs">
         <input
           type="text"
@@ -875,8 +882,15 @@ const Pacman = () => {
         >
           {soundEnabled ? 'Sound On' : 'Sound Off'}
         </button>
+        <button
+          className="px-2 py-1 bg-ub-grey rounded"
+          onClick={() => setShowHelp(true)}
+        >
+          Help
+        </button>
       </div>
       <div className="sr-only" aria-live="polite">{announcement}</div>
+      {showHelp && <HelpOverlay gameId="pacman" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

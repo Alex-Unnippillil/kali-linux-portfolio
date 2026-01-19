@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import HelpOverlay from "./HelpOverlay";
 
 // 0x88 board representation utilities
 const EMPTY = 0;
@@ -300,6 +301,7 @@ const ChessGame = () => {
   const [moves, setMoves] = useState([]);
   const [status, setStatus] = useState("Your move");
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const pausedRef = useRef(false);
   const [sound, setSound] = useState(true);
   const [sanLog, setSanLog] = useState([]);
@@ -1110,7 +1112,7 @@ const ChessGame = () => {
     "rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-1.5 font-semibold uppercase tracking-wide text-slate-200 transition-colors duration-150 hover:border-sky-400 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-400";
 
   return (
-    <div className="h-full w-full select-none bg-ub-cool-grey p-2 text-white">
+    <div className="relative h-full w-full select-none bg-ub-cool-grey p-2 text-white">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:flex-row">
         <div className="flex flex-1 flex-col items-center gap-4">
           <div ref={boardWrapperRef} className="w-full">
@@ -1155,6 +1157,9 @@ const ChessGame = () => {
             </button>
             <button className={buttonClass} onClick={toggleSound}>
               {sound ? "Sound On" : "Sound Off"}
+            </button>
+            <button className={buttonClass} onClick={() => setShowHelp(true)}>
+              Help
             </button>
           </div>
         </div>
@@ -1334,6 +1339,7 @@ const ChessGame = () => {
           </div>
         </aside>
       </div>
+      {showHelp && <HelpOverlay gameId="chess" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

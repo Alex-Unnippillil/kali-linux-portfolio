@@ -63,6 +63,10 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     objective: "Avoid other cars and stay on the road.",
     controls: "Arrow keys steer, space for brake if available.",
   },
+  "lane-runner": {
+    objective: "Survive lane obstacles and keep your streak alive.",
+    controls: "Use left/right arrows or tilt to switch lanes.",
+  },
   checkers: {
     objective: "Capture all opponent pieces or block their moves.",
     controls: "Click a piece then a destination square.",
