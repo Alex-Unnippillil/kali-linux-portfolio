@@ -23,6 +23,7 @@ function CityTile({ city }: { city: City }) {
   const tempLabel = hasReading
     ? `${Math.round(reading!.temp)}°C`
     : 'No data';
+  const errorMessage = city.weatherError;
 
   return (
     <div className="flex flex-col gap-4">
@@ -41,6 +42,11 @@ function CityTile({ city }: { city: City }) {
           >
             {tempLabel}
           </div>
+          {errorMessage && (
+            <div className="mt-2 text-xs font-semibold uppercase tracking-wide text-amber-200/80">
+              {errorMessage}
+            </div>
+          )}
         </div>
         <WeatherIcon
           code={reading?.condition ?? 3}
@@ -100,7 +106,12 @@ export default function WeatherApp() {
       fetch(
         `https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current_weather=true&daily=weathercode,temperature_2m_max&forecast_days=5&timezone=auto`,
       )
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            throw new Error('Weather data unavailable');
+          }
+          return res.json();
+        })
         .then((data) => {
           const reading: ReadingUpdate = {
             temp: data.current_weather.temperature,
@@ -117,15 +128,31 @@ export default function WeatherApp() {
           setCities((prev) => {
             const next = [...prev];
             if (!next[i]) return prev;
-            next[i] = { ...next[i], lastReading: reading, forecast };
+            next[i] = {
+              ...next[i],
+              lastReading: reading,
+              forecast,
+              weatherError: undefined,
+            };
             return next;
           });
         })
-        .catch(() => {
-          // ignore fetch errors
+        .catch((error) => {
+          setCities((prev) => {
+            const next = [...prev];
+            if (!next[i]) return prev;
+            next[i] = {
+              ...next[i],
+              weatherError:
+                error instanceof Error && error.message
+                  ? error.message
+                  : 'Weather data unavailable',
+            };
+            return next;
+          });
         });
     });
-    }, [offline, cities, setCities]);
+  }, [offline, cities, setCities]);
 
   const addCity = () => {
     const latNum = parseFloat(lat);
@@ -260,4 +287,3 @@ export default function WeatherApp() {
     </div>
   );
 }
-

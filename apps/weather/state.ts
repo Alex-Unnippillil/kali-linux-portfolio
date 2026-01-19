@@ -21,6 +21,7 @@ export interface City {
   lon: number;
   lastReading?: WeatherReading;
   forecast?: ForecastDay[];
+  weatherError?: string;
 }
 
 export interface CityGroup {
@@ -43,7 +44,8 @@ const isCity = (v: any): v is City =>
   typeof v.lat === 'number' &&
   typeof v.lon === 'number' &&
   (v.lastReading === undefined || isWeatherReading(v.lastReading)) &&
-  (v.forecast === undefined || isForecastArray(v.forecast));
+  (v.forecast === undefined || isForecastArray(v.forecast)) &&
+  (v.weatherError === undefined || typeof v.weatherError === 'string');
 
 const isCityArray = (v: unknown): v is City[] => Array.isArray(v) && v.every(isCity);
 
@@ -67,4 +69,3 @@ const isStringOrNull = (v: unknown): v is string | null =>
 export function useCurrentGroup() {
   return usePersistentState<string | null>('weather-current-group', null, isStringOrNull);
 }
-
