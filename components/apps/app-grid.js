@@ -1,13 +1,11 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import UbuntuApp from '../base/ubuntu_app';
-import apps from '../../apps.config';
+import coreApps, { loadFullRegistry } from '../../apps/registry-core';
 import AutoSizer from 'react-virtualized-auto-sizer';
 import { Grid } from 'react-window';
 import DelayedTooltip from '../ui/DelayedTooltip';
 import AppTooltipContent from '../ui/AppTooltipContent';
 import { createRegistryMap, buildAppMetadata } from '../../lib/appRegistry';
-
-const registryMetadata = createRegistryMap(apps);
 
 function fuzzyHighlight(text, query) {
   const q = query.toLowerCase();
@@ -30,16 +28,32 @@ export default function AppGrid({ openApp }) {
   const gridRef = useRef(null);
   const columnCountRef = useRef(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
+  const [registryApps, setRegistryApps] = useState(coreApps);
+  const [registryMetadata, setRegistryMetadata] = useState(() =>
+    createRegistryMap(coreApps)
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    loadFullRegistry().then((registry) => {
+      if (!mounted) return;
+      setRegistryApps(registry.apps);
+      setRegistryMetadata(createRegistryMap(registry.apps));
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filtered = useMemo(() => {
-    if (!query) return apps.map((app) => ({ ...app, nodes: app.title }));
-    return apps
+    if (!query) return registryApps.map((app) => ({ ...app, nodes: app.title }));
+    return registryApps
       .map((app) => {
         const { matched, nodes } = fuzzyHighlight(app.title, query);
         return matched ? { ...app, nodes } : null;
       })
       .filter(Boolean);
-  }, [query]);
+  }, [query, registryApps]);
 
   useEffect(() => {
     if (focusedIndex >= filtered.length) {

@@ -7,7 +7,7 @@ const BackgroundImage = dynamic(
     () => import('../util-components/background-image'),
     { ssr: false }
 );
-import apps, { games } from '../../apps.config';
+import coreApps, { coreGames, loadFullRegistry } from '../../apps/registry-core';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -39,6 +39,9 @@ import {
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
+
+let apps = coreApps;
+let games = coreGames;
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -346,6 +349,7 @@ export class Desktop extends Component {
             closedShelfOpen: false,
             appBadges: {},
             taskbarOrder: this.loadTaskbarOrder(),
+            registryVersion: 0,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -387,6 +391,8 @@ export class Desktop extends Component {
         this.windowPreviewCache = new Map();
         this.windowPreviewLastGoodCache = new Map();
         this.windowSwitcherRequestId = 0;
+        this.fullRegistryLoaded = false;
+        this.registryLoadPromise = null;
         this.refreshAppRegistry();
 
         if (!this.hasStoredPinnedAppIds) {
@@ -1784,6 +1790,29 @@ export class Desktop extends Component {
         this.appMap = nextAppMap;
         this.validAppIds = nextValidAppIds;
     }
+
+    loadFullRegistryIfNeeded = async () => {
+        if (this.fullRegistryLoaded) {
+            return this.registryLoadPromise || Promise.resolve();
+        }
+        if (!this.registryLoadPromise) {
+            this.registryLoadPromise = loadFullRegistry()
+                .then((registry) => {
+                    apps = registry.apps;
+                    games = registry.games;
+                    this.fullRegistryLoaded = true;
+                    this.refreshAppRegistry();
+                    this.updateAppsData();
+                    this.setState((prev) => ({ registryVersion: prev.registryVersion + 1 }));
+                    return registry;
+                })
+                .catch((error) => {
+                    this.registryLoadPromise = null;
+                    throw error;
+                });
+        }
+        return this.registryLoadPromise;
+    };
 
     normalizeBadgeTone = (tone) => {
         if (typeof tone !== 'string') {
@@ -3658,6 +3687,9 @@ export class Desktop extends Component {
 
         const launcherWasOpen = Boolean(prevLauncher?.open);
         const launcherIsOpen = Boolean(nextLauncher?.open);
+        if (launcherIsOpen && !launcherWasOpen) {
+            this.loadFullRegistryIfNeeded();
+        }
         if (!launcherWasOpen && launcherIsOpen) {
             this.activateAllAppsFocusTrap();
             this.focusAllAppsSearchInput();
@@ -4812,6 +4844,7 @@ export class Desktop extends Component {
                         onClose={this.closeAllAppsOverlay}
                     >
                         <AllApplications
+                            key={`all-apps-${this.state.registryVersion}`}
                             apps={apps}
                             games={games}
                             recentApps={this.getActiveStack()}
@@ -4846,6 +4879,7 @@ export class Desktop extends Component {
                         onClose={() => this.closeOverlay(SHORTCUT_OVERLAY_ID)}
                     >
                         <ShortcutSelector
+                            key={`shortcut-selector-${this.state.registryVersion}`}
                             apps={apps}
                             games={games}
                             onSelect={this.addShortcutToDesktop}
@@ -5099,6 +5133,13 @@ export class Desktop extends Component {
         }
         if (this.isOverlayId(objId)) {
             this.openOverlay(objId);
+            return;
+        }
+        const app = this.getAppById(objId);
+        if (app && !app.screen && !this.fullRegistryLoaded) {
+            this.loadFullRegistryIfNeeded().then(() => {
+                this.openApp(objId, params);
+            });
             return;
         }
         const baseContext = params && typeof params === 'object'

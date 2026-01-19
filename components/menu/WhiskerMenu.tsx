@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import Image from 'next/image';
-import apps from '../../apps.config';
+import coreApps, { loadFullRegistry } from '../../apps/registry-core';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -143,6 +143,8 @@ const WhiskerMenu: React.FC = () => {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
   const [isDesktop, setIsDesktop] = useState(false);
+  const [registryApps, setRegistryApps] = useState<AppMeta[]>(coreApps as AppMeta[]);
+  const registryLoadRef = useRef<Promise<unknown> | null>(null);
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -157,8 +159,22 @@ const WhiskerMenu: React.FC = () => {
   const focusFrameRef = useRef<number | null>(null);
 
 
-  const allApps: AppMeta[] = apps as any;
+  const allApps: AppMeta[] = registryApps;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const loadRegistry = useCallback(() => {
+    if (registryLoadRef.current) return;
+    registryLoadRef.current = loadFullRegistry().then((registry) => {
+      const nextApps = Array.isArray(registry.apps) ? registry.apps : [];
+      setRegistryApps(nextApps as AppMeta[]);
+      return registry;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadRegistry();
+    }
+  }, [isOpen, loadRegistry]);
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
