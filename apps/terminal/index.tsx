@@ -202,17 +202,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
             termRef.current.writeln(/\x1b\[[0-9;]*m/.test(l) ? l : `${historyColor}${l}${reset}`);
         });
       contentRef.current = transcript.endsWith('\n') ? transcript : `${transcript}\n`;
+      scrollToBottom();
     }
     if (commandHistory.length) {
       historyRef.current = commandHistory;
     }
-  }, [getDir, opfsSupported, persistHistory, readFile]);
+  }, [getDir, opfsSupported, persistHistory, readFile, scrollToBottom]);
 
   const updateOverflow = useCallback(() => {
     const term = termRef.current;
     if (!term || !term.buffer) return;
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
+  }, []);
+
+  const scrollToBottom = useCallback(() => {
+    termRef.current?.scrollToBottom();
   }, []);
 
   useEffect(() => {
@@ -250,9 +255,10 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       if (termRef.current) termRef.current.writeln(content);
       contentRef.current += `${text}\n`;
       void persistTranscript(contentRef.current);
+      scrollToBottom();
       updateOverflow();
     },
-    [persistTranscript, updateOverflow],
+    [persistTranscript, scrollToBottom, updateOverflow],
   );
 
   useEffect(() => {
@@ -297,11 +303,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         prompt,
         write: (text: string) => {
           if (termRef.current) termRef.current.write(text);
+          scrollToBottom();
         },
         writeLine,
         onHistoryUpdate: (history) => void persistCommandHistory(history),
       }),
-    [persistCommandHistory, prompt, writeLine],
+    [persistCommandHistory, prompt, scrollToBottom, writeLine],
   );
 
   const clearTerminal = useCallback(() => {
@@ -412,20 +419,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       ]);
       if (disposed) return;
       const term = new XTerm({
+        cursorStyle: 'block',
         cursorBlink: true,
         scrollback: sessionManager.getScrollbackLimit(),
         cols: 80,
         rows: 24,
         screenReaderMode: true,
-        fontFamily: '"Fira Code", monospace',
+        fontFamily:
+          '"Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
         fontSize: 15,
         letterSpacing: 0.75,
         lineHeight: 1.38,
         theme: {
-          background: '#080d12',
-          foreground: '#e3eaf6',
-          cursor: '#5cc8ff',
-          cursorAccent: '#080d12',
+          background: '#000000',
+          foreground: '#33ff33',
+          cursor: '#33ff33',
+          cursorAccent: '#000000',
           selectionBackground: '#1c2a3b',
           black: '#1a222c',
           red: '#f66a6a',
@@ -467,7 +476,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       prompt();
       term.onData((d: string) => sessionManager.handleInput(d));
       term.onKey(({ domEvent }: any) => {
-        if (domEvent.key === 'Tab') {
+        if ((domEvent.ctrlKey || domEvent.metaKey) && domEvent.key.toLowerCase() === 'w') {
+          domEvent.preventDefault();
+        } else if (domEvent.key === 'Tab') {
           domEvent.preventDefault();
           sessionManager.autocomplete();
         } else if (domEvent.ctrlKey && domEvent.key === 'f') {
