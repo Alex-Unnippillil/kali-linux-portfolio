@@ -38,6 +38,7 @@ export type EmbedFrameProps = {
   src: string;
   title: string;
   allow?: string;
+  allowFullScreen?: boolean;
   sandbox?: string;
   className?: string;
   containerClassName?: string;
@@ -58,6 +59,7 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
       src,
       title,
       allow,
+      allowFullScreen,
       sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups',
       className,
       containerClassName,
@@ -144,6 +146,7 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
           src={isAllowed ? src : 'about:blank'}
           className={className ?? 'h-full w-full border-0'}
           allow={allow}
+          allowFullScreen={allowFullScreen}
           sandbox={sandbox}
           onLoad={handleLoad}
           onError={handleError}
