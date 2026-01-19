@@ -322,7 +322,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, [deleteFile, opfsSupported, persistHistory, sessionManager]);
 
 
-  const handleCopy = () => {
+  const focusTerminal = useCallback(() => {
+    if (paletteOpen || settingsOpen) return;
+    const term = termRef.current;
+    if (!term) return;
+    requestAnimationFrame(() => term.focus());
+  }, [paletteOpen, settingsOpen]);
+
+  const handleCopy = useCallback(() => {
     const term = termRef.current;
     const hasSelection = term?.hasSelection?.();
     const selection = hasSelection ? term?.getSelection?.() : '';
@@ -335,15 +342,20 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           selection ? 'Copied selected text to clipboard.' : 'Copied terminal buffer to clipboard.',
         ),
       )
-      .catch(() => setCopyStatus('Copy failed. Please try again.'));
-  };
+      .catch(() => setCopyStatus('Copy failed. Please try again.'))
+      .finally(() => focusTerminal());
+  }, [focusTerminal]);
 
-  const handlePaste = async () => {
+  const handlePaste = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText();
       sessionManager.handlePaste(text);
-    } catch {}
-  };
+    } catch {
+      // noop
+    } finally {
+      focusTerminal();
+    }
+  }, [focusTerminal, sessionManager]);
 
   useEffect(() => {
     if (!copyStatus) return;
@@ -536,11 +548,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     return () => window.removeEventListener('keydown', listener);
   }, [paletteOpen]);
 
-  const focusTerminal = useCallback(() => {
-    if (paletteOpen || settingsOpen) return;
-    termRef.current?.focus();
-  }, [paletteOpen, settingsOpen]);
-
   useEffect(() => {
     if (tab?.active) {
       focusTerminal();
@@ -730,7 +737,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
           <TerminalContainer
             ref={containerRef}
             className="h-full w-full overflow-hidden font-mono"
-            tabIndex={-1}
+            tabIndex={0}
+            onPointerDownCapture={focusTerminal}
             onMouseDown={focusTerminal}
             onFocus={focusTerminal}
             style={{
