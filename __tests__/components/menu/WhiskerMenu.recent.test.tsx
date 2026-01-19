@@ -1,13 +1,23 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
-jest.mock('../../../apps.config', () => ({
+jest.mock('../../../apps/registry-core', () => ({
   __esModule: true,
   default: [
     { id: 'wireshark', title: 'Wireshark', icon: '/wireshark.svg' },
     { id: 'calculator', title: 'Calculator', icon: '/calculator.svg' },
     { id: 'metasploit', title: 'Metasploit', icon: '/metasploit.svg' },
   ],
+  loadFullRegistry: jest.fn().mockResolvedValue({
+    apps: [
+      { id: 'wireshark', title: 'Wireshark', icon: '/wireshark.svg' },
+      { id: 'calculator', title: 'Calculator', icon: '/calculator.svg' },
+      { id: 'metasploit', title: 'Metasploit', icon: '/metasploit.svg' },
+    ],
+    games: [],
+    utilities: [],
+    gameDefaults: {},
+  }),
 }));
 
 import WhiskerMenu from '../../../components/menu/WhiskerMenu';
