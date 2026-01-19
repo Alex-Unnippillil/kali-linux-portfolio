@@ -712,6 +712,7 @@ export default function YouTubeApp({ channelId }: Props) {
                     className={styles.embedFrame}
                     containerClassName={styles.embedContainer}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
                     fallbackLabel="Open on YouTube"
                     openInNewTabLabel="Open on YouTube"
                     loadingLabel="Loading YouTube player…"
