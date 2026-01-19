@@ -191,7 +191,14 @@ const NmapNSEApp = () => {
   return (
     <div className="flex h-full w-full flex-col text-kali-text md:flex-row">
       <div className="md:w-1/2 overflow-y-auto bg-kali-surface p-4">
-        <h1 className="mb-4 text-lg font-semibold">Nmap NSE Demo</h1>
+        <h1 className="mb-4 flex items-center gap-3 text-lg font-semibold">
+          <img
+            src="/themes/Yaru/apps/nmap-nse.svg"
+            alt="Nmap NSE"
+            className="h-8 w-8"
+          />
+          <span>Nmap NSE Demo</span>
+        </h1>
         <div className="mb-4 rounded border border-kali-severity-medium/60 bg-kali-severity-medium/15 p-3">
           <p className="text-sm font-semibold">
             Educational use only. Do not scan systems without permission.
