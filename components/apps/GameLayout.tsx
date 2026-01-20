@@ -6,6 +6,7 @@ import React, {
   useCallback,
   createContext,
   useContext,
+  useRef,
 } from 'react';
 import clsx from 'clsx';
 import HelpOverlay from './HelpOverlay';
@@ -61,6 +62,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
+  type PauseReason = 'auto' | 'user' | null;
+  const [pauseReason, setPauseReason] = useState<PauseReason>(null);
+  const pauseReasonRef = useRef<PauseReason>(pauseReason);
   const [log, setLog] = useState<RecordedInput[]>([]);
   const [replayHandler, setReplayHandler] = useState<
     ((input: any, index: number) => void) | undefined
@@ -73,6 +77,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
+  const setPauseState = useCallback((nextPaused: boolean, reason: PauseReason) => {
+    setPaused(nextPaused);
+    setPauseReason(nextPaused ? reason : null);
+  }, []);
 
   const fallbackCopy = useCallback((text: string) => {
     if (navigator.clipboard) {
@@ -217,25 +225,40 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        setPaused(true);
+        if (pauseReasonRef.current === 'user') return;
+        setPauseState(true, 'auto');
       }
     };
-    const handleBlur = () => setPaused(true);
+    const handleBlur = () => {
+      if (pauseReasonRef.current === 'user') return;
+      setPauseState(true, 'auto');
+    };
+    const handleFocus = () => {
+      if (pauseReasonRef.current === 'auto') {
+        setPauseState(false, null);
+      }
+    };
     document.addEventListener('visibilitychange', handleVisibility);
     window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, []);
+  }, [setPauseState]);
 
-  const resume = useCallback(() => setPaused(false), []);
+  const resume = useCallback(() => setPauseState(false, null), [setPauseState]);
 
   const contextValue = { record, registerReplay };
 
   useEffect(() => {
     onPauseChange?.(paused);
   }, [onPauseChange, paused]);
+
+  useEffect(() => {
+    pauseReasonRef.current = pauseReason;
+  }, [pauseReason]);
 
   return (
     <RecorderContext.Provider value={contextValue}>
@@ -260,7 +283,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       <div className="absolute top-2 right-2 z-40 flex space-x-2">
         <button
           type="button"
-          onClick={() => setPaused((p) => !p)}
+          onClick={() => {
+            if (paused) {
+              setPauseState(false, null);
+            } else {
+              setPauseState(true, 'user');
+            }
+          }}
           className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
         >
           {paused ? 'Resume' : 'Pause'}
