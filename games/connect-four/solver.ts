@@ -14,10 +14,10 @@ export const getValidRow = (board: Board, col: number): number => {
   return -1;
 };
 
-export const checkWinner = (
+export const getWinningCells = (
   board: Board,
   player: Exclude<Cell, null>,
-): boolean => {
+): { r: number; c: number }[] | null => {
   const dirs = [
     { dr: 0, dc: 1 },
     { dr: 1, dc: 0 },
@@ -28,20 +28,25 @@ export const checkWinner = (
     for (let c = 0; c < COLS; c++) {
       if (board[r][c] !== player) continue;
       for (const { dr, dc } of dirs) {
-        let count = 0;
+        const cells: { r: number; c: number }[] = [];
         for (let i = 0; i < 4; i++) {
           const rr = r + dr * i;
           const cc = c + dc * i;
           if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
           if (board[rr][cc] !== player) break;
-          count++;
+          cells.push({ r: rr, c: cc });
         }
-        if (count === 4) return true;
+        if (cells.length === 4) return cells;
       }
     }
   }
-  return false;
+  return null;
 };
+
+export const checkWinner = (
+  board: Board,
+  player: Exclude<Cell, null>,
+): boolean => Boolean(getWinningCells(board, player));
 
 export const isBoardFull = (board: Board): boolean => board[0].every(Boolean);
 
@@ -207,4 +212,3 @@ export const evaluateColumns = (
   }
   return scores;
 };
-
