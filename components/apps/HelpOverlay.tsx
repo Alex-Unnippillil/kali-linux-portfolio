@@ -57,7 +57,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   breakout: {
     objective: "Clear all bricks with the ball.",
-    controls: "Move the paddle with the arrow keys.",
+    controls:
+      "Mouse or touch to move the paddle. Arrow keys also work. Space launches the ball and releases magnet catches.",
+    actions: {
+      left: "ArrowLeft",
+      right: "ArrowRight",
+      fire: " ",
+    },
   },
   "car-racer": {
     objective: "Avoid other cars and stay on the road.",
