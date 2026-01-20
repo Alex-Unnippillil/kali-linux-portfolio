@@ -26,6 +26,8 @@ interface GameLayoutProps {
   editor?: React.ReactNode;
   onPauseChange?: (paused: boolean) => void;
   onRestart?: () => void;
+  pauseHotkeys?: string[];
+  restartHotkeys?: string[];
   settingsPanel?: React.ReactNode;
 }
 
@@ -47,6 +49,21 @@ const RecorderContext = createContext<RecorderContextValue>({
 
 export const useInputRecorder = () => useContext(RecorderContext);
 
+const isTextInput = (target: EventTarget | null) => {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable;
+};
+
+const matchesHotkey = (e: KeyboardEvent, hotkeys: string[]) => {
+  const key = e.key.toLowerCase();
+  const code = e.code.toLowerCase();
+  return hotkeys.some((hotkey) => {
+    const match = hotkey.toLowerCase();
+    return key === match || code === match;
+  });
+};
+
 const GameLayout: React.FC<GameLayoutProps> = ({
   gameId = 'unknown',
   children,
@@ -57,6 +74,8 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   editor,
   onPauseChange,
   onRestart,
+  pauseHotkeys,
+  restartHotkeys,
   settingsPanel,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
@@ -237,6 +256,31 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     onPauseChange?.(paused);
   }, [onPauseChange, paused]);
 
+  const handleRestart = useCallback(() => {
+    setPaused(false);
+    onRestart?.();
+  }, [onRestart]);
+
+  useEffect(() => {
+    if (!pauseHotkeys && !restartHotkeys) return undefined;
+    const pauseKeys = pauseHotkeys?.length ? pauseHotkeys : [];
+    const restartKeys = restartHotkeys?.length ? restartHotkeys : [];
+    const handler = (e: KeyboardEvent) => {
+      if (isTextInput(e.target)) return;
+      if (pauseKeys.length && matchesHotkey(e, pauseKeys)) {
+        e.preventDefault();
+        setPaused((p) => !p);
+        return;
+      }
+      if (restartKeys.length && matchesHotkey(e, restartKeys)) {
+        e.preventDefault();
+        handleRestart();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [pauseHotkeys, restartHotkeys, handleRestart]);
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
@@ -268,7 +312,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         {onRestart && (
           <button
             type="button"
-            onClick={onRestart}
+            onClick={handleRestart}
             className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
             Restart

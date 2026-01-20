@@ -20,6 +20,7 @@ import {
 
 const CELL_SIZE = 16; // pixels
 const DEFAULT_SPEED = 120; // ms per move
+const MAX_QUEUE = 3;
 const BOARD_SIZE = GRID_SIZE * CELL_SIZE;
 const SKINS = {
   classic: {
@@ -126,12 +127,25 @@ const Snake = () => {
     [],
     (v) => Array.isArray(v),
   );
-  const initialStateRef = useRef(
-    createInitialState({
-      obstacles: obstaclePack.length ? obstaclePack : undefined,
-      obstacleCount: obstaclePack.length ? 0 : 5,
-    }),
+  const [obstaclesEnabled, setObstaclesEnabled] = usePersistentState(
+    'snake_obstacles_enabled',
+    true,
+    (v) => typeof v === 'boolean',
   );
+  const buildInitialState = useCallback(
+    () =>
+      createInitialState({
+        obstacles:
+          obstaclesEnabled && obstaclePack.length ? obstaclePack : [],
+        obstacleCount:
+          obstaclesEnabled && !obstaclePack.length ? 5 : 0,
+      }),
+    [obstaclePack, obstaclesEnabled],
+  );
+  const initialStateRef = useRef(null);
+  if (!initialStateRef.current) {
+    initialStateRef.current = buildInitialState();
+  }
   const snakeRef = useRef(
     initialStateRef.current.snake.map((seg) => ({ ...seg, scale: 1 })),
   );
@@ -164,16 +178,26 @@ const Snake = () => {
     false,
     (v) => typeof v === 'boolean',
   );
-  const [sound, setSound] = useState(true);
-  const [speed, setSpeed] = useState(DEFAULT_SPEED);
+  const [sound, setSound] = usePersistentState(
+    'snake_sound',
+    true,
+    (v) => typeof v === 'boolean',
+  );
+  const [baseSpeed, setBaseSpeed] = usePersistentState(
+    'snake_base_speed',
+    DEFAULT_SPEED,
+    (v) => typeof v === 'number',
+  );
+  const [speed, setSpeed] = useState(baseSpeed);
   const [score, setScore] = useState(0);
   const [gameOver, setGameOver] = useState(false);
+  const [won, setWon] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
     'snake_highscore',
     0,
     (v) => typeof v === 'number',
   );
-  const speedRef = useRef(DEFAULT_SPEED);
+  const speedRef = useRef(baseSpeed);
   const {
     save: saveReplay,
     load: loadReplay,
@@ -181,6 +205,11 @@ const Snake = () => {
     remove: removeReplay,
   } = useSaveSlots('snake-replay');
   const [selectedReplay, setSelectedReplay] = useState('');
+  const [showTouchControls, setShowTouchControls] = usePersistentState(
+    'snake_touch_controls',
+    false,
+    (v) => typeof v === 'boolean',
+  );
   const playingRef = useRef(false);
   const playbackRef = useRef([]);
   const playbackIndexRef = useRef(0);
@@ -257,15 +286,6 @@ const Snake = () => {
   }, []);
 
   useEffect(() => {
-    const handleBlur = () => {
-      runningRef.current = false;
-      setRunning(false);
-    };
-    window.addEventListener('blur', handleBlur);
-    return () => window.removeEventListener('blur', handleBlur);
-  }, []);
-
-  useEffect(() => {
     speedRef.current = speed;
   }, [speed]);
 
@@ -294,11 +314,13 @@ const Snake = () => {
     }
   }, []);
 
-  // Respect prefers-reduced-motion by pausing automatic movement
   useEffect(() => {
-    if (prefersReducedMotion) {
-      runningRef.current = false;
-      setRunning(false);
+    if (!prefersReducedMotion) return;
+    particlesRef.current = [];
+    setMilestoneFlash(false);
+    if (milestoneTimeoutRef.current) {
+      clearTimeout(milestoneTimeoutRef.current);
+      milestoneTimeoutRef.current = null;
     }
   }, [prefersReducedMotion]);
 
@@ -461,7 +483,7 @@ const Snake = () => {
         ctx.setLineDash([]);
       }
       if (scale < 1) {
-        seg.scale = Math.min(1, scale + 0.1);
+        seg.scale = prefersReducedMotion ? 1 : Math.min(1, scale + 0.1);
       }
     });
 
@@ -571,12 +593,12 @@ const Snake = () => {
     if (result.collision !== 'none') {
       haptics.danger();
       setGameOver(true);
+      setWon(false);
       runningRef.current = false;
       setRunning(false);
       beep(120);
       return;
     }
-
     const nextSnake = result.state.snake.map((seg) => ({ ...seg, scale: 1 }));
     if (result.grew && !prefersReducedMotion && nextSnake.length) {
       nextSnake[0].scale = 0;
@@ -611,6 +633,14 @@ const Snake = () => {
       obstacles: obstaclesRef.current.map((o) => ({ ...o })),
       score: scoreRef.current,
     });
+
+    if (result.won) {
+      setWon(true);
+      setGameOver(false);
+      runningRef.current = false;
+      setRunning(false);
+      beep(620);
+    }
   }, [
     wrap,
     beep,
@@ -624,7 +654,9 @@ const Snake = () => {
 
   const tick = useCallback(
     (delta) => {
-      updateParticles(delta);
+      if (!prefersReducedMotion) {
+        updateParticles(delta);
+      }
       accumulatorRef.current += delta * 1000;
       if (accumulatorRef.current < speedRef.current) {
         draw();
@@ -637,46 +669,53 @@ const Snake = () => {
       }
       draw();
     },
-    [advanceGame, draw, updateParticles],
+    [advanceGame, draw, updateParticles, prefersReducedMotion],
   );
 
   useEffect(() => {
     runningRef.current = running;
   }, [running]);
 
-  useGameLoop(tick, running && !prefersReducedMotion);
+  useGameLoop(tick, running);
 
-  useGameControls(({ x, y }) => {
-    if (playingRef.current) return;
-    const queue = moveQueueRef.current;
-    const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
-    if (curr.x + x === 0 && curr.y + y === 0) return;
-    queue.push({ x, y });
+  const enqueueDirection = useCallback(
+    ({ x, y }) => {
+      if (playingRef.current || gameOver || won) return;
+      const queue = moveQueueRef.current;
+      const curr = queue.length ? queue[queue.length - 1] : dirRef.current;
+      if (curr.x + x === 0 && curr.y + y === 0) return;
+      if (queue.length >= MAX_QUEUE) return;
+      queue.push({ x, y });
+    },
+    [gameOver, won],
+  );
+
+  useGameControls(enqueueDirection, 'snake', {
+    preventDefault: true,
   });
 
   useEffect(() => {
-    if (gameOver && score > highScore) {
+    if ((gameOver || won) && score > highScore) {
       setHighScore(score);
     }
-  }, [gameOver, score, highScore, setHighScore]);
+  }, [gameOver, won, score, highScore, setHighScore]);
 
   useEffect(() => {
     if (gameOver) haptics.gameOver();
   }, [gameOver, haptics]);
 
   useEffect(() => {
-    if (gameOver && recordingRef.current.length) {
+    if (!gameOver && !won) return;
+    if (playingRef.current) return;
+    if (recordingRef.current.length) {
       const name = `replay-${Date.now()}`;
       saveReplay(name, { frames: recordingRef.current, wrap });
     }
-  }, [gameOver, saveReplay, wrap]);
+  }, [gameOver, won, saveReplay, wrap]);
 
   /** Reset the game to its initial state. */
   const reset = useCallback(() => {
-    const base = createInitialState({
-      obstacles: obstaclePack.length ? obstaclePack : undefined,
-      obstacleCount: obstaclePack.length ? 0 : 5,
-    });
+    const base = buildInitialState();
     snakeRef.current = base.snake.map((seg) => ({ ...seg, scale: 1 }));
     foodRef.current = { ...base.food };
     obstaclesRef.current = base.obstacles.map((o) => ({ ...o }));
@@ -690,9 +729,10 @@ const Snake = () => {
     setScore(0);
     scoreRef.current = 0;
     setGameOver(false);
+    setWon(false);
     setRunning(true);
-    setSpeed(DEFAULT_SPEED);
-    speedRef.current = DEFAULT_SPEED;
+    setSpeed(baseSpeed);
+    speedRef.current = baseSpeed;
     particlesRef.current = [];
     setMilestoneFlash(false);
     if (milestoneTimeoutRef.current) {
@@ -712,7 +752,7 @@ const Snake = () => {
       },
     ];
     draw();
-  }, [draw, obstaclePack]);
+  }, [baseSpeed, buildInitialState, draw]);
 
   const startReplay = useCallback(
     (name) => {
@@ -725,6 +765,7 @@ const Snake = () => {
       setRunning(true);
       runningRef.current = true;
       setGameOver(false);
+      setWon(false);
       accumulatorRef.current = 0;
       if (data.frames?.length) {
         const first = data.frames[0];
@@ -739,23 +780,228 @@ const Snake = () => {
     [loadReplay, setWrap],
   );
 
+  const handlePauseChange = useCallback(
+    (paused) => {
+      if (paused) {
+        runningRef.current = false;
+        setRunning(false);
+        return;
+      }
+      if (playingRef.current || (!gameOver && !won)) {
+        runningRef.current = true;
+        setRunning(true);
+      }
+    },
+    [gameOver, won],
+  );
+
+  const handleBaseSpeedChange = useCallback(
+    (event) => {
+      const value = Number(event.target.value);
+      setBaseSpeed(value);
+      setSpeed(value);
+    },
+    [setBaseSpeed, setSpeed],
+  );
+
+  const resetHighScore = useCallback(() => setHighScore(0), [setHighScore]);
+
+  const replayOptions = listReplays();
+  const settingsPanel = (
+    <div className="space-y-3 text-sm text-slate-100">
+      <div className="space-y-2">
+        <label className="flex items-center justify-between gap-2">
+          <span>Wrap</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={wrap}
+            onChange={(e) => setWrap(e.target.checked)}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-2">
+          <span>Obstacles</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={obstaclesEnabled}
+            onChange={(e) => {
+              setObstaclesEnabled(e.target.checked);
+              reset();
+            }}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-2">
+          <span>Sound</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={sound}
+            onChange={(e) => setSound(e.target.checked)}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-2">
+          <span>Haptics</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={haptics.enabled}
+            onChange={haptics.toggle}
+          />
+        </label>
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="snake-skin" className="flex items-center justify-between gap-2">
+          <span>Skin</span>
+          <select
+            id="snake-skin"
+            className="bg-gray-800/80 rounded px-2 py-1 focus:outline-none focus:ring"
+            value={skinId}
+            onChange={(e) => setSkinId(e.target.value)}
+          >
+            {Object.entries(SKINS).map(([key, skin]) => (
+              <option key={key} value={key}>
+                {skin.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center justify-between gap-2">
+          <span>Colorblind assist</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={colorblindMode}
+            onChange={(e) => setColorblindMode(e.target.checked)}
+          />
+        </label>
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="snake-speed" className="flex flex-col gap-2">
+          <span className="flex items-center justify-between">
+            <span>Base speed</span>
+            <span className="text-xs text-slate-400">{baseSpeed}ms</span>
+          </span>
+          <input
+            id="snake-speed"
+            type="range"
+            min="50"
+            max="300"
+            step="10"
+            value={baseSpeed}
+            onChange={handleBaseSpeedChange}
+            aria-label="Base speed"
+            className="accent-emerald-400"
+          />
+        </label>
+        <label className="flex items-center justify-between gap-2">
+          <span>Touch D-pad</span>
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={showTouchControls}
+            onChange={(e) => setShowTouchControls(e.target.checked)}
+          />
+        </label>
+      </div>
+      <div className="space-y-2">
+        <label htmlFor="snake-replay" className="flex items-center justify-between gap-2">
+          <span>Replay</span>
+          <select
+            id="snake-replay"
+            className="bg-gray-800/80 rounded px-2 py-1 focus:outline-none focus:ring"
+            value={selectedReplay}
+            onChange={(e) => setSelectedReplay(e.target.value)}
+          >
+            <option value="">Select</option>
+            {replayOptions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className="flex-1 px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring disabled:opacity-50"
+            onClick={() => startReplay(selectedReplay)}
+            disabled={!selectedReplay}
+          >
+            Play
+          </button>
+          <button
+            type="button"
+            className="flex-1 px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring disabled:opacity-50"
+            onClick={() => {
+              removeReplay(selectedReplay);
+              setSelectedReplay('');
+            }}
+            disabled={!selectedReplay}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        className="w-full px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
+        onClick={resetHighScore}
+      >
+        Reset high score
+      </button>
+    </div>
+  );
+
   return (
-    <GameLayout gameId="snake" score={score} highScore={highScore}>
+    <GameLayout
+      gameId="snake"
+      score={score}
+      highScore={highScore}
+      onPauseChange={handlePauseChange}
+      onRestart={reset}
+      pauseHotkeys={[' ', 'space', 'spacebar']}
+      restartHotkeys={['r']}
+      settingsPanel={settingsPanel}
+    >
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none px-3 pb-4">
+        <p id="snake-instructions" className="sr-only">
+          Use arrow keys or swipe to move. Press Space to pause and R to restart.
+        </p>
         <div className="relative flex flex-col items-center">
           <canvas
             ref={canvasRef}
             className="bg-gray-900/80 border border-gray-700/70 shadow-xl w-full h-full rounded"
             tabIndex={0}
             aria-label="Snake game board"
+            aria-describedby="snake-instructions"
           />
           {gameOver && (
             <div
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50"
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-center px-4"
               role="status"
               aria-live="polite"
             >
-              Game Over
+              <div className="text-2xl font-semibold text-rose-200">
+                Game Over
+              </div>
+              <div className="text-sm text-slate-200">
+                Press R or Restart to try again.
+              </div>
+            </div>
+          )}
+          {won && (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-center px-4"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="text-2xl font-semibold text-emerald-200">
+                You win!
+              </div>
+              <div className="text-sm text-slate-200">
+                Press R or Restart to play again.
+              </div>
             </div>
           )}
           {milestoneFlash && (
@@ -768,118 +1014,44 @@ const Snake = () => {
             </div>
           )}
         </div>
-        <div className="mt-4 flex flex-wrap justify-center gap-2 text-sm">
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={reset}
-          >
-            Reset
-          </button>
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={() => setRunning((r) => !r)}
-          >
-            {running ? 'Pause' : 'Resume'}
-          </button>
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={() => setWrap((w) => !w)}
-          >
-            {wrap ? 'Wrap' : 'No Wrap'}
-          </button>
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={() => setSound((s) => !s)}
-          >
-            {sound ? 'Sound On' : 'Sound Off'}
-          </button>
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={haptics.toggle}
-          >
-            {haptics.enabled ? 'Haptics On' : 'Haptics Off'}
-          </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm">
-          <label htmlFor="skin" className="flex items-center gap-2">
-            <span className="whitespace-nowrap">Skin</span>
-            <select
-              id="skin"
-              className="bg-gray-800/80 rounded px-2 py-1 focus:outline-none focus:ring"
-              value={skinId}
-              onChange={(e) => setSkinId(e.target.value)}
+        {showTouchControls && (
+          <div className="mt-4 grid grid-cols-3 gap-2 text-lg">
+            <div />
+            <button
+              type="button"
+              onPointerDown={() => enqueueDirection({ x: 0, y: -1 })}
+              className="h-12 w-12 rounded bg-gray-800/80 shadow-sm transition hover:bg-gray-700 focus:outline-none focus:ring"
+              aria-label="Move up"
             >
-              {Object.entries(SKINS).map(([key, skin]) => (
-                <option key={key} value={key}>
-                  {skin.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label
-            htmlFor="snake-colorblind-toggle"
-            className="inline-flex items-center gap-2"
-          >
-            <input
-              id="snake-colorblind-toggle"
-              type="checkbox"
-              className="h-4 w-4"
-              checked={colorblindMode}
-              onChange={(e) => setColorblindMode(e.target.checked)}
-              aria-label="Toggle colorblind assist"
-            />
-            <span>Colorblind assist</span>
-          </label>
-          <label htmlFor="speed" className="flex items-center gap-2">
-            <span className="whitespace-nowrap">Speed</span>
-            <input
-              id="speed"
-              type="range"
-              min="50"
-              max="300"
-              step="10"
-              value={speed}
-              onChange={(e) => setSpeed(Number(e.target.value))}
-              aria-label="Speed"
-              className="accent-emerald-400"
-            />
-          </label>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-2 text-sm">
-          <label htmlFor="replay" className="flex items-center gap-2">
-            <span>Replay</span>
-            <select
-              id="replay"
-              className="bg-gray-800/80 rounded px-2 py-1 focus:outline-none focus:ring"
-              value={selectedReplay}
-              onChange={(e) => setSelectedReplay(e.target.value)}
+              ↑
+            </button>
+            <div />
+            <button
+              type="button"
+              onPointerDown={() => enqueueDirection({ x: -1, y: 0 })}
+              className="h-12 w-12 rounded bg-gray-800/80 shadow-sm transition hover:bg-gray-700 focus:outline-none focus:ring"
+              aria-label="Move left"
             >
-              <option value="">Select</option>
-              {listReplays().map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring"
-            onClick={() => startReplay(selectedReplay)}
-            disabled={!selectedReplay}
-          >
-            Play
-          </button>
-          <button
-            className="px-3 py-1 bg-gray-700/80 rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring disabled:opacity-50"
-            onClick={() => {
-              removeReplay(selectedReplay);
-              setSelectedReplay('');
-            }}
-            disabled={!selectedReplay}
-          >
-            Delete
-          </button>
-        </div>
+              ←
+            </button>
+            <button
+              type="button"
+              onPointerDown={() => enqueueDirection({ x: 0, y: 1 })}
+              className="h-12 w-12 rounded bg-gray-800/80 shadow-sm transition hover:bg-gray-700 focus:outline-none focus:ring"
+              aria-label="Move down"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              onPointerDown={() => enqueueDirection({ x: 1, y: 0 })}
+              className="h-12 w-12 rounded bg-gray-800/80 shadow-sm transition hover:bg-gray-700 focus:outline-none focus:ring"
+              aria-label="Move right"
+            >
+              →
+            </button>
+          </div>
+        )}
       </div>
     </GameLayout>
   );

@@ -19,7 +19,14 @@ const defaultMap = {
   hyperspace: 'h',
 };
 
-const useGameControls = (arg, gameId = 'default') => {
+const isTextInput = (el) => {
+  if (!el || !(el instanceof HTMLElement)) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
+};
+
+const useGameControls = (arg, gameId = 'default', options = {}) => {
+  const { enabled = true, preventDefault = false } = options || {};
   const onDirection = typeof arg === 'function' ? arg : null;
   const canvasRef = typeof arg === 'function' ? null : arg;
   const stateRef = useRef({
@@ -33,13 +40,26 @@ const useGameControls = (arg, gameId = 'default') => {
 
   // keyboard controls for directional games
   useEffect(() => {
-    if (!onDirection) return undefined;
+    if (!onDirection || !enabled) return undefined;
     const handleKey = (e) => {
+      if (isTextInput(e.target)) return;
       const map = getMapping(gameId, defaultMap);
-      if (e.key === map.up) onDirection({ x: 0, y: -1 });
-      if (e.key === map.down) onDirection({ x: 0, y: 1 });
-      if (e.key === map.left) onDirection({ x: -1, y: 0 });
-      if (e.key === map.right) onDirection({ x: 1, y: 0 });
+      if (e.key === map.up) {
+        if (preventDefault) e.preventDefault();
+        onDirection({ x: 0, y: -1 });
+      }
+      if (e.key === map.down) {
+        if (preventDefault) e.preventDefault();
+        onDirection({ x: 0, y: 1 });
+      }
+      if (e.key === map.left) {
+        if (preventDefault) e.preventDefault();
+        onDirection({ x: -1, y: 0 });
+      }
+      if (e.key === map.right) {
+        if (preventDefault) e.preventDefault();
+        onDirection({ x: 1, y: 0 });
+      }
     };
     let timeout;
     const debounced = (e) => {
@@ -55,11 +75,11 @@ const useGameControls = (arg, gameId = 'default') => {
       window.removeEventListener('keydown', debounced);
       if (timeout) clearTimeout(timeout);
     };
-  }, [onDirection, gameId]);
+  }, [onDirection, gameId, enabled, preventDefault]);
 
   // touch swipe controls for directional games
   useEffect(() => {
-    if (!onDirection) return undefined;
+    if (!onDirection || !enabled) return undefined;
     let startX = 0;
     let startY = 0;
 
@@ -86,11 +106,11 @@ const useGameControls = (arg, gameId = 'default') => {
       window.removeEventListener('touchstart', start);
       window.removeEventListener('touchend', end);
     };
-  }, [onDirection]);
+  }, [onDirection, enabled]);
 
   // gamepad controls for directional games
   useEffect(() => {
-    if (!onDirection) return;
+    if (!onDirection || !enabled) return;
     const now = Date.now();
     if (now - padTime.current < 100) return;
     const { moveX, moveY } = gamepad;
@@ -99,18 +119,20 @@ const useGameControls = (arg, gameId = 'default') => {
       else onDirection({ x: 0, y: Math.sign(moveY) });
       padTime.current = now;
     }
-  }, [gamepad, onDirection]);
+  }, [gamepad, onDirection, enabled]);
 
   // keyboard controls for advanced games
   useEffect(() => {
-    if (onDirection) return undefined;
+    if (onDirection || !enabled) return undefined;
     const handleDown = (e) => {
+      if (isTextInput(e.target)) return;
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.fire) stateRef.current.fire = true;
       else if (e.key === map.hyperspace) stateRef.current.hyperspace = true;
       else stateRef.current.keys[e.key] = true;
     };
     const handleUp = (e) => {
+      if (isTextInput(e.target)) return;
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.fire) stateRef.current.fire = false;
       else if (e.key === map.hyperspace) stateRef.current.hyperspace = false;
@@ -122,11 +144,11 @@ const useGameControls = (arg, gameId = 'default') => {
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, [gameId, onDirection]);
+  }, [gameId, onDirection, enabled]);
 
   // touch controls for advanced games
   useEffect(() => {
-    if (onDirection || !canvasRef?.current) return undefined;
+    if (onDirection || !canvasRef?.current || !enabled) return undefined;
     const canvas = canvasRef.current;
 
     const rect = () => canvas.getBoundingClientRect();
@@ -170,15 +192,15 @@ const useGameControls = (arg, gameId = 'default') => {
       canvas.removeEventListener('touchmove', move);
       canvas.removeEventListener('touchend', end);
     };
-  }, [canvasRef, onDirection]);
+  }, [canvasRef, onDirection, enabled]);
 
   // gamepad controls for advanced games
   useEffect(() => {
-    if (onDirection) return;
+    if (onDirection || !enabled) return;
     stateRef.current.joystick.x = gamepad.moveX;
     stateRef.current.joystick.y = gamepad.moveY;
     stateRef.current.fire = gamepad.fire || stateRef.current.fire;
-  }, [gamepad, onDirection]);
+  }, [gamepad, onDirection, enabled]);
 
   return onDirection ? null : stateRef.current;
 };
