@@ -14,13 +14,25 @@ export interface ForecastDay {
   condition: number;
 }
 
+export interface HourlySnapshot {
+  temps: number[];
+  times?: string[];
+  precipProbability?: number[];
+  updatedAt: number;
+}
+
 export interface City {
   id: string;
   name: string;
   lat: number;
   lon: number;
+  region?: string;
+  countryCode?: string;
+  timezone?: string;
   lastReading?: WeatherReading;
   forecast?: ForecastDay[];
+  hourly?: HourlySnapshot;
+  lastError?: string;
 }
 
 export interface CityGroup {
@@ -29,12 +41,31 @@ export interface CityGroup {
 }
 
 const isWeatherReading = (v: any): v is WeatherReading =>
-  v && typeof v.temp === 'number' && typeof v.condition === 'number' && typeof v.time === 'number';
+  v &&
+  typeof v.temp === 'number' &&
+  typeof v.condition === 'number' &&
+  typeof v.time === 'number';
 
 const isForecastDay = (v: any): v is ForecastDay =>
-  v && typeof v.date === 'string' && typeof v.temp === 'number' && typeof v.condition === 'number';
+  v &&
+  typeof v.date === 'string' &&
+  typeof v.temp === 'number' &&
+  typeof v.condition === 'number';
 
 const isForecastArray = (v: any): v is ForecastDay[] => Array.isArray(v) && v.every(isForecastDay);
+
+const isNumberArray = (v: unknown): v is number[] =>
+  Array.isArray(v) && v.every((entry) => typeof entry === 'number');
+
+const isStringArray = (v: unknown): v is string[] =>
+  Array.isArray(v) && v.every((entry) => typeof entry === 'string');
+
+const isHourlySnapshot = (v: any): v is HourlySnapshot =>
+  v &&
+  isNumberArray(v.temps) &&
+  (v.times === undefined || isStringArray(v.times)) &&
+  (v.precipProbability === undefined || isNumberArray(v.precipProbability)) &&
+  typeof v.updatedAt === 'number';
 
 const isCity = (v: any): v is City =>
   v &&
@@ -42,8 +73,13 @@ const isCity = (v: any): v is City =>
   typeof v.name === 'string' &&
   typeof v.lat === 'number' &&
   typeof v.lon === 'number' &&
+  (v.region === undefined || typeof v.region === 'string') &&
+  (v.countryCode === undefined || typeof v.countryCode === 'string') &&
+  (v.timezone === undefined || typeof v.timezone === 'string') &&
   (v.lastReading === undefined || isWeatherReading(v.lastReading)) &&
-  (v.forecast === undefined || isForecastArray(v.forecast));
+  (v.forecast === undefined || isForecastArray(v.forecast)) &&
+  (v.hourly === undefined || isHourlySnapshot(v.hourly)) &&
+  (v.lastError === undefined || typeof v.lastError === 'string');
 
 const isCityArray = (v: unknown): v is City[] => Array.isArray(v) && v.every(isCity);
 
@@ -67,4 +103,3 @@ const isStringOrNull = (v: unknown): v is string | null =>
 export function useCurrentGroup() {
   return usePersistentState<string | null>('weather-current-group', null, isStringOrNull);
 }
-
