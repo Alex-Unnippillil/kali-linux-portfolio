@@ -91,7 +91,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   memory: {
     objective: "Match all pairs of cards.",
-    controls: "Click two cards to reveal and match.",
+    controls:
+      "Click two cards to reveal and match. Arrow keys move focus, Enter/Space flips, P pauses, R resets, Escape toggles pause.",
   },
   minesweeper: {
     objective: "Clear the board without hitting mines.",

@@ -9,6 +9,7 @@ import {
 } from './memory_utils';
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
+const SETTINGS_KEY_PREFIX = 'game:memory:settings';
 
 // Built-in theme assets that can be used by the memory game.
 const BUILT_IN_THEMES = {
@@ -34,11 +35,84 @@ const BUILT_IN_THEMES = {
   ],
 };
 
+const VALID_SIZES = [2, 4, 6];
+const VALID_TIMER_MODES = ['countup', 'countdown'];
+const VALID_DECK_TYPES = ['emoji', 'pattern', 'letters', 'theme'];
+const VALID_MOTION_SETTINGS = ['system', 'reduced', 'full'];
+
+let sharedAudioContext;
+const getAudioContext = () => {
+  if (typeof window === 'undefined') return null;
+  if (!sharedAudioContext) {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    sharedAudioContext = new AudioCtx();
+  }
+  if (sharedAudioContext?.state === 'suspended') {
+    sharedAudioContext.resume().catch(() => null);
+  }
+  return sharedAudioContext;
+};
+
+const getSafeThemeName = (themePacks, candidate) => {
+  const themeNames = Object.keys(themePacks || {});
+  if (candidate && themeNames.includes(candidate)) return candidate;
+  return themeNames[0] || 'icons';
+};
+
+const sanitizeSettings = (settings, themePacks) => {
+  if (!settings || typeof settings !== 'object') return null;
+  const safe = {};
+  const size = Number(settings.size);
+  safe.size = VALID_SIZES.includes(size) ? size : 4;
+  safe.timerMode = VALID_TIMER_MODES.includes(settings.timerMode) ? settings.timerMode : 'countup';
+  safe.deckType = VALID_DECK_TYPES.includes(settings.deckType) ? settings.deckType : 'emoji';
+  safe.patternTheme = PATTERN_THEMES[settings.patternTheme] ? settings.patternTheme : 'vibrant';
+  safe.previewTime = Number.isFinite(settings.previewTime)
+    ? Math.min(10, Math.max(0, Math.round(settings.previewTime)))
+    : 3;
+  safe.sound = typeof settings.sound === 'boolean' ? settings.sound : true;
+  safe.motionSetting = VALID_MOTION_SETTINGS.includes(settings.motionSetting)
+    ? settings.motionSetting
+    : 'system';
+  safe.seed = typeof settings.seed === 'string' && settings.seed.trim() ? settings.seed : generateSeed();
+  safe.themeName = getSafeThemeName(themePacks, settings.themeName);
+  return safe;
+};
+
+const isEditableTarget = (target) => {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  const tag = target.tagName.toLowerCase();
+  return ['input', 'textarea', 'select'].includes(tag) || target.isContentEditable;
+};
+
+const getNextAvailableIndex = (startIndex, size, matchedSet, rowStep, colStep) => {
+  if (!matchedSet?.size) return startIndex;
+  let row = Math.floor(startIndex / size);
+  let col = startIndex % size;
+  while (matchedSet.has(row * size + col)) {
+    const nextRow = row + rowStep;
+    const nextCol = col + colStep;
+    if (nextRow < 0 || nextRow >= size || nextCol < 0 || nextCol >= size) break;
+    row = nextRow;
+    col = nextCol;
+  }
+  return row * size + col;
+};
+
+const findFirstAvailableIndex = (size, matchedSet) => {
+  const total = size * size;
+  for (let i = 0; i < total; i += 1) {
+    if (!matchedSet.has(i)) return i;
+  }
+  return 0;
+};
+
 /**
  * Single player memory board. This encapsulates the original memory game
  * logic and is rendered once or twice depending on the selected mode.
  */
-const MemoryBoard = ({ player, themePacks, onWin }) => {
+const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
   const [size, setSize] = useState(4);
   const [timerMode, setTimerMode] = useState('countup');
   const [cards, setCards] = useState([]);
@@ -48,7 +122,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   const [moves, setMoves] = useState(0);
   const [time, setTime] = useState(0);
   const [stars, setStars] = useState(3);
-  const [paused, setPaused] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
   const [sound, setSound] = useState(true);
   const [best, setBest] = useState({ moves: null, time: null });
   const [announcement, setAnnouncement] = useState('');
@@ -59,25 +133,31 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   const [streak, setStreak] = useState(0);
   const [particles, setParticles] = useState([]);
   const [nudge, setNudge] = useState(false);
-  const [themeName, setThemeName] = useState(Object.keys(themePacks)[0] || 'icons');
+  const [themeName, setThemeName] = useState(getSafeThemeName(themePacks));
   const [seed, setSeed] = useState(generateSeed);
   const [motionSetting, setMotionSetting] = useState('system');
   const [systemReducedMotion, setSystemReducedMotion] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
+  const [uiLocked, setUiLocked] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const startRef = useRef(0);
   const initialTimeRef = useRef(0);
   const rafRef = useRef();
   const pauseStartedRef = useRef(null);
   const timeoutsRef = useRef([]);
+  const displayedTimeRef = useRef(time);
 
   const bestKey = useMemo(
     () => `game:memory:${player}:${size}:${timerMode}:best`,
     [player, size, timerMode]
   );
+  const settingsKey = useMemo(() => `${SETTINGS_KEY_PREFIX}:${player}`, [player]);
+  const matchedSet = useMemo(() => new Set(matched), [matched]);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     const update = () => {
       setSystemReducedMotion(mq.matches);
@@ -89,16 +169,84 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(settingsKey);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      const safe = sanitizeSettings(parsed, themePacks);
+      if (!safe) return;
+      setSize(safe.size);
+      setTimerMode(safe.timerMode);
+      setDeckType(safe.deckType);
+      setPatternTheme(safe.patternTheme);
+      setPreviewTime(safe.previewTime);
+      setSound(safe.sound);
+      setMotionSetting(safe.motionSetting);
+      setSeed(safe.seed);
+      setThemeName(safe.themeName);
+    } catch {
+      try {
+        window.localStorage.removeItem(settingsKey);
+      } catch {
+        // ignore storage errors
+      }
+    }
+  }, [settingsKey, themePacks]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const payload = {
+      size,
+      timerMode,
+      deckType,
+      patternTheme,
+      previewTime,
+      sound,
+      motionSetting,
+      seed,
+      themeName: getSafeThemeName(themePacks, themeName),
+    };
+    try {
+      window.localStorage.setItem(settingsKey, JSON.stringify(payload));
+    } catch {
+      // ignore storage errors
+    }
+  }, [
+    size,
+    timerMode,
+    deckType,
+    patternTheme,
+    previewTime,
+    sound,
+    motionSetting,
+    seed,
+    themeName,
+    themePacks,
+    settingsKey,
+  ]);
+
+  useEffect(() => {
+    const nextTheme = getSafeThemeName(themePacks, themeName);
+    if (nextTheme !== themeName) {
+      setThemeName(nextTheme);
+    }
+  }, [themePacks, themeName]);
+
   const clearAllTimeouts = useCallback(() => {
     timeoutsRef.current.forEach(clearTimeout);
     timeoutsRef.current = [];
   }, []);
 
-  const schedule = useCallback((fn, ms) => {
-    const id = setTimeout(fn, ms);
-    timeoutsRef.current.push(id);
-    return id;
-  }, []);
+  const schedule = useCallback(
+    (fn, ms) => {
+      const id = setTimeout(fn, ms);
+      timeoutsRef.current.push(id);
+      return id;
+    },
+    [timeoutsRef]
+  );
 
   useEffect(() => () => clearAllTimeouts(), [clearAllTimeouts]);
 
@@ -106,18 +254,19 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     motionSetting === 'reduced' || (motionSetting === 'system' && systemReducedMotion);
 
   const beep = useCallback(() => {
-    if (!sound || typeof window === 'undefined') return;
+    if (!sound) return;
+    const ctx = getAudioContext();
+    if (!ctx) return;
     try {
-      const ctx = new (window.AudioContext || window.webkitAudioContext)();
       const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      gain.gain.value = 0.05;
       osc.type = 'sine';
       osc.frequency.value = 600;
-      osc.connect(ctx.destination);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
       osc.start();
-      setTimeout(() => {
-        osc.stop();
-        ctx.close();
-      }, 100);
+      osc.stop(ctx.currentTime + 0.12);
     } catch {
       // ignore audio errors
     }
@@ -129,12 +278,17 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     setIsRunning(false);
     setParticles([]);
     setNudge(false);
+    setUiLocked(false);
     let deck;
     const themeAssets = themePacks[themeName] || [];
     const rng = createSeededRng(`memory:${seed}:${size}:${deckType}:${themeName}:${patternTheme}`);
     if (deckType === 'theme' && themeAssets.length) {
       const pairs = (size * size) / 2;
-      const themed = themeAssets.map((src, i) => ({ value: i, image: src, pairId: `${themeName}:${i}` }));
+      const themed = themeAssets.map((src, i) => ({
+        value: i + 1,
+        image: src,
+        pairId: `${themeName}:${i}`,
+      }));
       const selected = fisherYatesShuffle(themed, rng).slice(0, pairs);
       const doubled = [...selected, ...selected].map((card, index) => ({ id: index, ...card }));
       deck = fisherYatesShuffle(doubled, rng);
@@ -157,16 +311,18 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     setMatched([]);
     setHighlight([]);
     setMoves(0);
-    const initial = timerMode === 'countdown' ? (DEFAULT_TIME[size] || 60) : 0;
+    const initial = timerMode === 'countdown' ? DEFAULT_TIME[size] || 60 : 0;
     setTime(initial);
+    displayedTimeRef.current = initial;
     initialTimeRef.current = initial;
     setStars(3);
-    setPaused(false);
+    setUserPaused(false);
     setIsRunning(false);
     startRef.current = 0;
     pauseStartedRef.current = null;
     setAnnouncement('');
     setStreak(0);
+    setActiveIndex(0);
   }, [
     size,
     deckType,
@@ -182,6 +338,10 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
 
   useEffect(() => {
     reset();
+  }, [reset, roundId]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       const raw = window.localStorage.getItem(bestKey);
       if (raw) {
@@ -197,9 +357,10 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         // ignore storage errors
       }
     }
-  }, [reset, bestKey]);
+  }, [bestKey]);
 
   const saveBest = useCallback(() => {
+    if (typeof window === 'undefined') return;
     try {
       let stored = {};
       const raw = window.localStorage.getItem(bestKey);
@@ -222,13 +383,16 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     }
   }, [moves, time, bestKey, timerMode]);
 
+  const timeUp = timerMode === 'countdown' && time <= 0;
+
   useEffect(() => {
-    if (cards.length && matched.length === cards.length) {
+    if (!cards.length) return;
+    if (matched.length === cards.length) {
       setIsRunning(false);
       saveBest();
       const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
       setAnnouncement(`You won in ${moves} moves and ${elapsed} seconds`);
-      onWin?.(player, elapsed);
+      onWin?.(player, { moves, time: elapsed });
     }
   }, [matched, cards.length, saveBest, moves, time, timerMode, onWin, player]);
 
@@ -238,6 +402,22 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
     else if (moves <= pairs * 3) setStars(2);
     else setStars(1);
   }, [moves, cards.length]);
+
+  useEffect(() => {
+    if (!cards.length) return;
+    setActiveIndex((prev) => {
+      const total = size * size;
+      const fallback = Math.min(prev, total - 1);
+      return matchedSet.has(fallback) ? findFirstAvailableIndex(size, matchedSet) : fallback;
+    });
+  }, [cards.length, size, matchedSet]);
+
+  useEffect(() => {
+    if (timeUp) {
+      setAnnouncement("Time's up");
+      setIsRunning(false);
+    }
+  }, [timeUp]);
 
   const triggerStreakEffect = useCallback(() => {
     if (effectiveReduce) return;
@@ -249,97 +429,172 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
       }))
     );
     setNudge(true);
-    setPaused(true);
+    setUiLocked(true);
     schedule(() => setParticles([]), 300);
     schedule(() => setNudge(false), 150);
-    schedule(() => setPaused(false), 150);
+    schedule(() => setUiLocked(false), 150);
   }, [effectiveReduce, schedule]);
 
-  const handleCardClick = (idx) => {
-    if (
-      paused ||
-      previewing ||
-      isResolving ||
-      flipped.includes(idx) ||
-      matched.includes(idx) ||
-      (timerMode === 'countdown' && time <= 0)
-    )
-      return;
-    beep();
-    if (!isRunning) {
-      const elapsedSoFar = timerMode === 'countdown' ? initialTimeRef.current - time : time;
-      startRef.current = performance.now() - elapsedSoFar * 1000;
-      setIsRunning(true);
-    }
-    if (flipped.length === 0) {
-      setFlipped([idx]);
-    } else if (flipped.length === 1) {
-      const first = flipped[0];
-      const second = idx;
-      const newFlipped = [first, second];
-      setFlipped(newFlipped);
-      setIsResolving(true);
-      setMoves((mv) => mv + 1);
-      const matchClearMs = effectiveReduce ? 0 : 400;
-      const mismatchClearMs = effectiveReduce ? 0 : 800;
-      if (cards[first].pairId === cards[second].pairId) {
-        setMatched((prev) => [...prev, first, second]);
-        setHighlight([first, second]);
-        setAnnouncement('Match found');
-        setStreak((s) => {
-          const n = s + 1;
-          if (n > 1) triggerStreakEffect();
-          return n;
-        });
-        schedule(() => {
-          setFlipped([]);
-          setHighlight([]);
-          setIsResolving(false);
-        }, matchClearMs);
-      } else {
-        setAnnouncement('No match');
-        setStreak(0);
-        schedule(() => {
-          setFlipped([]);
-          setIsResolving(false);
-        }, mismatchClearMs);
+  const isInputDisabled =
+    userPaused || previewing || isResolving || uiLocked || timeUp || matched.length === cards.length;
+
+  const handleCardClick = useCallback(
+    (idx) => {
+      if (isInputDisabled || flipped.includes(idx) || matchedSet.has(idx)) return;
+      beep();
+      if (!isRunning) {
+        const elapsedSoFar = timerMode === 'countdown' ? initialTimeRef.current - time : time;
+        startRef.current = performance.now() - elapsedSoFar * 1000;
+        setIsRunning(true);
       }
-    }
-  };
+      if (flipped.length === 0) {
+        setFlipped([idx]);
+        setActiveIndex(idx);
+      } else if (flipped.length === 1) {
+        const first = flipped[0];
+        const second = idx;
+        if (first === second) return;
+        const newFlipped = [first, second];
+        setFlipped(newFlipped);
+        setIsResolving(true);
+        setMoves((mv) => mv + 1);
+        const matchClearMs = effectiveReduce ? 0 : 400;
+        const mismatchClearMs = effectiveReduce ? 0 : 800;
+        if (cards[first].pairId === cards[second].pairId) {
+          setMatched((prev) => [...prev, first, second]);
+          setHighlight([first, second]);
+          setAnnouncement('Match found');
+          setStreak((s) => {
+            const n = s + 1;
+            if (n > 1) triggerStreakEffect();
+            return n;
+          });
+          schedule(() => {
+            setFlipped([]);
+            setHighlight([]);
+            setIsResolving(false);
+          }, matchClearMs);
+        } else {
+          setAnnouncement('No match');
+          setStreak(0);
+          schedule(() => {
+            setFlipped([]);
+            setIsResolving(false);
+          }, mismatchClearMs);
+        }
+      }
+    },
+    [
+      isInputDisabled,
+      flipped,
+      matchedSet,
+      beep,
+      isRunning,
+      timerMode,
+      time,
+      effectiveReduce,
+      cards,
+      schedule,
+      triggerStreakEffect,
+    ]
+  );
 
   useEffect(() => {
-    if (!isRunning) return;
+    if (!isRunning) return undefined;
     const loop = (timestamp) => {
-      if (!paused) {
+      if (!userPaused) {
         const elapsed = Math.floor((timestamp - startRef.current) / 1000);
-        if (timerMode === 'countdown') {
-          const remaining = initialTimeRef.current - elapsed;
-          if (remaining <= 0) {
-            setTime(0);
-            setIsRunning(false);
-            return;
-          }
-          setTime(remaining);
-        } else {
-          setTime(elapsed);
+        const nextTime =
+          timerMode === 'countdown'
+            ? Math.max(initialTimeRef.current - elapsed, 0)
+            : elapsed;
+        if (nextTime !== displayedTimeRef.current) {
+          displayedTimeRef.current = nextTime;
+          setTime(nextTime);
         }
       }
       rafRef.current = requestAnimationFrame(loop);
     };
     rafRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isRunning, paused, timerMode]);
+  }, [isRunning, userPaused, timerMode]);
 
   useEffect(() => {
     if (!isRunning) return;
-    if (paused) {
+    if (userPaused) {
       pauseStartedRef.current = performance.now();
     } else if (pauseStartedRef.current != null) {
       const pausedDuration = performance.now() - pauseStartedRef.current;
       startRef.current += pausedDuration;
       pauseStartedRef.current = null;
     }
-  }, [paused, isRunning]);
+  }, [userPaused, isRunning]);
+
+  const handleBoardKeyDown = useCallback(
+    (event) => {
+      if (isEditableTarget(event.target)) return;
+      const total = size * size;
+      if (!total) return;
+      const row = Math.floor(activeIndex / size);
+      const col = activeIndex % size;
+
+      switch (event.key) {
+        case 'ArrowUp': {
+          event.preventDefault();
+          const nextRow = Math.max(0, row - 1);
+          const nextIndex = nextRow * size + col;
+          setActiveIndex(getNextAvailableIndex(nextIndex, size, matchedSet, -1, 0));
+          break;
+        }
+        case 'ArrowDown': {
+          event.preventDefault();
+          const nextRow = Math.min(size - 1, row + 1);
+          const nextIndex = nextRow * size + col;
+          setActiveIndex(getNextAvailableIndex(nextIndex, size, matchedSet, 1, 0));
+          break;
+        }
+        case 'ArrowLeft': {
+          event.preventDefault();
+          const nextCol = Math.max(0, col - 1);
+          const nextIndex = row * size + nextCol;
+          setActiveIndex(getNextAvailableIndex(nextIndex, size, matchedSet, 0, -1));
+          break;
+        }
+        case 'ArrowRight': {
+          event.preventDefault();
+          const nextCol = Math.min(size - 1, col + 1);
+          const nextIndex = row * size + nextCol;
+          setActiveIndex(getNextAvailableIndex(nextIndex, size, matchedSet, 0, 1));
+          break;
+        }
+        case 'Enter':
+        case ' ': {
+          event.preventDefault();
+          handleCardClick(activeIndex);
+          break;
+        }
+        case 'p':
+        case 'P':
+        case 'Escape': {
+          event.preventDefault();
+          if (!timeUp) setUserPaused((prev) => !prev);
+          break;
+        }
+        case 'r':
+        case 'R': {
+          event.preventDefault();
+          reset();
+          break;
+        }
+        default:
+          break;
+      }
+    },
+    [activeIndex, size, matchedSet, handleCardClick, timeUp, reset]
+  );
+
+  const boardLabel = `Player ${player} memory board`;
+  const boardMaxWidth = size * 96;
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4 select-none">
@@ -347,31 +602,40 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         {announcement}
       </div>
       <div
-        className="relative mb-4"
+        className="relative mb-4 w-full"
         style={{
-          width: `${size * 120}px`,
+          maxWidth: `${boardMaxWidth}px`,
           transform: nudge ? 'translateX(2px)' : 'none',
           transition: effectiveReduce ? 'none' : 'transform 150ms',
         }}
+        role="grid"
+        aria-label={boardLabel}
+        tabIndex={0}
+        onKeyDown={handleBoardKeyDown}
       >
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${size}, minmax(0,1fr))` }}>
+        <div className="grid gap-2 sm:gap-3 lg:gap-4" style={{ gridTemplateColumns: `repeat(${size}, minmax(0,1fr))` }}>
           {cards.map((card, i) => {
-            const isFlipped = flipped.includes(i) || matched.includes(i);
+            const isFlipped = flipped.includes(i) || matchedSet.has(i);
             const isHighlighted = highlight.includes(i);
+            const row = Math.floor(i / size) + 1;
+            const col = (i % size) + 1;
+            const cardValueLabel = card.image ? 'theme icon' : `${card.value}`;
+            const stateLabel = matchedSet.has(i)
+              ? `matched ${cardValueLabel}`
+              : isFlipped
+              ? `revealed ${cardValueLabel}`
+              : 'face down';
             return (
               <button
                 key={card.id}
+                type="button"
                 onClick={() => handleCardClick(i)}
-                aria-label={isFlipped ? `Card ${card.value}` : 'Hidden card'}
-                disabled={
-                  isResolving ||
-                  flipped.includes(i) ||
-                  matched.includes(i) ||
-                  paused ||
-                  previewing ||
-                  (timerMode === 'countdown' && time <= 0)
-                }
-                className={`relative w-full aspect-square [perspective:600px] rounded ${
+                onFocus={() => setActiveIndex(i)}
+                aria-label={`Row ${row}, Column ${col}, ${stateLabel}`}
+                aria-pressed={isFlipped}
+                disabled={isInputDisabled || flipped.includes(i) || matchedSet.has(i)}
+                tabIndex={activeIndex === i ? 0 : -1}
+                className={`relative w-full aspect-square [perspective:600px] rounded focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-ub-cool-grey ${
                   isHighlighted ? 'ring-4 ring-green-600' : ''
                 }`}
                 style={{
@@ -415,18 +679,18 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             style={{ left: `${p.x}%`, top: `${p.y}%` }}
           />
         ))}
-        {timerMode === 'countdown' && time <= 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">
+        {timeUp && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-2xl">
             Time&apos;s up
           </div>
         )}
-        {paused && time > 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white text-2xl">
+        {userPaused && !timeUp && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 text-white text-2xl">
             Paused
           </div>
         )}
       </div>
-      <div className="flex space-x-4 mb-2">
+      <div className="flex flex-wrap justify-center gap-4 mb-3 text-sm">
         <div>Time: {time}s</div>
         <div>Moves: {moves}</div>
         <div>
@@ -435,19 +699,26 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
         {best.moves != null && <div>Best: {best.moves}m/{best.time}s</div>}
         <div data-testid="combo-meter">Combo: {streak}</div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <button onClick={reset} className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+      <div className="flex flex-wrap items-center justify-center gap-2">
+        <button
+          type="button"
+          onClick={reset}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+        >
           Reset
         </button>
         <button
-          onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          type="button"
+          onClick={() => setUserPaused((p) => !p)}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+          disabled={timeUp}
         >
-          {paused ? 'Resume' : 'Pause'}
+          {userPaused ? 'Resume' : 'Pause'}
         </button>
         <button
+          type="button"
           onClick={() => setSound((s) => !s)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
         >
           Sound: {sound ? 'On' : 'Off'}
         </button>
@@ -457,7 +728,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             aria-label="Motion preference"
             value={motionSetting}
             onChange={(e) => setMotionSetting(e.target.value)}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             <option value="system">System</option>
             <option value="reduced">Reduced</option>
@@ -472,11 +743,12 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             id={`seed-${player}`}
             value={seed}
             onChange={(e) => setSeed(e.target.value)}
-            className="px-2 py-1 bg-gray-700 rounded text-white w-24"
+            className="px-2 py-1 bg-gray-700 rounded text-white w-24 focus:outline-none focus:ring-2 focus:ring-green-400"
           />
           <button
+            type="button"
             onClick={() => setSeed(generateSeed())}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             New seed
           </button>
@@ -485,7 +757,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           aria-label="Deck"
           value={deckType}
           onChange={(e) => setDeckType(e.target.value)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-400"
         >
           <option value="emoji">Emoji</option>
           <option value="pattern">Pattern</option>
@@ -497,7 +769,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             aria-label="Pattern theme"
             value={patternTheme}
             onChange={(e) => setPatternTheme(e.target.value)}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             {Object.keys(PATTERN_THEMES).map((t) => (
               <option key={t} value={t}>
@@ -511,7 +783,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
             aria-label="Theme pack"
             value={themeName}
             onChange={(e) => setThemeName(e.target.value)}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             {Object.keys(themePacks).map((t) => (
               <option key={t} value={t}>
@@ -524,7 +796,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           aria-label="Timer mode"
           value={timerMode}
           onChange={(e) => setTimerMode(e.target.value)}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-400"
         >
           <option value="countup">Count Up</option>
           <option value="countdown">Countdown</option>
@@ -533,7 +805,7 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
           aria-label="Grid size"
           value={size}
           onChange={(e) => setSize(Number(e.target.value))}
-          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white"
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-green-400"
         >
           <option value={2}>2x2</option>
           <option value={4}>4x4</option>
@@ -559,56 +831,148 @@ const MemoryBoard = ({ player, themePacks, onWin }) => {
   );
 };
 
+const decideWinner = (results) => {
+  if (!results?.length) return null;
+  const sorted = [...results].sort((a, b) => {
+    if (a.moves !== b.moves) return a.moves - b.moves;
+    return a.time - b.time;
+  });
+  const [best, second] = sorted;
+  if (!second) return { winner: best.player, tie: false };
+  if (best.moves === second.moves && best.time === second.time) {
+    return { winner: null, tie: true };
+  }
+  return { winner: best.player, tie: false };
+};
+
 // Wrapper component which can render one or two MemoryBoard instances
 // and also allows downloading additional theme packs.
 const Memory = () => {
   const [playerCount, setPlayerCount] = useState(1);
   const [themePacks, setThemePacks] = useState(BUILT_IN_THEMES);
-  const [winner, setWinner] = useState(null);
+  const [results, setResults] = useState([]);
+  const [roundId, setRoundId] = useState(0);
+  const [downloadStatus, setDownloadStatus] = useState(null);
 
   const handleDownloadTheme = async () => {
+    if (typeof window === 'undefined') return;
     const url = window.prompt('Enter theme pack URL');
     if (!url) return;
     try {
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data && data.name && Array.isArray(data.assets)) {
-        setThemePacks((p) => ({ ...p, [data.name]: data.assets }));
+      const parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('Invalid URL');
       }
+      const res = await fetch(parsedUrl.toString());
+      if (!res.ok) {
+        throw new Error('Fetch failed');
+      }
+      const data = await res.json();
+      const name = typeof data?.name === 'string' ? data.name.trim() : '';
+      const assets = Array.isArray(data?.assets)
+        ? data.assets.filter((asset) => typeof asset === 'string' && asset.trim())
+        : [];
+      if (!name || assets.length === 0) {
+        throw new Error('Invalid payload');
+      }
+      setThemePacks((prev) => ({ ...prev, [name]: assets }));
+      setDownloadStatus({ type: 'success', message: `Theme "${name}" added.` });
     } catch {
-      // ignore errors
+      setDownloadStatus({
+        type: 'error',
+        message: 'Theme download failed. Check the URL and payload format.',
+      });
     }
   };
 
-  const handleWin = (player) => {
-    if (!winner) setWinner(player);
+  useEffect(() => {
+    if (!downloadStatus) return undefined;
+    const timer = setTimeout(() => setDownloadStatus(null), 4000);
+    return () => clearTimeout(timer);
+  }, [downloadStatus]);
+
+  const handleWin = useCallback((player, payload) => {
+    setResults((prev) => {
+      const updated = prev.filter((entry) => entry.player !== player);
+      return [...updated, { player, ...payload }];
+    });
+  }, []);
+
+  useEffect(() => {
+    setResults([]);
+  }, [playerCount, roundId]);
+
+  const outcome = useMemo(() => {
+    if (results.length < playerCount) return null;
+    return decideWinner(results);
+  }, [results, playerCount]);
+
+  const handleNewRound = () => {
+    setResults([]);
+    setRoundId((prev) => prev + 1);
   };
 
   return (
     <GameLayout gameId="memory">
       <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 select-none">
-        <div className="mb-4 flex space-x-2 items-center">
+        <div className="mb-4 flex flex-wrap gap-2 items-center justify-center">
           <button
+            type="button"
             onClick={() => setPlayerCount((c) => (c === 1 ? 2 : 1))}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             {playerCount === 1 ? 'Two Players' : 'One Player'}
           </button>
           <button
+            type="button"
+            onClick={handleNewRound}
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+          >
+            New Round
+          </button>
+          <button
+            type="button"
             onClick={handleDownloadTheme}
-            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
           >
             Download Theme Pack
           </button>
-          {winner && <div className="ml-4">Winner: Player {winner}</div>}
+          {downloadStatus && (
+            <span
+              className={`text-sm ${
+                downloadStatus.type === 'success' ? 'text-green-300' : 'text-red-300'
+              }`}
+            >
+              {downloadStatus.message}
+            </span>
+          )}
         </div>
-        <div className={`flex ${playerCount === 2 ? 'space-x-4' : ''}`}>
+        <div className="mb-4 text-sm text-center">
+          <p>Keyboard: arrows to move, Enter/Space to flip, P/Escape to pause, R to reset.</p>
+          {playerCount === 2 && (
+            <p className="text-gray-300">
+              Two-player tie-break: fewest moves wins, then fastest time. Complete both boards to
+              declare a winner.
+            </p>
+          )}
+        </div>
+        {playerCount === 2 && outcome && (
+          <div className="mb-4 text-base">
+            {outcome.tie ? 'Result: Tie game.' : `Winner: Player ${outcome.winner}`}
+          </div>
+        )}
+        <div
+          className={`flex w-full gap-6 ${
+            playerCount === 2 ? 'flex-col xl:flex-row items-center xl:items-start' : 'justify-center'
+          }`}
+        >
           {Array.from({ length: playerCount }, (_, i) => (
             <MemoryBoard
-              key={i}
+              key={`${roundId}-${i}`}
               player={i + 1}
               themePacks={themePacks}
               onWin={handleWin}
+              roundId={roundId}
             />
           ))}
         </div>
@@ -618,4 +982,3 @@ const Memory = () => {
 };
 
 export default Memory;
-
