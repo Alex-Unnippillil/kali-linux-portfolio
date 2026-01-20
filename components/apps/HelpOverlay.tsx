@@ -89,7 +89,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   minesweeper: {
     objective: "Clear the board without hitting mines.",
-    controls: "Left-click to reveal, right-click to flag.",
+    controls:
+      "Left-click to reveal, right-click or F to flag. Arrow keys move, Enter or Space reveals, P pauses, N resets.",
   },
   pacman: {
     objective: "Eat all pellets while avoiding ghosts.",
