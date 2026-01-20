@@ -16,6 +16,7 @@ const OBSTACLE_HEIGHT = 40;
 const SPEED = 200; // pixels per second
 const SPAWN_TIME = 1; // seconds between obstacles
 const BOOST_DURATION = 2; // boost length in seconds
+const BRAKE_MULT = 0.45;
 const NEAR_INTERVAL = 0.3;
 const FAR_INTERVAL = 0.5;
 const BG_NEAR_INTERVAL = 0.5;
@@ -43,18 +44,64 @@ export const checkCollision = (car, obstacle) =>
   obstacle.y < car.y + car.height &&
   obstacle.y + obstacle.height > car.y;
 
+const safeStorageGet = (key) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeStorageSet = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Ignore storage errors
+  }
+};
+
+const safeStorageGetJson = (key, fallback) => {
+  const raw = safeStorageGet(key);
+  if (!raw) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+};
+
 const CarRacer = () => {
-  const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const workerRef = useRef(null);
+  const sizeRef = useRef({
+    width: WIDTH,
+    height: HEIGHT,
+    baseWidth: WIDTH,
+    baseHeight: HEIGHT,
+  });
+  const handleResize = React.useCallback((payload) => {
+    sizeRef.current = payload;
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: 'resize',
+        width: payload.width,
+        height: payload.height,
+        baseWidth: payload.baseWidth,
+        baseHeight: payload.baseHeight,
+      });
+    }
+  }, []);
+  const canvasRef = useCanvasResize(WIDTH, HEIGHT, handleResize);
   const [score, setScore] = useState(0);
   const scoreRef = useRef(0);
   const [highScore, setHighScore] = useState(0);
+  const highScoreRef = useRef(0);
   const [paused, setPaused] = useState(true);
   const pausedRef = useRef(true);
   const [showCustomization, setShowCustomization] = useState(true);
   const [skin, setSkin] = useState(() =>
-    typeof window !== 'undefined'
-      ? localStorage.getItem('car_racer_skin') || CAR_SKINS[0].key
-      : CAR_SKINS[0].key,
+    safeStorageGet('car_racer_skin') || CAR_SKINS[0].key,
   );
   const [skinAssets, setSkinAssets] = useState({});
   const [sound, setSound] = useState(true);
@@ -67,7 +114,7 @@ const CarRacer = () => {
   const [boost, setBoost] = useState(false);
   const boostRef = useRef(0);
   const reduceMotionRef = useRef(false);
-  const workerRef = useRef(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const lastRenderRef = useRef({});
   const medalsRef = useRef({});
   const [laneAssist, setLaneAssist] = useState(false);
@@ -83,6 +130,14 @@ const CarRacer = () => {
   const startTimeRef = useRef(0);
   const [speed, setSpeed] = useState(0);
   const speedRef = useRef(0);
+  const lastScoreUpdateRef = useRef(0);
+  const lastScoreDisplayRef = useRef(0);
+  const rafIdRef = useRef(0);
+  const mountedRef = useRef(false);
+  const skinColorRef = useRef(CAR_SKINS[0].color);
+  const brakeRef = useRef(false);
+  const [braking, setBraking] = useState(false);
+  const containerRef = useRef(null);
 
   const currentSkin = CAR_SKINS.find((s) => s.key === skin) || CAR_SKINS[0];
 
@@ -100,40 +155,47 @@ const CarRacer = () => {
     osc.frequency.value = 440;
     osc.start();
     osc.stop(ctx.currentTime + 0.1);
-  }, [soundRef, audioCtxRef]);
+  }, []);
 
   useEffect(() => {
-    const stored = localStorage.getItem('car_racer_high');
-    if (stored) setHighScore(parseInt(stored, 10));
-    try {
-      medalsRef.current = JSON.parse(localStorage.getItem('car_racer_medals') || '{}');
-    } catch {
-      medalsRef.current = {};
+    const stored = safeStorageGet('car_racer_high');
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!Number.isNaN(parsed)) {
+        setHighScore(parsed);
+        highScoreRef.current = parsed;
+      }
     }
-    try {
-      ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
-      ghostBestScoreRef.current = parseInt(
-        localStorage.getItem('car_racer_ghost_score') || '0',
-        10,
-      );
-      if (ghostDataRef.current.length)
-        ghostPosRef.current.lane = ghostDataRef.current[0].lane;
-    } catch {
-      ghostDataRef.current = [];
-      ghostBestScoreRef.current = 0;
-    }
-    if (typeof window !== 'undefined') {
-      const media = window.matchMedia('(prefers-reduced-motion: reduce)');
-      const updateMotion = () => {
-        reduceMotionRef.current = media.matches;
-      };
-      updateMotion();
-      media.addEventListener('change', updateMotion);
-      return () => media.removeEventListener('change', updateMotion);
-    }
+    medalsRef.current = safeStorageGetJson('car_racer_medals', {});
+    ghostDataRef.current = safeStorageGetJson('car_racer_ghost', []);
+    const ghostScore = safeStorageGet('car_racer_ghost_score');
+    ghostBestScoreRef.current = ghostScore ? parseInt(ghostScore, 10) || 0 : 0;
+    if (ghostDataRef.current.length)
+      ghostPosRef.current.lane = ghostDataRef.current[0].lane;
+
+    const media =
+      typeof window !== 'undefined'
+        ? window.matchMedia('(prefers-reduced-motion: reduce)')
+        : null;
+    const updateMotion = () => {
+      const prefersReduced = media?.matches ?? false;
+      reduceMotionRef.current = prefersReduced;
+      setPrefersReducedMotion(prefersReduced);
+      if (prefersReduced) {
+        boostRef.current = 0;
+        setBoost(false);
+      }
+    };
+    updateMotion();
+    media?.addEventListener('change', updateMotion);
+
     // start timer and record initial lane for ghost run
     startTimeRef.current = performance.now();
     ghostRunRef.current = [{ t: 0, lane: car.current.lane }];
+
+    return () => {
+      media?.removeEventListener('change', updateMotion);
+    };
   }, []);
 
   useEffect(() => {
@@ -141,15 +203,22 @@ const CarRacer = () => {
   }, []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('car_racer_skin', skin);
-    }
+    safeStorageSet('car_racer_skin', skin);
   }, [skin]);
+
+  useEffect(() => {
+    skinColorRef.current = currentSkin.color;
+  }, [currentSkin.color]);
+
+  useEffect(() => {
+    highScoreRef.current = highScore;
+  }, [highScore]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || typeof window === 'undefined') return;
 
+    mountedRef.current = true;
     const supportsWorker = typeof Worker === 'function' && hasOffscreenCanvas();
     let worker;
     let ctx;
@@ -158,6 +227,8 @@ const CarRacer = () => {
       workerRef.current = worker;
       const offscreen = canvas.transferControlToOffscreen();
       worker.postMessage({ type: 'init', canvas: offscreen }, [offscreen]);
+      const { width, height, baseWidth, baseHeight } = sizeRef.current;
+      worker.postMessage({ type: 'resize', width, height, baseWidth, baseHeight });
     } else {
       ctx = canvas.getContext('2d');
       if (ctx) ctx.imageSmoothingEnabled = false;
@@ -244,7 +315,7 @@ const CarRacer = () => {
     const postState = () => {
       const state = {
         car: { lane: car.current.lane, y: car.current.y },
-        carColor: currentSkin.color,
+        carColor: skinColorRef.current,
         obstacles: obstaclesRef.current.map((o) => ({ lane: o.lane, y: o.y })),
         roadside: reduceMotionRef.current
           ? null
@@ -287,7 +358,8 @@ const CarRacer = () => {
       last = time;
 
       const speedMult = boostRef.current > 0 ? 2 : 1;
-      const baseSpeed = SPEED * speedMult;
+      const brakeMult = brakeRef.current ? BRAKE_MULT : 1;
+      const baseSpeed = SPEED * speedMult * brakeMult;
       const currentSpeed = !pausedRef.current && runningRef.current ? baseSpeed : 0;
       if (speedRef.current !== currentSpeed) {
         speedRef.current = currentSpeed;
@@ -380,17 +452,29 @@ const CarRacer = () => {
             runningRef.current = false;
             playBeep();
             saveGhostRun(scoreRef.current);
-            if (scoreRef.current > highScore) {
+            if (scoreRef.current > highScoreRef.current) {
+              highScoreRef.current = scoreRef.current;
               setHighScore(scoreRef.current);
-              localStorage.setItem('car_racer_high', `${scoreRef.current}`);
+              safeStorageSet('car_racer_high', `${scoreRef.current}`);
             }
             saveMedal(Math.floor(scoreRef.current));
+            lastScoreDisplayRef.current = Math.floor(scoreRef.current);
+            setScore(lastScoreDisplayRef.current);
             break;
           }
         }
 
-        scoreRef.current += dt * 100 * speedMult;
-        setScore(Math.floor(scoreRef.current));
+        scoreRef.current += dt * 100 * speedMult * brakeMult;
+        const nextScore = Math.floor(scoreRef.current);
+        const now = performance.now();
+        if (
+          nextScore !== lastScoreDisplayRef.current &&
+          now - lastScoreUpdateRef.current > 100
+        ) {
+          lastScoreDisplayRef.current = nextScore;
+          lastScoreUpdateRef.current = now;
+          setScore(nextScore);
+        }
         if (boostRef.current > 0) {
           boostRef.current -= dt;
           if (boostRef.current <= 0) setBoost(false);
@@ -404,19 +488,22 @@ const CarRacer = () => {
         canvas.style.filter = 'none';
       }
       postState();
-      requestAnimationFrame(step);
+      if (!mountedRef.current) return;
+      rafIdRef.current = requestAnimationFrame(step);
     };
-    const req = requestAnimationFrame(step);
+    rafIdRef.current = requestAnimationFrame(step);
     return () => {
-      cancelAnimationFrame(req);
+      mountedRef.current = false;
+      if (rafIdRef.current) cancelAnimationFrame(rafIdRef.current);
       if (worker) worker.terminate();
+      workerRef.current = null;
     };
-  }, [canvasRef, highScore, playBeep, currentSkin.color]);
+  }, [canvasRef, playBeep]);
 
   const saveGhostRun = (score) => {
     if (ghostRunRef.current.length > 1 && score >= ghostBestScoreRef.current) {
-      localStorage.setItem('car_racer_ghost', JSON.stringify(ghostRunRef.current));
-      localStorage.setItem('car_racer_ghost_score', `${score}`);
+      safeStorageSet('car_racer_ghost', JSON.stringify(ghostRunRef.current));
+      safeStorageSet('car_racer_ghost_score', `${score}`);
       ghostDataRef.current = ghostRunRef.current.map((g) => ({ ...g }));
       ghostBestScoreRef.current = score;
     }
@@ -432,7 +519,10 @@ const CarRacer = () => {
     lastLaneChangeRef.current = now;
     const bonus = DRIFT_SCORE * driftComboRef.current;
     scoreRef.current += bonus;
-    setScore(Math.floor(scoreRef.current));
+    const nextScore = Math.floor(scoreRef.current);
+    lastScoreDisplayRef.current = nextScore;
+    lastScoreUpdateRef.current = performance.now();
+    setScore(nextScore);
     setDriftCombo(driftComboRef.current);
     setTimeout(() => setDriftCombo(0), 1000);
   }, [lastLaneChangeRef, driftComboRef, scoreRef, setScore, setDriftCombo]);
@@ -476,65 +566,99 @@ const CarRacer = () => {
     setBoost(true);
   }, []);
 
-  useEffect(() => {
-    const handle = (e) => {
+  const togglePause = React.useCallback(() => {
+    setPaused((p) => {
+      pausedRef.current = !p;
+      return !p;
+    });
+  }, []);
+
+  const startBraking = React.useCallback(() => {
+    brakeRef.current = true;
+    setBraking(true);
+  }, []);
+
+  const stopBraking = React.useCallback(() => {
+    brakeRef.current = false;
+    setBraking(false);
+  }, []);
+
+  const handleKeyDown = React.useCallback(
+    (e) => {
+      if (showCustomization) return;
+      if (
+        e.key === 'ArrowLeft' ||
+        e.key === 'ArrowRight' ||
+        e.key === 'ArrowUp' ||
+        e.key === ' ' ||
+        e.key === 'a' ||
+        e.key === 'd' ||
+        e.key === 'w' ||
+        e.key === 'p' ||
+        e.key === 'P'
+      ) {
+        e.preventDefault();
+      }
       if (e.key === 'ArrowLeft' || e.key === 'a') moveLeft();
       if (e.key === 'ArrowRight' || e.key === 'd') moveRight();
       if (e.key === 'ArrowUp' || e.key === 'w') triggerBoost();
+      if (e.key === ' ') startBraking();
+      if (e.key === 'p' || e.key === 'P') togglePause();
+    },
+    [moveLeft, moveRight, showCustomization, startBraking, togglePause, triggerBoost],
+  );
+
+  const handleKeyUp = React.useCallback(
+    (e) => {
+      if (showCustomization) return;
       if (e.key === ' ') {
-        setPaused((p) => {
-          pausedRef.current = !p;
-          return !p;
-        });
+        e.preventDefault();
+        stopBraking();
       }
-    };
-    window.addEventListener('keydown', handle);
-    return () => window.removeEventListener('keydown', handle);
-  }, [moveLeft, moveRight, triggerBoost]);
+    },
+    [showCustomization, stopBraking],
+  );
+
+  useEffect(() => {
+    if (paused) stopBraking();
+  }, [paused, stopBraking]);
 
   const resetGame = () => {
-    if (scoreRef.current > highScore) {
+    if (scoreRef.current > highScoreRef.current) {
+      highScoreRef.current = scoreRef.current;
       setHighScore(scoreRef.current);
-      localStorage.setItem('car_racer_high', `${scoreRef.current}`);
+      safeStorageSet('car_racer_high', `${scoreRef.current}`);
     }
     saveMedal(Math.floor(scoreRef.current));
     obstaclesRef.current = [];
     car.current.lane = 1;
     scoreRef.current = 0;
     setScore(0);
+    lastScoreDisplayRef.current = 0;
+    lastScoreUpdateRef.current = performance.now();
     runningRef.current = true;
     setPaused(false);
     pausedRef.current = false;
     startTimeRef.current = performance.now();
     ghostRunRef.current = [{ t: 0, lane: car.current.lane }];
     ghostIndexRef.current = 0;
-    try {
-      ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');
-      ghostBestScoreRef.current = parseInt(
-        localStorage.getItem('car_racer_ghost_score') || '0',
-        10,
-      );
-    } catch {
-      ghostDataRef.current = [];
-      ghostBestScoreRef.current = 0;
-    }
+    ghostDataRef.current = safeStorageGetJson('car_racer_ghost', []);
+    const ghostScore = safeStorageGet('car_racer_ghost_score');
+    ghostBestScoreRef.current = ghostScore ? parseInt(ghostScore, 10) || 0 : 0;
     ghostPosRef.current.lane = ghostDataRef.current.length
       ? ghostDataRef.current[0].lane
       : car.current.lane;
     setDriftCombo(0);
+    boostRef.current = 0;
+    setBoost(false);
+    stopBraking();
   };
 
   const openCustomization = () => {
     pausedRef.current = true;
     setPaused(true);
     setShowCustomization(true);
-  };
-
-  const togglePause = () => {
-    setPaused((p) => {
-      pausedRef.current = !p;
-      return !p;
-    });
+    stopBraking();
   };
 
   const toggleSound = () => {
@@ -551,18 +675,31 @@ const CarRacer = () => {
     const medal = getMedal(s);
     if (medal) {
       medalsRef.current[s] = medal;
-      localStorage.setItem('car_racer_medals', JSON.stringify(medalsRef.current));
+      safeStorageSet('car_racer_medals', JSON.stringify(medalsRef.current));
     }
   };
 
   const startRace = () => {
     resetGame();
     setShowCustomization(false);
+    requestAnimationFrame(() => {
+      containerRef.current?.focus();
+    });
   };
 
   return (
-    <div className="h-full w-full relative text-white select-none">
-      <canvas ref={canvasRef} className="h-full w-full bg-black" />
+    <div
+      ref={containerRef}
+      className="h-full w-full relative text-white select-none focus:outline-none focus:ring-2 focus:ring-white"
+      tabIndex={0}
+      role="application"
+      aria-label="Car racer game"
+      onKeyDown={handleKeyDown}
+      onKeyUp={handleKeyUp}
+      onBlur={stopBraking}
+      onPointerDown={() => containerRef.current?.focus()}
+    >
+      <canvas ref={canvasRef} className="h-full w-full bg-black" aria-hidden="true" />
       {showCustomization && (
         <div className="absolute inset-0 bg-black bg-opacity-60 z-20 flex flex-col items-center justify-center space-y-4">
           <div className="flex space-x-4">
@@ -597,6 +734,10 @@ const CarRacer = () => {
         <div>High: {highScore}</div>
         {getMedal(score) && <div data-testid="medal-display">Medal: {getMedal(score)}</div>}
         {boost && !reduceMotionRef.current && <div>Boost!</div>}
+        {braking && <div>Braking</div>}
+        {prefersReducedMotion && (
+          <div className="text-yellow-200">Boost disabled (reduced motion)</div>
+        )}
         {driftCombo > 1 && <div>Drift x{driftCombo}</div>}
       </div>
       <div className="absolute bottom-2 left-2 space-x-2 z-10 text-sm">
@@ -625,10 +766,17 @@ const CarRacer = () => {
           {laneAssist ? 'Lane Assist: on' : 'Lane Assist: off'}
         </button>
         <button
-          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          className={`bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white ${
+            prefersReducedMotion ? 'opacity-50 cursor-not-allowed' : ''
+          }`}
           onClick={triggerBoost}
+          disabled={prefersReducedMotion}
+          aria-disabled={prefersReducedMotion}
+          aria-label={
+            prefersReducedMotion ? 'Boost disabled (reduced motion)' : 'Boost'
+          }
         >
-          Boost
+          {prefersReducedMotion ? 'Boost disabled' : 'Boost'}
         </button>
       </div>
       <div className="absolute bottom-2 right-2 z-10 text-sm w-24">
@@ -647,6 +795,19 @@ const CarRacer = () => {
           onPointerDown={moveLeft}
         >
           ←
+        </button>
+        <button
+          aria-label="Brake"
+          className={`w-12 h-12 bg-gray-700 bg-opacity-70 flex items-center justify-center text-sm rounded ${
+            braking ? 'ring-2 ring-white' : ''
+          }`}
+          onPointerDown={startBraking}
+          onPointerUp={stopBraking}
+          onPointerLeave={stopBraking}
+          onPointerCancel={stopBraking}
+          aria-pressed={braking}
+        >
+          Brake
         </button>
         <button
           aria-label="Steer right"
@@ -672,4 +833,3 @@ const CarRacer = () => {
 };
 
 export default CarRacer;
-

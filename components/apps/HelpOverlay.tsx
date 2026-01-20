@@ -61,7 +61,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "car-racer": {
     objective: "Avoid other cars and stay on the road.",
-    controls: "Arrow keys steer, space for brake if available.",
+    controls:
+      "Arrow keys or A/D steer, W/Up boosts (unless reduced motion), Space brakes, P pauses.",
   },
   checkers: {
     objective: "Capture all opponent pieces or block their moves.",
