@@ -109,7 +109,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   simon: {
     objective: "Repeat the sequence of lights and sounds.",
-    controls: "Click the colored pads in order.",
+    controls:
+      "Click the pads in order, or use 1-4 / Q-W-A-S. N starts a new game and Space/Enter activates focused pads.",
   },
   snake: {
     objective: "Grow by eating food and avoid collisions.",
