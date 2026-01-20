@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
 
-// 0x88 board representation utilities
-const EMPTY = 0;
+const WHITE = 1;
+const BLACK = -1;
+
 const PAWN = 1;
 const KNIGHT = 2;
 const BISHOP = 3;
@@ -11,8 +12,38 @@ const ROOK = 4;
 const QUEEN = 5;
 const KING = 6;
 
-const WHITE = 1;
-const BLACK = -1;
+const SIZE = 512;
+const SQ = SIZE / 8;
+
+const pieceUnicode = {
+  1: "\u2659",
+  2: "\u2658",
+  3: "\u2657",
+  4: "\u2656",
+  5: "\u2655",
+  6: "\u2654",
+  "-1": "\u265F",
+  "-2": "\u265E",
+  "-3": "\u265D",
+  "-4": "\u265C",
+  "-5": "\u265B",
+  "-6": "\u265A",
+};
+
+const spritePaths = {
+  1: "/pieces/wP.svg",
+  2: "/pieces/wN.svg",
+  3: "/pieces/wB.svg",
+  4: "/pieces/wR.svg",
+  5: "/pieces/wQ.svg",
+  6: "/pieces/wK.svg",
+  "-1": "/pieces/bP.svg",
+  "-2": "/pieces/bN.svg",
+  "-3": "/pieces/bB.svg",
+  "-4": "/pieces/bR.svg",
+  "-5": "/pieces/bQ.svg",
+  "-6": "/pieces/bK.svg",
+};
 
 const pieceValues = {
   [PAWN]: 100,
@@ -23,382 +54,138 @@ const pieceValues = {
   [KING]: 20000,
 };
 
-const pieceUnicode = {
-  [PAWN]: { [WHITE]: "♙", [BLACK]: "♟" },
-  [KNIGHT]: { [WHITE]: "♘", [BLACK]: "♞" },
-  [BISHOP]: { [WHITE]: "♗", [BLACK]: "♝" },
-  [ROOK]: { [WHITE]: "♖", [BLACK]: "♜" },
-  [QUEEN]: { [WHITE]: "♕", [BLACK]: "♛" },
-  [KING]: { [WHITE]: "♔", [BLACK]: "♚" },
-};
-
-// sprite images for consistent piece rendering
-const spritePaths = {
-  [PAWN]: { [WHITE]: "/pieces/wP.svg", [BLACK]: "/pieces/bP.svg" },
-  [KNIGHT]: { [WHITE]: "/pieces/wN.svg", [BLACK]: "/pieces/bN.svg" },
-  [BISHOP]: { [WHITE]: "/pieces/wB.svg", [BLACK]: "/pieces/bB.svg" },
-  [ROOK]: { [WHITE]: "/pieces/wR.svg", [BLACK]: "/pieces/bR.svg" },
-  [QUEEN]: { [WHITE]: "/pieces/wQ.svg", [BLACK]: "/pieces/bQ.svg" },
-  [KING]: { [WHITE]: "/pieces/wK.svg", [BLACK]: "/pieces/bK.svg" },
-};
-
-const SIZE = 512; // internal canvas resolution for crisp rendering
-const SQ = SIZE / 8;
-
 const files = "abcdefgh";
 const sqToAlg = (sq) => {
-  const file = sq & 15;
+  const file = sq & 7;
   const rank = (sq >> 4) + 1;
   return files[file] + rank;
 };
+
 const algToSq = (alg) => {
+  if (!alg || alg.length < 2) return null;
   const file = files.indexOf(alg[0]);
-  const rank = parseInt(alg[1], 10) - 1;
+  const rank = Number.parseInt(alg.slice(1), 10) - 1;
+  if (file < 0 || rank < 0 || rank > 7) return null;
   return rank * 16 + file;
 };
 
-// create initial board in 0x88
+const inside = (sq) => (sq & 0x88) === 0;
+
 const createInitialBoard = () => {
   const b = new Int8Array(128);
-  const place = (sq, piece) => {
-    b[sq] = piece;
-  };
-
   const backRank = [ROOK, KNIGHT, BISHOP, QUEEN, KING, BISHOP, KNIGHT, ROOK];
-  for (let i = 0; i < 8; i++) {
-    place(i, backRank[i]);
-    place(16 + i, PAWN);
-    place(96 + i, -PAWN);
-    place(112 + i, -backRank[i]);
+  for (let f = 0; f < 8; f++) {
+    b[f] = WHITE * backRank[f];
+    b[16 + f] = WHITE * PAWN;
+    b[6 * 16 + f] = BLACK * PAWN;
+    b[7 * 16 + f] = BLACK * backRank[f];
   }
   return b;
 };
 
-// move generation helpers
-const knightOffsets = [-33, -31, -18, -14, 14, 18, 31, 33];
-const bishopOffsets = [-17, -15, 15, 17];
-const rookOffsets = [-16, -1, 1, 16];
-const kingOffsets = [-17, -16, -15, -1, 1, 15, 16, 17];
-
-const inside = (sq) => (sq & 0x88) === 0;
-
-const isSquareAttacked = (board, sq, bySide) => {
-  const enemy = bySide;
-
-  // pawns
-  if (enemy === WHITE) {
-    if (inside(sq - 15) && board[sq - 15] === PAWN) return true;
-    if (inside(sq - 17) && board[sq - 17] === PAWN) return true;
-  } else {
-    if (inside(sq + 15) && board[sq + 15] === -PAWN) return true;
-    if (inside(sq + 17) && board[sq + 17] === -PAWN) return true;
-  }
-
-  // knights
-  for (const o of knightOffsets) {
-    const t = sq + o;
-    if (inside(t)) {
-      const p = board[t];
-      if (p === enemy * KNIGHT) return true;
-    }
-  }
-
-  // bishops/queens
-  for (const o of bishopOffsets) {
-    let t = sq + o;
-    while (inside(t)) {
-      const p = board[t];
-      if (p) {
-        if (p === enemy * BISHOP || p === enemy * QUEEN) return true;
-        break;
-      }
-      t += o;
-    }
-  }
-
-  // rooks/queens
-  for (const o of rookOffsets) {
-    let t = sq + o;
-    while (inside(t)) {
-      const p = board[t];
-      if (p) {
-        if (p === enemy * ROOK || p === enemy * QUEEN) return true;
-        break;
-      }
-      t += o;
-    }
-  }
-
-  // king
-  for (const o of kingOffsets) {
-    const t = sq + o;
-    if (inside(t) && board[t] === enemy * KING) return true;
-  }
-
-  return false;
-};
-
-const inCheck = (board, side) => {
-  for (let i = 0; i < 128; i++) {
-    if (!inside(i)) continue;
-    if (board[i] === side * KING) {
-      return isSquareAttacked(board, i, -side);
-    }
-  }
-  return false;
-};
-
-const generateMoves = (board, side) => {
-  const moves = [];
-
-  for (let from = 0; from < 128; from++) {
-    if (!inside(from)) continue;
-    const piece = board[from];
-    if (piece * side <= 0) continue;
-
-    const type = Math.abs(piece);
-
-    if (type === PAWN) {
-      const dir = side === WHITE ? 16 : -16;
-      const startRank = side === WHITE ? 1 : 6;
-      const rank = from >> 4;
-      const one = from + dir;
-      if (inside(one) && board[one] === EMPTY) {
-        moves.push({ from, to: one });
-        const two = from + dir * 2;
-        if (rank === startRank && board[two] === EMPTY)
-          moves.push({ from, to: two });
-      }
-      for (const cap of [dir + 1, dir - 1]) {
-        const to = from + cap;
-        if (inside(to) && board[to] * side < 0) moves.push({ from, to });
-      }
-    } else if (type === KNIGHT) {
-      for (const o of knightOffsets) {
-        const to = from + o;
-        if (!inside(to)) continue;
-        if (board[to] * side <= 0) moves.push({ from, to });
-      }
-    } else if (type === BISHOP || type === ROOK || type === QUEEN) {
-      const dirs = [];
-      if (type === BISHOP || type === QUEEN) dirs.push(...bishopOffsets);
-      if (type === ROOK || type === QUEEN) dirs.push(...rookOffsets);
-      for (const o of dirs) {
-        let to = from + o;
-        while (inside(to)) {
-          const p = board[to];
-          if (p === EMPTY) moves.push({ from, to });
-          else {
-            if (p * side < 0) moves.push({ from, to });
-            break;
-          }
-          to += o;
-        }
-      }
-    } else if (type === KING) {
-      for (const o of kingOffsets) {
-        const to = from + o;
-        if (!inside(to)) continue;
-        if (board[to] * side <= 0) moves.push({ from, to });
-      }
-    }
-  }
-
-  // filter out moves that leave king in check
-  const legal = [];
-  for (const m of moves) {
-    const b = board.slice();
-    b[m.to] = b[m.from];
-    b[m.from] = EMPTY;
-    if (!inCheck(b, side)) legal.push(m);
-  }
-  return legal;
-};
-
-const evaluate = (board) => {
+const evaluateMaterial = (board) => {
   let score = 0;
-  for (let i = 0; i < 128; i++) {
-    if (!inside(i)) continue;
-    const piece = board[i];
-    if (piece > 0) score += pieceValues[piece];
-    else if (piece < 0) score -= pieceValues[-piece];
+  for (let sq = 0; sq < 128; sq++) {
+    if (!inside(sq)) {
+      sq += 7;
+      continue;
+    }
+    const piece = board[sq];
+    if (!piece) continue;
+    const abs = Math.abs(piece);
+    const val = pieceValues[abs] || 0;
+    score += piece > 0 ? val : -val;
   }
   return score;
 };
 
-const minimax = (board, depth, alpha, beta, side) => {
-  if (depth === 0) return evaluate(board);
+const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-  const moves = generateMoves(board, side);
-  if (moves.length === 0) return evaluate(board);
-
-  if (side === WHITE) {
-    let max = -Infinity;
-    for (const m of moves) {
-      const b = board.slice();
-      b[m.to] = b[m.from];
-      b[m.from] = EMPTY;
-      const val = minimax(b, depth - 1, alpha, beta, -side);
-      max = Math.max(max, val);
-      alpha = Math.max(alpha, val);
-      if (beta <= alpha) break;
-    }
-    return max;
-  }
-  let min = Infinity;
-  for (const m of moves) {
-    const b = board.slice();
-    b[m.to] = b[m.from];
-    b[m.from] = EMPTY;
-    const val = minimax(b, depth - 1, alpha, beta, -side);
-    min = Math.min(min, val);
-    beta = Math.min(beta, val);
-    if (beta <= alpha) break;
-  }
-  return min;
+const formatClock = (ms) => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
-const getBestMove = (board, side, depth) => {
-  const moves = generateMoves(board, side);
-  let best = null;
-  let bestVal = side === WHITE ? -Infinity : Infinity;
-
-  for (const m of moves) {
-    const b = board.slice();
-    b[m.to] = b[m.from];
-    b[m.from] = EMPTY;
-    const val = minimax(b, depth - 1, -Infinity, Infinity, -side);
-    if (
-      (side === WHITE && val > bestVal) ||
-      (side === BLACK && val < bestVal)
-    ) {
-      bestVal = val;
-      best = m;
-    }
-  }
-  return best;
-};
-
-const playBeep = () => {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  const osc = ctx.createOscillator();
-  osc.frequency.value = 400;
-  osc.connect(ctx.destination);
-  osc.start();
-  osc.stop(ctx.currentTime + 0.1);
+const safeLoadPgn = (game, pgn) => {
+  if (!game || !pgn) return false;
+  if (typeof game.load_pgn === "function") return game.load_pgn(pgn);
+  if (typeof game.loadPgn === "function") return game.loadPgn(pgn);
+  return false;
 };
 
 const ChessGame = () => {
   const canvasRef = useRef(null);
-  const boardRef = useRef(createInitialBoard());
+  const boardWrapperRef = useRef(null);
+  const pgnInputRef = useRef(null);
+
   const chessRef = useRef(new Chess());
+  const boardRef = useRef(createInitialBoard());
   const sideRef = useRef(WHITE);
-  const historyRef = useRef([boardRef.current.slice()]);
+  const playerSideRef = useRef(WHITE);
+  const aiDepthRef = useRef(2);
+  const pausedRef = useRef(false);
+  const gameOverRef = useRef(false);
+
+  const aiTimeoutRef = useRef(null);
+  const replayTimeoutRef = useRef(null);
+  const replayTokenRef = useRef(0);
+
+  const audioCtxRef = useRef(null);
+  const spritesRef = useRef({});
+
+  const trailsRef = useRef([]);
+  const particlesRef = useRef([]);
+  const animationsRef = useRef([]);
   const lastMoveRef = useRef(null);
+
+  const clockRef = useRef({
+    white: 0,
+    black: 0,
+    active: WHITE,
+    lastTick: typeof performance !== "undefined" ? performance.now() : Date.now(),
+    resumeTarget: WHITE,
+  });
+
   const [selected, setSelected] = useState(null);
   const [cursor, setCursor] = useState(0);
   const [moves, setMoves] = useState([]);
   const [status, setStatus] = useState("Your move");
   const [paused, setPaused] = useState(false);
-  const pausedRef = useRef(false);
+  const [gameOver, setGameOver] = useState(false);
   const [sound, setSound] = useState(true);
-  const [sanLog, setSanLog] = useState([]);
-  const particlesRef = useRef([]);
   const [showHints, setShowHints] = useState(false);
   const [mateSquares, setMateSquares] = useState([]);
-  const [elo, setElo] = useState(() =>
-    typeof window === "undefined"
-      ? 1200
-      : Number(localStorage.getItem("chessElo") || 1200),
-  );
-  const animRef = useRef(null);
-  const trailsRef = useRef([]);
-  const animationsRef = useRef([]);
-  const [evalScore, setEvalScore] = useState(0);
-  const [displayEval, setDisplayEval] = useState(0);
-  const reduceMotionRef = useRef(false);
-  const spritesRef = useRef({});
-  const [spritesReady, setSpritesReady] = useState(false);
-  const [pieceSet, setPieceSet] = useState("sprites");
-  const [analysisMoves, setAnalysisMoves] = useState([]);
-  const [analysisDepth, setAnalysisDepth] = useState(2);
-  const pgnInputRef = useRef(null);
-  const boardWrapperRef = useRef(null);
-  const [boardPixelSize, setBoardPixelSize] = useState(SIZE);
-  const [hoverSquare, setHoverSquare] = useState(null);
   const [showArrows, setShowArrows] = useState(true);
   const [orientation, setOrientation] = useState("white");
-  const clockRef = useRef({
-    white: 0,
-    black: 0,
-    active: WHITE,
-    lastTick: typeof performance !== "undefined" ? performance.now() : 0,
-    resumeTarget: WHITE,
-  });
+  const [pieceSet, setPieceSet] = useState("sprites");
+  const [spritesReady, setSpritesReady] = useState(false);
+  const [sanLog, setSanLog] = useState([]);
+  const [analysisMoves, setAnalysisMoves] = useState([]);
+  const [analysisDepth, setAnalysisDepth] = useState(2);
+  const [aiDepth, setAiDepth] = useState(2);
+  const [playerSide, setPlayerSide] = useState(WHITE);
+  const [boardPixelSize, setBoardPixelSize] = useState(SIZE);
+  const [hoverSquare, setHoverSquare] = useState(null);
+  const [turnLabel, setTurnLabel] = useState("White");
   const [clockDisplay, setClockDisplay] = useState({ white: 0, black: 0 });
-  const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
-  const formatClock = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60)
-      .toString()
-      .padStart(2, "0");
-    const seconds = (totalSeconds % 60).toString().padStart(2, "0");
-    return `${minutes}:${seconds}`;
-  };
-
-  const advanceClock = () => {
-    if (clockRef.current.active === null) {
-      clockRef.current.lastTick =
-        typeof performance !== "undefined" ? performance.now() : 0;
-      return;
-    }
-    const now =
-      typeof performance !== "undefined" ? performance.now() : Date.now();
-    const delta = now - clockRef.current.lastTick;
-    if (delta <= 0) return;
-    const key = clockRef.current.active === WHITE ? "white" : "black";
-    clockRef.current[key] += delta;
-    clockRef.current.lastTick = now;
-    setClockDisplay({
-      white: clockRef.current.white,
-      black: clockRef.current.black,
-    });
-  };
-
-  const startClockForSide = (side) => {
-    clockRef.current.active = side;
-    clockRef.current.resumeTarget = side;
-    clockRef.current.lastTick =
-      typeof performance !== "undefined" ? performance.now() : Date.now();
-  };
+  const [evalScore, setEvalScore] = useState(0);
+  const [displayEval, setDisplayEval] = useState(0);
+  const [reduceMotion, setReduceMotion] = useState(false);
+  const [elo, setElo] = useState(() =>
+    typeof window !== "undefined"
+      ? Number(localStorage.getItem("chessElo") || 1200)
+      : 1200,
+  );
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined") return undefined;
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    reduceMotionRef.current = mq.matches;
-    const handler = () => (reduceMotionRef.current = mq.matches);
+    setReduceMotion(mq.matches);
+    const handler = () => setReduceMotion(mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (typeof ResizeObserver === "undefined") return;
-    const el = boardWrapperRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width;
-        setBoardPixelSize(Math.max(240, Math.min(width, 520)));
-      }
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  useEffect(() => {
-    startClockForSide(WHITE);
-    setClockDisplay({ white: 0, black: 0 });
   }, []);
 
   useEffect(() => {
@@ -406,43 +193,112 @@ const ChessGame = () => {
   }, [paused]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (!paused) {
-        advanceClock();
-      }
-    }, 250);
-    return () => clearInterval(interval);
-  }, [paused]);
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
 
   useEffect(() => {
-    const imgs = {};
-    let loaded = 0;
-    const total = 12;
-    for (const type of [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING]) {
-      imgs[type] = {};
-      for (const side of [WHITE, BLACK]) {
-        const img = new Image();
-        img.src = spritePaths[type][side];
-        img.onload = () => {
-          loaded++;
-          if (loaded === total) setSpritesReady(true);
-        };
-        imgs[type][side] = img;
-      }
+    playerSideRef.current = playerSide;
+  }, [playerSide]);
+
+  useEffect(() => {
+    aiDepthRef.current = aiDepth;
+  }, [aiDepth]);
+
+  const stopAi = useCallback(() => {
+    if (aiTimeoutRef.current) {
+      clearTimeout(aiTimeoutRef.current);
+      aiTimeoutRef.current = null;
     }
-    spritesRef.current = imgs;
   }, []);
 
-  const updateEval = () => setEvalScore(evaluate(boardRef.current));
+  const cancelReplay = useCallback(() => {
+    replayTokenRef.current += 1;
+    if (replayTimeoutRef.current) {
+      clearTimeout(replayTimeoutRef.current);
+      replayTimeoutRef.current = null;
+    }
+  }, []);
+
+  const playBeep = useCallback(() => {
+    if (!sound || typeof window === "undefined") return;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.value = 0.03;
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.06);
+    } catch {
+      // ignore audio errors
+    }
+  }, [sound]);
+
+  const syncBoardFromChess = useCallback(() => {
+    const game = chessRef.current;
+    const grid = game.board();
+    const map = { p: PAWN, n: KNIGHT, b: BISHOP, r: ROOK, q: QUEEN, k: KING };
+    const next = new Int8Array(128);
+
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = grid[row][col];
+        if (!piece) continue;
+        const type = map[piece.type];
+        const sign = piece.color === "w" ? WHITE : BLACK;
+        const rank = 7 - row;
+        next[rank * 16 + col] = sign * type;
+      }
+    }
+
+    boardRef.current = next;
+    sideRef.current = game.turn() === "w" ? WHITE : BLACK;
+    setTurnLabel(game.turn() === "w" ? "White" : "Black");
+  }, []);
+
+  const updateEval = useCallback(() => {
+    setEvalScore(evaluateMaterial(boardRef.current));
+  }, []);
+
+  const updateMateHints = useCallback(() => {
+    if (!showHints) {
+      setMateSquares([]);
+      return;
+    }
+    const game = chessRef.current;
+    if (game.isGameOver()) {
+      setMateSquares([]);
+      return;
+    }
+    const movesVerbose = game.moves({ verbose: true });
+    const mates = [];
+    for (const move of movesVerbose) {
+      game.move(move);
+      const isMate = game.isCheckmate();
+      game.undo();
+      if (isMate) {
+        const toSq = algToSq(move.to);
+        if (toSq !== null) mates.push(toSq);
+      }
+    }
+    setMateSquares(mates);
+  }, [showHints]);
 
   useEffect(() => {
     updateEval();
-  }, []);
+  }, [updateEval]);
 
   useEffect(() => {
-    if (reduceMotionRef.current) {
+    if (reduceMotion) {
       setDisplayEval(evalScore);
-      return;
+      return undefined;
     }
     let frame;
     const animate = () => {
@@ -455,66 +311,518 @@ const ChessGame = () => {
     };
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [evalScore]);
+  }, [evalScore, reduceMotion]);
 
   useEffect(() => {
+    // Load piece sprites
+    const imgs = {};
+    let loaded = 0;
+    const total = 12;
+    const pieces = [PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING];
+
+    for (const type of pieces) {
+      for (const side of [WHITE, BLACK]) {
+        const key = String(side * type);
+        const img = new Image();
+        img.onload = img.onerror = () => {
+          loaded += 1;
+          if (loaded >= total) setSpritesReady(true);
+        };
+        img.src = spritePaths[key];
+        imgs[key] = img;
+      }
+    }
+
+    spritesRef.current = imgs;
+  }, []);
+
+  useEffect(() => {
+    if (!boardWrapperRef.current || typeof ResizeObserver === "undefined")
+      return undefined;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        const height = entry.contentRect.height;
+        const size = Math.floor(Math.min(width, height));
+        if (size > 0) setBoardPixelSize(clamp(size, 260, SIZE));
+      }
+    });
+    ro.observe(boardWrapperRef.current);
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!pausedRef.current && !gameOverRef.current) advanceClock();
+    }, 250);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    syncBoardFromChess();
+    updateEval();
     updateMateHints();
-  }, [updateMateHints]);
+  }, [syncBoardFromChess, updateEval, updateMateHints]);
+
+  useEffect(() => {
+    return () => {
+      stopAi();
+      cancelReplay();
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+        audioCtxRef.current = null;
+      }
+    };
+  }, [cancelReplay, stopAi]);
+
+  const advanceClock = () => {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const clock = clockRef.current;
+
+    if (clock.active === null) {
+      clock.lastTick = now;
+      return;
+    }
+
+    const delta = Math.max(0, now - clock.lastTick);
+    clock.lastTick = now;
+
+    if (clock.active === WHITE) clock.white += delta;
+    else clock.black += delta;
+
+    setClockDisplay({ white: clock.white, black: clock.black });
+  };
+
+  const startClockForSide = (side) => {
+    const clock = clockRef.current;
+    clock.active = side;
+    clock.lastTick = typeof performance !== "undefined" ? performance.now() : Date.now();
+    clock.resumeTarget = side;
+  };
 
   const addTrail = (from, to) => {
-    const fx = (from & 15) * SQ + SQ / 2;
+    const fx = (from & 7) * SQ + SQ / 2;
     const fy = (7 - (from >> 4)) * SQ + SQ / 2;
-    const tx = (to & 15) * SQ + SQ / 2;
+    const tx = (to & 7) * SQ + SQ / 2;
     const ty = (7 - (to >> 4)) * SQ + SQ / 2;
     trailsRef.current.push({ fx, fy, tx, ty, t: performance.now() });
   };
 
-  const startMoveAnimation = (piece, from, to) => {
-    if (!piece || reduceMotionRef.current) return;
-    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
-    animationsRef.current.push({
-      piece,
-      from,
-      to,
-      start: now,
-      duration: 260,
-    });
-  };
-
   const addCaptureSparks = (sq) => {
-    const x = (sq & 15) * SQ + SQ / 2;
-    const y = (7 - (sq >> 4)) * SQ + SQ / 2;
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      const speed = 60 + Math.random() * 40;
+    if (reduceMotion) return;
+    const cx = (sq & 7) * SQ + SQ / 2;
+    const cy = (7 - (sq >> 4)) * SQ + SQ / 2;
+    for (let i = 0; i < 18; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const spd = 2 + Math.random() * 3;
       particlesRef.current.push({
-        x,
-        y,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
+        x: cx,
+        y: cy,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        a: 1,
+        r: 1 + Math.random() * 2,
+        c: Math.random() < 0.5 ? "rgba(250, 204, 21," : "rgba(59, 130, 246,",
         t: performance.now(),
       });
     }
   };
 
-  const updateMateHints = React.useCallback(() => {
-    if (!showHints) {
-      setMateSquares([]);
+  const startMoveAnimation = (piece, from, to) => {
+    if (reduceMotion || !piece) return;
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    animationsRef.current.push({ piece, from, to, start: now, duration: 260 });
+  };
+
+  const endGame = (result) => {
+    const player = elo;
+    const opp = 900 + aiDepthRef.current * 200;
+    const expected = 1 / (1 + 10 ** ((opp - player) / 400));
+    const score = result === "win" ? 1 : result === "draw" ? 0.5 : 0;
+    const k = 24;
+    const newElo = Math.round(player + k * (score - expected));
+    setElo(newElo);
+    try {
+      localStorage.setItem("chessElo", String(newElo));
+    } catch {}
+  };
+
+  const checkGameState = (defaultStatus) => {
+    const game = chessRef.current;
+
+    if (game.isCheckmate()) {
+      const loser = game.turn() === "w" ? WHITE : BLACK;
+      const winner = -loser;
+      const youWin = winner === playerSideRef.current;
+
+      setStatus(youWin ? "Checkmate! You win." : "Checkmate! You lose.");
+      setGameOver(true);
+      pausedRef.current = true;
+      setPaused(true);
+      advanceClock();
+      clockRef.current.active = null;
+      endGame(youWin ? "win" : "loss");
+      return true;
+    }
+
+    if (game.isDraw()) {
+      setStatus("Draw.");
+      setGameOver(true);
+      pausedRef.current = true;
+      setPaused(true);
+      advanceClock();
+      clockRef.current.active = null;
+      endGame("draw");
+      return true;
+    }
+
+    if (game.isCheck()) {
+      setStatus(
+        sideRef.current === playerSideRef.current
+          ? "Check! Your move."
+          : "Check! AI thinking...",
+      );
+      return false;
+    }
+
+    setStatus(defaultStatus || "Your move");
+    return false;
+  };
+
+  const findVerboseMove = (fromAlg, toAlg) => {
+    const list = chessRef.current.moves({ verbose: true });
+    const candidates = list.filter((m) => m.from === fromAlg && m.to === toAlg);
+    if (!candidates.length) return null;
+    const queen = candidates.find((m) => m.promotion === "q");
+    return queen || candidates[0];
+  };
+
+  const applyMove = (move, opts = {}) => {
+    const {
+      announce = true,
+      triggerAi = true,
+      fromSqOverride = null,
+      toSqOverride = null,
+    } = opts;
+    if (!move) return false;
+
+    const fromSq = fromSqOverride ?? algToSq(move.from);
+    const toSq = toSqOverride ?? algToSq(move.to);
+    if (fromSq === null || toSq === null) return false;
+
+    const movingPiece = boardRef.current[fromSq];
+    const flags = typeof move.flags === "string" ? move.flags : "";
+    const isCastle = flags.includes("k") || flags.includes("q");
+    const isEnPassant = flags.includes("e");
+    const isCapture = Boolean(move.captured) || isEnPassant;
+    const captureSq = isEnPassant
+      ? toSq + (sideRef.current === WHITE ? -16 : 16)
+      : toSq;
+
+    startMoveAnimation(movingPiece, fromSq, toSq);
+    addTrail(fromSq, toSq);
+    if (isCapture) addCaptureSparks(captureSq);
+
+    if (isCastle) {
+      const rank = fromSq >> 4;
+      const rookFrom = flags.includes("k") ? rank * 16 + 7 : rank * 16;
+      const rookTo = flags.includes("k") ? rank * 16 + 5 : rank * 16 + 3;
+      const rookPiece = boardRef.current[rookFrom];
+      if (rookPiece) startMoveAnimation(rookPiece, rookFrom, rookTo);
+      addTrail(rookFrom, rookTo);
+    }
+
+    const res = chessRef.current.move(move);
+    if (!res) return false;
+
+    syncBoardFromChess();
+
+    if (announce) {
+      setSanLog((l) => [...l, res.san]);
+      playBeep();
+    }
+
+    lastMoveRef.current = { from: fromSq, to: toSq };
+    setSelected(null);
+    setMoves([]);
+
+    advanceClock();
+    if (!pausedRef.current) startClockForSide(sideRef.current);
+
+    updateEval();
+    updateMateHints();
+
+    const ended = checkGameState(
+      sideRef.current === playerSideRef.current ? "Your move" : "AI thinking...",
+    );
+    if (ended) {
+      stopAi();
+      return true;
+    }
+
+    if (triggerAi && !pausedRef.current && sideRef.current !== playerSideRef.current) {
+      stopAi();
+      aiTimeoutRef.current = setTimeout(() => aiMove(), reduceMotion ? 100 : 260);
+    }
+
+    return true;
+  };
+
+  const aiMove = () => {
+    stopAi();
+    if (pausedRef.current || gameOverRef.current) return;
+    if (sideRef.current === playerSideRef.current) return;
+
+    let chosen = null;
+    try {
+      const suggestions = suggestMoves(
+        chessRef.current.fen(),
+        aiDepthRef.current,
+        1,
+      );
+      if (suggestions?.length) {
+        chosen = findVerboseMove(suggestions[0].from, suggestions[0].to);
+      }
+    } catch {}
+
+    if (!chosen) {
+      const list = chessRef.current.moves({ verbose: true });
+      chosen = list[Math.floor(Math.random() * list.length)];
+    }
+
+    applyMove(chosen, { announce: true, triggerAi: false });
+  };
+
+  const resetGame = ({ autoplayAi } = { autoplayAi: true }) => {
+    stopAi();
+    cancelReplay();
+
+    chessRef.current.reset();
+    syncBoardFromChess();
+
+    setSelected(null);
+    setCursor(0);
+    setMoves([]);
+    trailsRef.current = [];
+    particlesRef.current = [];
+    animationsRef.current = [];
+    setHoverSquare(null);
+
+    setSanLog([]);
+    setAnalysisMoves([]);
+    setGameOver(false);
+    gameOverRef.current = false;
+    lastMoveRef.current = null;
+
+    clockRef.current = {
+      white: 0,
+      black: 0,
+      active: WHITE,
+      lastTick: typeof performance !== "undefined" ? performance.now() : Date.now(),
+      resumeTarget: WHITE,
+    };
+
+    setClockDisplay({ white: 0, black: 0 });
+
+    pausedRef.current = false;
+    setPaused(false);
+    startClockForSide(WHITE);
+
+    updateEval();
+    updateMateHints();
+
+    if (autoplayAi && playerSideRef.current === BLACK) {
+      setStatus("AI thinking...");
+      aiTimeoutRef.current = setTimeout(() => aiMove(), reduceMotion ? 100 : 260);
+    } else {
+      setStatus("Your move");
+    }
+  };
+
+  useEffect(() => {
+    setOrientation(playerSide === WHITE ? "white" : "black");
+    resetGame({ autoplayAi: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playerSide]);
+
+  const undoMove = () => {
+    stopAi();
+    cancelReplay();
+    if (chessRef.current.history().length === 0) return;
+
+    chessRef.current.undo();
+    syncBoardFromChess();
+    setSanLog((l) => l.slice(0, -1));
+
+    if (
+      chessRef.current.turn() === "b" &&
+      chessRef.current.history().length > 0
+    ) {
+      chessRef.current.undo();
+      syncBoardFromChess();
+      setSanLog((l) => l.slice(0, -1));
+    }
+
+    setSelected(null);
+    setMoves([]);
+    trailsRef.current = [];
+    particlesRef.current = [];
+    animationsRef.current = [];
+    lastMoveRef.current = null;
+
+    updateEval();
+    updateMateHints();
+
+    clockRef.current.white = 0;
+    clockRef.current.black = 0;
+    clockRef.current.lastTick =
+      typeof performance !== "undefined" ? performance.now() : Date.now();
+    clockRef.current.resumeTarget = sideRef.current;
+
+    setClockDisplay({ white: clockRef.current.white, black: clockRef.current.black });
+
+    if (sideRef.current !== playerSideRef.current) {
+      pausedRef.current = true;
+      setPaused(true);
+      clockRef.current.active = null;
+      setStatus("Undo complete. Resume when ready — AI to move.");
+    } else {
+      pausedRef.current = false;
+      setPaused(false);
+      startClockForSide(sideRef.current);
+      setStatus("Your move");
+    }
+  };
+
+  const togglePause = () => {
+    setPaused((prev) => {
+      if (!prev) {
+        stopAi();
+        advanceClock();
+        clockRef.current.resumeTarget =
+          clockRef.current.active ?? sideRef.current;
+        clockRef.current.active = null;
+        setStatus("Paused.");
+      } else {
+        const resumeSide = clockRef.current.resumeTarget ?? sideRef.current;
+        startClockForSide(resumeSide);
+        setStatus(resumeSide === playerSideRef.current ? "Your move" : "AI thinking...");
+        if (resumeSide !== playerSideRef.current && !gameOverRef.current) {
+          aiTimeoutRef.current = setTimeout(() => aiMove(), reduceMotion ? 120 : 260);
+        }
+      }
+      return !prev;
+    });
+  };
+
+  const toggleSound = () => setSound((s) => !s);
+  const toggleHints = () => setShowHints((s) => !s);
+  const togglePieces = () =>
+    setPieceSet((p) => (p === "sprites" ? "unicode" : "sprites"));
+  const toggleArrows = () => setShowArrows((s) => !s);
+  const flipBoard = () => {
+    setHoverSquare(null);
+    setOrientation((o) => (o === "white" ? "black" : "white"));
+  };
+
+  const copyMoves = () => {
+    navigator.clipboard?.writeText(chessRef.current.pgn());
+  };
+
+  const loadPGNString = (pgn) => {
+    if (!pgn) return;
+    resetGame({ autoplayAi: false });
+
+    if (!safeLoadPgn(chessRef.current, pgn)) {
+      alert("Invalid PGN");
+      resetGame({ autoplayAi: true });
       return;
     }
-    const game = chessRef.current;
-    const moves = game.moves({ verbose: true });
-    const mates = [];
-    for (const m of moves) {
-      const clone = new Chess(game.fen());
-      clone.move(m);
-      if (clone.isCheckmate()) mates.push(algToSq(m.to));
-    }
-    setMateSquares(mates);
-  }, [showHints]);
+
+    const movesList = chessRef.current.history({ verbose: true });
+    chessRef.current.reset();
+    syncBoardFromChess();
+    setSanLog([]);
+
+    pausedRef.current = true;
+    setPaused(true);
+    clockRef.current.active = null;
+    clockRef.current.white = 0;
+    clockRef.current.black = 0;
+    clockRef.current.resumeTarget = WHITE;
+    setClockDisplay({ white: 0, black: 0 });
+    setStatus("Replaying PGN...");
+
+    const token = replayTokenRef.current + 1;
+    replayTokenRef.current = token;
+
+    let i = 0;
+    const playNext = () => {
+      if (replayTokenRef.current !== token) return;
+      if (i >= movesList.length) {
+        pausedRef.current = false;
+        setPaused(false);
+        startClockForSide(sideRef.current);
+        checkGameState("Your move");
+        return;
+      }
+      const m = movesList[i++];
+      const res = chessRef.current.move(m);
+      if (!res) return;
+
+      const from = algToSq(m.from);
+      const to = algToSq(m.to);
+      if (from === null || to === null) return;
+
+      const movingPiece = boardRef.current[from];
+      const flags = typeof m.flags === "string" ? m.flags : "";
+      const isEnPassant = flags.includes("e");
+      const isCastle = flags.includes("k") || flags.includes("q");
+      const captureSq = isEnPassant
+        ? to + (sideRef.current === WHITE ? -16 : 16)
+        : to;
+      startMoveAnimation(movingPiece, from, to);
+      addTrail(from, to);
+      if (m.captured || isEnPassant) addCaptureSparks(captureSq);
+
+      if (isCastle) {
+        const rank = from >> 4;
+        const rookFrom = flags.includes("k") ? rank * 16 + 7 : rank * 16;
+        const rookTo = flags.includes("k") ? rank * 16 + 5 : rank * 16 + 3;
+        const rookPiece = boardRef.current[rookFrom];
+        if (rookPiece) startMoveAnimation(rookPiece, rookFrom, rookTo);
+        addTrail(rookFrom, rookTo);
+      }
+
+      syncBoardFromChess();
+      lastMoveRef.current = { from, to };
+      setSanLog((l) => [...l, res.san]);
+      updateEval();
+      updateMateHints();
+      playBeep();
+      checkGameState(undefined);
+
+      replayTimeoutRef.current = setTimeout(playNext, 500);
+    };
+
+    playNext();
+  };
+
+  const handlePGNImport = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => loadPGNString(reader.result);
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const loadPGN = () => {
+    pgnInputRef.current?.click();
+  };
 
   const runAnalysis = () => {
-    const suggestions = suggestMoves(chessRef.current.fen(), analysisDepth);
+    const suggestions = suggestMoves(chessRef.current.fen(), analysisDepth, 5);
     setAnalysisMoves(suggestions);
   };
 
@@ -524,25 +832,19 @@ const ChessGame = () => {
     const ctx = canvas.getContext("2d");
     const render = () => {
       ctx.clearRect(0, 0, SIZE, SIZE);
-      const now =
-        typeof performance !== "undefined" ? performance.now() : Date.now();
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+
       const activeAnimations = [];
       animationsRef.current = animationsRef.current.filter((anim) => {
         const duration = anim.duration || 260;
         const elapsed = now - anim.start;
-        const progress = reduceMotionRef.current
-          ? 1
-          : Math.min(1, elapsed / duration);
-        if (progress >= 1) {
-          return false;
-        }
+        const progress = reduceMotion ? 1 : Math.min(1, elapsed / duration);
+        if (progress >= 1) return false;
         anim.progress = progress;
         activeAnimations.push(anim);
         return true;
       });
-      const suppressedSquares = new Set(
-        activeAnimations.map((anim) => anim.to),
-      );
+      const suppressedSquares = new Set(activeAnimations.map((anim) => anim.to));
 
       for (let r = 0; r < 8; r++) {
         for (let f = 0; f < 8; f++) {
@@ -583,7 +885,7 @@ const ChessGame = () => {
             ctx.lineWidth = 2.5;
             ctx.strokeRect(x + 2, y + 2, SQ - 4, SQ - 4);
           } else {
-            const move = moves.find((m) => m.to === sq);
+            const move = moves.find((m) => m.toSq === sq);
             if (move) {
               ctx.strokeStyle = "rgba(102, 204, 255, 0.7)";
               ctx.lineWidth = 2;
@@ -624,8 +926,7 @@ const ChessGame = () => {
 
           const piece = boardRef.current[sq];
           if (piece && !suppressedSquares.has(sq)) {
-            const img =
-              spritesRef.current[Math.abs(piece)]?.[piece > 0 ? WHITE : BLACK];
+            const img = spritesRef.current[String(piece)];
             if (pieceSet === "sprites" && img && spritesReady) {
               ctx.save();
               ctx.shadowColor = "rgba(0,0,0,0.35)";
@@ -637,11 +938,7 @@ const ChessGame = () => {
               ctx.textAlign = "center";
               ctx.textBaseline = "middle";
               ctx.fillStyle = piece > 0 ? "#111" : "#f8f8f8";
-              ctx.fillText(
-                pieceUnicode[Math.abs(piece)][piece > 0 ? WHITE : BLACK],
-                x + SQ / 2,
-                y + SQ / 2,
-              );
+              ctx.fillText(pieceUnicode[String(piece)], x + SQ / 2, y + SQ / 2);
             }
           }
         }
@@ -651,7 +948,7 @@ const ChessGame = () => {
         trailsRef.current = trailsRef.current.filter((t) => now - t.t < 1000);
         for (const t of trailsRef.current) {
           const age = (now - t.t) / 1000;
-          const alpha = reduceMotionRef.current ? 0.5 : Math.max(0, 1 - age);
+          const alpha = reduceMotion ? 0.5 : Math.max(0, 1 - age);
           ctx.strokeStyle = `rgba(255, 200, 80, ${alpha})`;
           ctx.lineWidth = 4;
           ctx.beginPath();
@@ -678,26 +975,24 @@ const ChessGame = () => {
         trailsRef.current = [];
       }
 
-      particlesRef.current = particlesRef.current.filter(
-        (p) => now - p.t < 500,
-      );
+      particlesRef.current = particlesRef.current.filter((p) => now - p.t < 500);
       for (const p of particlesRef.current) {
         const age = (now - p.t) / 1000;
         const px = p.x + p.vx * age;
         const py = p.y + p.vy * age;
-        const alpha = reduceMotionRef.current ? 0.7 : Math.max(0, 1 - age * 2);
-        ctx.fillStyle = `rgba(255,215,0,${alpha})`;
+        const alpha = reduceMotion ? 0.7 : Math.max(0, 1 - age * 2);
+        ctx.fillStyle = `${p.c}${alpha})`;
         ctx.beginPath();
-        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.arc(px, py, p.r, 0, Math.PI * 2);
         ctx.fill();
       }
 
       for (const anim of activeAnimations) {
         const progress = anim.progress ?? 0;
         const eased = 1 - Math.pow(1 - progress, 3);
-        const fromFile = anim.from & 15;
+        const fromFile = anim.from & 7;
         const fromRank = anim.from >> 4;
-        const toFile = anim.to & 15;
+        const toFile = anim.to & 7;
         const toRank = anim.to >> 4;
         const fromX = fromFile * SQ;
         const fromY = (7 - fromRank) * SQ;
@@ -705,10 +1000,7 @@ const ChessGame = () => {
         const toY = (7 - toRank) * SQ;
         const drawX = fromX + (toX - fromX) * eased;
         const drawY = fromY + (toY - fromY) * eased;
-        const img =
-          spritesRef.current[Math.abs(anim.piece)]?.[
-            anim.piece > 0 ? WHITE : BLACK
-          ];
+        const img = spritesRef.current[String(anim.piece)];
         if (pieceSet === "sprites" && img && spritesReady) {
           ctx.save();
           ctx.shadowColor = "rgba(0,0,0,0.35)";
@@ -721,147 +1013,29 @@ const ChessGame = () => {
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = anim.piece > 0 ? "#111" : "#f8f8f8";
-          ctx.fillText(
-            pieceUnicode[Math.abs(anim.piece)][
-              anim.piece > 0 ? WHITE : BLACK
-            ],
-            drawX + SQ / 2,
-            drawY + SQ / 2,
-          );
+          ctx.fillText(pieceUnicode[String(anim.piece)], drawX + SQ / 2, drawY + SQ / 2);
         }
       }
 
-      animRef.current = requestAnimationFrame(render);
+      animationsRef.current = activeAnimations;
+      requestAnimationFrame(render);
     };
-    animRef.current = requestAnimationFrame(render);
-    return () => cancelAnimationFrame(animRef.current);
-  }, [
-    selected,
-    moves,
-    mateSquares,
-    cursor,
-    spritesReady,
-    pieceSet,
-    hoverSquare,
-    showArrows,
-  ]);
-
-  const endGame = (result) => {
-    // result: 1 win, 0 draw, -1 loss
-    const score = result === 1 ? 1 : result === 0 ? 0.5 : 0;
-    const opp = 1200;
-    const expected = 1 / (1 + 10 ** ((opp - elo) / 400));
-    const k = 32;
-    const newElo = Math.round(elo + k * (score - expected));
-    setElo(newElo);
-    if (typeof window !== "undefined")
-      localStorage.setItem("chessElo", String(newElo));
-  };
-
-  const checkGameState = (defaultStatus, skipElo = false) => {
-    const game = chessRef.current;
-    if (game.isCheckmate()) {
-      if (game.turn() === "w") {
-        setStatus("Checkmate! You lose");
-        if (!skipElo) endGame(-1);
-      } else {
-        setStatus("Checkmate! You win");
-        if (!skipElo) endGame(1);
-      }
-      return true;
-    }
-    if (game.isDraw()) {
-      setStatus("Draw");
-      if (!skipElo) endGame(0);
-      return true;
-    }
-    if (game.isCheck()) {
-      setStatus("Check!");
-    } else if (defaultStatus) {
-      setStatus(defaultStatus);
-    }
-    return false;
-  };
-
-  const aiMove = () => {
-    if (pausedRef.current) return;
-    const move = getBestMove(boardRef.current, sideRef.current, 2);
-    if (move) {
-      const movingPiece = boardRef.current[move.from];
-      const capture = boardRef.current[move.to] !== EMPTY;
-      const res = chessRef.current.move({
-        from: sqToAlg(move.from),
-        to: sqToAlg(move.to),
-        promotion: "q",
-      });
-      if (!res) return;
-      startMoveAnimation(movingPiece, move.from, move.to);
-      boardRef.current[move.to] = movingPiece;
-      boardRef.current[move.from] = EMPTY;
-      addTrail(move.from, move.to);
-      if (capture) addCaptureSparks(move.to);
-      historyRef.current.push(boardRef.current.slice());
-      setSanLog((l) => [...l, res.san]);
-      if (sound) playBeep();
-      setSelected(null);
-      setMoves([]);
-      lastMoveRef.current = { from: move.from, to: move.to };
-      advanceClock();
-      sideRef.current = -sideRef.current;
-      if (!pausedRef.current) {
-        startClockForSide(sideRef.current);
-      } else {
-        clockRef.current.resumeTarget = sideRef.current;
-        clockRef.current.active = null;
-      }
-      updateEval();
-      updateMateHints();
-      checkGameState("Your move");
-    }
-  };
+    const frame = requestAnimationFrame(render);
+    return () => cancelAnimationFrame(frame);
+  }, [cursor, hoverSquare, mateSquares, moves, pieceSet, reduceMotion, selected, showArrows, spritesReady]);
 
   const handleSquare = (sq) => {
-    if (paused) return;
+    if (pausedRef.current || gameOverRef.current) return;
+    if (sideRef.current !== playerSideRef.current) return;
+
     setCursor(sq);
     const side = sideRef.current;
 
     if (selected !== null) {
-      const legal = moves.find((m) => m.to === sq);
+      const legal = moves.find((m) => m.toSq === sq);
       if (legal) {
-        const movingPiece = boardRef.current[legal.from];
-        const res = chessRef.current.move({
-          from: sqToAlg(legal.from),
-          to: sqToAlg(legal.to),
-          promotion: "q",
-        });
-        if (res) {
-          const capture = boardRef.current[legal.to] !== EMPTY;
-          startMoveAnimation(movingPiece, legal.from, legal.to);
-          boardRef.current[legal.to] = movingPiece;
-          boardRef.current[legal.from] = EMPTY;
-          addTrail(legal.from, legal.to);
-          if (capture) addCaptureSparks(legal.to);
-          if (sound) playBeep();
-          historyRef.current.push(boardRef.current.slice());
-          setSanLog((l) => [...l, res.san]);
-          advanceClock();
-          sideRef.current = -side;
-          if (!pausedRef.current) {
-            startClockForSide(sideRef.current);
-          } else {
-            clockRef.current.resumeTarget = sideRef.current;
-            clockRef.current.active = null;
-          }
-          setSelected(null);
-          setMoves([]);
-          lastMoveRef.current = { from: legal.from, to: legal.to };
-          updateEval();
-          updateMateHints();
-          if (!checkGameState("AI thinking...")) {
-            setTimeout(aiMove, 200);
-          }
-          return;
-        }
+        applyMove(legal, { announce: true, triggerAi: true });
+        return;
       }
       setSelected(null);
       setMoves([]);
@@ -870,10 +1044,11 @@ const ChessGame = () => {
       const legals = chessRef.current
         .moves({ square: sqToAlg(sq), verbose: true })
         .map((m) => ({
-          from: algToSq(m.from),
-          to: algToSq(m.to),
-          capture: !!m.captured,
-        }));
+          ...m,
+          fromSq: algToSq(m.from),
+          toSq: algToSq(m.to),
+        }))
+        .filter((m) => m.fromSq !== null && m.toSq !== null);
       setMoves(legals);
     }
   };
@@ -909,7 +1084,14 @@ const ChessGame = () => {
   const handleMouseLeave = () => setHoverSquare(null);
 
   const handleKey = (e) => {
-    if (paused) return;
+    if (pausedRef.current || gameOverRef.current) return;
+    if (sideRef.current !== playerSideRef.current) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      setSelected(null);
+      setMoves([]);
+      return;
+    }
     let next = cursor;
     const forward = orientation === "white" ? 16 : -16;
     const right = orientation === "white" ? 1 : -1;
@@ -928,184 +1110,32 @@ const ChessGame = () => {
     }
   };
 
-  const reset = () => {
-    boardRef.current = createInitialBoard();
-    chessRef.current.reset();
-    sideRef.current = WHITE;
-    historyRef.current = [boardRef.current.slice()];
-    setSelected(null);
-    setCursor(0);
-    setMoves([]);
-    trailsRef.current = [];
-    particlesRef.current = [];
-    animationsRef.current = [];
-    setHoverSquare(null);
-    setSanLog([]);
-    updateEval();
-    updateMateHints();
-    setPaused(false);
-    setStatus("Your move");
-    lastMoveRef.current = null;
-    clockRef.current = {
-      white: 0,
-      black: 0,
-      active: WHITE,
-      lastTick: typeof performance !== "undefined" ? performance.now() : Date.now(),
-      resumeTarget: WHITE,
-    };
-    setClockDisplay({ white: 0, black: 0 });
-    startClockForSide(WHITE);
-  };
-
-  const togglePause = () =>
-    setPaused((p) => {
-      if (!p) {
-        advanceClock();
-        clockRef.current.resumeTarget =
-          clockRef.current.active ?? sideRef.current;
-        clockRef.current.active = null;
-      } else {
-        const resumeSide =
-          clockRef.current.resumeTarget ?? sideRef.current;
-        startClockForSide(resumeSide);
-      }
-      return !p;
-    });
-  const toggleSound = () => setSound((s) => !s);
-  const toggleHints = () => setShowHints((s) => !s);
-  const togglePieces = () =>
-    setPieceSet((p) => (p === "sprites" ? "unicode" : "sprites"));
-  const toggleArrows = () => setShowArrows((s) => !s);
-  const flipBoard = () => {
-    setHoverSquare(null);
-    setOrientation((o) => (o === "white" ? "black" : "white"));
-  };
-  const undoMove = () => {
-    let undone = 0;
-    if (historyRef.current.length <= 1) return;
-    if (chessRef.current.history().length > 0) {
-      chessRef.current.undo();
-      historyRef.current.pop();
-      undone++;
+  const moveLines = useMemo(() => {
+    const lines = [];
+    for (let i = 0; i < sanLog.length; i += 2) {
+      lines.push(
+        `${i / 2 + 1}. ${sanLog[i]}${sanLog[i + 1] ? " " + sanLog[i + 1] : ""}`,
+      );
     }
-    if (
-      chessRef.current.turn() === "b" &&
-      chessRef.current.history().length > 0
-    ) {
-      chessRef.current.undo();
-      historyRef.current.pop();
-      undone++;
-    }
-    boardRef.current =
-      historyRef.current[historyRef.current.length - 1].slice();
-    sideRef.current = chessRef.current.turn() === "w" ? WHITE : BLACK;
-    trailsRef.current = [];
-    particlesRef.current = [];
-    setSelected(null);
-    setMoves([]);
-    setSanLog((l) => l.slice(0, -undone));
-    updateEval();
-    updateMateHints();
-    lastMoveRef.current = null;
-    setStatus("Your move");
-    clockRef.current.white = 0;
-    clockRef.current.black = 0;
-    clockRef.current.resumeTarget = sideRef.current;
-    clockRef.current.lastTick =
-      typeof performance !== "undefined" ? performance.now() : Date.now();
-    if (!pausedRef.current) {
-      startClockForSide(sideRef.current);
-    }
-    setClockDisplay({ white: clockRef.current.white, black: clockRef.current.black });
-  };
-
-  const copyMoves = () => {
-    navigator.clipboard?.writeText(chessRef.current.pgn());
-  };
-
-  const loadPGNString = (pgn) => {
-    if (!pgn) return;
-    reset();
-    if (!chessRef.current.load_pgn(pgn)) {
-      alert("Invalid PGN");
-      reset();
-      return;
-    }
-    const moves = chessRef.current.history({ verbose: true });
-    chessRef.current.reset();
-    boardRef.current = createInitialBoard();
-    historyRef.current = [boardRef.current.slice()];
-    setSanLog([]);
-    sideRef.current = WHITE;
-    setPaused(true);
-    clockRef.current.active = null;
-    clockRef.current.white = 0;
-    clockRef.current.black = 0;
-    clockRef.current.resumeTarget = WHITE;
-    setClockDisplay({ white: 0, black: 0 });
-    setStatus("Replaying PGN...");
-    let i = 0;
-    const playNext = () => {
-      if (i >= moves.length) {
-        setPaused(false);
-        startClockForSide(sideRef.current);
-        checkGameState("Your move", true);
-        return;
-      }
-      const m = moves[i++];
-      const res = chessRef.current.move(m);
-      const from = algToSq(m.from);
-      const to = algToSq(m.to);
-      const capture = boardRef.current[to] !== EMPTY;
-      const movingPiece = boardRef.current[from];
-      startMoveAnimation(movingPiece, from, to);
-      boardRef.current[to] = movingPiece;
-      boardRef.current[from] = EMPTY;
-      addTrail(from, to);
-      if (capture) addCaptureSparks(to);
-      lastMoveRef.current = { from, to };
-      historyRef.current.push(boardRef.current.slice());
-      setSanLog((l) => [...l, res.san]);
-      sideRef.current = chessRef.current.turn() === "w" ? WHITE : BLACK;
-      updateEval();
-      updateMateHints();
-      if (sound) playBeep();
-      checkGameState(undefined, true);
-      setTimeout(playNext, 500);
-    };
-    playNext();
-  };
-
-  const handlePGNImport = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => loadPGNString(reader.result);
-    reader.readAsText(file);
-    e.target.value = "";
-  };
-
-  const loadPGN = () => {
-    pgnInputRef.current?.click();
-  };
-
-  const moveLines = [];
-  for (let i = 0; i < sanLog.length; i += 2) {
-    moveLines.push(
-      `${i / 2 + 1}. ${sanLog[i]}${sanLog[i + 1] ? " " + sanLog[i + 1] : ""}`,
-    );
-  }
+    return lines;
+  }, [sanLog]);
 
   const statusTone = status.includes("Checkmate")
     ? "bg-red-600/80 text-white"
     : status.includes("Check")
       ? "bg-amber-400/80 text-slate-900"
-      : "bg-slate-800/70 text-slate-100";
+      : status.includes("Paused")
+        ? "bg-slate-600/80 text-white"
+        : "bg-slate-800/70 text-slate-100";
+
   const whiteClock = formatClock(clockDisplay.white);
   const blackClock = formatClock(clockDisplay.black);
   const orientationLabel = orientation === "white" ? "White" : "Black";
   const formattedEval = (evalScore / 100).toFixed(2);
   const engineSuggestions = analysisMoves.slice(0, 5);
+  const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
+  const youLabel = playerSide === WHITE ? "White" : "Black";
+
   const buttonClass =
     "rounded-full border border-slate-700/70 bg-slate-900/70 px-3 py-1.5 font-semibold uppercase tracking-wide text-slate-200 transition-colors duration-150 hover:border-sky-400 hover:bg-slate-800/80 focus:outline-none focus:ring-2 focus:ring-sky-400";
 
@@ -1125,6 +1155,7 @@ const ChessGame = () => {
                 onKeyDown={handleKey}
                 tabIndex={0}
                 aria-label="Chess board"
+                aria-describedby="chess-board-instructions"
                 className="rounded-2xl border border-slate-700 bg-gradient-to-br from-slate-800 via-slate-900 to-black shadow-[0_30px_60px_rgba(0,0,0,0.45)] outline-none transition-transform duration-500 ease-out focus:ring-2 focus:ring-sky-400"
                 style={{
                   width: boardPixelSize,
@@ -1135,6 +1166,10 @@ const ChessGame = () => {
               />
             </div>
           </div>
+          <p id="chess-board-instructions" className="sr-only">
+            Use arrow keys to move the cursor, Enter or Space to select a piece or
+            destination, and Escape to clear your selection.
+          </p>
           <input
             type="file"
             accept=".pgn"
@@ -1144,16 +1179,16 @@ const ChessGame = () => {
             aria-label="PGN file input"
           />
           <div className="flex flex-wrap justify-center gap-2 text-xs sm:text-sm">
-            <button className={buttonClass} onClick={reset}>
+            <button className={buttonClass} onClick={() => resetGame()} type="button">
               Reset
             </button>
-            <button className={buttonClass} onClick={undoMove}>
+            <button className={buttonClass} onClick={undoMove} type="button">
               Undo
             </button>
-            <button className={buttonClass} onClick={togglePause}>
+            <button className={buttonClass} onClick={togglePause} type="button">
               {paused ? "Resume" : "Pause"}
             </button>
-            <button className={buttonClass} onClick={toggleSound}>
+            <button className={buttonClass} onClick={toggleSound} type="button">
               {sound ? "Sound On" : "Sound Off"}
             </button>
           </div>
@@ -1192,8 +1227,57 @@ const ChessGame = () => {
                 </div>
               </div>
               <div className="mt-3 text-xs text-slate-400">
-                Orientation: <span className="font-semibold text-slate-200">{orientationLabel}</span>
+                Turn: <span className="font-semibold text-slate-200">{turnLabel}</span>
               </div>
+              <div className="mt-1 text-xs text-slate-400">
+                You: <span className="font-semibold text-slate-200">{youLabel}</span>
+              </div>
+              <div className="mt-1 text-xs text-slate-400">
+                Orientation:{" "}
+                <span className="font-semibold text-slate-200">{orientationLabel}</span>
+              </div>
+            </section>
+            <section>
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-200">
+                <span aria-hidden>🎛️</span>
+                <span>Player Setup</span>
+              </h2>
+              <label
+                className="mt-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400"
+                htmlFor="chess-side"
+              >
+                <span>Play As</span>
+                <select
+                  id="chess-side"
+                  className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  value={playerSide}
+                  onChange={(e) => setPlayerSide(Number(e.target.value))}
+                >
+                  <option value={WHITE}>White</option>
+                  <option value={BLACK}>Black</option>
+                </select>
+              </label>
+              <label
+                className="mt-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400"
+                htmlFor="chess-ai-depth"
+              >
+                <span>AI Depth</span>
+                <select
+                  id="chess-ai-depth"
+                  className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  value={aiDepth}
+                  onChange={(e) => setAiDepth(Number(e.target.value))}
+                >
+                  {[1, 2, 3, 4].map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <p className="mt-2 text-xs text-slate-400">
+                Changing sides restarts the game. The AI moves first when you choose Black.
+              </p>
             </section>
             <section>
               <h2 className="flex items-center gap-2 text-lg font-semibold text-slate-200">
@@ -1266,7 +1350,7 @@ const ChessGame = () => {
                   id="chess-depth"
                   className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   value={analysisDepth}
-                  onChange={(e) => setAnalysisDepth(parseInt(e.target.value, 10))}
+                  onChange={(e) => setAnalysisDepth(Number(e.target.value))}
                 >
                   {[1, 2, 3, 4, 5].map((d) => (
                     <option key={d} value={d}>
@@ -1276,13 +1360,13 @@ const ChessGame = () => {
                 </select>
               </label>
               <div className="mt-3 flex flex-wrap gap-2 text-xs sm:text-sm">
-                <button className={buttonClass} onClick={runAnalysis}>
+                <button className={buttonClass} onClick={runAnalysis} type="button">
                   Analyze
                 </button>
-                <button className={buttonClass} onClick={copyMoves}>
+                <button className={buttonClass} onClick={copyMoves} type="button">
                   Copy PGN
                 </button>
-                <button className={buttonClass} onClick={loadPGN}>
+                <button className={buttonClass} onClick={loadPGN} type="button">
                   Load PGN
                 </button>
               </div>
@@ -1317,16 +1401,16 @@ const ChessGame = () => {
                 <span>Options</span>
               </h2>
               <div className="mt-3 flex flex-wrap gap-2 text-xs sm:text-sm">
-                <button className={buttonClass} onClick={flipBoard}>
+                <button className={buttonClass} onClick={flipBoard} type="button">
                   Flip to {orientation === "white" ? "Black" : "White"} view
                 </button>
-                <button className={buttonClass} onClick={toggleArrows}>
+                <button className={buttonClass} onClick={toggleArrows} type="button">
                   {showArrows ? "Hide Arrows" : "Show Arrows"}
                 </button>
-                <button className={buttonClass} onClick={togglePieces}>
+                <button className={buttonClass} onClick={togglePieces} type="button">
                   {pieceSet === "sprites" ? "Use Unicode" : "Use SVG Pieces"}
                 </button>
-                <button className={buttonClass} onClick={toggleHints}>
+                <button className={buttonClass} onClick={toggleHints} type="button">
                   {showHints ? "Hide Mate-in-1" : "Show Mate-in-1"}
                 </button>
               </div>
