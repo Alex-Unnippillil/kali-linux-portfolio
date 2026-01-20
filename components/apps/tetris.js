@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
+import useCanvasResize from '../../hooks/useCanvasResize';
 import { PieceGenerator } from '../../games/tetris/logic';
 
 const WIDTH = 10;
@@ -43,6 +44,19 @@ const createPiece = (type) => ({
   type,
   rotation: 0,
 });
+
+const clampNumber = (value, min, max) => Math.min(max, Math.max(min, value));
+
+const isFiniteNumber = (value) => typeof value === 'number' && Number.isFinite(value);
+
+const isNullableNumber = (value) => value === null || isFiniteNumber(value);
+
+const validateKeyBindings = (value) => {
+  if (!value || typeof value !== 'object') return false;
+  return Object.keys(defaultKeys).every(
+    (key) => typeof value[key] === 'string' && value[key].length > 0,
+  );
+};
 
 const KICKS = {
   JLSTZ: {
@@ -220,9 +234,15 @@ const defaultKeys = {
 };
 
 const Tetris = () => {
-  const canvasRef = useRef(null);
+  const canvasRef = useCanvasResize(WIDTH * CELL_SIZE, HEIGHT * CELL_SIZE);
+  const boardContainerRef = useRef(null);
+  const settingsRef = useRef(null);
   const generatorRef = useRef(new PieceGenerator());
-  const [useBag, setUseBag] = usePersistentState('tetris-use-bag', true);
+  const [useBag, setUseBag] = usePersistentState(
+    'tetris-use-bag',
+    true,
+    (value) => typeof value === 'boolean',
+  );
   useEffect(() => {
     generatorRef.current.setMode(useBag ? 'seven-bag' : 'true-random');
   }, [useBag]);
@@ -241,29 +261,53 @@ const Tetris = () => {
   const [lines, setLines] = useState(0);
   const [combo, setCombo] = useState(0);
   const [maxCombo, setMaxCombo] = useState(0);
-  const [highScore, setHighScore] = usePersistentState('tetris-high-score', 0);
-  const [maxLevel, setMaxLevel] = usePersistentState('tetris-max-level', 1);
-  const [keyBindings, setKeyBindings] = usePersistentState('tetris-keys', defaultKeys);
+  const [highScore, setHighScore] = usePersistentState(
+    'tetris-high-score',
+    0,
+    isFiniteNumber,
+  );
+  const [maxLevel, setMaxLevel] = usePersistentState(
+    'tetris-max-level',
+    1,
+    isFiniteNumber,
+  );
+  const [keyBindings, setKeyBindings] = usePersistentState(
+    'tetris-keys',
+    defaultKeys,
+    validateKeyBindings,
+  );
   const [showSettings, setShowSettings] = useState(false);
   const [paused, setPaused] = useState(false);
-  const [sound, setSound] = usePersistentState('tetris-sound', true);
+  const [sound, setSound] = usePersistentState(
+    'tetris-sound',
+    true,
+    (value) => typeof value === 'boolean',
+  );
   const [tSpin, setTSpin] = useState('');
   const [mode, setMode] = useState('marathon');
   const sprintStartRef = useRef(null);
   const [sprintTime, setSprintTime] = useState(0);
-  const [bestTime, setBestTime] = usePersistentState('tetris-best-time', null);
+  const [bestTime, setBestTime] = usePersistentState(
+    'tetris-best-time',
+    null,
+    isNullableNumber,
+  );
   const [finishTime, setFinishTime] = useState(null);
 
   const [clearAnimation, setClearAnimation] = useState(null);
   const clearInfoRef = useRef(null);
   const [celebration, setCelebration] = useState('');
   const [danger, setDanger] = useState(false);
-  const [das, setDas] = usePersistentState('tetris-das', 150);
-  const [arr, setArr] = usePersistentState('tetris-arr', 50);
+  const [das, setDas] = usePersistentState('tetris-das', 150, isFiniteNumber);
+  const [arr, setArr] = usePersistentState('tetris-arr', 50, isFiniteNumber);
 
   const [shake, setShake] = useState(false);
   const [gamepadConnected, setGamepadConnected] = useState(false);
   const reducedMotion = useRef(false);
+  const [gameOver, setGameOver] = useState(false);
+  const [bindingCapture, setBindingCapture] = useState(null);
+
+  const isInputLocked = paused || !!clearAnimation || gameOver || showSettings;
 
   useEffect(() => {
     const media = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -307,6 +351,39 @@ const Tetris = () => {
     const top = board.findIndex((row) => row.some((c) => c));
     setDanger(top !== -1 && top < 4);
   }, [board]);
+
+  useEffect(() => {
+    setDas((current) => {
+      const clamped = clampNumber(current, 50, 500);
+      return clamped === current ? current : clamped;
+    });
+    setArr((current) => {
+      const clamped = clampNumber(current, 10, 200);
+      return clamped === current ? current : clamped;
+    });
+  }, [setArr, setDas]);
+
+  useEffect(() => {
+    if (showSettings) {
+      settingsRef.current?.focus();
+      keyHeld.current.left = false;
+      keyHeld.current.right = false;
+      softDropRef.current = false;
+      ['left', 'right'].forEach((dir) => {
+        if (dasTimer.current[dir]) {
+          clearTimeout(dasTimer.current[dir]);
+          dasTimer.current[dir] = null;
+        }
+        if (arrTimer.current[dir]) {
+          cancelAnimationFrame(arrTimer.current[dir]);
+          arrTimer.current[dir] = null;
+          arrTimeRef.current[dir] = 0;
+        }
+      });
+    } else {
+      boardContainerRef.current?.focus();
+    }
+  }, [showSettings]);
 
   useEffect(() => {
     const update = () => {
@@ -392,6 +469,9 @@ const Tetris = () => {
       setCombo(0);
       setCelebration('');
       setPaused(false);
+      setGameOver(false);
+      dropCounter.current = 0;
+      softDropRef.current = false;
       if (lockRef.current) {
         clearTimeout(lockRef.current);
         lockRef.current = null;
@@ -456,21 +536,24 @@ const Tetris = () => {
     setCanHold(true);
     lastRotateRef.current = false;
     clearInfoRef.current = null;
+    dropCounter.current = 0;
     if (!canMove(compact, nextPiece.shape, Math.floor(WIDTH / 2) - 2, 0)) {
-      resetGame(mode);
+      setGameOver(true);
+      setPaused(true);
     }
-  }, [endSprint, highScore, level, maxLevel, mode, resetGame, setHighScore, setMaxLevel]);
+  }, [endSprint, highScore, level, maxLevel, mode, setHighScore, setMaxLevel]);
 
-  const placePiece = useCallback(() => {
+  const placePiece = useCallback((overridePos) => {
     if (lockRef.current) {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
+    const position = overridePos ?? posRef.current;
     const newBoard = merge(
       boardRef.current,
       pieceRef.current.shape,
-      posRef.current.x,
-      posRef.current.y,
+      position.x,
+      position.y,
       pieceRef.current.type,
     );
     thud();
@@ -478,7 +561,7 @@ const Tetris = () => {
     for (let r = 0; r < HEIGHT; r += 1) {
       if (newBoard[r].every((c) => c)) filled.push(r);
     }
-    const tSpinFlag = isTSpin(newBoard, pieceRef.current, posRef.current);
+    const tSpinFlag = isTSpin(newBoard, pieceRef.current, position);
     let gained = 0;
     if (tSpinFlag) {
       const msg = ['T-Spin', 'T-Spin Single', 'T-Spin Double', 'T-Spin Triple'][filled.length];
@@ -513,6 +596,7 @@ const Tetris = () => {
         nextPiece: currentNext,
         upcoming,
       };
+      dropCounter.current = 0;
       setClearAnimation({
         lines: filled,
         start: performance.now(),
@@ -535,12 +619,14 @@ const Tetris = () => {
       setCanHold(true);
       lastRotateRef.current = false;
       if (!canMove(newBoard, currentNext.shape, Math.floor(WIDTH / 2) - 2, 0)) {
-        resetGame(mode);
+        setGameOver(true);
+        setPaused(true);
       }
     }
-  }, [getPiece, highScore, isTSpin, mode, next, playSound, reducedMotion, resetGame, setHighScore, thud]);
+  }, [getPiece, highScore, isTSpin, next, playSound, reducedMotion, setHighScore, thud]);
 
   const moveDown = useCallback((soft = false) => {
+    if (clearAnimation || gameOver || paused || showSettings) return;
     softDropRef.current = soft;
     if (canMove(boardRef.current, pieceRef.current.shape, posRef.current.x, posRef.current.y + 1)) {
       if (lockRef.current) {
@@ -553,9 +639,10 @@ const Tetris = () => {
         placePiece();
       }, 500);
     }
-  }, [placePiece]);
+  }, [clearAnimation, gameOver, paused, placePiece, showSettings]);
 
   const move = useCallback((dir) => {
+    if (clearAnimation || gameOver || paused || showSettings) return;
     const newX = posRef.current.x + dir;
     if (canMove(boardRef.current, pieceRef.current.shape, newX, posRef.current.y)) {
       setPos((p) => ({ ...p, x: newX }));
@@ -570,7 +657,7 @@ const Tetris = () => {
       }
     }
     lastRotateRef.current = false;
-  }, [placePiece]);
+  }, [clearAnimation, gameOver, paused, placePiece, showSettings]);
 
   const drawBlock = useCallback((ctx, x, y, color, options = {}) => {
     const { opacity = 1, shadow = true, padding = 0, outline = true } = options;
@@ -604,6 +691,7 @@ const Tetris = () => {
   }, []);
 
   const rotatePiece = useCallback(() => {
+    if (clearAnimation || gameOver || paused || showSettings) return;
     const p = pieceRef.current;
     const from = p.rotation;
     const to = (p.rotation + 1) % 4;
@@ -629,21 +717,29 @@ const Tetris = () => {
         return;
       }
     }
-  }, [placePiece]);
+  }, [clearAnimation, gameOver, paused, placePiece, showSettings]);
 
   const hardDrop = useCallback(() => {
+    if (clearAnimation || gameOver || paused || showSettings) return;
     const y = getDropY();
     if (lockRef.current) {
       clearTimeout(lockRef.current);
       lockRef.current = null;
     }
-    setPos((p) => ({ ...p, y }));
-    placePiece();
+    const distance = y - posRef.current.y;
+    if (distance > 0) {
+      setScore((s) => {
+        const ns = s + distance * 2;
+        if (ns > highScore) setHighScore(ns);
+        return ns;
+      });
+    }
+    placePiece({ x: posRef.current.x, y });
     lastRotateRef.current = false;
-  }, [getDropY, placePiece]);
+  }, [clearAnimation, gameOver, getDropY, highScore, paused, placePiece, setHighScore, showSettings]);
 
   const holdPiece = useCallback(() => {
-    if (!canHold) return;
+    if (!canHold || clearAnimation || gameOver || paused || showSettings) return;
     setCanHold(false);
     if (lockRef.current) {
       clearTimeout(lockRef.current);
@@ -661,7 +757,7 @@ const Tetris = () => {
     }
     setPos({ x: Math.floor(WIDTH / 2) - 2, y: 0 });
     lastRotateRef.current = false;
-  }, [canHold, getPiece, hold, next]);
+  }, [canHold, clearAnimation, gameOver, getPiece, hold, next, paused, showSettings]);
 
   const actionFromKey = useCallback(
     (key, code) => {
@@ -675,78 +771,92 @@ const Tetris = () => {
     [keyBindings],
   );
 
-  const togglePause = useCallback(() => setPaused((p) => !p), [setPaused]);
+  const togglePause = useCallback(() => {
+    if (gameOver) return;
+    setPaused((p) => !p);
+  }, [gameOver, setPaused]);
   const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
 
   const handleKeyDown = useCallback(
     (e) => {
+      if (showSettings) return;
       const action = actionFromKey(e.key, e.code);
       if (!action) return;
       e.preventDefault();
-        if (action === 'left' || action === 'right') {
-          const dir = action === 'left' ? -1 : 1;
-          move(dir);
-          if (!keyHeld.current[action]) {
-            keyHeld.current[action] = true;
-            dasTimer.current[action] = setTimeout(() => {
-              const step = (time) => {
-                if (!keyHeld.current[action]) return;
-                if (!arrTimeRef.current[action]) arrTimeRef.current[action] = time;
-                if (time - arrTimeRef.current[action] >= arr) {
-                  move(dir);
-                  arrTimeRef.current[action] = time;
-                }
-                arrTimer.current[action] = requestAnimationFrame(step);
-              };
+      if (action === 'left' || action === 'right') {
+        if (isInputLocked) return;
+        const dir = action === 'left' ? -1 : 1;
+        move(dir);
+        if (!keyHeld.current[action]) {
+          keyHeld.current[action] = true;
+          dasTimer.current[action] = setTimeout(() => {
+            const step = (time) => {
+              if (!keyHeld.current[action]) return;
+              if (!arrTimeRef.current[action]) arrTimeRef.current[action] = time;
+              if (time - arrTimeRef.current[action] >= arr) {
+                move(dir);
+                arrTimeRef.current[action] = time;
+              }
               arrTimer.current[action] = requestAnimationFrame(step);
-            }, das);
-          }
-        } else if (action === 'down') moveDown(true);
-      else if (action === 'rotate') rotatePiece();
-      else if (action === 'drop') hardDrop();
-      else if (action === 'hold') holdPiece();
-      else if (action === 'pause') togglePause();
-      else if (action === 'reset') resetGame();
-      else if (action === 'sound') toggleSound();
-      else if (action === 'settings') setShowSettings((s) => !s);
+            };
+            arrTimer.current[action] = requestAnimationFrame(step);
+          }, das);
+        }
+      } else if (action === 'down') {
+        if (isInputLocked) return;
+        moveDown(true);
+      } else if (action === 'rotate') {
+        if (isInputLocked) return;
+        rotatePiece();
+      } else if (action === 'drop') {
+        if (isInputLocked) return;
+        hardDrop();
+      } else if (action === 'hold') {
+        if (isInputLocked) return;
+        holdPiece();
+      } else if (action === 'pause') {
+        if (clearAnimation) return;
+        togglePause();
+      } else if (action === 'reset') {
+        resetGame();
+      } else if (action === 'sound') {
+        toggleSound();
+      } else if (action === 'settings') {
+        setShowSettings(true);
+      }
     },
-    [actionFromKey, arr, das, hardDrop, holdPiece, move, moveDown, rotatePiece, resetGame, togglePause, toggleSound],
+    [actionFromKey, arr, clearAnimation, das, hardDrop, holdPiece, isInputLocked, move, moveDown, resetGame, rotatePiece, showSettings, togglePause, toggleSound],
   );
 
   const handleKeyUp = useCallback(
     (e) => {
+      if (showSettings) return;
       const action = actionFromKey(e.key, e.code);
       if (!action) return;
-        if (action === 'left' || action === 'right') {
-          keyHeld.current[action] = false;
-          if (dasTimer.current[action]) {
-            clearTimeout(dasTimer.current[action]);
-            dasTimer.current[action] = null;
-          }
-          if (arrTimer.current[action]) {
-            cancelAnimationFrame(arrTimer.current[action]);
-            arrTimer.current[action] = null;
-            arrTimeRef.current[action] = 0;
-          }
-        } else if (action === 'down') {
-          softDropRef.current = false;
+      if (action === 'left' || action === 'right') {
+        keyHeld.current[action] = false;
+        if (dasTimer.current[action]) {
+          clearTimeout(dasTimer.current[action]);
+          dasTimer.current[action] = null;
         }
+        if (arrTimer.current[action]) {
+          cancelAnimationFrame(arrTimer.current[action]);
+          arrTimer.current[action] = null;
+          arrTimeRef.current[action] = 0;
+        }
+      } else if (action === 'down') {
+        softDropRef.current = false;
+      }
     },
-    [actionFromKey],
+    [actionFromKey, showSettings],
   );
 
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+  useEffect(() => () => {
     const dasTimers = dasTimer.current;
     const arrTimers = arrTimer.current;
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      Object.values(dasTimers).forEach((t) => t && clearTimeout(t));
-      Object.values(arrTimers).forEach((r) => r && cancelAnimationFrame(r));
-    };
-  }, [handleKeyDown, handleKeyUp]);
+    Object.values(dasTimers).forEach((t) => t && clearTimeout(t));
+    Object.values(arrTimers).forEach((r) => r && cancelAnimationFrame(r));
+  }, []);
 
   const animationStart = clearAnimation?.start ?? null;
 
@@ -799,7 +909,7 @@ const Tetris = () => {
     if (resetPress && !state.reset) resetGame();
     state.reset = resetPress;
 
-    if (paused) {
+    if (paused || clearAnimation || showSettings || gameOver) {
       state.leftStart = 0;
       state.leftRepeat = 0;
       state.rightStart = 0;
@@ -858,7 +968,7 @@ const Tetris = () => {
     if (holdPress && !state.hold) holdPiece();
     state.hold = holdPress;
 
-  }, [arr, das, hardDrop, holdPiece, move, moveDown, paused, resetGame, rotatePiece, togglePause]);
+  }, [arr, clearAnimation, das, gameOver, hardDrop, holdPiece, move, moveDown, paused, resetGame, rotatePiece, showSettings, togglePause]);
 
   useEffect(() => {
     let raf;
@@ -922,55 +1032,57 @@ const Tetris = () => {
         }
       });
 
-      const ghostY = getDropY();
-      pieceRef.current.shape.forEach((row, r) => {
-        row.forEach((c, col) => {
-          if (c) {
-            const gx = posRef.current.x + col;
-            const gy = ghostY + r;
-            drawBlock(ctx, gx, gy, pieceRef.current.color, {
-              opacity: 0.2,
-              shadow: false,
-              outline: false,
-            });
-            ctx.save();
-            ctx.setLineDash([4, 4]);
-            ctx.strokeStyle = adjustColor(pieceRef.current.color, 80);
-            ctx.globalAlpha = 0.6;
-            ctx.strokeRect(gx * CELL_SIZE + 0.5, gy * CELL_SIZE + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
-            ctx.restore();
-          }
+      if (!clearAnimation) {
+        const ghostY = getDropY();
+        pieceRef.current.shape.forEach((row, r) => {
+          row.forEach((c, col) => {
+            if (c) {
+              const gx = posRef.current.x + col;
+              const gy = ghostY + r;
+              drawBlock(ctx, gx, gy, pieceRef.current.color, {
+                opacity: 0.2,
+                shadow: false,
+                outline: false,
+              });
+              ctx.save();
+              ctx.setLineDash([4, 4]);
+              ctx.strokeStyle = adjustColor(pieceRef.current.color, 80);
+              ctx.globalAlpha = 0.6;
+              ctx.strokeRect(gx * CELL_SIZE + 0.5, gy * CELL_SIZE + 0.5, CELL_SIZE - 1, CELL_SIZE - 1);
+              ctx.restore();
+            }
+          });
         });
-      });
 
-      ctx.save();
-      ctx.globalAlpha = 0.45;
-      pieceRef.current.shape.forEach((row, r) => {
-        row.forEach((c, col) => {
-          if (c) {
-            const px = (posRef.current.x + col) * CELL_SIZE;
-            const py = (posRef.current.y + r) * CELL_SIZE;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)';
-            ctx.beginPath();
-            ctx.ellipse(px + CELL_SIZE / 2, py + CELL_SIZE, CELL_SIZE * 0.35, CELL_SIZE * 0.2, 0, 0, Math.PI * 2);
-            ctx.fill();
-          }
+        ctx.save();
+        ctx.globalAlpha = 0.45;
+        pieceRef.current.shape.forEach((row, r) => {
+          row.forEach((c, col) => {
+            if (c) {
+              const px = (posRef.current.x + col) * CELL_SIZE;
+              const py = (posRef.current.y + r) * CELL_SIZE;
+              ctx.fillStyle = 'rgba(0,0,0,0.5)';
+              ctx.beginPath();
+              ctx.ellipse(px + CELL_SIZE / 2, py + CELL_SIZE, CELL_SIZE * 0.35, CELL_SIZE * 0.2, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
         });
-      });
-      ctx.restore();
+        ctx.restore();
 
-      pieceRef.current.shape.forEach((row, r) => {
-        row.forEach((c, col) => {
-          if (c) {
-            drawBlock(
-              ctx,
-              posRef.current.x + col,
-              posRef.current.y + r,
-              pieceRef.current.color,
-            );
-          }
+        pieceRef.current.shape.forEach((row, r) => {
+          row.forEach((c, col) => {
+            if (c) {
+              drawBlock(
+                ctx,
+                posRef.current.x + col,
+                posRef.current.y + r,
+                pieceRef.current.color,
+              );
+            }
+          });
         });
-      });
+      }
     },
     [clearAnimation, drawBlock, getDropY],
   );
@@ -1005,6 +1117,40 @@ const Tetris = () => {
     ],
     [keyBindings],
   );
+
+  const bindingConflicts = useMemo(() => {
+    const entries = Object.entries(keyBindings);
+    const normalized = entries.map(([action, key]) => [action, key.toLowerCase()]);
+    const counts = normalized.reduce((acc, [, key]) => {
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+    return entries.filter(([, key]) => counts[key.toLowerCase()] > 1);
+  }, [keyBindings]);
+
+  const captureBinding = useCallback((event, bindingKey) => {
+    if (!bindingKey) return;
+    event.preventDefault();
+    const value = event.key === ' ' || event.code === 'Space'
+      ? 'Space'
+      : event.key.length === 1
+        ? event.key.toLowerCase()
+        : event.key;
+    setKeyBindings((prev) => ({ ...prev, [bindingKey]: value }));
+    setBindingCapture(null);
+  }, [setKeyBindings]);
+
+  const handleSettingsKeyDown = useCallback((event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setBindingCapture(null);
+      setShowSettings(false);
+      return;
+    }
+    if (bindingCapture) {
+      captureBinding(event, bindingCapture);
+    }
+  }, [bindingCapture, captureBinding, setShowSettings]);
 
   const gamepadHints = useMemo(
     () => [
@@ -1042,19 +1188,22 @@ const Tetris = () => {
   );
 
   useEffect(() => {
-    const ctx = canvasRef.current.getContext('2d');
+    const ctx = canvasRef.current?.getContext('2d');
+    if (!ctx) return () => {};
     const loop = (time = 0) => {
       const delta = time - lastTime.current;
       lastTime.current = time;
-      if (!paused) {
+      if (!paused && !gameOver) {
         if (mode === 'sprint' && sprintStartRef.current) {
           setSprintTime(time - sprintStartRef.current);
         }
-        dropCounter.current += delta;
-        const interval = softDropRef.current ? dropInterval / 10 : dropInterval;
-        if (dropCounter.current > interval) {
-          moveDown(softDropRef.current);
-          dropCounter.current = 0;
+        if (!clearAnimation) {
+          dropCounter.current += delta;
+          const interval = softDropRef.current ? dropInterval / 10 : dropInterval;
+          if (dropCounter.current > interval) {
+            moveDown(softDropRef.current);
+            dropCounter.current = 0;
+          }
         }
         draw(ctx);
       }
@@ -1062,7 +1211,7 @@ const Tetris = () => {
     };
     animationRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [draw, moveDown, paused, dropInterval, mode]);
+  }, [clearAnimation, draw, gameOver, moveDown, paused, dropInterval, mode]);
 
   const cellPreview = (p) => (
     p.shape.map((row, r) =>
@@ -1087,11 +1236,18 @@ const Tetris = () => {
       <div className="mx-auto flex min-h-full max-w-6xl flex-col gap-6 p-4 md:p-8">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
           <div className="relative rounded-3xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-[0_25px_70px_rgba(15,23,42,0.65)]">
-            <div className="relative mx-auto flex justify-center">
+            <div
+              className="relative mx-auto flex w-full max-w-[320px] aspect-[10/20] justify-center focus:outline-none"
+              ref={boardContainerRef}
+              tabIndex={0}
+              role="application"
+              aria-label="Tetris board. Click or focus to enable keyboard controls."
+              onKeyDown={handleKeyDown}
+              onKeyUp={handleKeyUp}
+              onClick={() => boardContainerRef.current?.focus()}
+            >
               <canvas
                 ref={canvasRef}
-                width={WIDTH * CELL_SIZE}
-                height={HEIGHT * CELL_SIZE}
                 className="rounded-2xl border border-slate-800/70 bg-slate-950/60 shadow-[0_20px_60px_rgba(15,23,42,0.7)] transition-transform duration-150"
                 style={{ transform: shake ? 'translateY(2px)' : 'none' }}
                 aria-label="Active Tetris board"
@@ -1123,10 +1279,15 @@ const Tetris = () => {
                   </span>
                 </div>
               )}
-              {paused && finishTime === null && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-slate-950/85 backdrop-blur">
+              {paused && finishTime === null && !gameOver && (
+                <div
+                  className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-slate-950/85 backdrop-blur"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="tetris-paused-title"
+                >
                   <div className="w-full max-w-xs space-y-4 rounded-2xl border border-slate-700/70 bg-slate-900/90 p-6 text-center shadow-2xl">
-                    <h3 className="text-lg font-semibold uppercase tracking-[0.4em] text-sky-400">Paused</h3>
+                    <h3 id="tetris-paused-title" className="text-lg font-semibold uppercase tracking-[0.4em] text-sky-400">Paused</h3>
                     <div className="flex flex-col gap-2 text-sm">
                       <button
                         type="button"
@@ -1162,9 +1323,14 @@ const Tetris = () => {
                 </div>
               )}
               {finishTime !== null && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-slate-950/85 backdrop-blur">
+                <div
+                  className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-slate-950/85 backdrop-blur"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="tetris-sprint-title"
+                >
                   <div className="w-full max-w-sm space-y-4 rounded-2xl border border-slate-700/70 bg-slate-900/95 p-6 text-center shadow-2xl">
-                    <p className="text-xs uppercase tracking-[0.45em] text-sky-400">Sprint Complete</p>
+                    <p id="tetris-sprint-title" className="text-xs uppercase tracking-[0.45em] text-sky-400">Sprint Complete</p>
                     <p className="text-3xl font-semibold text-white">
                       {(finishTime / 1000).toFixed(2)}s
                       {bestTime === finishTime ? ' • PB' : ''}
@@ -1175,6 +1341,30 @@ const Tetris = () => {
                       onClick={() => resetGame('sprint')}
                     >
                       Run it back
+                    </button>
+                  </div>
+                </div>
+              )}
+              {gameOver && (
+                <div
+                  className="absolute inset-0 z-30 flex items-center justify-center rounded-2xl bg-slate-950/85 backdrop-blur"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="tetris-gameover-title"
+                >
+                  <div className="w-full max-w-sm space-y-4 rounded-2xl border border-rose-500/40 bg-slate-900/95 p-6 text-center shadow-2xl">
+                    <p id="tetris-gameover-title" className="text-xs uppercase tracking-[0.45em] text-rose-400">Game Over</p>
+                    <p className="text-3xl font-semibold text-white">{score.toLocaleString()}</p>
+                    <div className="text-xs text-slate-300">
+                      <p>Lines: {lines}</p>
+                      <p>Level: {level}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-full border border-rose-500/60 bg-rose-500/20 px-4 py-2 font-semibold text-rose-200 transition hover:border-rose-400 hover:text-white"
+                      onClick={() => resetGame(mode)}
+                    >
+                      Restart Run
                     </button>
                   </div>
                 </div>
@@ -1339,9 +1529,17 @@ const Tetris = () => {
         </div>
       </div>
       {showSettings && (
-        <div className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur">
+        <div
+          className="absolute inset-0 z-40 flex items-center justify-center bg-slate-950/80 backdrop-blur"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="tetris-settings-title"
+          onKeyDown={handleSettingsKeyDown}
+          tabIndex={-1}
+          ref={settingsRef}
+        >
           <div className="w-full max-w-lg rounded-2xl border border-slate-700/70 bg-slate-900/95 p-6 shadow-2xl">
-            <h2 className="mb-4 text-center text-lg font-semibold uppercase tracking-[0.4em] text-sky-400">
+            <h2 id="tetris-settings-title" className="mb-4 text-center text-lg font-semibold uppercase tracking-[0.4em] text-sky-400">
               Control Settings
             </h2>
             <div className="mb-4 grid gap-3 sm:grid-cols-3">
@@ -1381,21 +1579,35 @@ const Tetris = () => {
               </div>
             </div>
             <h3 className="mb-2 text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">Key Bindings</h3>
+            <p className="mb-3 text-xs text-slate-400">
+              Select an action, then press a key to bind it. Press Esc to close settings.
+            </p>
+            {bindingConflicts.length > 0 && (
+              <div className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+                Duplicate bindings detected:
+                <ul className="mt-1 list-disc space-y-1 pl-4">
+                  {bindingConflicts.map(([action, key]) => (
+                    <li key={`${action}-${key}`}>{action} ⇢ {prettyKey(key)}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               {Object.keys(keyBindings).map((k) => {
-                const inputId = `binding-${k}`;
+                const isCapturing = bindingCapture === k;
                 return (
                   <div key={k} className="flex flex-col gap-1 text-sm text-slate-200">
-                    <label htmlFor={inputId} className="uppercase tracking-[0.3em] text-slate-500">
+                    <span className="uppercase tracking-[0.3em] text-slate-500">
                       {k}
-                    </label>
-                    <input
-                      id={inputId}
-                      className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-slate-100 focus:border-sky-500 focus:outline-none"
-                      value={keyBindings[k]}
-                      onChange={(e) => setKeyBindings({ ...keyBindings, [k]: e.target.value })}
+                    </span>
+                    <button
+                      type="button"
+                      className={`rounded border px-2 py-1 text-left text-slate-100 transition focus:outline-none ${isCapturing ? 'border-sky-500 bg-slate-800/80' : 'border-slate-700 bg-slate-800'}`}
                       aria-label={`Set ${k} key binding`}
-                    />
+                      onClick={() => setBindingCapture(k)}
+                    >
+                      {isCapturing ? 'Press a key…' : prettyKey(keyBindings[k])}
+                    </button>
                   </div>
                 );
               })}
@@ -1404,7 +1616,10 @@ const Tetris = () => {
               <button
                 type="button"
                 className="rounded-full border border-slate-700 bg-slate-800/70 px-4 py-2 font-semibold text-slate-100 transition hover:border-slate-500 hover:text-white"
-                onClick={() => setShowSettings(false)}
+                onClick={() => {
+                  setBindingCapture(null);
+                  setShowSettings(false);
+                }}
               >
                 Close
               </button>
@@ -1417,4 +1632,3 @@ const Tetris = () => {
 };
 
 export default Tetris;
-
