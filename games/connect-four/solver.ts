@@ -1,5 +1,6 @@
 export type Cell = 'red' | 'yellow' | null;
 export type Board = Cell[][];
+export type WinningCell = { r: number; c: number };
 
 export const ROWS = 6;
 export const COLS = 7;
@@ -12,6 +13,37 @@ export const getValidRow = (board: Board, col: number): number => {
     if (!board[r][col]) return r;
   }
   return -1;
+};
+
+export const getWinningCells = (
+  board: Board,
+  player: Exclude<Cell, null>,
+): WinningCell[] | null => {
+  const dirs = [
+    { dr: 0, dc: 1 },
+    { dr: 1, dc: 0 },
+    { dr: 1, dc: 1 },
+    { dr: 1, dc: -1 },
+  ];
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (board[r][c] !== player) continue;
+      for (const { dr, dc } of dirs) {
+        const cells: WinningCell[] = [];
+        for (let i = 0; i < 4; i++) {
+          const rr = r + dr * i;
+          const cc = c + dc * i;
+          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS) break;
+          if (board[rr][cc] !== player) break;
+          cells.push({ r: rr, c: cc });
+        }
+        if (cells.length === 4) return cells;
+      }
+    }
+  }
+
+  return null;
 };
 
 export const checkWinner = (
@@ -207,4 +239,3 @@ export const evaluateColumns = (
   }
   return scores;
 };
-
