@@ -159,15 +159,17 @@ const Minesweeper = () => {
     'minesweeperAssist',
     false,
   );
-  const riskMap = useMemo(
-    () => (showRisk ? analyze(board).risk : null),
-    [board, showRisk],
-  );
+  const riskMap = useMemo(() => {
+    if (!showRisk || !board) return null;
+    return analyze(board).risk;
+  }, [board, showRisk]);
   const [useQuestionMarks, setUseQuestionMarks] = usePersistedState(
     'minesweeperQuestion',
     false,
   );
   const [showSettings, setShowSettings] = useState(false);
+  const settingsRef = useRef(null);
+  const previousFocusRef = useRef(null);
   const [hasSave, setHasSave] = useState(false);
   const [facePressed, setFacePressed] = useState(false);
   const [faceBtnDown, setFaceBtnDown] = useState(false);
@@ -185,6 +187,18 @@ const Minesweeper = () => {
   const rightDown = useRef(false);
   const chorded = useRef(false);
   const flagAnim = useRef({});
+  const [copyToast, setCopyToast] = useState('');
+
+  const clampValue = (value, min, max) =>
+    Math.min(max, Math.max(min, value));
+
+  const getDifficultyForConfig = (size, mines) =>
+    Object.entries(DIFFICULTIES).find(
+      ([, value]) => value.size === size && value.mines === mines,
+    )?.[0] ?? null;
+
+  const buildShareCode = (seedValue, size, mines, x, y) =>
+    `${seedValue.toString(36)}-${size}-${mines}-${x}-${y}`;
 
   useEffect(() => {
     initWorker();
@@ -493,7 +507,7 @@ const Minesweeper = () => {
             } else if (cell.question) {
               ctx.fillStyle = text;
               ctx.fillText('?', px + cellSize / 2, py + cellSize / 2);
-            } else if (riskMap) {
+            } else if (riskMap?.[x]?.[y] !== undefined) {
               const r = riskMap[x][y];
               if (r > 0) {
                 ctx.fillStyle = toRgbaString(
@@ -503,6 +517,22 @@ const Minesweeper = () => {
                 ctx.fillRect(px, py, cellSize, cellSize);
               }
             }
+          }
+
+          if (cell.exploded) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(248, 113, 113, 0.55)';
+            ctx.fillRect(px, py, cellSize, cellSize);
+            ctx.fillStyle = '#111827';
+            ctx.fillText('💥', px + cellSize / 2, py + cellSize / 2);
+            ctx.restore();
+          } else if (cell.wrongFlag) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(248, 113, 113, 0.3)';
+            ctx.fillRect(px, py, cellSize, cellSize);
+            ctx.fillStyle = '#f87171';
+            ctx.fillText('❌', px + cellSize / 2, py + cellSize / 2);
+            ctx.restore();
           }
         }
       }
@@ -603,6 +633,33 @@ const Minesweeper = () => {
     }
   }, [scoreboard]);
 
+  useEffect(() => {
+    if (!copyToast) return;
+    const timeout = setTimeout(() => setCopyToast(''), 2400);
+    return () => clearTimeout(timeout);
+  }, [copyToast]);
+
+  useEffect(() => {
+    if (!showSettings) return;
+    previousFocusRef.current = document.activeElement;
+    const focusTarget =
+      settingsRef.current?.querySelector('input, button, select, textarea');
+    focusTarget?.focus();
+    const handleKey = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowSettings(false);
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+      if (previousFocusRef.current?.focus) {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [showSettings]);
+
   const playSound = (type) => {
     if (!sound || typeof window === 'undefined') return;
     if (!audioRef.current)
@@ -654,6 +711,25 @@ const Minesweeper = () => {
 
   const checkAndHandleWin = (newBoard) => {
     if (!checkWin(newBoard)) return;
+    const updated = cloneBoard(newBoard);
+    let autoFlags = 0;
+    updated.forEach((row) => {
+      row.forEach((cell) => {
+        if (cell.mine) {
+          if (!cell.flagged) {
+            cell.flagged = true;
+          }
+          autoFlags += 1;
+        } else {
+          cell.flagged = false;
+        }
+        cell.question = false;
+        cell.exploded = false;
+        cell.wrongFlag = false;
+      });
+    });
+    setBoard(updated);
+    setFlags(autoFlags);
     setStatus('won');
     const time = (Date.now() - startTime) / 1000;
     setElapsed(time);
@@ -727,6 +803,36 @@ const Minesweeper = () => {
     animate(cells);
   };
 
+  const finalizeLoss = (newBoard, exploded) => {
+    const updated = cloneBoard(newBoard);
+    updated.forEach((row, x) => {
+      row.forEach((cell, y) => {
+        if (cell.mine) {
+          cell.revealed = true;
+        } else if (cell.flagged) {
+          cell.wrongFlag = true;
+        }
+        cell.question = false;
+        cell.exploded = false;
+        if (exploded && exploded[0] === x && exploded[1] === y) {
+          cell.exploded = true;
+        }
+      });
+    });
+    setBoard(updated);
+    setStatus('lost');
+    const time = (Date.now() - startTime) / 1000;
+    setElapsed(time);
+    const finalBV = calculate3BV(updated);
+    setBV(finalBV);
+    setBVPS(time > 0 ? finalBV / time : finalBV);
+    playSound('boom');
+    if (exploded) {
+      spawnExplosion(exploded[0], exploded[1]);
+    }
+    setAriaMessage('Boom! Game over');
+  };
+
   const startGame = async (x, y) => {
     flagAnim.current = {};
     const validated = validateConfig(config.size, config.mines, { start: [x, y] });
@@ -741,7 +847,7 @@ const Minesweeper = () => {
     setBoard(newBoard);
     setStatus('playing');
     setStartTime(Date.now());
-    setShareCode(`${seed.toString(36)}-${x}-${y}`);
+    setShareCode(buildShareCode(seed, validated.size, validated.mines, x, y));
     setBV(calculate3BV(newBoard));
     setBVPS(null);
     setFlags(0);
@@ -782,16 +888,7 @@ const Minesweeper = () => {
         revealed.forEach(([cx, cy]) => {
           newBoard[cx][cy].revealed = true;
         });
-        setBoard(newBoard);
-        setStatus('lost');
-        const time = (Date.now() - startTime) / 1000;
-        setElapsed(time);
-        const finalBV = calculate3BV(newBoard);
-        setBV(finalBV);
-        setBVPS(time > 0 ? finalBV / time : finalBV);
-        playSound('boom');
-        spawnExplosion(x, y);
-        setAriaMessage('Boom! Game over');
+        finalizeLoss(newBoard, [x, y]);
         return;
       }
       playSound('reveal');
@@ -861,24 +958,19 @@ const Minesweeper = () => {
     const updated = applyReveal(board, cells);
     setBoard(updated);
     if (hit) {
-      setStatus('lost');
-      const time = (Date.now() - startTime) / 1000;
-      setElapsed(time);
-      const finalBV = calculate3BV(updated);
-      setBV(finalBV);
-      setBVPS(time > 0 ? finalBV / time : finalBV);
-      playSound('boom');
       if (cells.length) {
         const [mx, my] = cells[0];
-        spawnExplosion(mx, my);
+        finalizeLoss(updated, [mx, my]);
+        return;
       }
-      setAriaMessage('Boom! Game over');
+      finalizeLoss(updated, null);
       return;
     }
     checkAndHandleWin(updated);
   };
 
   const handleMouseDown = (e) => {
+    canvasRef.current?.focus();
     const rect = canvasRef.current.getBoundingClientRect();
     const cellWidth = rect.width / effectiveSize;
     const cellHeight = rect.height / effectiveSize;
@@ -971,22 +1063,41 @@ const Minesweeper = () => {
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'ArrowUp') {
+    const key = e.key.toLowerCase();
+    if (key === 'arrowup') {
+      e.preventDefault();
       setCursor((c) => ({ x: Math.max(0, c.x - 1), y: c.y }));
       setCursorVisible(true);
-    } else if (e.key === 'ArrowDown') {
+    } else if (key === 'arrowdown') {
+      e.preventDefault();
       setCursor((c) => ({ x: Math.min(effectiveSize - 1, c.x + 1), y: c.y }));
       setCursorVisible(true);
-    } else if (e.key === 'ArrowLeft') {
+    } else if (key === 'arrowleft') {
+      e.preventDefault();
       setCursor((c) => ({ x: c.x, y: Math.max(0, c.y - 1) }));
       setCursorVisible(true);
-    } else if (e.key === 'ArrowRight') {
+    } else if (key === 'arrowright') {
+      e.preventDefault();
       setCursor((c) => ({ x: c.x, y: Math.min(effectiveSize - 1, c.y + 1) }));
       setCursorVisible(true);
-    } else if (e.key.toLowerCase() === 'f') {
+    } else if (key === 'f') {
+      e.preventDefault();
       toggleFlag(cursor.x, cursor.y);
-    } else if (e.key === ' ' || e.key === 'Enter') {
+    } else if (key === ' ' || key === 'enter') {
+      e.preventDefault();
       handleClick(cursor.x, cursor.y);
+    } else if (key === 'contextmenu' || (key === 'f10' && e.shiftKey)) {
+      e.preventDefault();
+      toggleFlag(cursor.x, cursor.y);
+    } else if (key === 'p') {
+      e.preventDefault();
+      togglePause();
+    } else if (key === 'n') {
+      e.preventDefault();
+      reset();
+    } else if (key === 'escape' && showSettings) {
+      e.preventDefault();
+      setShowSettings(false);
     }
   };
 
@@ -1014,16 +1125,41 @@ const Minesweeper = () => {
   };
 
   const copyCode = () => {
-    if (typeof navigator !== 'undefined' && shareCode) {
-      navigator.clipboard.writeText(shareCode);
-    }
+    if (typeof navigator === 'undefined' || !shareCode) return;
+    navigator.clipboard
+      .writeText(shareCode)
+      .then(() => {
+        setCopyToast('Share code copied to clipboard.');
+        setAriaMessage('Share code copied to clipboard.');
+      })
+      .catch(() => {
+        setCopyToast('Unable to copy share code.');
+        setAriaMessage('Unable to copy share code.');
+      });
   };
 
   const loadFromCode = async () => {
     if (!codeInput) return;
-    const parts = codeInput.trim().split('-');
+    const trimmed = codeInput.trim();
+    const parts = trimmed.split('-');
     const newSeed = parseInt(parts[0], 36);
     if (Number.isNaN(newSeed)) return;
+    const parsedSize = parts.length >= 5 ? parseInt(parts[1], 10) : config.size;
+    const parsedMines = parts.length >= 5 ? parseInt(parts[2], 10) : config.mines;
+    const rawX = parts.length >= 5 ? parseInt(parts[3], 10) : parseInt(parts[1], 10);
+    const rawY = parts.length >= 5 ? parseInt(parts[4], 10) : parseInt(parts[2], 10);
+    const validated = validateConfig(parsedSize, parsedMines, {
+      start: [
+        Number.isNaN(rawX) ? Math.floor(parsedSize / 2) : rawX,
+        Number.isNaN(rawY) ? Math.floor(parsedSize / 2) : rawY,
+      ],
+    });
+    const startX = Number.isNaN(rawX)
+      ? Math.floor(validated.size / 2)
+      : clampValue(rawX, 0, validated.size - 1);
+    const startY = Number.isNaN(rawY)
+      ? Math.floor(validated.size / 2)
+      : clampValue(rawY, 0, validated.size - 1);
     workerRef.current?.terminate();
     initWorker();
     flagAnim.current = {};
@@ -1037,31 +1173,49 @@ const Minesweeper = () => {
     setBVPS(null);
     setFlags(0);
     setPaused(false);
-    if (parts.length === 3) {
-      const x = parseInt(parts[1], 10);
-      const y = parseInt(parts[2], 10);
-      if (!Number.isNaN(x) && !Number.isNaN(y)) {
-        const newBoard = generateBoard(config.size, config.mines, newSeed, x, y);
-        setBoard(newBoard);
-        setStatus('playing');
-        setStartTime(Date.now());
-        setShareCode(codeInput.trim());
-        setBV(calculate3BV(newBoard));
-        setFlags(0);
-        const finalize = (count) => {
-          setAriaMessage(`Revealed ${count} cells`);
-          checkAndHandleWin(newBoard);
-        };
-        if (prefersReducedMotion.current) {
-          const { cells } = await computeRevealed(newBoard, [[x, y]]);
-          cells.forEach(([cx, cy]) => {
-            newBoard[cx][cy].revealed = true;
-          });
-          setBoard(cloneBoard(newBoard));
-          finalize(cells.length);
-        } else {
-          revealWave(newBoard, x, y, finalize);
-        }
+    if (parts.length === 1) {
+      setCodeInput('');
+      return;
+    }
+    if (parts.length === 3 || parts.length >= 5) {
+      setConfig((prev) => ({ ...prev, ...validated }));
+      const difficultyKey = getDifficultyForConfig(
+        validated.size,
+        validated.mines,
+      );
+      if (difficultyKey) setDifficulty(difficultyKey);
+      const generated = generateBoard(newSeed, {
+        size: validated.size,
+        mines: validated.mines,
+        startX,
+        startY,
+      });
+      const newBoard = ensureFirstClickSafe(
+        generated,
+        [startX, startY],
+        newSeed,
+      );
+      setBoard(newBoard);
+      setStatus('playing');
+      setStartTime(Date.now());
+      setShareCode(
+        buildShareCode(newSeed, validated.size, validated.mines, startX, startY),
+      );
+      setBV(calculate3BV(newBoard));
+      setFlags(0);
+      const finalize = (count) => {
+        setAriaMessage(`Revealed ${count} cells`);
+        checkAndHandleWin(newBoard);
+      };
+      if (prefersReducedMotion.current) {
+        const { cells } = await computeRevealed(newBoard, [[startX, startY]]);
+        cells.forEach(([cx, cy]) => {
+          newBoard[cx][cy].revealed = true;
+        });
+        setBoard(cloneBoard(newBoard));
+        finalize(cells.length);
+      } else {
+        revealWave(newBoard, startX, startY, finalize);
       }
     }
     setCodeInput('');
@@ -1074,8 +1228,12 @@ const Minesweeper = () => {
     try {
       const data = JSON.parse(saved);
       if (data.config) {
-        setConfig(data.config);
-        const match = Object.entries(DIFFICULTIES).find(([, value]) => value.size === data.config.size && value.mines === data.config.mines);
+        const validated = validateConfig(data.config.size, data.config.mines);
+        setConfig(validated);
+        const match = Object.entries(DIFFICULTIES).find(
+          ([, value]) =>
+            value.size === validated.size && value.mines === validated.mines,
+        );
         if (match) setDifficulty(match[0]);
       }
       if (data.board) {
@@ -1095,17 +1253,18 @@ const Minesweeper = () => {
       }
       if (data.status) setStatus(data.status);
       if (data.seed !== undefined) setSeed(data.seed);
-      if (data.shareCode) setShareCode(data.shareCode);
-      if (data.bv) setBV(data.bv);
+      if (data.shareCode !== undefined) setShareCode(data.shareCode);
+      if (data.bv !== undefined) setBV(data.bv);
       if (data.bvps !== undefined) setBVPS(data.bvps);
-      if (data.flags) setFlags(data.flags);
-      if (data.paused) setPaused(data.paused);
+      if (data.flags !== undefined) setFlags(data.flags);
+      if (data.paused !== undefined) setPaused(data.paused);
       if (data.status === 'playing' && !data.paused) {
-        setStartTime(Date.now() - (data.elapsed || 0) * 1000);
-        setElapsed(data.elapsed || 0);
+        const elapsedValue = data.elapsed ?? 0;
+        setStartTime(Date.now() - elapsedValue * 1000);
+        setElapsed(elapsedValue);
       } else {
-        if (data.startTime) setStartTime(data.startTime);
-        if (data.elapsed) setElapsed(data.elapsed);
+        if (data.startTime !== undefined) setStartTime(data.startTime);
+        if (data.elapsed !== undefined) setElapsed(data.elapsed);
       }
     } catch {
       setHasSave(false);
@@ -1221,6 +1380,11 @@ const Minesweeper = () => {
                   Copy share
                 </button>
               )}
+              {copyToast && (
+                <span className="rounded-full bg-[color:var(--color-surface-muted)] px-2 py-1 text-xs text-[color:var(--kali-text-subtle)]">
+                  {copyToast}
+                </span>
+              )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <label
@@ -1234,7 +1398,7 @@ const Minesweeper = () => {
                 className="min-w-[160px] flex-1 rounded-lg border border-[color:var(--color-border)] bg-[color:var(--color-surface)] px-3 py-1.5 font-mono text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-focus-ring)]"
                 value={codeInput}
                 onChange={(e) => setCodeInput(e.target.value)}
-                placeholder="seed-optional-x-y" aria-label="Load seed or code"
+                placeholder="seed-size-mines-x-y" aria-label="Load seed or code"
               />
               <button
                 onClick={loadFromCode}
@@ -1300,7 +1464,7 @@ const Minesweeper = () => {
                   : status === 'playing'
                   ? paused
                     ? 'Game paused.'
-                    : 'Sweep the field—flag suspected mines with right click or F.'
+                    : 'Sweep the field, flag suspected mines with right click or F.'
                   : status === 'won'
                   ? `Victory! 3BV ${bv} in ${timeDisplay}s.`
                   : `Boom! Game over. 3BV ${bv}.`}
@@ -1361,8 +1525,17 @@ const Minesweeper = () => {
         </div>
         {showSettings && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-[color:rgba(7,12,18,0.78)] backdrop-blur-sm">
-            <div className="w-full max-w-sm space-y-4 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 text-sm shadow-xl shadow-black/30">
-              <h2 className="text-center text-base font-semibold text-[color:var(--kali-text)]">
+            <div
+              ref={settingsRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="minesweeper-settings-title"
+              className="w-full max-w-sm space-y-4 rounded-2xl border border-[color:var(--color-border)] bg-[color:var(--color-surface-raised)] p-5 text-sm shadow-xl shadow-black/30"
+            >
+              <h2
+                id="minesweeper-settings-title"
+                className="text-center text-base font-semibold text-[color:var(--kali-text)]"
+              >
                 Game settings
               </h2>
               <label className="flex items-center justify-between gap-3 text-[color:var(--kali-text-subtle)]">
@@ -1400,4 +1573,3 @@ const Minesweeper = () => {
 };
 
 export default Minesweeper;
-
