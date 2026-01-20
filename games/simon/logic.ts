@@ -92,6 +92,17 @@ export function replayAfterStrike(state: SimonState): SimonState {
   };
 }
 
+export function replaySequence(state: SimonState): SimonState {
+  if (state.phase !== 'input') return state;
+  return {
+    ...state,
+    phase: 'playback',
+    inputIndex: 0,
+    lastError: undefined,
+    roundId: state.roundId + 1,
+  };
+}
+
 export function handleInput(
   state: SimonState,
   pad: number,
