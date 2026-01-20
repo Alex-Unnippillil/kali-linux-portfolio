@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Overlay, useGameLoop } from "../../components/apps/Games/common";
 import { useGamePersistence } from "../../components/apps/useGameControls";
+import HelpOverlay from "../../components/apps/HelpOverlay";
 import { createPinballWorld, constants, type PinballWorld } from "./physics";
 import { useTiltSensor } from "./tilt";
 
@@ -46,6 +47,7 @@ export default function Pinball() {
   const [tilt, setTilt] = useState(false);
   const [score, setScore] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [muted, setMuted] = useState(false);
   const [ready, setReady] = useState(false);
   const [ballsRemaining, setBallsRemaining] = useState(MAX_BALLS);
@@ -381,7 +383,7 @@ export default function Pinball() {
   const bannerStatus = status.banner;
 
   return (
-    <div className="flex flex-col items-center space-y-4">
+    <div className="relative flex flex-col items-center space-y-4">
       <div className="w-full max-w-xl rounded-lg border border-slate-700/60 bg-slate-900/60 p-4 text-xs text-slate-200 shadow-inner">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
@@ -471,6 +473,13 @@ export default function Pinball() {
           <span className="text-[11px] text-slate-400">
             Tune the table physics to match your style.
           </span>
+          <button
+            type="button"
+            onClick={() => setShowHelp(true)}
+            className="rounded border border-slate-600 bg-slate-800 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-slate-200 shadow transition hover:border-slate-400 hover:text-white"
+          >
+            Help
+          </button>
         </div>
       </div>
       <div className="relative">
@@ -550,6 +559,7 @@ export default function Pinball() {
           </div>
         </div>
       </div>
+      {showHelp && <HelpOverlay gameId="pinball" onClose={() => setShowHelp(false)} />}
     </div>
   );
 }

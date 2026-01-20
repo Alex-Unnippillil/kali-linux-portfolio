@@ -12,6 +12,7 @@ import {
   autoFillLines,
 } from "./nonogramUtils";
 import { getDailyPuzzle } from "../../utils/dailyPuzzle";
+import HelpOverlay from "./HelpOverlay";
 
 // visual settings
 const CELL_SIZE = 30;
@@ -62,6 +63,7 @@ const Nonogram = () => {
 
   const [mode, setMode] = useState("paint"); // paint or mark
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [sound, setSound] = useState(true);
   const [preventIllegal, setPreventIllegal] = useState(false);
   const [time, setTime] = useState(0);
@@ -464,7 +466,7 @@ const Nonogram = () => {
   }, [rows, cols, setCellValue]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
+    <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
       <div className="sr-only" aria-live="polite">
         {liveMessage}
       </div>
@@ -544,7 +546,14 @@ const Nonogram = () => {
         >
           Strict: {preventIllegal ? "On" : "Off"}
         </button>
+        <button
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setShowHelp(true)}
+        >
+          Help
+        </button>
       </div>
+      {showHelp && <HelpOverlay gameId="nonogram" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

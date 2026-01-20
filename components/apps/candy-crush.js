@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import { Overlay, useGameLoop } from './Games/common';
+import HelpOverlay from './HelpOverlay';
 import {
   BOARD_WIDTH,
   GEM_IDS,
@@ -218,6 +219,7 @@ const CandyCrush = () => {
   const [selected, setSelected] = useState(null);
   const [boosters, setBoosters] = useState(() => ({ ...initialBoosters }));
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [lastCascade, setLastCascade] = useState(null);
   const [comboBanner, setComboBanner] = useState(null);
   const [particleBursts, setParticleBursts] = useState([]);
@@ -768,6 +770,13 @@ const CandyCrush = () => {
             >
               {colorblindMode ? 'Disable Colorblind Mode' : 'Enable Colorblind Mode'}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowHelp(true)}
+              className="rounded-lg border border-cyan-500/30 bg-slate-950/60 px-4 py-2 font-semibold text-cyan-100 shadow-[0_0_18px_rgba(8,47,73,0.45)] transition hover:border-cyan-300/60 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              Help
+            </button>
           </div>
         </div>
         <div className="flex flex-1 flex-col items-center gap-4">
@@ -917,6 +926,7 @@ const CandyCrush = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {showHelp && <HelpOverlay gameId="candy-crush" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

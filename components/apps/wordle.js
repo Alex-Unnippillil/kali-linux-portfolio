@@ -4,6 +4,7 @@ import {
   buildResultMosaic,
   dictionaries as wordleDictionaries,
 } from '../../utils/wordle';
+import HelpOverlay from './HelpOverlay';
 
 // Determine today's puzzle key for local storage
 const todayKey = new Date().toISOString().split('T')[0];
@@ -102,6 +103,7 @@ const Wordle = () => {
     false
   );
   const [hardMode, setHardMode] = usePersistentState('wordle-hardmode', false);
+  const [showHelp, setShowHelp] = useState(false);
 
   const isSolved = guesses.some((g) => g.guess === solution);
   const isGameOver = isSolved || guesses.length === 6;
@@ -400,7 +402,7 @@ const Wordle = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
+    <div className="relative h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
       <h1 className="text-xl font-bold">Wordle</h1>
 
       <div className="flex space-x-4">
@@ -434,6 +436,13 @@ const Wordle = () => {
             ))}
           </select>
         </label>
+        <button
+          type="button"
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+          onClick={() => setShowHelp(true)}
+        >
+          Help
+        </button>
       </div>
 
       <div className="grid grid-rows-6 gap-1" role="grid" aria-label="Wordle board">
@@ -526,6 +535,7 @@ const Wordle = () => {
         </div>
         <Calendar history={history} />
       </div>
+      {showHelp && <HelpOverlay gameId="wordle" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };
@@ -548,4 +558,3 @@ const Calendar = ({ history }) => {
 export default Wordle;
 
 export const displayWordle = () => <Wordle />;
-

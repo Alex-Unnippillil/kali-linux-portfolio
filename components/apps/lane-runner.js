@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
 import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
+import HelpOverlay from './HelpOverlay';
 
 const WIDTH = 300;
 const HEIGHT = 500;
@@ -51,6 +52,7 @@ const LaneRunner = () => {
   const [control, setControl] = useState('keys');
   const [tiltAllowed, setTiltAllowed] = useState(false);
   const [tiltOffset, setTiltOffset] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
   const [sensitivity, setSensitivity] = usePersistentState(
     'lane-runner:sensitivity',
     1,
@@ -287,6 +289,9 @@ const LaneRunner = () => {
           >
             Import
           </button>
+          <button onClick={() => setShowHelp(true)} className="px-2 py-1 bg-gray-700">
+            Help
+          </button>
           <input
             type="file"
             accept="application/json"
@@ -308,9 +313,9 @@ const LaneRunner = () => {
           Restart
         </button>
       )}
+      {showHelp && <HelpOverlay gameId="lane-runner" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };
 
 export default LaneRunner;
-

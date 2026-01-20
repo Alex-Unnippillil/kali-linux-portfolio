@@ -4,6 +4,7 @@ import useGameControls from './useGameControls';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings as useGlobalSettings } from '../../hooks/useSettings';
 import { SettingsProvider, useSettings as useGameSettings } from './GameSettingsContext';
+import HelpOverlay from './HelpOverlay';
 import {
   createInitialState,
   DEFAULT_CONFIG,
@@ -42,6 +43,7 @@ const PongInner = () => {
   const audioCtxRef = useRef(null);
   const [sound, setSound] = useState(true);
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const pausedRef = useRef(false);
   const [rally, setRally] = useState(0);
   const { pongSpin } = useGlobalSettings();
@@ -497,7 +499,7 @@ const PongInner = () => {
   }, [offerSDP]);
 
   return (
-    <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white">
       <canvas
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"
@@ -628,6 +630,12 @@ const PongInner = () => {
         >
           Reset
         </button>
+        <button
+          className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+          onClick={() => setShowHelp(true)}
+        >
+          Help
+        </button>
       </div>
 
       {history.length > 0 && (
@@ -639,6 +647,7 @@ const PongInner = () => {
           ))}
         </div>
       )}
+      {showHelp && <HelpOverlay gameId="pong" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

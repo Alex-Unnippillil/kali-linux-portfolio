@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import ReactGA from 'react-ga4';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
+import HelpOverlay from '../HelpOverlay';
 import {
   initializeGame,
   drawFromStock,
@@ -118,6 +119,7 @@ const CardView: React.FC<{
 
 const Solitaire = () => {
   const [drawMode, setDrawMode] = useState<1 | 3>(1);
+  const [showHelp, setShowHelp] = useState(false);
   const [passLimit, setPassLimit] = useState<number>(3);
   const [variant, setVariant] = useState<Variant>('klondike');
   const [game, setGame] = useState<GameState>(() =>
@@ -1176,6 +1178,14 @@ const Solitaire = () => {
             >
               Restart
             </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={() => setShowHelp(true)}
+              title="View controls and objectives"
+            >
+              Help
+            </button>
           </div>
         </div>
         <div className="flex flex-wrap items-start gap-4 rounded-xl bg-black/25 p-4 shadow-inner shadow-black/70">
@@ -1452,6 +1462,7 @@ const Solitaire = () => {
           }
         }
       `}</style>
+      {showHelp && <HelpOverlay gameId="solitaire" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

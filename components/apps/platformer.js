@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TILE_SIZE, cameraDefaults, parseLevel, step } from '../../games/platformer/logic';
+import HelpOverlay from './HelpOverlay';
 
 // Level definitions are data driven: edit the string arrays to tweak layouts or add more.
 // Each row must share the same width. Tokens: # solid, . empty, S spawn, G goal, ^ spikes, C coin, M moving platform.
@@ -104,6 +105,7 @@ export default function PlatformerApp() {
     status: 'running',
     paused: false,
   });
+  const [showHelp, setShowHelp] = useState(false);
 
   const sessionRef = useRef(createInitialState(0));
 
@@ -383,6 +385,13 @@ export default function PlatformerApp() {
           >
             {ui.paused ? 'Resume' : 'Pause'}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowHelp(true)}
+            className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700"
+          >
+            Help
+          </button>
           {ui.status === 'complete' && (
             <button
               type="button"
@@ -409,6 +418,7 @@ export default function PlatformerApp() {
           </div>
         </div>
       </div>
+      {showHelp && <HelpOverlay gameId="platformer" onClose={() => setShowHelp(false)} />}
     </div>
   );
 }

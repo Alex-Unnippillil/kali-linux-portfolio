@@ -15,6 +15,7 @@ import {
 } from '../../utils/analytics';
 import { DICTIONARIES } from '../../apps/hangman/engine';
 import { getGuessPool } from '../../apps/games/hangman/logic';
+import HelpOverlay from './HelpOverlay';
 
 
 // Helper to draw a line segment with a dashed reveal animation
@@ -71,6 +72,7 @@ const Hangman = () => {
   const [wrong, setWrong] = useState(0);
   const [score, setScore] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [sound, setSound] = usePersistentState(
     'hangman-sound',
     true,
@@ -462,7 +464,7 @@ const Hangman = () => {
 
   if (!word) {
     return (
-      <div className="flex flex-col items-center">
+      <div className="relative flex flex-col items-center">
         <select
           className="text-black px-1 mb-2"
           value={pendingDict}
@@ -474,17 +476,26 @@ const Hangman = () => {
             </option>
           ))}
         </select>
-        <button
-          onClick={() => reset(undefined, pendingDict)}
-          className="px-2 py-1 bg-ubt-blue text-black rounded"
-        >
-          Start Game
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => reset(undefined, pendingDict)}
+            className="px-2 py-1 bg-ubt-blue text-black rounded"
+          >
+            Start Game
+          </button>
+          <button
+            onClick={() => setShowHelp(true)}
+            className="px-2 py-1 bg-ubt-blue text-black rounded"
+          >
+            Help
+          </button>
+        </div>
+        {showHelp && <HelpOverlay gameId="hangman" onClose={() => setShowHelp(false)} />}
       </div>
     );
   }
   return (
-    <>
+    <div className="relative h-full w-full">
       <div className="flex justify-center space-x-2 mb-2">
         <select
           className="text-black px-1"
@@ -532,6 +543,12 @@ const Hangman = () => {
         >
           Share Image
         </button>
+        <button
+          onClick={() => setShowHelp(true)}
+          className="px-2 py-1 bg-ubt-blue text-black rounded"
+        >
+          Help
+        </button>
       </div>
       <div className="text-center text-xs mb-2">
         {`Stats for ${dict}: ${stats[dict]?.wins || 0} wins / ${
@@ -571,9 +588,9 @@ const Hangman = () => {
       <div aria-live="polite" role="status" className="sr-only">
         {announcement}
       </div>
-    </>
+      {showHelp && <HelpOverlay gameId="hangman" onClose={() => setShowHelp(false)} />}
+    </div>
   );
 };
 
 export default Hangman;
-

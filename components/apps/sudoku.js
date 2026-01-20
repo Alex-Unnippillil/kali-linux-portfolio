@@ -8,6 +8,7 @@ import {
   sanitizeAllCandidates,
   toggleCandidateIfLegal,
 } from '../../apps/games/sudoku/cell';
+import HelpOverlay from './HelpOverlay';
 
 const SIZE = 9;
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -34,6 +35,7 @@ const Sudoku = () => {
   const [selectedCell, setSelectedCell] = useState(null);
   const [mistakes, setMistakes] = useState(0);
   const [hintsUsed, setHintsUsed] = useState(0);
+  const [showHelp, setShowHelp] = useState(false);
   const timerRef = useRef(null);
 
   useEffect(() => {
@@ -261,7 +263,7 @@ const Sudoku = () => {
     );
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full overflow-y-auto bg-ub-cool-grey text-white">
       <div className="sr-only" aria-live="polite">
         {ariaMessage}
       </div>
@@ -336,6 +338,14 @@ const Sudoku = () => {
                 title="Restart with a fresh puzzle"
               >
                 New Game
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-white/10 bg-white/10 px-3 py-1 text-sm font-semibold text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                onClick={() => setShowHelp(true)}
+                title="View Sudoku controls"
+              >
+                Help
               </button>
             </div>
           </div>
@@ -518,6 +528,7 @@ const Sudoku = () => {
           </div>
         </div>
       </div>
+      {showHelp && <HelpOverlay gameId="sudoku" onClose={() => setShowHelp(false)} />}
       <style jsx>{`
         .conflict-cell {
           background: rgba(248, 113, 113, 0.85);

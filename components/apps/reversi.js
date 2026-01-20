@@ -9,6 +9,7 @@ import {
   bestMove,
   getTurnResolution,
 } from './reversiLogic';
+import HelpOverlay from './HelpOverlay';
 
 const DIFFICULTIES = {
   easy: {
@@ -98,6 +99,7 @@ const Reversi = () => {
   const [player, setPlayer] = useState('B');
   const [paused, setPaused] = useState(false);
   const [sound, setSound] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
   const [message, setMessage] = useState('Your turn');
   const [wins, setWins] = useState({ player: 0, ai: 0 });
   const [mobility, setMobility] = useState({ player: 0, ai: 0 });
@@ -789,7 +791,7 @@ const Reversi = () => {
   const instructionsId = 'reversi-instructions';
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-ub-cool-grey text-white">
+    <div className="relative h-full w-full overflow-y-auto bg-ub-cool-grey text-white">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:flex-row">
         <div
           ref={containerRef}
@@ -943,6 +945,12 @@ const Reversi = () => {
             >
               Hint
             </button>
+            <button
+              className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              onClick={() => setShowHelp(true)}
+            >
+              Help
+            </button>
           </div>
           <div className="flex flex-col gap-2 text-sm">
             <label className="text-xs font-semibold uppercase tracking-widest text-slate-300" htmlFor="reversi-difficulty">
@@ -998,6 +1006,7 @@ const Reversi = () => {
           </div>
         </div>
       </div>
+      {showHelp && <HelpOverlay gameId="reversi" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };

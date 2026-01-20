@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { CAR_SKINS, loadSkinAssets } from '../../apps/games/car-racer/customization';
 import { hasOffscreenCanvas } from '../../utils/feature';
+import HelpOverlay from './HelpOverlay';
 
 // Canvas dimensions
 const WIDTH = 300;
@@ -51,6 +52,7 @@ const CarRacer = () => {
   const [paused, setPaused] = useState(true);
   const pausedRef = useRef(true);
   const [showCustomization, setShowCustomization] = useState(true);
+  const [showHelp, setShowHelp] = useState(false);
   const [skin, setSkin] = useState(() =>
     typeof window !== 'undefined'
       ? localStorage.getItem('car_racer_skin') || CAR_SKINS[0].key
@@ -630,6 +632,12 @@ const CarRacer = () => {
         >
           Boost
         </button>
+        <button
+          className="bg-gray-700 px-2 focus:outline-none focus:ring-2 focus:ring-white"
+          onClick={() => setShowHelp(true)}
+        >
+          Help
+        </button>
       </div>
       <div className="absolute bottom-2 right-2 z-10 text-sm w-24">
         <div className="w-full h-2 bg-gray-700">
@@ -667,9 +675,9 @@ const CarRacer = () => {
           </div>
         </div>
       )}
+      {showHelp && <HelpOverlay gameId="car-racer" onClose={() => setShowHelp(false)} />}
     </div>
   );
 };
 
 export default CarRacer;
-

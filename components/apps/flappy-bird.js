@@ -5,6 +5,7 @@ import {
   BIRD_ANIMATION_FRAMES,
   PIPE_SKINS,
 } from "../../apps/games/flappy-bird/skins";
+import HelpOverlay from "./HelpOverlay";
 
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -14,6 +15,7 @@ const FlappyBird = () => {
   const liveRef = useRef(null);
   const [started, setStarted] = useState(false);
   const [gameState, setGameState] = useState("menu");
+  const [showHelp, setShowHelp] = useState(false);
   const [skin, setSkin] = useState(0);
   const [pipeSkinIndex, setPipeSkinIndex] = useState(0);
   const birdImages = useRef([]);
@@ -1138,6 +1140,12 @@ const FlappyBird = () => {
           >
             Start Flight
           </button>
+          <button
+            className="w-40 rounded-full border border-white/30 px-6 py-2 text-xs font-semibold uppercase tracking-widest text-white/90 shadow transition hover:border-white/60 hover:text-white focus:outline-none focus:ring-4 focus:ring-white/40"
+            onClick={() => setShowHelp(true)}
+          >
+            Help
+          </button>
         </div>
       )}
 
@@ -1213,6 +1221,7 @@ const FlappyBird = () => {
           </button>
         </div>
       )}
+      {showHelp && <HelpOverlay gameId="flappy-bird" onClose={() => setShowHelp(false)} />}
 
       <div ref={liveRef} className="sr-only" aria-live="polite" />
     </div>
