@@ -22,6 +22,7 @@ export default function MemorySlots() {
     display.value = display.value.slice(0, start) + text + display.value.slice(end);
     const pos = start + text.length;
     display.selectionStart = display.selectionEnd = pos;
+    display.dispatchEvent(new Event('input', { bubbles: true }));
     display.focus();
   };
 

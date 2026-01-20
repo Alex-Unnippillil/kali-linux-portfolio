@@ -19,11 +19,13 @@ export function useFormulas() {
 }
 
 export function validateFormula(expr: string): boolean {
+  if (/\+\+/.test(expr)) {
+    return false;
+  }
   try {
-    evaluate(expr);
-    return true;
+    const result = evaluate(expr);
+    return result !== null && result !== 'Error';
   } catch {
     return false;
   }
 }
-

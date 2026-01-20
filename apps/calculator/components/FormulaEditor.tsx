@@ -30,6 +30,7 @@ export default function FormulaEditor() {
       display.value = display.value.slice(0, start) + f.expr + display.value.slice(end);
       const pos = start + f.expr.length;
       display.selectionStart = display.selectionEnd = pos;
+      display.dispatchEvent(new Event('input', { bubbles: true }));
       display.focus();
     }
   };
@@ -83,4 +84,3 @@ export default function FormulaEditor() {
     </div>
   );
 }
-

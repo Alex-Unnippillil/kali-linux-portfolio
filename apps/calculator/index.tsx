@@ -1,5 +1,5 @@
 'use client';
-import { Fragment, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { Fragment, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import ModeSwitcher, { type Mode } from './components/ModeSwitcher';
 import MemorySlots from './components/MemorySlots';
@@ -21,9 +21,34 @@ export default function Calculator() {
           typeof item?.result === 'string',
       ),
   );
-  const [mode, setMode] = useState<Mode>('basic');
+  const [mode, setMode] = usePersistentState<Mode>(
+    'calc-mode',
+    () => 'basic',
+    (v): v is Mode => v === 'basic' || v === 'scientific' || v === 'programmer',
+  );
   const [scientificActive, setScientificActive] = useState(false);
   const [programmerActive, setProgrammerActive] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
+  const historyRef = useRef(history);
+  const modeRef = useRef(mode);
+  const apiRef = useRef<{
+    evaluate?: (expr: string) => string;
+    memoryAdd?: (expr: string) => void;
+    memorySubtract?: (expr: string) => void;
+    memoryRecall?: () => string;
+    formatBase?: (value: string) => string;
+    getLastResult?: () => string;
+    setBase?: (base: number) => void;
+    setPreciseMode?: (on: boolean) => void;
+    setProgrammerMode?: (on: boolean) => void;
+  } | null>(null);
+  const uiRef = useRef<{
+    display: HTMLInputElement;
+    scientificToggle?: HTMLButtonElement | null;
+    programmerToggle?: HTMLButtonElement | null;
+    scientificPanel?: HTMLElement | null;
+    programmerPanel?: HTMLElement | null;
+  } | null>(null);
 
   const baseBtnCls =
     'btn flex items-center justify-center font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]';
@@ -106,38 +131,50 @@ export default function Calculator() {
   ];
 
   useEffect(() => {
-    let evaluate: any;
-    let memoryAdd: any;
-    let memorySubtract: any;
-    let memoryRecall: any;
-    let formatBase: any;
-    let getLastResult: any;
-    let setBase: any;
-    let setPreciseMode: any;
-    let setProgrammerMode: any;
+    historyRef.current = history;
+  }, [history]);
+
+  const applyMode = useCallback((nextMode: Mode) => {
+    const refs = uiRef.current;
+    if (!refs) return;
+    const isScientific = nextMode === 'scientific';
+    const isProgrammer = nextMode === 'programmer';
+    refs.scientificToggle?.setAttribute('aria-pressed', String(isScientific));
+    refs.programmerToggle?.setAttribute('aria-pressed', String(isProgrammer));
+    refs.scientificPanel?.classList.toggle('hidden', !isScientific);
+    refs.programmerPanel?.classList.toggle('hidden', !isProgrammer);
+    apiRef.current?.setProgrammerMode?.(isProgrammer);
+    setScientificActive(isScientific);
+    setProgrammerActive(isProgrammer);
+  }, []);
+
+  useEffect(() => {
+    modeRef.current = mode;
+    applyMode(mode);
+  }, [mode, applyMode]);
+
+  useEffect(() => {
+    let cleanup = () => {};
+    let disposed = false;
 
     const load = async () => {
-      if (typeof window !== 'undefined' && !(window as any).math) {
-        await new Promise((resolve) => {
-          const script = document.createElement('script');
-          script.src =
-            'https://cdn.jsdelivr.net/npm/mathjs@13.2.3/lib/browser/math.js';
-          script.onload = resolve as any;
-          document.body.appendChild(script);
-        });
-      }
       const mod = await import('./main');
-      evaluate = mod.evaluate;
-      memoryAdd = mod.memoryAdd;
-      memorySubtract = mod.memorySubtract;
-      memoryRecall = mod.memoryRecall;
-      formatBase = mod.formatBase;
-      getLastResult = mod.getLastResult;
-      setBase = mod.setBase;
-      setPreciseMode = mod.setPreciseMode;
-      setProgrammerMode = mod.setProgrammerMode;
+      const api = (mod as any).default ?? mod;
+      if (disposed) return;
+      apiRef.current = {
+        evaluate: api.evaluate,
+        memoryAdd: api.memoryAdd,
+        memorySubtract: api.memorySubtract,
+        memoryRecall: api.memoryRecall,
+        formatBase: api.formatBase,
+        getLastResult: api.getLastResult,
+        setBase: api.setBase,
+        setPreciseMode: api.setPreciseMode,
+        setProgrammerMode: api.setProgrammerMode,
+      };
 
-      const display = document.getElementById('display') as HTMLInputElement;
+      const display = document.getElementById('display') as HTMLInputElement | null;
+      if (!display) return;
       const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
       const historyToggle = document.getElementById('toggle-history');
       const historyEl = document.getElementById('history');
@@ -149,8 +186,60 @@ export default function Calculator() {
       const programmerToggle = document.getElementById('toggle-programmer') as HTMLButtonElement | null;
       const scientificPanel = document.getElementById('scientific');
       const programmerPanel = document.getElementById('programmer');
+      const parenIndicator = document.getElementById('paren-indicator');
+      const allButtons = document.querySelectorAll<HTMLButtonElement>('.calculator button');
+
+      uiRef.current = {
+        display,
+        scientificToggle,
+        programmerToggle,
+        scientificPanel,
+        programmerPanel,
+      };
+      applyMode(modeRef.current);
+
+      const handlers: Array<{
+        element: HTMLElement | Document;
+        type: keyof DocumentEventMap | keyof HTMLElementEventMap;
+        handler: (event: any) => void;
+      }> = [];
+      const addListener = (
+        element: HTMLElement | Document,
+        type: keyof DocumentEventMap | keyof HTMLElementEventMap,
+        handler: (event: any) => void,
+      ) => {
+        element.addEventListener(type, handler);
+        handlers.push({ element, type, handler });
+      };
+
+      const clearError = () => {
+        display.classList.remove('error');
+      };
+
+      const updateParenIndicator = () => {
+        if (!parenIndicator) return;
+        let balance = 0;
+        for (const ch of display.value) {
+          if (ch === '(') balance += 1;
+          if (ch === ')') balance -= 1;
+        }
+        if (balance < 0) {
+          display.classList.add('error');
+          parenIndicator.style.background = 'rgba(248, 113, 113, 0.75)';
+          parenIndicator.setAttribute('aria-label', 'Mismatched parentheses');
+        } else if (balance > 0) {
+          display.classList.remove('error');
+          parenIndicator.style.background = 'color-mix(in srgb, var(--color-accent) 65%, transparent)';
+          parenIndicator.setAttribute('aria-label', `${balance} open parenthesis${balance === 1 ? '' : 'es'}`);
+        } else {
+          display.classList.remove('error');
+          parenIndicator.style.background = '';
+          parenIndicator.setAttribute('aria-label', 'Parentheses balanced');
+        }
+      };
 
       const insertAtCursor = (text: string) => {
+        clearError();
         const start = display.selectionStart ?? display.value.length;
         const end = display.selectionEnd ?? display.value.length;
         const before = display.value.slice(0, start);
@@ -158,32 +247,50 @@ export default function Calculator() {
         display.value = before + text + after;
         const pos = start + text.length;
         display.selectionStart = display.selectionEnd = pos;
+        updateParenIndicator();
       };
 
-      const handlers: Array<{ btn: HTMLButtonElement; handler: () => void }> = [];
+      const toggleSection = (toggle: HTMLElement | null, section: HTMLElement | null) => {
+        if (!section) return;
+        const willShow = section.classList.contains('hidden');
+        section.classList.toggle('hidden');
+        toggle?.setAttribute('aria-pressed', String(willShow));
+      };
+
+      allButtons.forEach((btn) => {
+        addListener(btn, 'mousedown', (event) => event.preventDefault());
+      });
+
       buttons.forEach((btn) => {
         const handler = () => {
           const action = btn.dataset.action;
           const value = btn.dataset.value || btn.textContent || '';
 
           if (action === 'clear') {
+            clearError();
             display.value = '';
+            updateParenIndicator();
             return;
           }
 
           if (action === 'backspace') {
+            clearError();
             display.value = display.value.slice(0, -1);
+            updateParenIndicator();
             return;
           }
 
           if (action === 'equals') {
             const expr = display.value;
             try {
-              const result = evaluate(expr);
+              const result = apiRef.current?.evaluate?.(expr);
+              if (result === undefined) return;
               setHistory((prev) =>
                 [{ expr, result }, ...prev].slice(0, HISTORY_LIMIT),
               );
               display.value = result;
+              clearError();
+              updateParenIndicator();
             } catch (e: any) {
               const idx = e.index || 0;
               display.classList.add('error');
@@ -194,30 +301,75 @@ export default function Calculator() {
           }
 
           if (action === 'ans') {
-            insertAtCursor(formatBase(getLastResult()));
+            const last = apiRef.current?.getLastResult?.();
+            const formatted = apiRef.current?.formatBase?.(last ?? '');
+            if (formatted) {
+              insertAtCursor(formatted);
+            }
             return;
           }
 
           if (action === 'mplus') {
-            memoryAdd(display.value);
+            apiRef.current?.memoryAdd?.(display.value);
             return;
           }
 
           if (action === 'mminus') {
-            memorySubtract(display.value);
+            apiRef.current?.memorySubtract?.(display.value);
             return;
           }
 
           if (action === 'mr') {
-            display.value = formatBase(memoryRecall());
+            const result = apiRef.current?.memoryRecall?.();
+            if (result !== undefined) {
+              clearError();
+              display.value = apiRef.current?.formatBase?.(result) ?? result;
+              updateParenIndicator();
+            }
+            return;
+          }
+
+          if (action === 'print') {
+            const entries = historyRef.current;
+            const content =
+              entries.length === 0
+                ? 'Tape is empty.'
+                : entries
+                    .map(({ expr: entryExpr, result }, index) => `${index + 1}. ${entryExpr} = ${result}`)
+                    .join('\n');
+            const escapeHtml = (value: string) =>
+              value.replace(/[&<>"']/g, (char) => {
+                const map: Record<string, string> = {
+                  '&': '&amp;',
+                  '<': '&lt;',
+                  '>': '&gt;',
+                  '"': '&quot;',
+                  "'": '&#39;',
+                };
+                return map[char] ?? char;
+              });
+            const printWindow = window.open('', 'calc-print', 'width=480,height=640');
+            if (printWindow) {
+              printWindow.document.write(`<pre>${escapeHtml(content)}</pre>`);
+              printWindow.document.close();
+              printWindow.focus();
+              printWindow.print();
+              setStatusMessage('Print dialog opened.');
+            } else if (navigator.clipboard) {
+              navigator.clipboard
+                .writeText(content)
+                .then(() => setStatusMessage('Tape copied to clipboard.'))
+                .catch(() => setStatusMessage('Unable to print or copy tape.'));
+            } else {
+              setStatusMessage('Unable to print or copy tape.');
+            }
             return;
           }
 
           insertAtCursor(value);
           display.focus();
         };
-        btn.addEventListener('click', handler);
-        handlers.push({ btn, handler });
+        addListener(btn, 'click', handler);
       });
 
       const keyHandler = (e: KeyboardEvent) => {
@@ -228,12 +380,16 @@ export default function Calculator() {
         }
         if (e.key === 'Backspace') {
           e.preventDefault();
+          clearError();
           display.value = display.value.slice(0, -1);
+          updateParenIndicator();
           return;
         }
         if (e.key === 'Escape' || e.key.toLowerCase() === 'c') {
           e.preventDefault();
+          clearError();
           display.value = '';
+          updateParenIndicator();
           return;
         }
         const btn = document.querySelector<HTMLButtonElement>(
@@ -252,74 +408,75 @@ export default function Calculator() {
           insertAtCursor(e.key);
         }
       };
-      document.addEventListener('keydown', keyHandler);
+      addListener(document, 'keydown', keyHandler);
 
-      historyToggle?.addEventListener('click', () => {
-        historyEl?.classList.toggle('hidden');
-      });
+      addListener(display, 'input', updateParenIndicator);
 
-      formulasToggle?.addEventListener('click', () => {
-        formulasEl?.classList.toggle('hidden');
-      });
+      if (historyToggle) {
+        addListener(historyToggle as HTMLElement, 'click', () => {
+          toggleSection(historyToggle, historyEl as HTMLElement | null);
+        });
+      }
+      if (formulasToggle) {
+        addListener(formulasToggle as HTMLElement, 'click', () => {
+          toggleSection(formulasToggle, formulasEl as HTMLElement | null);
+        });
+      }
 
-      baseSelect?.addEventListener('change', () => {
-        setBase(parseInt(baseSelect.value, 10));
-      });
+      if (historyToggle && historyEl) {
+        historyToggle.setAttribute('aria-pressed', String(!historyEl.classList.contains('hidden')));
+      }
+      if (formulasToggle && formulasEl) {
+        formulasToggle.setAttribute('aria-pressed', String(!formulasEl.classList.contains('hidden')));
+      }
+
+      if (baseSelect) {
+        addListener(baseSelect, 'change', () => {
+          apiRef.current?.setBase?.(parseInt(baseSelect.value, 10));
+        });
+      }
 
       if (preciseToggle) {
         let preciseOn = preciseToggle.getAttribute('aria-pressed') === 'true';
         const handlePrecise = () => {
           preciseOn = !preciseOn;
           preciseToggle.setAttribute('aria-pressed', String(preciseOn));
-          setPreciseMode?.(preciseOn);
+          apiRef.current?.setPreciseMode?.(preciseOn);
+          setStatusMessage(preciseOn ? 'Precise mode enabled.' : 'Precise mode disabled.');
         };
-        preciseToggle.addEventListener('click', handlePrecise);
-        handlers.push({ btn: preciseToggle, handler: handlePrecise });
+        addListener(preciseToggle, 'click', handlePrecise);
       }
 
       if (scientificToggle) {
-        let isActive = scientificToggle.getAttribute('aria-pressed') === 'true';
-        const syncScientific = (next: boolean) => {
-          isActive = next;
-          scientificToggle.setAttribute('aria-pressed', String(next));
-          scientificPanel?.classList.toggle('hidden', !next);
-          setScientificActive(next);
-        };
-        syncScientific(isActive);
         const handleScientific = () => {
-          syncScientific(!isActive);
+          setMode((prevMode) => (prevMode === 'scientific' ? 'basic' : 'scientific'));
         };
-        scientificToggle.addEventListener('click', handleScientific);
-        handlers.push({ btn: scientificToggle, handler: handleScientific });
+        addListener(scientificToggle, 'click', handleScientific);
       }
 
       if (programmerToggle) {
-        let isActive = programmerToggle.getAttribute('aria-pressed') === 'true';
-        const syncProgrammer = (next: boolean) => {
-          isActive = next;
-          programmerToggle.setAttribute('aria-pressed', String(next));
-          programmerPanel?.classList.toggle('hidden', !next);
-          setProgrammerMode?.(next);
-          setProgrammerActive(next);
-        };
-        syncProgrammer(isActive);
         const handleProgrammer = () => {
-          syncProgrammer(!isActive);
+          setMode((prevMode) => (prevMode === 'programmer' ? 'basic' : 'programmer'));
         };
-        programmerToggle.addEventListener('click', handleProgrammer);
-        handlers.push({ btn: programmerToggle, handler: handleProgrammer });
+        addListener(programmerToggle, 'click', handleProgrammer);
       }
 
-      return () => {
-        handlers.forEach(({ btn, handler }) =>
-          btn.removeEventListener('click', handler),
+      updateParenIndicator();
+
+      cleanup = () => {
+        handlers.forEach(({ element, type, handler }) =>
+          element.removeEventListener(type, handler),
         );
-        document.removeEventListener('keydown', keyHandler);
       };
     };
 
     load();
-  }, [setHistory]);
+
+    return () => {
+      disposed = true;
+      cleanup();
+    };
+  }, [applyMode, setHistory, setMode]);
 
   const activePanels = useMemo(() => {
     const panels: string[] = [];
@@ -340,7 +497,11 @@ export default function Calculator() {
           type="button"
           onClick={() => {
             const display = document.getElementById('display') as HTMLInputElement | null;
-            if (display) display.value = display.value.slice(0, -1);
+            if (display) {
+              display.value = display.value.slice(0, -1);
+              display.dispatchEvent(new Event('input', { bubbles: true }));
+              display.focus();
+            }
           }}
           className="inline-flex items-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_60%,transparent)] bg-[var(--kali-overlay)] px-4 py-2 text-sm font-medium text-[color:color-mix(in_srgb,var(--kali-text)_88%,rgba(148,163,184,0.35))] transition hover:bg-[color:color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] hover:text-[color:var(--kali-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
         >
@@ -363,7 +524,7 @@ export default function Calculator() {
           Undo
         </button>
         <div className="flex items-center gap-3">
-          <ModeSwitcher onChange={(nextMode) => setMode(nextMode)} />
+          <ModeSwitcher mode={mode} onChange={(nextMode) => setMode(nextMode)} />
           <div className="flex items-center gap-2 text-[color:color-mix(in_srgb,var(--kali-text)_65%,rgba(148,163,184,0.55))]">
             <button
               id="toggle-history"
@@ -545,6 +706,11 @@ export default function Calculator() {
             ))
           )}
         </div>
+        {statusMessage && (
+          <div className="mt-2 text-xs font-semibold uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_75%,rgba(148,163,184,0.35))]" data-testid="calc-status-message">
+            {statusMessage}
+          </div>
+        )}
       </div>
 
       <div id="scientific" className="scientific hidden grid grid-cols-3 gap-2 rounded-2xl border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] p-4 text-sm uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_88%,rgba(148,163,184,0.2))]" aria-label="scientific functions">
@@ -610,7 +776,13 @@ export default function Calculator() {
             Print
           </button>
         </div>
-        <div id="paren-indicator" className="mt-2 h-1 rounded-full bg-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)]" />
+        <div
+          id="paren-indicator"
+          className="mt-2 h-1 rounded-full bg-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)]"
+          role="status"
+          aria-live="polite"
+          aria-label="Parentheses balanced"
+        />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -649,4 +821,3 @@ export default function Calculator() {
     </div>
   );
 }
-
