@@ -1,6 +1,12 @@
 // Shunting-yard evaluator and tokenizer for the calculator
 // Exposes pure functions without DOM dependencies
 
+let math = globalThis.math;
+if (!math) {
+  const mathjs = require('mathjs');
+  math = mathjs.create ? mathjs.create(mathjs.all, {}) : mathjs;
+}
+
 let preciseMode = false;
 let programmerMode = false;
 let currentBase = 10;
@@ -40,6 +46,10 @@ function convertBase(val, from, to) {
 
 function formatBase(value, base = currentBase) {
   return convertBase(String(value), 10, base).toUpperCase();
+}
+
+function sanitizeExpression(expression) {
+  return expression.replace(/(\d*\.?\d+)%/g, '($1/100)');
 }
 
 // --- Tokenizer ---
@@ -234,6 +244,7 @@ function evalRPN(rpn, vars = {}) {
 }
 
 function evaluate(expression, vars = {}) {
+  const sanitizedExpression = sanitizeExpression(expression);
   let scope = { ...vars };
   if (typeof window !== 'undefined') {
     try {
@@ -244,7 +255,7 @@ function evaluate(expression, vars = {}) {
     }
   }
   if (programmerMode) {
-    const decimalExpr = expression.replace(/\b[0-9A-F]+\b/gi, (m) =>
+    const decimalExpr = sanitizedExpression.replace(/\b[0-9A-F]+\b/gi, (m) =>
       parseInt(m, currentBase)
     );
     const ctx = { Ans: lastResult };
@@ -255,7 +266,7 @@ function evaluate(expression, vars = {}) {
     lastResult = result;
     return formatBase(result);
   }
-  const tokens = tokenize(expression);
+  const tokens = tokenize(sanitizedExpression);
   const rpn = toRPN(tokens);
   const result = evalRPN(rpn, scope);
   lastResult = result;
