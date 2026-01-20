@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   getWordOfTheDay,
   buildResultMosaic,
@@ -10,20 +10,99 @@ const todayKey = new Date().toISOString().split('T')[0];
 
 const dictionaries = wordleDictionaries;
 
+const STATUSES = ['correct', 'present', 'absent'];
+const STATUS_SET = new Set(STATUSES);
+
+const sanitizeGuessText = (value) =>
+  value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
+
+const normalizeBoolean = (value, fallback) =>
+  typeof value === 'boolean' ? value : fallback;
+
+const normalizeDictName = (value) =>
+  dictionaries[value] ? value : 'common';
+
+const normalizeGuesses = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (entry) =>
+        entry &&
+        typeof entry.guess === 'string' &&
+        entry.guess.length === 5 &&
+        Array.isArray(entry.result) &&
+        entry.result.length === 5 &&
+        entry.result.every((res) => STATUS_SET.has(res))
+    )
+    .map((entry) => ({
+      guess: entry.guess.toUpperCase(),
+      result: entry.result,
+    }))
+    .slice(0, 6);
+};
+
+const normalizeHistory = (value) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  const next = {};
+  Object.entries(value).forEach(([key, entry]) => {
+    if (
+      entry &&
+      typeof entry === 'object' &&
+      typeof entry.success === 'boolean' &&
+      typeof entry.solution === 'string' &&
+      typeof entry.guesses === 'number'
+    ) {
+      next[key] = {
+        guesses: entry.guesses,
+        solution: entry.solution,
+        success: entry.success,
+      };
+    }
+  });
+  return next;
+};
+
+const normalizeStreak = (value) => {
+  if (!value || typeof value !== 'object') return { current: 0, max: 0 };
+  const current = Number.isFinite(value.current) ? Math.max(0, value.current) : 0;
+  const max = Number.isFinite(value.max) ? Math.max(0, value.max) : 0;
+  return { current, max };
+};
+
+const normalizeStats = (value, fallback) => {
+  if (!value || typeof value !== 'object') return fallback;
+  const guessDist = { ...fallback.guessDist };
+  if (value.guessDist && typeof value.guessDist === 'object') {
+    Object.keys(guessDist).forEach((key) => {
+      const num = Number(value.guessDist[key]);
+      guessDist[key] = Number.isFinite(num) ? Math.max(0, num) : guessDist[key];
+    });
+  }
+  const played = Number.isFinite(value.played) ? Math.max(0, value.played) : fallback.played;
+  const won = Number.isFinite(value.won) ? Math.max(0, value.won) : fallback.won;
+  return { played, won, guessDist };
+};
+
 // Persist state to localStorage so that refreshes keep progress/history
 // and games reset each day.
-function usePersistentState(key, defaultValue) {
+function usePersistentState(key, defaultValue, normalize) {
   const [state, setState] = useState(defaultValue);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       const stored = localStorage.getItem(key);
-      setState(stored ? JSON.parse(stored) : defaultValue);
+      if (!stored) {
+        setState(defaultValue);
+        return;
+      }
+      const parsed = JSON.parse(stored);
+      const nextValue = normalize ? normalize(parsed, defaultValue) : parsed;
+      setState(nextValue ?? defaultValue);
     } catch {
       setState(defaultValue);
     }
-  }, [key, defaultValue]);
+  }, [key, defaultValue, normalize]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -62,22 +141,39 @@ const evaluateGuess = (guess, answer) => {
 };
 
 const Wordle = () => {
-  const [dictName, setDictName] = usePersistentState('wordle-dictionary', 'common');
-  const wordList = dictionaries[dictName];
-  const solution = useMemo(() => getWordOfTheDay(dictName), [dictName]);
+  const [dictName, setDictName] = usePersistentState(
+    'wordle-dictionary',
+    'common',
+    normalizeDictName
+  );
+  const activeDictName = useMemo(
+    () => normalizeDictName(dictName),
+    [dictName]
+  );
+  const wordList = dictionaries[activeDictName] || dictionaries.common || [];
+  const solution = useMemo(
+    () => getWordOfTheDay(activeDictName),
+    [activeDictName]
+  );
+  const emptyGuesses = useMemo(() => [], []);
+  const emptyHistory = useMemo(() => ({}), []);
+  const defaultStreak = useMemo(() => ({ current: 0, max: 0 }), []);
 
   // guesses for today are stored under a daily key so a new game starts each day
   const [guesses, setGuesses] = usePersistentState(
     `wordle-guesses-${dictName}-${todayKey}`,
-    []
+    emptyGuesses,
+    normalizeGuesses
   );
   const [history, setHistory] = usePersistentState(
     `wordle-history-${dictName}`,
-    {}
+    emptyHistory,
+    normalizeHistory
   );
   const [streak, setStreak] = usePersistentState(
     `wordle-streak-${dictName}`,
-    { current: 0, max: 0 }
+    defaultStreak,
+    normalizeStreak
   );
   const defaultStats = useMemo(
     () => ({
@@ -89,29 +185,44 @@ const Wordle = () => {
   );
   const [stats, setStats] = usePersistentState(
     `wordle-stats-${dictName}`,
-    defaultStats
+    defaultStats,
+    normalizeStats
   );
   const [guess, setGuess] = useState('');
   const [message, setMessage] = useState('');
   const [analysis, setAnalysis] = useState('');
   const [revealMap, setRevealMap] = useState({});
+  const [shareText, setShareText] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   // settings
   const [colorBlind, setColorBlind] = usePersistentState(
     'wordle-colorblind',
-    false
+    false,
+    normalizeBoolean
   );
-  const [hardMode, setHardMode] = usePersistentState('wordle-hardmode', false);
+  const [hardMode, setHardMode] = usePersistentState(
+    'wordle-hardmode',
+    false,
+    normalizeBoolean
+  );
 
   const isSolved = guesses.some((g) => g.guess === solution);
   const isGameOver = isSolved || guesses.length === 6;
+
+  useEffect(() => {
+    if (dictName !== activeDictName) {
+      setDictName(activeDictName);
+    }
+  }, [dictName, activeDictName, setDictName]);
 
   useEffect(() => {
     setGuess('');
     setMessage('');
     setAnalysis('');
     setRevealMap({});
-  }, [dictName]);
+    setShareText('');
+  }, [activeDictName]);
 
   const colors = colorBlind
     ? {
@@ -190,6 +301,10 @@ const Wordle = () => {
   };
 
   const handleAnalyze = () => {
+    if (!wordList.length) {
+      setAnalysis('Dictionary unavailable.');
+      return;
+    }
     const upper = guess.toUpperCase();
     if (upper.length !== 5) return;
     if (!wordList.includes(upper)) {
@@ -203,109 +318,260 @@ const Wordle = () => {
     );
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isGameOver) return;
-    const upper = guess.toUpperCase();
-    if (upper.length !== 5) return;
+  const submitGuess = useCallback(
+    (rawGuess) => {
+      if (isGameOver) return;
+      if (!wordList.length) {
+        setMessage('Dictionary unavailable.');
+        return;
+      }
+      const upper = rawGuess.toUpperCase();
+      if (upper.length !== 5) {
+        setMessage('Enter a 5-letter word.');
+        return;
+      }
 
-    if (!wordList.includes(upper)) {
-      setMessage('Word not in dictionary.');
-      return;
-    }
+      if (!wordList.includes(upper)) {
+        setMessage('Word not in dictionary.');
+        return;
+      }
 
-    if (hardMode) {
-      const requiredPos = {};
-      const requiredCounts = {};
-      const forbiddenPos = {};
+      if (hardMode) {
+        const requiredPos = {};
+        const requiredCounts = {};
+        const forbiddenPos = {};
 
-      guesses.forEach(({ guess: g, result }) => {
-        const localCounts = {};
-        for (let i = 0; i < 5; i += 1) {
-          const ch = g[i];
-          const res = result[i];
-          if (res === 'correct') {
-            requiredPos[i] = ch;
-            localCounts[ch] = (localCounts[ch] || 0) + 1;
-          } else if (res === 'present') {
-            forbiddenPos[i] = forbiddenPos[i] || new Set();
-            forbiddenPos[i].add(ch);
-            localCounts[ch] = (localCounts[ch] || 0) + 1;
+        guesses.forEach(({ guess: g, result }) => {
+          const localCounts = {};
+          for (let i = 0; i < 5; i += 1) {
+            const ch = g[i];
+            const res = result[i];
+            if (res === 'correct') {
+              requiredPos[i] = ch;
+              localCounts[ch] = (localCounts[ch] || 0) + 1;
+            } else if (res === 'present') {
+              forbiddenPos[i] = forbiddenPos[i] || new Set();
+              forbiddenPos[i].add(ch);
+              localCounts[ch] = (localCounts[ch] || 0) + 1;
+            }
+          }
+          Object.entries(localCounts).forEach(([ch, c]) => {
+            requiredCounts[ch] = Math.max(requiredCounts[ch] || 0, c);
+          });
+        });
+
+        for (const [idx, ch] of Object.entries(requiredPos)) {
+          if (upper[Number(idx)] !== ch) {
+            setMessage(`Hard mode: ${ch} must be in position ${Number(idx) + 1}.`);
+            return;
           }
         }
-        Object.entries(localCounts).forEach(([ch, c]) => {
-          requiredCounts[ch] = Math.max(requiredCounts[ch] || 0, c);
-        });
-      });
 
-      for (const [idx, ch] of Object.entries(requiredPos)) {
-        if (upper[Number(idx)] !== ch) {
-          setMessage(`Hard mode: ${ch} must be in position ${Number(idx) + 1}.`);
-          return;
+        const guessCounts = {};
+        for (let i = 0; i < 5; i += 1) {
+          const ch = upper[i];
+          guessCounts[ch] = (guessCounts[ch] || 0) + 1;
+          if (forbiddenPos[i] && forbiddenPos[i].has(ch)) {
+            setMessage(`Hard mode: ${ch} cannot be in position ${i + 1}.`);
+            return;
+          }
+        }
+
+        for (const [ch, count] of Object.entries(requiredCounts)) {
+          if ((guessCounts[ch] || 0) < count) {
+            setMessage(`Hard mode: guess must contain ${ch}${count > 1 ? ` (${count}x)` : ''}.`);
+            return;
+          }
         }
       }
 
-      const guessCounts = {};
-      for (let i = 0; i < 5; i += 1) {
-        const ch = upper[i];
-        guessCounts[ch] = (guessCounts[ch] || 0) + 1;
-        if (forbiddenPos[i] && forbiddenPos[i].has(ch)) {
-          setMessage(`Hard mode: ${ch} cannot be in position ${i + 1}.`);
-          return;
+      const result = evaluateGuess(upper, solution);
+      const next = [...guesses, { guess: upper, result }];
+      setGuesses(next);
+      setGuess('');
+      setMessage('');
+      setAnalysis('');
+
+      if (upper === solution || next.length === 6) {
+        const newHistory = {
+          ...history,
+          [todayKey]: {
+            guesses: next.length,
+            solution,
+            success: upper === solution,
+          },
+        };
+        setHistory(newHistory);
+        updateStreaks(newHistory);
+
+        const newStats = {
+          ...stats,
+          played: stats.played + 1,
+          won: stats.won + (upper === solution ? 1 : 0),
+          guessDist: { ...stats.guessDist },
+        };
+        if (upper === solution) {
+          newStats.guessDist[next.length] += 1;
+        } else {
+          newStats.guessDist.fail += 1;
         }
+        setStats(newStats);
       }
+    },
+    [
+      guesses,
+      hardMode,
+      history,
+      isGameOver,
+      setHistory,
+      setStats,
+      solution,
+      stats,
+      wordList,
+      updateStreaks,
+    ]
+  );
 
-      for (const [ch, count] of Object.entries(requiredCounts)) {
-        if ((guessCounts[ch] || 0) < count) {
-          setMessage(`Hard mode: guess must contain ${ch}${count > 1 ? ` (${count}x)` : ''}.`);
-          return;
-        }
-      }
-    }
-
-    const result = evaluateGuess(upper, solution);
-    const next = [...guesses, { guess: upper, result }];
-    setGuesses(next);
-    setGuess('');
-    setMessage('');
-    setAnalysis('');
-
-    if (upper === solution || next.length === 6) {
-      const newHistory = {
-        ...history,
-        [todayKey]: {
-          guesses: next.length,
-          solution,
-          success: upper === solution,
-        },
-      };
-      setHistory(newHistory);
-      updateStreaks(newHistory);
-
-      const newStats = {
-        ...stats,
-        played: stats.played + 1,
-        won: stats.won + (upper === solution ? 1 : 0),
-        guessDist: { ...stats.guessDist },
-      };
-      if (upper === solution) {
-        newStats.guessDist[next.length] += 1;
-      } else {
-        newStats.guessDist.fail += 1;
-      }
-      setStats(newStats);
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    submitGuess(guess);
   };
 
-  const share = () => {
+  const share = async () => {
     const mosaic = buildResultMosaic(
       guesses.map((g) => g.result),
       colorBlind
     );
     const text = `Wordle ${isSolved ? guesses.length : 'X'}/6\n${mosaic}`;
-    navigator.clipboard.writeText(text);
-    setMessage('Copied results to clipboard!');
+    setShareText(text);
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({ text });
+        setMessage('Shared results!');
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
+    }
+    try {
+      const clipboardPromise = navigator?.clipboard?.writeText?.(text);
+      if (clipboardPromise && typeof clipboardPromise.then === 'function') {
+        await clipboardPromise;
+      }
+      setMessage('Copied results to clipboard!');
+      return;
+    } catch {
+      // fall through to in-app share text
+    }
+    setMessage('Copy failed. Select the results below.');
   };
+
+  const handleLetterInput = useCallback(
+    (letter) => {
+      if (isGameOver) return;
+      setGuess((prev) => {
+        if (prev.length >= 5) return prev;
+        return `${prev}${letter}`;
+      });
+      setMessage('');
+      setAnalysis('');
+    },
+    [isGameOver]
+  );
+
+  const handleBackspace = useCallback(() => {
+    if (isGameOver) return;
+    setGuess((prev) => prev.slice(0, -1));
+  }, [isGameOver]);
+
+  const handleEscape = useCallback(() => {
+    setGuess('');
+    setMessage('');
+    setAnalysis('');
+  }, []);
+
+  const handleEnter = useCallback(() => {
+    submitGuess(guess);
+  }, [guess, submitGuess]);
+
+  const resetToday = useCallback(() => {
+    const todayEntry = history[todayKey];
+    if (todayEntry) {
+      const updatedHistory = { ...history };
+      delete updatedHistory[todayKey];
+      setHistory(updatedHistory);
+      updateStreaks(updatedHistory);
+
+      const updatedStats = {
+        ...stats,
+        played: Math.max(0, stats.played - 1),
+        won: Math.max(0, stats.won - (todayEntry.success ? 1 : 0)),
+        guessDist: { ...stats.guessDist },
+      };
+      if (todayEntry.success) {
+        const bucket = Math.min(6, Math.max(1, Number(todayEntry.guesses) || 0));
+        if (updatedStats.guessDist[bucket] > 0) {
+          updatedStats.guessDist[bucket] -= 1;
+        }
+      } else if (updatedStats.guessDist.fail > 0) {
+        updatedStats.guessDist.fail -= 1;
+      }
+      setStats(updatedStats);
+    }
+    setGuesses([]);
+    setGuess('');
+    setMessage("Today's board reset.");
+    setAnalysis('');
+    setRevealMap({});
+    setShareText('');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`wordle-guesses-${dictName}-${todayKey}`);
+    }
+  }, [dictName, history, setGuesses, setHistory, setStats, stats, updateStreaks]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (event) => {
+      if (showHelp) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          setShowHelp(false);
+        }
+        return;
+      }
+      const target = event.target;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      if (event.key === 'Backspace') {
+        event.preventDefault();
+        handleBackspace();
+        return;
+      }
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleEnter();
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleEscape();
+        return;
+      }
+      if (/^[a-z]$/i.test(event.key)) {
+        event.preventDefault();
+        handleLetterInput(event.key.toUpperCase());
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleBackspace, handleEnter, handleEscape, handleLetterInput, showHelp]);
 
   useEffect(() => {
     if (!guesses.length) return;
@@ -363,10 +629,12 @@ const Wordle = () => {
       guessRow?.guess[col] || (row === guesses.length ? guess[col] || '' : '');
     const status = guessRow?.result[col];
     const revealed = revealMap[`${row}-${col}`];
+    const displayLetter = letter || '';
+    const statusLabel = status && revealed ? status : displayLetter ? 'filled' : 'empty';
     let classes =
-      'w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl';
+      'w-10 h-10 md:w-12 md:h-12 flex items-center justify-center border-2 font-bold text-xl transition-colors duration-300';
     if (status && revealed) {
-      classes += ` ${colors[status]} text-white tile-flip`;
+      classes += ` ${colors[status]} text-white`;
     } else {
       classes += ' border-gray-600';
     }
@@ -375,9 +643,9 @@ const Wordle = () => {
         key={col}
         className={classes}
         role="gridcell"
-        aria-label={status ? `${letter} ${status}` : letter}
+        aria-label={`Row ${row + 1} Column ${col + 1}: ${displayLetter || 'blank'} ${statusLabel}`}
       >
-        {letter}
+        {displayLetter}
       </div>
     );
   };
@@ -386,22 +654,37 @@ const Wordle = () => {
   const renderKey = (ch) => {
     const status = letterHints[ch];
     let classes =
-      'w-6 h-10 md:w-8 md:h-10 flex items-center justify-center rounded font-bold text-sm';
+      'w-6 h-10 md:w-8 md:h-10 flex items-center justify-center rounded font-bold text-sm focus:outline-none focus:ring-2 focus:ring-white/70';
     if (status) {
       classes += ` ${keyColors[status]} text-white`;
     } else {
       classes += ' bg-gray-600';
     }
     return (
-      <div key={ch} className={classes} aria-label={`${ch} ${status || ''}`.trim()}>
+      <button
+        key={ch}
+        type="button"
+        onClick={() => handleLetterInput(ch)}
+        className={classes}
+        aria-label={`Letter ${ch}${status ? `, ${status}` : ''}`}
+      >
         {ch}
-      </div>
+      </button>
     );
   };
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-ub-cool-grey text-white p-4 space-y-4 overflow-y-auto">
-      <h1 className="text-xl font-bold">Wordle</h1>
+      <div className="flex items-center justify-between w-full max-w-xl">
+        <h1 className="text-xl font-bold">Wordle</h1>
+        <button
+          type="button"
+          onClick={() => setShowHelp(true)}
+          className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+        >
+          Help
+        </button>
+      </div>
 
       <div className="flex space-x-4">
         <label className="flex items-center space-x-1 text-sm">
@@ -450,6 +733,24 @@ const Wordle = () => {
             {row.split('').map((ch) => renderKey(ch))}
           </div>
         ))}
+        <div className="flex justify-center space-x-1">
+          <button
+            type="button"
+            onClick={handleEnter}
+            className="px-3 h-10 md:h-10 rounded bg-gray-600 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Enter guess"
+          >
+            Enter
+          </button>
+          <button
+            type="button"
+            onClick={handleBackspace}
+            className="px-3 h-10 md:h-10 rounded bg-gray-600 font-bold text-sm focus:outline-none focus:ring-2 focus:ring-white/70"
+            aria-label="Backspace"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {!isGameOver && (
@@ -458,9 +759,10 @@ const Wordle = () => {
             type="text"
             maxLength={5}
             value={guess}
-            onChange={(e) => setGuess(e.target.value.toUpperCase())}
+            onChange={(e) => setGuess(sanitizeGuessText(e.target.value))}
             className="w-32 p-2 text-black text-center uppercase"
             placeholder="Guess"
+            aria-label="Guess"
           />
           <button
             type="submit"
@@ -474,6 +776,14 @@ const Wordle = () => {
             className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
           >
             Analyze
+          </button>
+          <button
+            type="button"
+            onClick={resetToday}
+            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            aria-label="Reset today's board"
+          >
+            Reset Today
           </button>
         </form>
       )}
@@ -500,10 +810,19 @@ const Wordle = () => {
                 <div key={i}>{line}</div>
               ))}
           </div>
+          {shareText && (
+            <textarea
+              value={shareText}
+              readOnly
+              rows={4}
+              className="w-full max-w-xs text-black p-2 rounded"
+              aria-label="Share results"
+            />
+          )}
         </div>
       )}
 
-      <div className="text-sm" aria-live="polite">
+      <div className="text-sm" aria-live="polite" role="status">
         {analysis}
       </div>
       <div className="text-sm" aria-live="polite" role="status">
@@ -526,6 +845,44 @@ const Wordle = () => {
         </div>
         <Calendar history={history} />
       </div>
+
+      {showHelp && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wordle-help-title"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              setShowHelp(false);
+            }
+          }}
+        >
+          <div className="bg-ub-cool-grey text-white p-4 rounded max-w-md w-full space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 id="wordle-help-title" className="text-lg font-bold">
+                How to play
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowHelp(false)}
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm"
+              >
+                Close
+              </button>
+            </div>
+            <p className="text-sm">
+              Guess the 5-letter word in six tries. Each guess must be in the word
+              list. Letters turn green for correct placement, yellow when present
+              elsewhere, and gray when absent.
+            </p>
+            <p className="text-sm">
+              Use the on-screen keyboard or your physical keyboard (Enter to
+              submit, Backspace to delete). Escape clears your current guess.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -539,13 +896,28 @@ const Calendar = ({ history }) => {
     const key = d.toISOString().split('T')[0];
     const entry = history[key];
     let color = 'bg-gray-700';
-    if (entry) color = entry.success ? 'bg-green-700' : 'bg-red-700';
-    cells.push(<div key={key} className={`w-4 h-4 ${color}`}></div>);
+    let label = `${key}: no game`;
+    if (entry) {
+      color = entry.success ? 'bg-green-700' : 'bg-red-700';
+      label = `${key}: ${entry.success ? 'win' : 'loss'} in ${entry.guesses} guesses`;
+    }
+    cells.push(
+      <div
+        key={key}
+        className={`w-4 h-4 ${color}`}
+        role="gridcell"
+        aria-label={label}
+        title={label}
+      ></div>
+    );
   }
-  return <div className="grid grid-cols-7 gap-1">{cells}</div>;
+  return (
+    <div className="grid grid-cols-7 gap-1" role="grid" aria-label="Last 30 days">
+      {cells}
+    </div>
+  );
 };
 
 export default Wordle;
 
 export const displayWordle = () => <Wordle />;
-
