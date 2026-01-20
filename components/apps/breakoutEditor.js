@@ -1,146 +1,289 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  BREAKOUT_COLS,
+  BREAKOUT_ROWS,
+  BREAKOUT_STORAGE_PREFIX,
+  DEFAULT_LAYOUT,
+  normalizeLayout,
+} from './breakoutPresets';
 
-const ROWS = 5;
-const COLS = 10;
-const KEY_PREFIX = 'breakout-level:';
+const cellClass = (cell, active) => {
+  const base =
+    cell === 0
+      ? 'bg-slate-900'
+      : cell === 1
+        ? 'bg-blue-500'
+        : cell === 2
+          ? 'bg-emerald-400'
+          : 'bg-rose-500';
+  return `${base} ${active ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-700/80'}`;
+};
 
-const cellClass = (cell) =>
-  cell === 0
-    ? 'bg-gray-800'
-    : cell === 1
-      ? 'bg-blue-500'
-      : cell === 2
-        ? 'bg-green-500'
-        : 'bg-red-500';
+const BRUSHES = [
+  { type: 0, label: 'Eraser' },
+  { type: 1, label: 'Normal brick' },
+  { type: 2, label: 'Multi-ball brick' },
+  { type: 3, label: 'Magnet brick' },
+];
 
-/**
- * Simple level editor for Breakout.
- * Provides a drag-and-drop grid for placing bricks and stores layouts in
- * localStorage. Cell types: 0-empty, 1-normal, 2-multi-ball, 3-magnet.
- */
+const listSaved = () => {
+  const saved = [];
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith(BREAKOUT_STORAGE_PREFIX)) {
+      saved.push(key.slice(BREAKOUT_STORAGE_PREFIX.length));
+    }
+  }
+  return saved.sort();
+};
+
 export default function BreakoutEditor({ onLoad }) {
-  const [grid, setGrid] = useState(
-    Array.from({ length: ROWS }, () => Array(COLS).fill(0)),
-  );
+  const [grid, setGrid] = useState(() => normalizeLayout(DEFAULT_LAYOUT));
+  const [brush, setBrush] = useState(1);
   const [name, setName] = useState('level1');
-  const currentType = useRef(1);
-  const dragging = useRef(false);
+  const [savedLevels, setSavedLevels] = useState([]);
+  const [selectedSaved, setSelectedSaved] = useState('');
+  const pointerDown = useRef(false);
 
-  const setCell = (r, c, t) => {
-    setGrid((g) => {
-      const copy = g.map((row) => row.slice());
-      copy[r][c] = t;
-      return copy;
-    });
-  };
-
-  const handleDrop = (r, c) => {
-    setCell(r, c, currentType.current);
-  };
-
-  const handleMouseDown = (r, c) => {
-    dragging.current = true;
-    handleDrop(r, c);
-  };
-
-  const handleMouseEnter = (r, c) => {
-    if (dragging.current) handleDrop(r, c);
-  };
-
-  useEffect(() => {
-    const up = () => {
-      dragging.current = false;
-    };
-    window.addEventListener('mouseup', up);
-    return () => window.removeEventListener('mouseup', up);
+  const refreshSaved = useCallback(() => {
+    try {
+      setSavedLevels(listSaved());
+    } catch {
+      setSavedLevels([]);
+    }
   }, []);
 
-  const save = () => {
-    localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));
-  };
+  useEffect(() => {
+    refreshSaved();
+  }, [refreshSaved]);
 
-  const load = () => {
-    const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);
-    if (txt) {
+  useEffect(() => {
+    const endPointer = () => {
+      pointerDown.current = false;
+    };
+    window.addEventListener('pointerup', endPointer);
+    window.addEventListener('pointercancel', endPointer);
+    return () => {
+      window.removeEventListener('pointerup', endPointer);
+      window.removeEventListener('pointercancel', endPointer);
+    };
+  }, []);
+
+  const updateCell = useCallback((r, c, value) => {
+    setGrid((prev) => {
+      const next = prev.map((row) => row.slice());
+      next[r][c] = value;
+      return next;
+    });
+  }, []);
+
+  const handlePaint = useCallback(
+    (r, c) => {
+      updateCell(r, c, brush);
+    },
+    [brush, updateCell],
+  );
+
+  const handlePointerDown = useCallback(
+    (r, c) => {
+      pointerDown.current = true;
+      handlePaint(r, c);
+    },
+    [handlePaint],
+  );
+
+  const handlePointerEnter = useCallback(
+    (r, c) => {
+      if (pointerDown.current) handlePaint(r, c);
+    },
+    [handlePaint],
+  );
+
+  const handleCellKey = useCallback(
+    (e, r, c) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handlePaint(r, c);
+      }
+    },
+    [handlePaint],
+  );
+
+  const saveLevel = useCallback(() => {
+    try {
+      localStorage.setItem(
+        `${BREAKOUT_STORAGE_PREFIX}${name}`,
+        JSON.stringify(grid),
+      );
+    } catch {
+      /* ignore */
+    }
+    refreshSaved();
+    setSelectedSaved(name);
+  }, [grid, name, refreshSaved]);
+
+  const loadLevel = useCallback(
+    (levelName) => {
+      if (!levelName) return;
       try {
-        const arr = JSON.parse(txt);
-        if (Array.isArray(arr)) setGrid(arr);
+        const raw = localStorage.getItem(
+          `${BREAKOUT_STORAGE_PREFIX}${levelName}`,
+        );
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        setGrid(normalizeLayout(parsed));
+        setName(levelName);
       } catch {
         /* ignore */
       }
-    }
-  };
+    },
+    [],
+  );
 
-  const play = () => {
-    if (onLoad) onLoad(grid);
-  };
+  const deleteLevel = useCallback(
+    (levelName) => {
+      if (!levelName) return;
+      try {
+        localStorage.removeItem(`${BREAKOUT_STORAGE_PREFIX}${levelName}`);
+      } catch {
+        /* ignore */
+      }
+      refreshSaved();
+      if (selectedSaved === levelName) setSelectedSaved('');
+    },
+    [refreshSaved, selectedSaved],
+  );
+
+  const clearGrid = useCallback(() => {
+    setGrid(Array.from({ length: BREAKOUT_ROWS }, () => Array(BREAKOUT_COLS).fill(0)));
+  }, []);
+
+  const playLevel = useCallback(() => {
+    onLoad?.(grid, name);
+  }, [grid, name, onLoad]);
+
+  const savedOptions = useMemo(
+    () =>
+      savedLevels.map((level) => (
+        <option key={level} value={level}>
+          {level}
+        </option>
+      )),
+    [savedLevels],
+  );
 
   return (
-    <div className="text-white space-y-2">
-      <div className="flex space-x-1">
-        {[0, 1, 2, 3].map((t) => (
-          <div
-            key={t}
-            draggable
-            onDragStart={() => {
-              currentType.current = t;
-            }}
-            onClick={() => {
-              currentType.current = t;
-            }}
-            className={`w-5 h-5 cursor-pointer ${cellClass(t)}`}
+    <div className="text-white space-y-3">
+      <div className="text-xs uppercase tracking-wide text-slate-400">
+        Brush
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {BRUSHES.map((item) => (
+          <button
+            key={item.type}
+            type="button"
+            aria-label={item.label}
+            onClick={() => setBrush(item.type)}
+            className={`h-6 w-6 rounded ${
+              brush === item.type ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-600'
+            } ${
+              item.type === 0
+                ? 'bg-slate-900'
+                : item.type === 1
+                  ? 'bg-blue-500'
+                  : item.type === 2
+                    ? 'bg-emerald-400'
+                    : 'bg-rose-500'
+            }`}
           />
         ))}
       </div>
       <div
         className="grid gap-1 select-none"
-        style={{ gridTemplateColumns: `repeat(${COLS}, 20px)` }}
+        style={{ gridTemplateColumns: `repeat(${BREAKOUT_COLS}, 20px)` }}
       >
         {grid.map((row, r) =>
           row.map((cell, c) => (
-            <div
+            <button
               key={`${r}-${c}`}
-              className={cellClass(cell)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDrop(r, c)}
-              onMouseDown={() => handleMouseDown(r, c)}
-              onMouseEnter={() => handleMouseEnter(r, c)}
-              style={{ width: 20, height: 10 }}
+              type="button"
+              onPointerDown={() => handlePointerDown(r, c)}
+              onPointerEnter={() => handlePointerEnter(r, c)}
+              onKeyDown={(e) => handleCellKey(e, r, c)}
+              className={cellClass(cell, brush === cell)}
+              style={{ width: 20, height: 12 }}
+              aria-label={`Cell ${r + 1}-${c + 1}`}
             />
           )),
         )}
       </div>
-      <div className="flex space-x-2">
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wide text-slate-400">
+          Level name
+        </label>
         <input
-          className="text-black px-1"
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-white"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
+      </div>
+      <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={save}
-          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={saveLevel}
+          className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
         >
           Save
         </button>
         <button
           type="button"
-          onClick={load}
-          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={clearGrid}
+          className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
         >
-          Load
+          Clear
         </button>
         <button
           type="button"
-          onClick={play}
-          className="px-2 py-1 bg-gray-700 rounded"
+          onClick={playLevel}
+          className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500"
         >
           Play
         </button>
       </div>
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wide text-slate-400">
+          Saved layouts
+        </label>
+        <select
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-white"
+          value={selectedSaved}
+          onChange={(e) => {
+            setSelectedSaved(e.target.value);
+            loadLevel(e.target.value);
+          }}
+        >
+          <option value="">Select a saved layout</option>
+          {savedOptions}
+        </select>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => loadLevel(selectedSaved)}
+            className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
+          >
+            Load
+          </button>
+          <button
+            type="button"
+            onClick={() => deleteLevel(selectedSaved)}
+            className="px-2 py-1 rounded bg-rose-600 hover:bg-rose-500"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
-
