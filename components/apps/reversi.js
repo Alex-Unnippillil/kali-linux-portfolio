@@ -55,6 +55,8 @@ const DIFFICULTIES = {
 const DEFAULT_BOARD_SIZE = 420;
 const MIN_BOARD_SIZE = 240;
 const MAX_BOARD_SIZE = 520;
+const SETTINGS_STORAGE_KEY = 'reversiSettings';
+const WINS_STORAGE_KEY = 'reversiWins';
 
 const BOARD_THEME = {
   boardStart: '#1a463b',
@@ -74,6 +76,7 @@ const BOARD_THEME = {
 const Reversi = () => {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const boardWrapperRef = useRef(null);
   const boardSizeRef = useRef(DEFAULT_BOARD_SIZE);
   const boardRef = useRef(createBoard());
   const legalRef = useRef({});
@@ -85,6 +88,7 @@ const Reversi = () => {
   const aiSearchIdRef = useRef(0);
   const aiThinkingRef = useRef(false);
   const reduceMotionRef = useRef(false);
+  const soundRef = useRef(true);
   const flippingRef = useRef([]);
   const previewRef = useRef(null);
   const lastMoveRef = useRef(null);
@@ -92,6 +96,8 @@ const Reversi = () => {
   const focusedCellRef = useRef({ r: 3, c: 3 });
   const boardFocusRef = useRef(false);
   const passTimeoutRef = useRef(null);
+  const isPageVisibleRef = useRef(true);
+  const gameOverRef = useRef(false);
 
   const [board, setBoard] = useState(() => createBoard());
   const [boardSize, setBoardSize] = useState(DEFAULT_BOARD_SIZE);
@@ -114,6 +120,9 @@ const Reversi = () => {
   const [hintMove, setHintMove] = useState(null);
   const [lastMove, setLastMove] = useState(null);
   const [gameOver, setGameOver] = useState(false);
+  const [gameResult, setGameResult] = useState(null);
+  const [pendingAiMove, setPendingAiMove] = useState(null);
+  const [isPageVisible, setIsPageVisible] = useState(true);
   const themeRef = useRef('dark');
   const bookEnabled = React.useMemo(() => useBook, [useBook]);
 
@@ -137,6 +146,18 @@ const Reversi = () => {
     boardFocusRef.current = isBoardFocused;
   }, [isBoardFocused]);
 
+  useEffect(() => {
+    soundRef.current = sound;
+  }, [sound]);
+
+  useEffect(() => {
+    isPageVisibleRef.current = isPageVisible;
+  }, [isPageVisible]);
+
+  useEffect(() => {
+    gameOverRef.current = gameOver;
+  }, [gameOver]);
+
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
   useEffect(() => { playerRef.current = player; }, [player]);
@@ -146,49 +167,13 @@ const Reversi = () => {
   useEffect(() => () => clearTimeout(passTimeoutRef.current), []);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      reduceMotionRef.current = window.matchMedia(
-        '(prefers-reduced-motion: reduce)'
-      ).matches;
-      if (typeof Worker === 'function') {
-        workerRef.current = new Worker(
-          new URL('../../workers/reversi.worker.js', import.meta.url)
-        );
-        workerRef.current.onmessage = (e) => {
-          const { type, id } = e.data;
-          if (id && id !== aiSearchIdRef.current) return;
-          if (type === 'progress') {
-            const { evaluated, total } = e.data;
-            setAiProgress({ evaluated, total });
-            return;
-          }
-          if (type !== 'done') return;
-          aiThinkingRef.current = false;
-          setIsAiThinking(false);
-          setAiProgress(null);
-          const { move } = e.data;
-          if (!move) return;
-          const [r, c] = move;
-          const moves = computeLegalMoves(boardRef.current, 'W');
-          const key = `${r}-${c}`;
-          const flips = moves[key];
-          if (!flips) return;
-          const prev = boardRef.current.map((row) => row.slice());
-          const next = applyMove(prev, r, c, 'W', flips);
-          queueFlips(r, c, 'W', flips, prev);
-          setHistory((h) => [
-            ...h,
-            { board: prev, player: 'W', move: { r, c }, flips },
-          ]);
-          setBoard(next);
-          playSound();
-          setPlayer('B');
-          setLastMove({ r, c, player: 'W' });
-        };
-      }
-    }
-    return () => workerRef.current?.terminate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (typeof document === 'undefined') return;
+    const handleVisibility = () => {
+      setIsPageVisible(!document.hidden);
+    };
+    handleVisibility();
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
   useEffect(() => {
@@ -218,38 +203,88 @@ const Reversi = () => {
     };
   }, []);
 
+  // load settings from storage
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const saved = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (parsed?.difficulty) setDifficulty(parsed.difficulty);
+      if (typeof parsed?.useBook === 'boolean') setUseBook(parsed.useBook);
+      if (parsed?.diskTheme) setDiskTheme(parsed.diskTheme);
+      if (typeof parsed?.sound === 'boolean') setSound(parsed.sound);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // persist settings
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem(
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify({
+          difficulty,
+          useBook,
+          diskTheme,
+          sound,
+        }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [difficulty, useBook, diskTheme, sound]);
+
   // load wins from storage
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const saved = window.localStorage.getItem('reversiWins');
-    if (saved) {
-      try { setWins(JSON.parse(saved)); } catch { /* ignore */ }
+    try {
+      const saved = window.localStorage.getItem(WINS_STORAGE_KEY);
+      if (saved) {
+        setWins(JSON.parse(saved));
+      }
+    } catch {
+      /* ignore */
     }
   }, []);
 
   // persist wins
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    window.localStorage.setItem('reversiWins', JSON.stringify(wins));
+    try {
+      window.localStorage.setItem(WINS_STORAGE_KEY, JSON.stringify(wins));
+    } catch {
+      /* ignore */
+    }
   }, [wins]);
 
   const playSound = React.useCallback(() => {
-    if (!sound) return;
-    const ctx =
-      audioRef.current || new (window.AudioContext || window.webkitAudioContext)();
-    audioRef.current = ctx;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 500;
-    osc.start();
-    gain.gain.setValueAtTime(0.3, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
-    osc.stop(ctx.currentTime + 0.1);
-  }, [sound]);
+    if (!soundRef.current || typeof window === 'undefined') return;
+    try {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = audioRef.current || new AudioContextClass();
+      audioRef.current = ctx;
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 500;
+      osc.start();
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.1);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
-  const queueFlips = (r, c, player, flips, prevBoard) => {
+  const queueFlips = useCallback((r, c, player, flips, prevBoard) => {
     if (reduceMotionRef.current) return;
     const start = performance.now();
     flips.forEach(([sr, sc], idx) => {
@@ -261,7 +296,114 @@ const Reversi = () => {
         duration: 360,
       });
     });
-  };
+  }, []);
+
+  const commitMove = useCallback((r, c, mover, flipsOverride = null) => {
+    const moves = computeLegalMoves(boardRef.current, mover);
+    const flips = flipsOverride || moves[`${r}-${c}`];
+    if (!flips) return false;
+    const prev = boardRef.current.map((row) => row.slice());
+    const next = applyMove(prev, r, c, mover, flips);
+    queueFlips(r, c, mover, flips, prev);
+    setHistory((h) => [
+      ...h,
+      { board: prev, player: mover, move: { r, c }, flips },
+    ]);
+    setBoard(next);
+    setPlayer(mover === 'B' ? 'W' : 'B');
+    setLastMove({ r, c, player: mover });
+    setHintMove(null);
+    previewRef.current = null;
+    setGameOver(false);
+    setFocusedCell({ r, c });
+    playSound();
+    return true;
+  }, [playSound, queueFlips]);
+
+  const startAiTurn = useCallback(() => {
+    if (pausedRef.current || gameOverRef.current || !isPageVisibleRef.current) return;
+    const bookMove = bookEnabled ? getBookMove(boardRef.current, 'W') : null;
+    if (bookMove) {
+      const [r, c] = bookMove;
+      commitMove(r, c, 'W');
+      return;
+    }
+    aiThinkingRef.current = true;
+    setIsAiThinking(true);
+    setAiProgress(null);
+    const { depth, weights, randomizeTop } = DIFFICULTIES[difficulty];
+    const id = aiSearchIdRef.current + 1;
+    aiSearchIdRef.current = id;
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        type: 'search',
+        id,
+        board: boardRef.current,
+        player: 'W',
+        depth,
+        weights,
+        randomizeTop,
+      });
+      return;
+    }
+    const move = bestMove(boardRef.current, 'W', depth, weights, {
+      randomizeTop,
+      onProgress: ({ evaluated, total }) => {
+        if (aiSearchIdRef.current !== id) return;
+        setAiProgress({ evaluated, total });
+      },
+    });
+    aiThinkingRef.current = false;
+    setIsAiThinking(false);
+    setAiProgress(null);
+    if (!move || aiSearchIdRef.current !== id) return;
+    const [r, c] = move;
+    if (pausedRef.current || !isPageVisibleRef.current) {
+      setPendingAiMove({ r, c, player: 'W' });
+      return;
+    }
+    commitMove(r, c, 'W');
+  }, [bookEnabled, commitMove, difficulty]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      reduceMotionRef.current = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+      if (typeof Worker === 'function') {
+        try {
+          workerRef.current = new Worker(
+            new URL('../../workers/reversi.worker.js', import.meta.url)
+          );
+          workerRef.current.onmessage = (e) => {
+            const { type, id } = e.data;
+            if (id && id !== aiSearchIdRef.current) return;
+            if (type === 'progress') {
+              const { evaluated, total } = e.data;
+              setAiProgress({ evaluated, total });
+              return;
+            }
+            if (type !== 'done') return;
+            aiThinkingRef.current = false;
+            setIsAiThinking(false);
+            setAiProgress(null);
+            const { move } = e.data;
+            if (!move) return;
+            if (gameOverRef.current || playerRef.current !== 'W') return;
+            const [r, c] = move;
+            if (pausedRef.current || !isPageVisibleRef.current) {
+              setPendingAiMove({ r, c, player: 'W' });
+              return;
+            }
+            commitMove(r, c, 'W');
+          };
+        } catch {
+          workerRef.current = null;
+        }
+      }
+    }
+    return () => workerRef.current?.terminate();
+  }, [commitMove]);
 
   // draw loop
   useEffect(() => {
@@ -516,11 +658,12 @@ const Reversi = () => {
     );
 
     if (resolution.kind === 'gameover') {
-      const { score, winner } = resolution;
+      const { score: finalScore, winner } = resolution;
       setIsAiThinking(false);
       aiThinkingRef.current = false;
       setAiProgress(null);
       setGameOver(true);
+      setGameResult({ winner, score: finalScore });
       if (winner === 'B') {
         setWins((w) => ({ ...w, player: w.player + 1 }));
         setMessage('You win!');
@@ -530,11 +673,26 @@ const Reversi = () => {
       } else {
         setMessage('Draw!');
       }
-      setScore(score);
+      setScore(finalScore);
       return;
     }
 
     setGameOver(false);
+    setGameResult(null);
+
+    if (paused || !isPageVisible) {
+      if (paused) {
+        setMessage(pendingAiMove ? 'Paused — AI move queued' : 'Paused');
+      } else {
+        setMessage('Tab inactive — resume to continue');
+      }
+      return;
+    }
+
+    if (pendingAiMove && player === 'W') {
+      setMessage('AI move queued');
+      return;
+    }
 
     if (resolution.kind === 'pass') {
       setIsAiThinking(false);
@@ -549,43 +707,8 @@ const Reversi = () => {
       return;
     }
 
-    if (player === 'W' && !paused && !aiThinkingRef.current) {
-      const bookMove = bookEnabled ? getBookMove(board, 'W') : null;
-      if (bookMove) {
-        const [r, c] = bookMove;
-        const flips = activeMoves[`${r}-${c}`];
-        if (flips) {
-          const prev = boardRef.current.map((row) => row.slice());
-          const next = applyMove(prev, r, c, 'W', flips);
-          queueFlips(r, c, 'W', flips, prev);
-          setHistory((h) => [
-            ...h,
-            { board: prev, player: 'W', move: { r, c }, flips },
-          ]);
-          setBoard(next);
-          playSound();
-          setPlayer('B');
-          setLastMove({ r, c, player: 'W' });
-        }
-      } else {
-        aiThinkingRef.current = true;
-        setIsAiThinking(true);
-        setAiProgress(null);
-        if (workerRef.current) {
-          const { depth, weights, randomizeTop } = DIFFICULTIES[difficulty];
-          const id = aiSearchIdRef.current + 1;
-          aiSearchIdRef.current = id;
-          workerRef.current.postMessage({
-            type: 'search',
-            id,
-            board,
-            player: 'W',
-            depth,
-            weights,
-            randomizeTop,
-          });
-        }
-      }
+    if (player === 'W' && !aiThinkingRef.current) {
+      startAiTurn();
     }
     if (player === 'B') {
       setMessage('Your turn');
@@ -594,7 +717,7 @@ const Reversi = () => {
     } else {
       setMessage("AI's turn");
     }
-  }, [board, player, paused, difficulty, playSound, bookEnabled]);
+  }, [board, player, paused, isPageVisible, pendingAiMove, startAiTurn]);
 
   const tryMove = useCallback((r, c) => {
     if (paused || player !== 'B' || gameOver) return;
@@ -602,21 +725,15 @@ const Reversi = () => {
     const flips = legalRef.current[key];
     if (!flips) return;
     previewRef.current = null;
-    const prev = boardRef.current.map((row) => row.slice());
-    const next = applyMove(prev, r, c, 'B', flips);
-    queueFlips(r, c, 'B', flips, prev);
-    setHistory((h) => [
-      ...h,
-      { board: prev, player: 'B', move: { r, c }, flips },
-    ]);
-    setBoard(next);
-    playSound();
-    setPlayer('W');
-    setLastMove({ r, c, player: 'B' });
-    setHintMove(null);
-  }, [paused, player, playSound, gameOver]);
+    commitMove(r, c, 'B', flips);
+  }, [paused, player, gameOver, commitMove]);
+
+  const focusBoard = () => {
+    boardWrapperRef.current?.focus();
+  };
 
   const handleClick = (e) => {
+    focusBoard();
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const size = boardSizeRef.current;
@@ -672,41 +789,64 @@ const Reversi = () => {
     setHintMove(null);
     setLastMove(null);
     setGameOver(false);
+    setGameResult(null);
+    setPendingAiMove(null);
     setFocusedCell({ r: 3, c: 3 });
+  };
+
+  const handleResetWins = () => {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm('Reset win counters for this device?');
+      if (!confirmed) return;
+    }
+    setWins({ player: 0, ai: 0 });
   };
 
   const undo = useCallback(() => {
     if (!history.length) return;
     clearTimeout(passTimeoutRef.current);
     const last = history[history.length - 1];
-    setBoard(last.board.map((row) => row.slice()));
-    setPlayer(last.player);
-    setHistory((h) => h.slice(0, -1));
-    setMessage(last.player === 'B' ? 'Your turn' : "AI's turn");
+    const stepCount = last.player === 'W' && history.length >= 2 ? 2 : 1;
+    const targetEntry = history[history.length - stepCount];
+    const nextHistory = history.slice(0, -stepCount);
+    setBoard(targetEntry.board.map((row) => row.slice()));
+    setPlayer(targetEntry.player);
+    setHistory(nextHistory);
+    setMessage(targetEntry.player === 'B' ? 'Your turn' : "AI's turn");
     previewRef.current = null;
     flippingRef.current = [];
     aiThinkingRef.current = false;
     aiSearchIdRef.current += 1;
     setIsAiThinking(false);
     setAiProgress(null);
-    setLastMove(null);
+    const previousMove = nextHistory[nextHistory.length - 1];
+    if (previousMove?.move) {
+      setLastMove({ r: previousMove.move.r, c: previousMove.move.c, player: previousMove.player });
+    } else {
+      setLastMove(null);
+    }
     setHintMove(null);
     setGameOver(false);
-    if (last.move) {
-      setFocusedCell({ r: last.move.r, c: last.move.c });
+    setGameResult(null);
+    setPendingAiMove(null);
+    if (targetEntry.move) {
+      setFocusedCell({ r: targetEntry.move.r, c: targetEntry.move.c });
     }
   }, [history]);
 
   useEffect(() => {
-    const handler = (e) => {
-      if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace') {
-        e.preventDefault();
-        undo();
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undo]);
+    if (!pendingAiMove) return;
+    if (player !== 'W' || gameOver) {
+      setPendingAiMove(null);
+      return;
+    }
+    if (paused || !isPageVisible) return;
+    const { r, c } = pendingAiMove;
+    const applied = commitMove(r, c, 'W');
+    if (applied) {
+      setPendingAiMove(null);
+    }
+  }, [pendingAiMove, paused, isPageVisible, gameOver, player, commitMove]);
 
   useEffect(() => {
     setHintMove(null);
@@ -727,8 +867,23 @@ const Reversi = () => {
   }, [difficulty, paused, player, gameOver]);
 
   const handleKeyDown = (e) => {
-    if (paused || gameOver) return;
     const { key } = e;
+    if (key === 'p' || key === 'P') {
+      e.preventDefault();
+      setPaused((prev) => !prev);
+      return;
+    }
+    if (key === 'r' || key === 'R') {
+      e.preventDefault();
+      reset();
+      return;
+    }
+    if (key === 'u' || key === 'U' || key === 'Backspace') {
+      e.preventDefault();
+      undo();
+      return;
+    }
+    if (paused || gameOver) return;
     if (!focusedCell) return;
     const moveFocus = (dr, dc) => {
       e.preventDefault();
@@ -796,25 +951,58 @@ const Reversi = () => {
           className="flex flex-1 flex-col items-center gap-3"
         >
           <div
+            ref={boardWrapperRef}
             role="application"
             aria-roledescription="Reversi board"
             aria-describedby={instructionsId}
+            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight Enter Space H U Backspace R P"
             tabIndex={0}
             onFocus={() => setIsBoardFocused(true)}
             onBlur={() => setIsBoardFocused(false)}
             onKeyDown={handleKeyDown}
-            className="relative focus:outline-none"
+            className="relative rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
           >
             <canvas
               ref={canvasRef}
               width={boardSize}
               height={boardSize}
+              onPointerDown={focusBoard}
               onClick={handleClick}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               className="rounded-lg shadow-[0_35px_60px_-15px_rgba(0,0,0,0.45)]"
               aria-label="Reversi board"
             />
+            {gameOver && gameResult && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-slate-950/85 p-4 text-center">
+                <div className="w-full max-w-xs space-y-3 rounded-lg border border-slate-700/70 bg-slate-900/90 p-4 shadow-xl">
+                  <div className="text-lg font-semibold text-slate-100">
+                    {gameResult.winner === 'B'
+                      ? 'You win!'
+                      : gameResult.winner === 'W'
+                        ? 'AI wins!'
+                        : 'Draw game'}
+                  </div>
+                  <div className="text-sm text-slate-300">
+                    Final score — You {gameResult.score.black} : AI {gameResult.score.white}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      className="w-full rounded border border-slate-700 bg-slate-900/80 px-3 py-2 text-sm font-semibold uppercase tracking-widest text-slate-100 transition hover:border-sky-400 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                      onClick={reset}
+                    >
+                      Play Again
+                    </button>
+                    <button
+                      className="w-full rounded border border-slate-700 bg-slate-900/80 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-200 transition hover:border-rose-400 hover:text-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                      onClick={handleResetWins}
+                    >
+                      Reset Wins
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="pointer-events-none absolute inset-x-3 top-3 flex justify-between text-xs font-semibold uppercase tracking-widest text-slate-200/80">
               <span className="flex items-center gap-1">
                 <span
@@ -832,7 +1020,7 @@ const Reversi = () => {
               </span>
             </div>
             <p id={instructionsId} className="sr-only">
-              Use arrow keys to move around the board and press Enter or Space to place a disk. Press H for a hint, U to undo, or click cells directly.
+              Use arrow keys to move around the board and press Enter or Space to place a disk. Press H for a hint, U or Backspace to undo, R to reset, or P to pause. Click cells directly to play.
             </p>
           </div>
           <div className="w-full space-y-3 rounded-lg bg-slate-900/60 p-4 shadow-inner">
@@ -870,6 +1058,11 @@ const Reversi = () => {
             <div className="text-sm" role="status" aria-live="polite">
               {message}
             </div>
+            {paused && pendingAiMove && (
+              <div className="text-xs text-amber-200" role="status" aria-live="polite">
+                AI move queued — resume to apply it.
+              </div>
+            )}
             {isAiThinking && (
               <div
                 className="flex items-center gap-2 text-xs text-slate-300"
@@ -921,18 +1114,21 @@ const Reversi = () => {
             <button
               className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-emerald-400 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
               onClick={() => setPaused((p) => !p)}
+              aria-pressed={paused}
             >
               {paused ? 'Resume' : 'Pause'}
             </button>
             <button
               className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-emerald-400 hover:text-emerald-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
               onClick={() => setSound((s) => !s)}
+              aria-pressed={sound}
             >
               {sound ? 'Sound: On' : 'Sound: Off'}
             </button>
             <button
               className="flex items-center justify-center gap-2 rounded border border-slate-700 bg-slate-900/70 px-3 py-2 font-semibold transition hover:border-violet-400 hover:text-violet-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-400"
               onClick={() => setDiskTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+              aria-pressed={diskTheme === 'light'}
             >
               {diskTheme === 'dark' ? 'Theme: Dark' : 'Theme: Light'}
             </button>
@@ -944,6 +1140,12 @@ const Reversi = () => {
               Hint
             </button>
           </div>
+          <button
+            className="w-full rounded border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs font-semibold uppercase tracking-widest text-slate-200 transition hover:border-rose-400 hover:text-rose-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+            onClick={handleResetWins}
+          >
+            Reset Wins
+          </button>
           <div className="flex flex-col gap-2 text-sm">
             <label className="text-xs font-semibold uppercase tracking-widest text-slate-300" htmlFor="reversi-difficulty">
               Difficulty
@@ -963,6 +1165,7 @@ const Reversi = () => {
             <button
               className="w-full rounded border border-slate-700 bg-slate-900/70 px-3 py-2 text-sm font-semibold uppercase tracking-widest text-slate-100 transition hover:border-amber-400 hover:text-amber-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
               onClick={() => setUseBook((b) => !b)}
+              aria-pressed={useBook}
             >
               {useBook ? 'Opening Book: Enabled' : 'Opening Book: Disabled'}
             </button>
