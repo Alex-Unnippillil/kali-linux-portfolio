@@ -1,15 +1,33 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
+import useGameHaptics from '../../hooks/useGameHaptics';
 import { exportGameSettings, importGameSettings } from '../../utils/gameSettings';
+import GameLayout from './GameLayout';
+import useGameLoop from './Games/common/useGameLoop';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
 
 const WIDTH = 300;
 const HEIGHT = 500;
 const LANES = 3;
 const LANE_WIDTH = WIDTH / LANES;
-const PLAYER_Y = HEIGHT - 40;
-const OBSTACLE_HEIGHT = 20;
+
+// World sizes (base canvas coordinates)
+const PLAYER_HEIGHT = 22;
+const PLAYER_Y_BOTTOM = HEIGHT - 40;
+const PLAYER_Y_TOP = PLAYER_Y_BOTTOM - PLAYER_HEIGHT;
+const OBSTACLE_HEIGHT = 22;
+
 const BASE_SPEEDS = [100, 120, 140];
+const ACCEL_BASE = 10;
+const MAX_DT = 0.05;
+const HIT_INVULN_SECONDS = 1.1;
+
+const DIFFICULTY_PRESETS = {
+  easy: { speedMul: 0.9, accelMul: 0.85, spawnMul: 0.9 },
+  normal: { speedMul: 1, accelMul: 1, spawnMul: 1 },
+  hard: { speedMul: 1.15, accelMul: 1.15, spawnMul: 1.15 },
+};
 
 export const CURVE_PRESETS = {
   linear: (t) => t,
@@ -19,21 +37,32 @@ export const CURVE_PRESETS = {
     t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2,
 };
 
+// Collision helper for tests and gameplay.
+// Assumes:
+// - player is in a lane, with its bottom at playerY and height threshold
+// - obstacles are in lanes with a fixed height threshold, positioned by their top y
 export const detectCollision = (
   playerLane,
   obstacles,
-  playerY = PLAYER_Y,
+  playerY = PLAYER_Y_BOTTOM,
   threshold = OBSTACLE_HEIGHT
-) =>
-  obstacles.some(
-    (o) => o.lane === playerLane && Math.abs(o.y - playerY) < threshold * 0.8
-  );
+) => {
+  const playerTop = playerY - threshold;
+  const playerBottom = playerY;
+  return obstacles.some((o) => {
+    if (o.lane !== playerLane) return false;
+    const oTop = o.y;
+    const oBottom = o.y + threshold;
+    return oTop <= playerBottom && oBottom >= playerTop;
+  });
+};
 
 export const updateScore = (score, speed, dt) => score + speed * dt;
 
+// Requests tilt permission when required (iOS). Call from a user gesture.
 export const canUseTilt = async () => {
   if (typeof window === 'undefined') return false;
-  const D = window.DeviceOrientationEvent;
+  const D = window.DeviceOrientationEvent || globalThis.DeviceOrientationEvent;
   if (!D) return false;
   if (typeof D.requestPermission === 'function') {
     try {
@@ -46,31 +75,409 @@ export const canUseTilt = async () => {
   return true;
 };
 
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
 const LaneRunner = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
-  const [control, setControl] = useState('keys');
-  const [tiltAllowed, setTiltAllowed] = useState(false);
-  const [tiltOffset, setTiltOffset] = useState(0);
+  const { danger, gameOver: hGameOver } = useGameHaptics();
+  const fileRef = useRef(null);
+  const gammaRef = useRef(0);
+
+  // Settings (exported)
+  const [control, setControl] = usePersistentState('lane-runner:control', 'keys');
+  const [curve, setCurve] = usePersistentState('lane-runner:curve', 'linear');
+  const [difficulty, setDifficulty] = usePersistentState(
+    'lane-runner:difficulty',
+    'normal'
+  );
   const [sensitivity, setSensitivity] = usePersistentState(
     'lane-runner:sensitivity',
-    1,
+    1
   );
-  const [score, setScore] = useState(0);
-  const [speed, setSpeed] = useState(0);
-  const [running, setRunning] = useState(true);
-  const [reset, setReset] = useState(0);
-  const [lives, setLives] = useState(3);
-  const [curve, setCurve] = usePersistentState('lane-runner:curve', 'linear');
-  const gammaRef = useRef(0);
-  const fileRef = useRef(null);
 
-  const handleCalibrate = () => setTiltOffset(gammaRef.current);
-  const handleRestart = () => {
-    setLives(3);
-    setReset((r) => r + 1);
-  };
+  // Score is intentionally not exported with settings.
+  const [highScore, setHighScore] = usePersistentState('lane_runner_high', 0);
 
-  const handleExport = () => {
+  const difficultyCfg =
+    DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normal;
+
+  // Runtime state
+  const [running, setRunning] = useState(true); // true = not paused
+  const [gameOver, setGameOver] = useState(false);
+  const [tiltAllowed, setTiltAllowed] = useState(false);
+  const [tiltOffset, setTiltOffset] = useState(0);
+
+  // HUD state (throttled updates)
+  const [hud, setHud] = useState({ score: 0, speed: BASE_SPEEDS[1], lives: 3 });
+  const lastHudUpdateRef = useRef(0);
+
+  // Input mapping
+  const [mapping] = useInputMapping('lane-runner', {
+    left: 'ArrowLeft',
+    right: 'ArrowRight',
+    pause: ' ',
+    restart: 'r',
+  });
+
+  // Game refs (avoid rerender per frame)
+  const ctxRef = useRef(null);
+  const laneRef = useRef(1);
+  const obstaclesRef = useRef([]);
+  const speedsRef = useRef([...BASE_SPEEDS]);
+  const elapsedRef = useRef(0);
+  const spawnRef = useRef(0);
+  const scoreRef = useRef(0);
+  const livesRef = useRef(3);
+  const invulnRef = useRef(0);
+  const hitFlashRef = useRef(0);
+  const roadOffsetRef = useRef(0);
+  const tiltValueRef = useRef(0);
+  const prevTiltRef = useRef(0);
+  const swipeStartRef = useRef(null);
+
+  const resetGame = useCallback(() => {
+    laneRef.current = 1;
+    obstaclesRef.current = [];
+    speedsRef.current = BASE_SPEEDS.map((s) => s * difficultyCfg.speedMul);
+    elapsedRef.current = 0;
+    spawnRef.current = 0;
+    scoreRef.current = 0;
+    livesRef.current = 3;
+    invulnRef.current = 0;
+    hitFlashRef.current = 0;
+    roadOffsetRef.current = 0;
+    setHud({ score: 0, speed: speedsRef.current[1], lives: 3 });
+    setGameOver(false);
+    setRunning(true);
+  }, [difficultyCfg.speedMul]);
+
+  // Initialize or re-init when difficulty changes.
+  useEffect(() => {
+    resetGame();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [difficulty]);
+
+  // Acquire canvas context once.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    canvas.style.imageRendering = 'pixelated';
+    ctxRef.current = ctx;
+  }, [canvasRef]);
+
+  // Tilt support is NOT requested automatically (iOS requires a gesture).
+  const tiltSupport = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return { supported: false, needsPermission: false };
+    }
+    const D = window.DeviceOrientationEvent || globalThis.DeviceOrientationEvent;
+    if (!D) return { supported: false, needsPermission: false };
+    return { supported: true, needsPermission: typeof D.requestPermission === 'function' };
+  }, []);
+
+  // On browsers that do not require permission, enable tilt immediately when selected.
+  useEffect(() => {
+    if (control !== 'tilt') {
+      setTiltAllowed(false);
+      return;
+    }
+    if (tiltSupport.supported && !tiltSupport.needsPermission) {
+      setTiltAllowed(true);
+    }
+  }, [control, tiltSupport.supported, tiltSupport.needsPermission]);
+
+  const requestTilt = useCallback(async () => {
+    const allowed = await canUseTilt();
+    setTiltAllowed(allowed);
+    if (!allowed) setControl('keys');
+  }, [setControl]);
+
+  const calibrateTilt = useCallback(() => {
+    setTiltOffset(gammaRef.current);
+    prevTiltRef.current = 0;
+  }, []);
+
+  // Keyboard controls
+  useEffect(() => {
+    if (control !== 'keys') return;
+    const onKeyDown = (e) => {
+      const key = e.key;
+      if (key === mapping.left) laneRef.current = Math.max(0, laneRef.current - 1);
+      if (key === mapping.right)
+        laneRef.current = Math.min(LANES - 1, laneRef.current + 1);
+
+      if (key === mapping.pause) {
+        setRunning((r) => !r);
+        e.preventDefault();
+      }
+
+      if (key === mapping.restart) {
+        if (gameOver) resetGame();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [control, mapping, gameOver, resetGame]);
+
+  // Touch/swipe controls (works for mouse too).
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (control !== 'touch' && control !== 'keys') return;
+
+    const onPointerDown = (e) => {
+      swipeStartRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+    };
+
+    const onPointerUp = (e) => {
+      const start = swipeStartRef.current;
+      swipeStartRef.current = null;
+      if (!start) return;
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      const adx = Math.abs(dx);
+      const ady = Math.abs(dy);
+      if (adx < 24 || adx < ady) return;
+      if (dx < 0) laneRef.current = Math.max(0, laneRef.current - 1);
+      if (dx > 0) laneRef.current = Math.min(LANES - 1, laneRef.current + 1);
+    };
+
+    canvas.addEventListener('pointerdown', onPointerDown);
+    canvas.addEventListener('pointerup', onPointerUp);
+    canvas.addEventListener('pointercancel', onPointerUp);
+    return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      canvas.removeEventListener('pointerup', onPointerUp);
+      canvas.removeEventListener('pointercancel', onPointerUp);
+    };
+  }, [canvasRef, control]);
+
+  // Device orientation controls
+  useEffect(() => {
+    if (control !== 'tilt' || !tiltAllowed) return;
+    const onOrientation = (e) => {
+      const g = typeof e.gamma === 'number' ? e.gamma : 0;
+      gammaRef.current = g;
+      tiltValueRef.current = (g - tiltOffset) * sensitivity;
+    };
+    window.addEventListener('deviceorientation', onOrientation);
+    return () => window.removeEventListener('deviceorientation', onOrientation);
+  }, [control, tiltAllowed, tiltOffset, sensitivity]);
+
+  const draw = useCallback(() => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+
+    const lane = laneRef.current;
+    const obstacles = obstaclesRef.current;
+    const speeds = speedsRef.current;
+    const invuln = invulnRef.current;
+    const hitFlash = hitFlashRef.current;
+    const roadOffset = roadOffsetRef.current;
+
+    // Background
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    ctx.fillStyle = '#070a10';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+    // Road
+    ctx.fillStyle = '#0b0f18';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, WIDTH - 1, HEIGHT - 1);
+
+    // Lane dividers (dashed)
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
+    ctx.setLineDash([10, 10]);
+    ctx.lineDashOffset = -(roadOffset % 20);
+    for (let i = 1; i < LANES; i += 1) {
+      ctx.beginPath();
+      ctx.moveTo(i * LANE_WIDTH, 0);
+      ctx.lineTo(i * LANE_WIDTH, HEIGHT);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Obstacles
+    for (const o of obstacles) {
+      const x = o.lane * LANE_WIDTH + 10;
+      const w = LANE_WIDTH - 20;
+      ctx.save();
+      ctx.fillStyle = '#ef4444';
+      ctx.shadowColor = 'rgba(239,68,68,0.6)';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x, o.y, w, OBSTACLE_HEIGHT);
+      ctx.restore();
+    }
+
+    // Player
+    const px = lane * LANE_WIDTH + 10;
+    const pw = LANE_WIDTH - 20;
+    const shouldBlink = invuln > 0 && Math.floor(invuln * 12) % 2 === 0;
+    if (!shouldBlink) {
+      ctx.save();
+      ctx.fillStyle = '#22d3ee';
+      ctx.shadowColor = 'rgba(34,211,238,0.65)';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(px, PLAYER_Y_TOP, pw, PLAYER_HEIGHT);
+      ctx.restore();
+    }
+
+    // Hit flash
+    if (hitFlash > 0) {
+      ctx.save();
+      ctx.globalAlpha = clamp(hitFlash, 0, 1);
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.restore();
+    }
+
+    // Tiny lane speed readout
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.font =
+      '11px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+    for (let i = 0; i < LANES; i += 1) {
+      const tx = i * LANE_WIDTH + 6;
+      ctx.fillText(`${Math.round(speeds[i])}`, tx, 14);
+    }
+
+    // Game over text
+    if (gameOver) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#fff';
+      ctx.font = '20px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillText('Game Over', WIDTH / 2 - 55, HEIGHT / 2 - 10);
+      ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillText('Press R to restart', WIDTH / 2 - 55, HEIGHT / 2 + 14);
+      ctx.restore();
+    } else if (!running) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.fillStyle = '#fff';
+      ctx.font = '16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillText('Paused', WIDTH / 2 - 28, HEIGHT / 2);
+      ctx.restore();
+    }
+  }, [gameOver, running]);
+
+  // Core game loop
+  useGameLoop(
+    (dtRaw) => {
+      if (gameOver) return;
+      const dt = clamp(dtRaw, 0, MAX_DT);
+
+      elapsedRef.current += dt;
+      spawnRef.current += dt;
+
+      // Curve influences how quickly the game ramps.
+      const t = Math.min(elapsedRef.current / 60, 1);
+      const curveFn = CURVE_PRESETS[curve] || CURVE_PRESETS.linear;
+      const c = curveFn(t);
+
+      // Speed ramps up over time.
+      const accel = ACCEL_BASE * difficultyCfg.accelMul * (1 + c);
+      const speeds = speedsRef.current;
+      for (let i = 0; i < speeds.length; i += 1) speeds[i] += dt * accel;
+
+      // Road offset for dashes
+      roadOffsetRef.current += dt * speeds[laneRef.current] * 0.45;
+
+      // Obstacles advance
+      const obstacles = obstaclesRef.current;
+      for (const o of obstacles) {
+        o.y += speeds[o.lane] * dt;
+      }
+      obstaclesRef.current = obstacles.filter((o) => o.y < HEIGHT + OBSTACLE_HEIGHT);
+
+      // Spawn new obstacles
+      const baseGap = 1.05 / difficultyCfg.spawnMul;
+      const gap = Math.max(0.35, baseGap - c * 0.55);
+      if (spawnRef.current >= gap) {
+        obstaclesRef.current.push({
+          lane: Math.floor(Math.random() * LANES),
+          y: -OBSTACLE_HEIGHT,
+        });
+        spawnRef.current = 0;
+      }
+
+      // Tilt based lane changes
+      if (control === 'tilt' && tiltAllowed) {
+        const tilt = tiltValueRef.current;
+        const prev = prevTiltRef.current;
+        const threshold = 12;
+        if (tilt > threshold && prev <= threshold) {
+          laneRef.current = Math.min(LANES - 1, laneRef.current + 1);
+        }
+        if (tilt < -threshold && prev >= -threshold) {
+          laneRef.current = Math.max(0, laneRef.current - 1);
+        }
+        prevTiltRef.current = tilt;
+      }
+
+      // Hit state
+      invulnRef.current = Math.max(0, invulnRef.current - dt);
+      hitFlashRef.current = Math.max(0, hitFlashRef.current - dt * 3);
+
+      // Collision detection
+      if (invulnRef.current <= 0) {
+        const collided = detectCollision(
+          laneRef.current,
+          obstaclesRef.current,
+          PLAYER_Y_BOTTOM,
+          OBSTACLE_HEIGHT
+        );
+        if (collided) {
+          livesRef.current -= 1;
+          invulnRef.current = HIT_INVULN_SECONDS;
+          hitFlashRef.current = 1;
+          danger();
+
+          if (livesRef.current > 0) {
+            obstaclesRef.current = [];
+            laneRef.current = 1;
+          } else {
+            setGameOver(true);
+            setRunning(false);
+            hGameOver();
+            const finalScore = Math.floor(scoreRef.current);
+            if (finalScore > highScore) setHighScore(finalScore);
+          }
+        }
+      }
+
+      // Score update
+      scoreRef.current = updateScore(scoreRef.current, speeds[laneRef.current], dt);
+
+      // Throttle HUD updates
+      const now = performance.now();
+      if (now - lastHudUpdateRef.current > 120) {
+        lastHudUpdateRef.current = now;
+        setHud({
+          score: Math.floor(scoreRef.current),
+          speed: speeds[laneRef.current],
+          lives: Math.max(0, livesRef.current),
+        });
+      }
+
+      draw();
+    },
+    running && !gameOver
+  );
+
+  // Ensure we draw a paused/game over frame when loop stops.
+  useEffect(() => {
+    draw();
+  }, [draw]);
+
+  const handleExport = useCallback(() => {
     const data = exportGameSettings('lane-runner');
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -79,165 +486,139 @@ const LaneRunner = () => {
     a.download = 'lane-runner-settings.json';
     a.click();
     URL.revokeObjectURL(url);
-  };
+  }, []);
 
-  const handleImport = async (file) => {
-    const text = await file.text();
-    importGameSettings('lane-runner', text);
-    try {
-      const parsed = JSON.parse(text);
-      if (typeof parsed.sensitivity === 'number')
-        setSensitivity(parsed.sensitivity);
-      if (typeof parsed.curve === 'string') setCurve(parsed.curve);
-    } catch {
-      /* ignore */
-    }
-  };
-
-  useEffect(() => {
-    if (control !== 'tilt') return;
-    let active = true;
-    canUseTilt().then((allowed) => {
-      if (!active) return;
-      setTiltAllowed(allowed);
-      if (!allowed) setControl('keys');
-    });
-    return () => {
-      active = false;
-    };
-  }, [control]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    setScore(0);
-    setSpeed(BASE_SPEEDS[1]);
-    setRunning(true);
-    setLives(3);
-
-    let playerLane = 1;
-    let obstacles = [];
-    let speeds = [...BASE_SPEEDS];
-    let sc = 0;
-    let l = 3;
-    let last = performance.now();
-    let spawn = 0;
-    let elapsed = 0;
-    let alive = true;
-    let tilt = 0;
-    let prevTilt = 0;
-    let animId;
-
-    const onKey = (e) => {
-      if (e.key === 'ArrowLeft') playerLane = Math.max(0, playerLane - 1);
-      if (e.key === 'ArrowRight') playerLane = Math.min(LANES - 1, playerLane + 1);
-    };
-
-    const onOrientation = (e) => {
-      gammaRef.current = e.gamma || 0;
-      tilt = (gammaRef.current - tiltOffset) * sensitivity;
-    };
-
-    if (control === 'keys') window.addEventListener('keydown', onKey);
-    if (control === 'tilt' && tiltAllowed)
-      window.addEventListener('deviceorientation', onOrientation);
-
-    const loop = (time) => {
-      const dt = (time - last) / 1000;
-      last = time;
-      elapsed += dt;
-      spawn += dt;
-      const t = Math.min(elapsed / 60, 1);
-      const curveFn = CURVE_PRESETS[curve] || CURVE_PRESETS.linear;
-      const c = curveFn(t);
-      const gapTime = 1 - c * 0.5;
-      const speedScale = 1 + c;
-      speeds = speeds.map((sp) => sp + dt * 10 * speedScale);
-      obstacles.forEach((o) => {
-        o.y += speeds[o.lane] * dt;
-      });
-      obstacles = obstacles.filter((o) => o.y < HEIGHT + OBSTACLE_HEIGHT);
-      if (spawn > gapTime) {
-        obstacles.push({ lane: Math.floor(Math.random() * LANES), y: -OBSTACLE_HEIGHT });
-        spawn = 0;
+  const handleImport = useCallback(
+    async (file) => {
+      const text = await file.text();
+      importGameSettings('lane-runner', text);
+      try {
+        const parsed = JSON.parse(text);
+        if (typeof parsed.sensitivity === 'number')
+          setSensitivity(clamp(parsed.sensitivity, 0.5, 2));
+        if (typeof parsed.curve === 'string' && CURVE_PRESETS[parsed.curve])
+          setCurve(parsed.curve);
+        if (typeof parsed.control === 'string') setControl(parsed.control);
+        if (typeof parsed.difficulty === 'string') setDifficulty(parsed.difficulty);
+      } catch {
+        // ignore invalid json
       }
-      if (control === 'tilt' && tiltAllowed) {
-        if (tilt > 15 && prevTilt <= 15 && playerLane < LANES - 1) playerLane += 1;
-        if (tilt < -15 && prevTilt >= -15 && playerLane > 0) playerLane -= 1;
-        prevTilt = tilt;
-      }
-      if (detectCollision(playerLane, obstacles)) {
-        l -= 1;
-        setLives(l);
-        if (l > 0) {
-          obstacles = [];
-          playerLane = 1;
-        } else {
-          alive = false;
-          setRunning(false);
-        }
-      }
-      sc = updateScore(sc, speeds[playerLane], dt);
-      setScore(sc);
-      setSpeed(speeds[playerLane]);
-      ctx.clearRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = 'cyan';
-      const x = playerLane * LANE_WIDTH + 10;
-      ctx.fillRect(x, PLAYER_Y - OBSTACLE_HEIGHT, LANE_WIDTH - 20, OBSTACLE_HEIGHT);
-      ctx.fillStyle = 'red';
-      obstacles.forEach((o) => {
-        const ox = o.lane * LANE_WIDTH + 10;
-        ctx.fillRect(ox, o.y, LANE_WIDTH - 20, OBSTACLE_HEIGHT);
-      });
+    },
+    [setSensitivity, setCurve, setControl, setDifficulty]
+  );
 
-      // lane speed indicators
-      ctx.fillStyle = 'white';
-      ctx.font = '12px sans-serif';
-      for (let i = 0; i < LANES; i += 1) {
-        const tx = i * LANE_WIDTH + LANE_WIDTH / 2 - 10;
-        ctx.fillText(Math.round(speeds[i]).toString(), tx, 12);
-      }
-      if (alive) animId = requestAnimationFrame(loop);
-      else {
-        ctx.fillStyle = 'white';
-        ctx.font = '20px sans-serif';
-        ctx.fillText('Game Over', WIDTH / 2 - 50, HEIGHT / 2);
-      }
-    };
-
-    animId = requestAnimationFrame(loop);
-
-    return () => {
-      if (animId) cancelAnimationFrame(animId);
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('deviceorientation', onOrientation);
-    };
-  }, [canvasRef, control, tiltAllowed, tiltOffset, sensitivity, reset, curve]);
-
-  return (
-    <div className="relative h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-      <canvas ref={canvasRef} className="bg-black w-full h-full" />
-      <div className="absolute top-2 left-2 bg-black/60 p-2 rounded text-xs space-y-1">
-        <div>Score: {Math.floor(score)}</div>
-        <div>Speed: {Math.round(speed)}</div>
-        <div className="flex items-center gap-1">
-          <span>Lives:</span>
-          {Array.from({ length: lives }).map((_, i) => (
-            <span key={i} role="img" aria-label="life">
-              ❤️
-            </span>
-          ))}
-        </div>
-        <div className="flex items-center gap-1">
-          <label htmlFor="curve">Curve:</label>
+  const settings = (
+    <div className="space-y-4 text-sm">
+      <div className="space-y-1">
+        <div className="font-semibold">Controls</div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="lr-control" className="min-w-24 opacity-80">
+            Mode
+          </label>
           <select
-            id="curve"
+            id="lr-control"
+            value={control}
+            onChange={(e) => {
+              const next = e.target.value;
+              setControl(next);
+              if (next !== 'tilt') setTiltAllowed(false);
+            }}
+            className="rounded bg-black/40 border border-white/10 px-2 py-1"
+          >
+            <option value="keys">Keyboard + Swipe</option>
+            <option value="touch">Touch Buttons</option>
+            <option value="tilt" disabled={!tiltSupport.supported}>
+              Tilt
+            </option>
+          </select>
+        </div>
+
+        {control === 'tilt' && !tiltSupport.supported && (
+          <div className="text-xs opacity-75">Tilt is not supported on this device.</div>
+        )}
+
+        {control === 'tilt' && tiltSupport.supported && (
+          <div className="space-y-2 mt-2">
+            {tiltSupport.needsPermission && !tiltAllowed && (
+              <button
+                onClick={requestTilt}
+                className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600"
+              >
+                Enable tilt
+              </button>
+            )}
+            {(!tiltSupport.needsPermission || tiltAllowed) && (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={calibrateTilt}
+                  className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600"
+                >
+                  Calibrate
+                </button>
+                <div className="flex items-center gap-2">
+                  <label className="opacity-80">Sensitivity</label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2"
+                    step="0.1"
+                    value={sensitivity}
+                    onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                  />
+                  <span className="tabular-nums w-10 text-right">
+                    {sensitivity.toFixed(1)}
+                  </span>
+                </div>
+              </div>
+            )}
+            {tiltSupport.needsPermission && tiltAllowed === false && (
+              <div className="text-xs opacity-75">
+                Some browsers require permission. Tap "Enable tilt" first.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {control === 'touch' && (
+        <div className="space-y-1">
+          <div className="font-semibold">Touch buttons</div>
+          <div className="text-xs opacity-75">
+            Use the on-screen buttons, or swipe left and right on the canvas.
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <div className="font-semibold">Difficulty</div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="lr-difficulty" className="min-w-24 opacity-80">
+            Preset
+          </label>
+          <select
+            id="lr-difficulty"
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="rounded bg-black/40 border border-white/10 px-2 py-1"
+          >
+            <option value="easy">Easy</option>
+            <option value="normal">Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="font-semibold">Ramp curve</div>
+        <div className="flex items-center gap-2">
+          <label htmlFor="lr-curve" className="min-w-24 opacity-80">
+            Curve
+          </label>
+          <select
+            id="lr-curve"
             value={curve}
             onChange={(e) => setCurve(e.target.value)}
-            className="text-black"
+            className="rounded bg-black/40 border border-white/10 px-2 py-1"
           >
             {Object.keys(CURVE_PRESETS).map((c) => (
               <option key={c} value={c}>
@@ -246,44 +627,23 @@ const LaneRunner = () => {
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-1">
-          <label htmlFor="ctrl">Control:</label>
-          <select
-            id="ctrl"
-            value={control}
-            onChange={(e) => setControl(e.target.value)}
-            className="text-black"
-          >
-            <option value="keys">Keyboard</option>
-            <option value="tilt">Tilt</option>
-          </select>
+        <div className="text-xs opacity-75">
+          This controls how quickly speed and spawn rate ramp during the first minute.
         </div>
-        {control === 'tilt' && tiltAllowed && (
-          <>
-            <button onClick={handleCalibrate} className="px-2 py-1 bg-gray-700">
-              Calibrate
-            </button>
-            <div className="flex items-center gap-1">
-              <label>Sens:</label>
-              <input
-                type="range"
-                min="0.5"
-                max="2"
-                step="0.1"
-                value={sensitivity}
-                onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-              />
-            </div>
-          </>
-        )}
-        {control === 'tilt' && !tiltAllowed && <div>Tilt not permitted</div>}
-        <div className="flex items-center gap-1 mt-2">
-          <button onClick={handleExport} className="px-2 py-1 bg-gray-700">
+      </div>
+
+      <div className="space-y-2">
+        <div className="font-semibold">Export / import settings</div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleExport}
+            className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600"
+          >
             Export
           </button>
           <button
             onClick={() => fileRef.current?.click()}
-            className="px-2 py-1 bg-gray-700"
+            className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600"
           >
             Import
           </button>
@@ -300,17 +660,72 @@ const LaneRunner = () => {
           />
         </div>
       </div>
-      {!running && (
-        <button
-          onClick={handleRestart}
-          className="absolute bottom-4 left-2 bg-gray-700 px-2 py-1"
-        >
-          Restart
-        </button>
-      )}
     </div>
+  );
+
+  const stageText = useMemo(() => {
+    const s = Math.round(hud.speed);
+    return `Speed ${s}`;
+  }, [hud.speed]);
+
+  return (
+    <GameLayout
+      gameId="lane-runner"
+      title="Lane Runner"
+      running={running}
+      onRunningChange={setRunning}
+      onPauseChange={() => {
+        // draw a paused overlay immediately
+        draw();
+      }}
+      score={hud.score}
+      highScore={highScore}
+      lives={hud.lives}
+      stage={stageText}
+      hint="Arrow keys or swipe to change lanes"
+      badge={difficulty}
+      gameOver={gameOver}
+      onRestart={resetGame}
+      settings={settings}
+    >
+      <div className="relative h-full w-full flex items-center justify-center bg-black">
+        <canvas
+          ref={canvasRef}
+          className="w-full h-full"
+          aria-label="Lane Runner game canvas"
+        />
+
+        {control === 'touch' && (
+          <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-3 pointer-events-none">
+            <div className="flex gap-3 pointer-events-auto">
+              <button
+                type="button"
+                aria-label="Move left"
+                className="px-4 py-3 rounded bg-white/10 hover:bg-white/15 border border-white/15"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  laneRef.current = Math.max(0, laneRef.current - 1);
+                }}
+              >
+                ◀
+              </button>
+              <button
+                type="button"
+                aria-label="Move right"
+                className="px-4 py-3 rounded bg-white/10 hover:bg-white/15 border border-white/15"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  laneRef.current = Math.min(LANES - 1, laneRef.current + 1);
+                }}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </GameLayout>
   );
 };
 
 export default LaneRunner;
-

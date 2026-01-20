@@ -69,6 +69,17 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     objective: "Avoid other cars and stay on the road.",
     controls: "Arrow keys steer, space for brake if available.",
   },
+  "lane-runner": {
+    objective: "Dodge obstacles by switching lanes and survive as speed ramps up.",
+    controls:
+      "Arrow keys or swipe left/right to change lanes. Space pauses. R restarts after game over. Optional tilt controls can be enabled in Settings.",
+    actions: {
+      left: "ArrowLeft",
+      right: "ArrowRight",
+      pause: " ",
+      restart: "r",
+    },
+  },
   checkers: {
     objective: "Capture all opponent pieces or block their moves.",
     controls: "Click a piece then a destination square.",
