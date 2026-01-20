@@ -20,7 +20,9 @@ export class UbuntuApp extends Component {
         this.setState({ launching: true }, () => {
             setTimeout(() => this.setState({ launching: false }), 300);
         });
-        this.props.openApp(this.props.id);
+        if (typeof this.props.openApp === 'function') {
+            this.props.openApp(this.props.id);
+        }
     }
 
     handlePrefetch = () => {
@@ -58,6 +60,7 @@ export class UbuntuApp extends Component {
             isSelected = false,
             isHovered = false,
             accentVariables = {},
+            launchOnClick = false,
         } = this.props;
 
         const dragging = this.state.dragging || isBeingDragged;
@@ -122,6 +125,15 @@ export class UbuntuApp extends Component {
                 onPointerMove={onPointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerCancel={onPointerCancel}
+                onClick={(event) => {
+                    if (typeof this.props.onClick === 'function') {
+                        this.props.onClick(event);
+                        if (event.defaultPrevented) return;
+                    }
+                    if (launchOnClick) {
+                        this.handleActivate(event);
+                    }
+                }}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 outline-none rounded select-none flex flex-col justify-start items-center text-center text-white transition-colors transition-shadow duration-150 ease-out border focus-visible:ring-2 focus-visible:ring-sky-300/70 "}
