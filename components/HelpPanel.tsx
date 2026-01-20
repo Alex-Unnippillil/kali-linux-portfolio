@@ -7,9 +7,10 @@ import { marked } from 'marked';
 interface HelpPanelProps {
   appId: string;
   docPath?: string;
+  embedded?: boolean;
 }
 
-export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
+export default function HelpPanel({ appId, docPath, embedded = false }: HelpPanelProps) {
   const [open, setOpen] = useState(false);
   const [html, setHtml] = useState("<p>Loading...</p>");
 
@@ -46,7 +47,29 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setOpen(false);
+      }
+    };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [open]);
+
   const toggle = () => setOpen((o) => !o);
+
+  const buttonClassName = embedded
+    ? 'absolute top-2 right-2 z-10 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus-visible:outline-none focus-visible:ring focus-visible:ring-white/70'
+    : 'fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus-visible:outline-none focus-visible:ring focus-visible:ring-white/70';
+  const overlayClassName = embedded
+    ? 'absolute inset-0 bg-black/60 z-20 flex items-start justify-end p-4'
+    : 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-end p-4';
+  const panelClassName = embedded
+    ? 'bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto shadow-xl'
+    : 'bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto';
 
   return (
     <>
@@ -55,17 +78,17 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
         aria-label="Help"
         aria-expanded={open}
         onClick={toggle}
-        className="fixed top-2 right-2 z-40 bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+        className={buttonClassName}
       >
         ?
       </button>
       {open && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-end p-4"
+          className={overlayClassName}
           onClick={toggle}
         >
           <div
-            className="bg-white text-black p-4 rounded max-w-md w-full h-full overflow-auto"
+            className={panelClassName}
             onClick={(e) => e.stopPropagation()}
           >
             <div dangerouslySetInnerHTML={{ __html: html }} />
@@ -75,4 +98,3 @@ export default function HelpPanel({ appId, docPath }: HelpPanelProps) {
     </>
   );
 }
-

@@ -93,6 +93,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const commandList = useMemo(() => getCommandList(), []);
   const registryRef = useRef<Record<string, CommandDefinition>>(commandRegistry);
   const workerRef = useRef<Worker | null>(null);
+  const pendingWorkerResolveRef = useRef<(() => void) | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
@@ -289,6 +290,21 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     termRef.current.write(`${accent}└─${reset} ${symbolColor}$${reset} `);
   }, []);
 
+  const createWorker = useCallback(() => {
+    if (typeof Worker !== 'function') return null;
+    return new Worker(new URL('../../workers/terminal-worker.ts', import.meta.url));
+  }, []);
+
+  const cancelWorker = useCallback(() => {
+    if (typeof Worker !== 'function') return;
+    workerRef.current?.terminate();
+    workerRef.current = createWorker();
+    if (pendingWorkerResolveRef.current) {
+      pendingWorkerResolveRef.current();
+      pendingWorkerResolveRef.current = null;
+    }
+  }, [createWorker]);
+
   const sessionManager = useMemo(
     () =>
       createSessionManager({
@@ -300,8 +316,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         },
         writeLine,
         onHistoryUpdate: (history) => void persistCommandHistory(history),
+        onCancelRunning: cancelWorker,
       }),
-    [persistCommandHistory, prompt, writeLine],
+    [cancelWorker, persistCommandHistory, prompt, writeLine],
   );
 
   const clearTerminal = useCallback(() => {
@@ -359,12 +376,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
         return;
       }
       await new Promise<void>((resolve) => {
+        pendingWorkerResolveRef.current = resolve;
         worker.onmessage = ({ data }: MessageEvent<any>) => {
           if (data.type === 'data') {
             for (const line of String(data.chunk).split('\n')) {
               if (line) writeLine(line);
             }
           } else if (data.type === 'end') {
+            pendingWorkerResolveRef.current = null;
             resolve();
           }
         };
@@ -389,13 +408,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.safeMode = safeModeRef.current;
 
   useEffect(() => {
-    if (typeof Worker === 'function') {
-      workerRef.current = new Worker(
-        new URL('../../workers/terminal-worker.ts', import.meta.url),
-      );
-    }
+    workerRef.current = createWorker();
     return () => workerRef.current?.terminate();
-  }, []);
+  }, [createWorker]);
 
   useImperativeHandle(ref, () => ({
     runCommand: (c: string) => sessionManager.runCommand(c),

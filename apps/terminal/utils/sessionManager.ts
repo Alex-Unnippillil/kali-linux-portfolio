@@ -8,6 +8,7 @@ export interface SessionManagerConfig {
   write: (text: string) => void;
   writeLine: (text: string) => void;
   onHistoryUpdate?: (history: string[]) => void;
+  onCancelRunning?: () => void;
 }
 
 export interface SessionManager {
@@ -29,10 +30,15 @@ export function createSessionManager({
   write,
   writeLine,
   onHistoryUpdate,
+  onCancelRunning,
 }: SessionManagerConfig): SessionManager {
   let terminal: XTerm | null = null;
   let buffer = '';
   let scrollbackLimit = 1000;
+  let historyIndex: number | null = null;
+  let draftBuffer = '';
+  let running = false;
+  let suppressNextPrompt = false;
 
   const setTerminal = (term: XTerm | null) => {
     terminal = term;
@@ -71,9 +77,19 @@ export function createSessionManager({
       return;
     }
     if (handler) {
-      await handler(cmdArgs.join(' '), context);
+      running = true;
+      try {
+        await handler(cmdArgs.join(' '), context);
+      } finally {
+        running = false;
+      }
     } else if (cmdName) {
-      await context.runWorker(expanded);
+      running = true;
+      try {
+        await context.runWorker(expanded);
+      } finally {
+        running = false;
+      }
     }
   };
 
@@ -99,26 +115,126 @@ export function createSessionManager({
 
   const executeAndPrompt = (command: string) => {
     void runCommand(command).finally(() => {
+      if (suppressNextPrompt) {
+        suppressNextPrompt = false;
+        return;
+      }
       prompt();
     });
   };
 
+  const clearCurrentLine = () => {
+    if (!terminal || buffer.length === 0) return;
+    const erase = '\b \b'.repeat(buffer.length);
+    terminal.write(erase);
+  };
+
+  const replaceBuffer = (next: string) => {
+    clearCurrentLine();
+    buffer = next;
+    if (buffer) {
+      write(buffer);
+    }
+  };
+
+  const applyHistory = (direction: 'up' | 'down') => {
+    const history = context.history;
+    if (!history.length) return;
+
+    if (historyIndex === null) {
+      draftBuffer = buffer;
+      historyIndex = history.length - 1;
+    } else if (direction === 'up' && historyIndex > 0) {
+      historyIndex -= 1;
+    } else if (direction === 'down' && historyIndex < history.length - 1) {
+      historyIndex += 1;
+    } else if (direction === 'down' && historyIndex === history.length - 1) {
+      historyIndex = null;
+      replaceBuffer(draftBuffer);
+      return;
+    }
+
+    if (historyIndex !== null) {
+      replaceBuffer(history[historyIndex]);
+    }
+  };
+
+  const cancelInput = () => {
+    if (running) {
+      suppressNextPrompt = true;
+      onCancelRunning?.();
+      running = false;
+    }
+    if (terminal) {
+      terminal.write('^C');
+      terminal.writeln('');
+    }
+    buffer = '';
+    historyIndex = null;
+    draftBuffer = '';
+    prompt();
+  };
+
+  const handleEscapeSequence = (sequence: string) => {
+    if (sequence === '\x1b[A') {
+      applyHistory('up');
+      return;
+    }
+    if (sequence === '\x1b[B') {
+      applyHistory('down');
+      return;
+    }
+    // Ignore other navigation escape sequences.
+  };
+
   const handleInput = (data: string) => {
-    for (const ch of data) {
+    let i = 0;
+    while (i < data.length) {
+      const ch = data[i];
+      if (ch === '\x1b') {
+        let end = i + 1;
+        if (data[end] === '[') {
+          end += 1;
+          while (end < data.length && !/[A-Za-z]/.test(data[end])) {
+            end += 1;
+          }
+          if (end < data.length) {
+            end += 1;
+          }
+        }
+        const sequence = data.slice(i, end);
+        handleEscapeSequence(sequence);
+        i = end;
+        continue;
+      }
+      if (ch === '\x03') {
+        cancelInput();
+        i += 1;
+        continue;
+      }
       if (ch === '\r') {
         if (terminal) terminal.writeln('');
         const command = buffer;
         buffer = '';
+        historyIndex = null;
+        draftBuffer = '';
         executeAndPrompt(command);
-      } else if (ch === '\u007F') {
+        i += 1;
+        continue;
+      }
+      if (ch === '\u007F') {
         if (buffer.length > 0) {
           if (terminal) terminal.write('\b \b');
           buffer = buffer.slice(0, -1);
         }
-      } else {
+        i += 1;
+        continue;
+      }
+      if (ch >= ' ') {
         buffer += ch;
         write(ch);
       }
+      i += 1;
     }
   };
 
