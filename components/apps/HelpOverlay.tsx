@@ -132,7 +132,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   snake: {
     objective: "Grow by eating food and avoid collisions.",
-    controls: "Arrow keys to move, space to pause.",
+    controls: "Arrow keys or swipe to move, Space to pause, R to restart.",
   },
   sokoban: {
     objective: "Push all boxes onto target squares.",

@@ -20,6 +20,7 @@ describe('snake engine', () => {
     });
 
     expect(result.collision).toBe('wall');
+    expect(result.won).toBe(false);
     expect(state.snake[0]).toEqual({ x: 0, y: 0 });
   });
 
@@ -44,6 +45,7 @@ describe('snake engine', () => {
     });
 
     expect(result.collision).toBe('self');
+    expect(result.won).toBe(false);
   });
 
   it('detects obstacle collisions', () => {
@@ -64,6 +66,7 @@ describe('snake engine', () => {
     });
 
     expect(result.collision).toBe('obstacle');
+    expect(result.won).toBe(false);
   });
 
   it('grows the snake and spawns new food and obstacles when eating', () => {
@@ -91,6 +94,7 @@ describe('snake engine', () => {
 
     expect(result.collision).toBe('none');
     expect(result.grew).toBe(true);
+    expect(result.won).toBe(false);
     expect(result.state.snake).toHaveLength(3);
     expect(result.state.food).toEqual(nextFood);
     expect(result.state.obstacles).toContainEqual(newObstacle);
@@ -105,5 +109,28 @@ describe('snake engine', () => {
       [{ x: 0, y: 0 }],
       5,
     );
+  });
+
+  it('detects a win when no food can be spawned', () => {
+    const state = createInitialState({
+      gridSize: 2,
+      snake: [
+        { x: 0, y: 0 },
+        { x: 1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+      ],
+      food: { x: -1, y: -1 },
+      obstacles: [],
+    });
+
+    const result = stepSnake(state, { x: 0, y: 1 }, {
+      wrap: true,
+      gridSize: 2,
+      randomObstacle: null,
+    });
+
+    expect(result.won).toBe(true);
+    expect(result.collision).toBe('none');
   });
 });
