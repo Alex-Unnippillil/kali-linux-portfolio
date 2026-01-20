@@ -34,12 +34,35 @@ const useGameControls = (arg, gameId = 'default') => {
   // keyboard controls for directional games
   useEffect(() => {
     if (!onDirection) return undefined;
+    const isEditableTarget = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName;
+      return (
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        tag === 'SELECT' ||
+        target.isContentEditable
+      );
+    };
     const handleKey = (e) => {
+      if (isEditableTarget(e.target)) return;
       const map = getMapping(gameId, defaultMap);
-      if (e.key === map.up) onDirection({ x: 0, y: -1 });
-      if (e.key === map.down) onDirection({ x: 0, y: 1 });
-      if (e.key === map.left) onDirection({ x: -1, y: 0 });
-      if (e.key === map.right) onDirection({ x: 1, y: 0 });
+      if (e.key === map.up) {
+        e.preventDefault();
+        onDirection({ x: 0, y: -1 });
+      }
+      if (e.key === map.down) {
+        e.preventDefault();
+        onDirection({ x: 0, y: 1 });
+      }
+      if (e.key === map.left) {
+        e.preventDefault();
+        onDirection({ x: -1, y: 0 });
+      }
+      if (e.key === map.right) {
+        e.preventDefault();
+        onDirection({ x: 1, y: 0 });
+      }
     };
     let timeout;
     const debounced = (e) => {
