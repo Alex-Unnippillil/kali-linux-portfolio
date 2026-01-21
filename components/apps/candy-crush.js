@@ -12,9 +12,11 @@ import { Overlay, useGameLoop } from './Games/common';
 import {
   BOARD_WIDTH,
   GEM_IDS,
-  createBoard,
+  createPlayableBoard,
   detonateColorBomb,
+  findFirstPossibleMove,
   findMatches,
+  hasPossibleMoves,
   initialBoosters,
   isAdjacent,
   resolveBoard,
@@ -207,7 +209,7 @@ const GemSprite = ({ cell, gem, streak, colorblindMode }) => {
 
 const CandyCrush = () => {
   const rngRef = useRef(() => Math.random());
-  const [board, setBoard] = useState(() => createBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
+  const [board, setBoard] = useState(() => createPlayableBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -233,8 +235,12 @@ const CandyCrush = () => {
   const cascadeSource = useRef('auto');
   const started = useRef(false);
   const burstTimers = useRef([]);
+  const gridCellRefs = useRef([]);
+  const hintTimeout = useRef(null);
   const { bestScore, bestStreak, updateStats } = useCandyCrushStats();
   const [muted, setMuted] = usePersistentState('candy-crush:muted', false, isBoolean);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [hintMove, setHintMove] = useState(null);
 
   const playTone = useCallback(
     (frequency, duration = 0.35) => {
@@ -283,6 +289,17 @@ const CandyCrush = () => {
     [],
   );
 
+  useEffect(
+    () => () => {
+      if (typeof window === 'undefined') return;
+      if (hintTimeout.current) {
+        window.clearTimeout(hintTimeout.current);
+        hintTimeout.current = null;
+      }
+    },
+    [],
+  );
+
   const stats = useMemo(
     () => [
       { label: 'Level', value: level },
@@ -300,6 +317,13 @@ const CandyCrush = () => {
   useEffect(() => {
     updateStats(score, streak);
   }, [score, streak, updateStats]);
+
+  useEffect(() => {
+    const target = gridCellRefs.current[activeIndex];
+    if (target && target !== document.activeElement) {
+      target.focus();
+    }
+  }, [activeIndex]);
 
   useEffect(() => {
     if (!comboBanner) return;
@@ -358,20 +382,19 @@ const CandyCrush = () => {
 
     const { chain, cleared, totalPoints, positions, colors, triggeredByPlayer } = cascadeDetails;
 
-    if (totalPoints > 0) {
+    const shouldAnnounce = triggeredByPlayer || started.current;
+
+    if (totalPoints > 0 && shouldAnnounce) {
       setScore((prev) => prev + totalPoints);
-      const shouldAnnounce = triggeredByPlayer || started.current;
-      if (shouldAnnounce) {
-        setLastCascade({ chain, cleared, points: totalPoints, positions });
-        setMessage(
-          chain > 1
-            ? `Chain x${chain}! Cleared ${cleared} gems (+${totalPoints}).`
-            : `Cleared ${cleared} gems (+${totalPoints}).`,
-        );
-        setComboBanner({ id: `${Date.now()}-${chain}`, chain, points: totalPoints });
-        queueBurst({ id: `${Date.now()}-${Math.random()}`, positions, colors });
-        playMatchSound();
-      }
+      setLastCascade({ chain, cleared, points: totalPoints, positions });
+      setMessage(
+        chain > 1
+          ? `Chain x${chain}! Cleared ${cleared} gems (+${totalPoints}).`
+          : `Cleared ${cleared} gems (+${totalPoints}).`,
+      );
+      setComboBanner({ id: `${Date.now()}-${chain}`, chain, points: totalPoints });
+      queueBurst({ id: `${Date.now()}-${Math.random()}`, positions, colors });
+      playMatchSound();
     }
 
     if (triggeredByPlayer && totalPoints > 0) {
@@ -383,8 +406,33 @@ const CandyCrush = () => {
 
   useGameLoop(step, !paused);
 
+  const isInteractionDisabled = paused || levelComplete || levelFailed || showEndScreen;
+
+  const clearHint = useCallback(() => {
+    if (typeof window !== 'undefined' && hintTimeout.current) {
+      window.clearTimeout(hintTimeout.current);
+      hintTimeout.current = null;
+    }
+    setHintMove(null);
+  }, []);
+
+  const regenerateBoard = useCallback(
+    (nextMessage) => {
+      setBoard(createPlayableBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
+      setSelected(null);
+      setActiveIndex(0);
+      clearHint();
+      setLastCascade(null);
+      setComboBanner(null);
+      setParticleBursts([]);
+      setMessage(nextMessage);
+    },
+    [clearHint],
+  );
+
   const attemptSwap = useCallback(
     (from, to) => {
+      if (isInteractionDisabled) return;
       if (!isAdjacent(from, to, BOARD_WIDTH)) {
         setSelected(to);
         setMessage('Choose an adjacent gem to swap.');
@@ -420,11 +468,13 @@ const CandyCrush = () => {
       setMovesLeft((prev) => Math.max(0, prev - 1));
       setMessage('Match found! Cascade incoming.');
     },
-    [playFailSound],
+    [isInteractionDisabled, playFailSound],
   );
 
   const handleCellClick = useCallback(
     (index) => {
+      if (isInteractionDisabled) return;
+      clearHint();
       if (selected === null) {
         setSelected(index);
         setMessage('Select an adjacent gem to swap.');
@@ -436,25 +486,31 @@ const CandyCrush = () => {
       }
       attemptSwap(selected, index);
     },
-    [attemptSwap, selected],
+    [attemptSwap, clearHint, isInteractionDisabled, selected],
   );
 
   const handleDragStart = useCallback(
     (index, event) => {
+      if (isInteractionDisabled) return;
       dragSource.current = index;
+      setActiveIndex(index);
+      clearHint();
       setSelected(index);
-      event.dataTransfer.effectAllowed = 'move';
+      if (event?.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+      }
     },
-    [],
+    [clearHint, isInteractionDisabled],
   );
 
   const handleDrop = useCallback(
     (index) => {
+      if (isInteractionDisabled) return;
       if (dragSource.current === null) return;
       attemptSwap(dragSource.current, index);
       dragSource.current = null;
     },
-    [attemptSwap],
+    [attemptSwap, isInteractionDisabled],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -463,6 +519,7 @@ const CandyCrush = () => {
   }, []);
 
   const handleShuffle = useCallback(() => {
+    if (isInteractionDisabled) return;
     let allowed = false;
     setBoosters((prev) => {
       if (prev.shuffle === 0) return prev;
@@ -478,10 +535,12 @@ const CandyCrush = () => {
     setBoard((current) => shuffleBoard(current, rngRef.current));
     setMoves((prev) => prev + 1);
     setMovesLeft((prev) => Math.max(0, prev - 1));
+    clearHint();
     setMessage('Grid reconfigured. Seek new breaches.');
-  }, []);
+  }, [clearHint, isInteractionDisabled]);
 
   const handleColorBomb = useCallback(() => {
+    if (isInteractionDisabled) return;
     let allowed = false;
     setBoosters((prev) => {
       if (prev.colorBomb === 0) return prev;
@@ -522,6 +581,7 @@ const CandyCrush = () => {
     setScore((prev) => prev + bonus);
     setMoves((prev) => prev + 1);
     setMovesLeft((prev) => Math.max(0, prev - 1));
+    clearHint();
     setMessage(`Color bomb cleared ${removed} gems (+${bonus}).`);
     setLastCascade({ chain: 1, cleared: removed, points: bonus, positions: cascadePositions });
     queueBurst({
@@ -530,17 +590,19 @@ const CandyCrush = () => {
       colors: cascadePositions.map(() => detonatedColor ?? GEM_IDS[0]),
     });
     playMatchSound();
-  }, [playMatchSound, queueBurst]);
+  }, [clearHint, isInteractionDisabled, playMatchSound, queueBurst]);
 
   const resetBoardState = useCallback(
     (nextLevel) => {
-      setBoard(createBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
+      setBoard(createPlayableBoard(BOARD_WIDTH, GEM_IDS, rngRef.current));
       setScore(0);
       setStreak(0);
       setMoves(0);
       setMovesLeft(MOVES_PER_LEVEL);
       setBoosters({ ...initialBoosters });
       setSelected(null);
+      setActiveIndex(0);
+      clearHint();
       setLastCascade(null);
       setComboBanner(null);
       setParticleBursts([]);
@@ -552,7 +614,7 @@ const CandyCrush = () => {
       started.current = false;
       setMessage(nextLevel ? 'New objective loaded. Chain the hacks!' : 'New grid ready. Match three gems!');
     },
-    [],
+    [clearHint],
   );
 
   const handleReset = useCallback(() => {
@@ -578,8 +640,9 @@ const CandyCrush = () => {
   const handlePause = useCallback(() => {
     if (levelComplete || levelFailed) return;
     setPaused(true);
+    clearHint();
     setMessage('Game paused.');
-  }, [levelComplete, levelFailed]);
+  }, [clearHint, levelComplete, levelFailed]);
 
   const handleResume = useCallback(() => {
     if (showEndScreen) return;
@@ -599,6 +662,106 @@ const CandyCrush = () => {
     setColorblindMode((prev) => !prev);
     setMessage(colorblindMode ? 'Standard palette enabled.' : 'Colorblind palette enabled.');
   }, [colorblindMode, setColorblindMode]);
+
+  const handleHint = useCallback(() => {
+    if (isInteractionDisabled) return;
+    const hint = findFirstPossibleMove(board, BOARD_WIDTH);
+    if (!hint) {
+      regenerateBoard('No moves detected. Rebooting the grid.');
+      return;
+    }
+    clearHint();
+    setHintMove(hint);
+    setActiveIndex(hint[0]);
+    setMessage('Hint: swap the highlighted gems to start a cascade.');
+    if (typeof window !== 'undefined') {
+      hintTimeout.current = window.setTimeout(() => {
+        setHintMove(null);
+        hintTimeout.current = null;
+      }, 1400);
+    }
+  }, [board, clearHint, isInteractionDisabled, regenerateBoard]);
+
+  const handleGridKeyDown = useCallback(
+    (event) => {
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const key = event.key;
+      const size = board.length;
+      if (size === 0) return;
+
+      const row = Math.floor(activeIndex / BOARD_WIDTH);
+      const col = activeIndex % BOARD_WIDTH;
+      let nextIndex = activeIndex;
+
+      if (key === 'ArrowRight') {
+        event.preventDefault();
+        nextIndex = Math.min(size - 1, row * BOARD_WIDTH + Math.min(BOARD_WIDTH - 1, col + 1));
+      } else if (key === 'ArrowLeft') {
+        event.preventDefault();
+        nextIndex = Math.max(0, row * BOARD_WIDTH + Math.max(0, col - 1));
+      } else if (key === 'ArrowUp') {
+        event.preventDefault();
+        nextIndex = Math.max(0, (row - 1) * BOARD_WIDTH + col);
+      } else if (key === 'ArrowDown') {
+        event.preventDefault();
+        nextIndex = Math.min(size - 1, (row + 1) * BOARD_WIDTH + col);
+      } else if (key === 'Enter' || key === ' ') {
+        event.preventDefault();
+        if (isInteractionDisabled) return;
+        clearHint();
+        handleCellClick(activeIndex);
+        return;
+      } else if (key === 'Escape') {
+        event.preventDefault();
+        setSelected(null);
+        clearHint();
+        return;
+      } else if (key === 'h' || key === 'H') {
+        event.preventDefault();
+        handleHint();
+        return;
+      } else if (key === 'p' || key === 'P') {
+        event.preventDefault();
+        if (showEndScreen) return;
+        paused ? handleResume() : handlePause();
+        return;
+      } else if (key === 'm' || key === 'M') {
+        event.preventDefault();
+        handleToggleSound(!muted);
+        return;
+      } else if (key === 'r' || key === 'R') {
+        event.preventDefault();
+        handleRetryLevel();
+        return;
+      }
+
+      if (nextIndex !== activeIndex) {
+        setActiveIndex(nextIndex);
+      }
+    },
+    [
+      activeIndex,
+      board.length,
+      clearHint,
+      handleCellClick,
+      handleHint,
+      handlePause,
+      handleResume,
+      handleRetryLevel,
+      handleToggleSound,
+      isInteractionDisabled,
+      muted,
+      paused,
+      showEndScreen,
+    ],
+  );
+
+  useEffect(() => {
+    if (isInteractionDisabled) return;
+    if (!hasPossibleMoves(board, BOARD_WIDTH)) {
+      regenerateBoard('No possible moves left. Shuffling to a safe grid.');
+    }
+  }, [board, isInteractionDisabled, regenerateBoard]);
 
   const gridStyle = useMemo(
     () => ({
@@ -629,7 +792,14 @@ const CandyCrush = () => {
 
   return (
     <div className="relative flex flex-col gap-6 rounded-3xl border border-cyan-500/10 bg-gradient-to-br from-slate-950 via-slate-950/85 to-slate-900/90 p-6 text-sm text-cyan-100 shadow-[0_0_32px_rgba(8,47,73,0.45)] backdrop-blur-xl sm:text-base">
-      <Overlay onPause={handlePause} onResume={handleResume} muted={muted} onToggleSound={handleToggleSound} />
+      <Overlay
+        onPause={handlePause}
+        onResume={handleResume}
+        muted={muted}
+        paused={paused}
+        onToggleSound={handleToggleSound}
+        onReset={handleRetryLevel}
+      />
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
         <div className="flex w-full flex-col gap-6 xl:max-w-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -662,7 +832,7 @@ const CandyCrush = () => {
           </div>
           <div className="rounded-2xl border border-cyan-500/15 bg-slate-950/60 px-4 py-4 shadow-[0_8px_28px_rgba(8,145,178,0.2)] backdrop-blur">
             <div className="text-[0.65rem] font-semibold uppercase tracking-[0.35em] text-cyan-400/80">Mission Feed</div>
-            <p className="mt-2 text-sm leading-snug text-cyan-100" aria-live="polite">
+            <p className="mt-2 text-sm leading-snug text-cyan-100" aria-live="polite" aria-atomic="true">
               {message}
             </p>
             {lastCascade && (
@@ -708,11 +878,19 @@ const CandyCrush = () => {
             >
               Reset Grid
             </button>
+            <button
+              type="button"
+              onClick={handleHint}
+              disabled={isInteractionDisabled}
+              className="group relative overflow-hidden rounded-lg border border-amber-400/50 bg-gradient-to-r from-amber-600/80 via-yellow-500/80 to-amber-400/80 px-4 py-2 font-semibold text-amber-50 shadow-[0_0_20px_rgba(251,191,36,0.35)] transition hover:from-amber-500/90 hover:to-yellow-400/90 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              Hint
+            </button>
             <div className="group relative">
               <button
                 type="button"
                 onClick={handleShuffle}
-                disabled={boosters.shuffle === 0}
+                disabled={boosters.shuffle === 0 || isInteractionDisabled}
                 aria-describedby="shuffle-tooltip"
                 className="relative overflow-hidden rounded-lg border border-cyan-500/40 bg-gradient-to-r from-sky-700/80 via-cyan-600/80 to-sky-500/80 px-4 py-2 font-semibold text-cyan-50 shadow-[0_0_24px_rgba(14,165,233,0.35)] transition hover:from-sky-600/90 hover:to-sky-400/90 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
@@ -736,7 +914,7 @@ const CandyCrush = () => {
               <button
                 type="button"
                 onClick={handleColorBomb}
-                disabled={boosters.colorBomb === 0}
+                disabled={boosters.colorBomb === 0 || isInteractionDisabled}
                 aria-describedby="bomb-tooltip"
                 className="relative overflow-hidden rounded-lg border border-fuchsia-500/50 bg-gradient-to-r from-fuchsia-700/80 via-pink-600/80 to-rose-500/80 px-4 py-2 font-semibold text-fuchsia-50 shadow-[0_0_24px_rgba(217,70,239,0.35)] transition hover:from-fuchsia-600/90 hover:to-rose-400/90 disabled:cursor-not-allowed disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-fuchsia-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
               >
@@ -774,19 +952,37 @@ const CandyCrush = () => {
           <div className="relative rounded-3xl border border-cyan-500/20 bg-slate-950/60 p-4 shadow-[0_0_40px_rgba(8,145,178,0.35)] backdrop-blur-lg">
             <LayoutGroup>
               <div className="relative">
-                <div className="grid gap-2" style={gridStyle}>
+                <div
+                  className="grid gap-2"
+                  style={gridStyle}
+                  role="grid"
+                  aria-label="Kali Crush grid"
+                  aria-rowcount={BOARD_WIDTH}
+                  aria-colcount={BOARD_WIDTH}
+                  aria-describedby="candy-crush-instructions"
+                  onKeyDown={handleGridKeyDown}
+                >
                   {board.map((cell, index) => {
                     const gem = useGem(cell.gem);
                     const row = Math.floor(index / BOARD_WIDTH) + 1;
                     const col = (index % BOARD_WIDTH) + 1;
-                    const isDisabled = levelComplete || levelFailed || showEndScreen;
+                    const isDisabled = isInteractionDisabled;
+                    const hinted = Boolean(hintMove && (hintMove[0] === index || hintMove[1] === index));
+                    const isActive = activeIndex === index;
                     return (
                       <motion.button
+                        ref={(el) => {
+                          gridCellRefs.current[index] = el;
+                        }}
                         key={cell.id}
                         type="button"
                         layout
+                        role="gridcell"
+                        aria-selected={selected === index}
+                        tabIndex={isActive ? 0 : -1}
                         draggable={!isDisabled}
                         disabled={isDisabled}
+                        onFocus={() => setActiveIndex(index)}
                         onDragStart={(event) => handleDragStart(index, event)}
                         onDragOver={(event) => event.preventDefault()}
                         onDrop={(event) => {
@@ -794,14 +990,21 @@ const CandyCrush = () => {
                           handleDrop(index);
                         }}
                         onDragEnd={handleDragEnd}
-                        onClick={() => handleCellClick(index)}
+                        onClick={() => {
+                          setActiveIndex(index);
+                          handleCellClick(index);
+                        }}
                         aria-pressed={selected === index}
                         aria-label={`${gem.label} gem at row ${row}, column ${col}`}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.92 }}
+                        whileHover={{ scale: isDisabled ? 1 : 1.05 }}
+                        whileTap={{ scale: isDisabled ? 1 : 0.92 }}
                         className={`relative flex items-center justify-center overflow-hidden rounded-xl border bg-slate-900/60 transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
                           selected === index
                             ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-950'
+                            : hinted
+                            ? 'ring-2 ring-amber-300/70 ring-offset-2 ring-offset-slate-950'
+                            : isActive
+                            ? 'border-cyan-300/60'
                             : 'hover:shadow-[0_0_14px_rgba(56,189,248,0.35)]'
                         }`}
                         style={{ width: cellSize, height: cellSize }}
@@ -857,8 +1060,12 @@ const CandyCrush = () => {
               </div>
             </LayoutGroup>
           </div>
+          <p id="candy-crush-instructions" className="sr-only">
+            Use arrow keys to move around the grid. Press Enter or Space to select a gem, then press Enter on an adjacent gem to
+            swap. Press Escape to clear selection. Press H for a hint, P to pause, M to mute, and R to restart the level.
+          </p>
           <p className="text-xs text-cyan-300/70">
-            Drag or click adjacent gems to execute swaps. Boosters refill on reset.
+            Drag or click adjacent gems to swap. Keyboard: arrows, Enter, Esc, H hint, P pause, M mute, R restart.
           </p>
         </div>
       </div>

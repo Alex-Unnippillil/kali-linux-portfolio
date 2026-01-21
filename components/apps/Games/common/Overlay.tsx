@@ -8,17 +8,19 @@ import Toast from '../../../ui/Toast';
 export default function Overlay({
   onPause,
   onResume,
+  paused: externalPaused,
   muted: externalMuted,
   onToggleSound,
   onReset,
 }: {
   onPause?: () => void;
   onResume?: () => void;
+  paused?: boolean;
   muted?: boolean;
   onToggleSound?: (muted: boolean) => void;
   onReset?: () => void;
 }) {
-  const [paused, setPaused] = useState(false);
+  const [paused, setPaused] = useState(externalPaused ?? false);
   const [muted, setMuted] = useState(externalMuted ?? false);
   const [fps, setFps] = useState(0);
   const frame = useRef(performance.now());
@@ -44,11 +46,12 @@ export default function Overlay({
 
   const togglePause = useCallback(() => {
     setPaused((p) => {
-      const np = !p;
-      np ? onPause?.() : onResume?.();
-      return np;
+      const baseline = externalPaused !== undefined ? externalPaused : p;
+      const next = !baseline;
+      next ? onPause?.() : onResume?.();
+      return next;
     });
-  }, [onPause, onResume]);
+  }, [externalPaused, onPause, onResume]);
 
   const toggleSound = useCallback(() => {
     setMuted((m) => {
@@ -63,6 +66,12 @@ export default function Overlay({
       setMuted(externalMuted);
     }
   }, [externalMuted]);
+
+  useEffect(() => {
+    if (externalPaused !== undefined) {
+      setPaused(externalPaused);
+    }
+  }, [externalPaused]);
 
   useEffect(() => {
     const handleDisconnect = () => {
@@ -89,18 +98,18 @@ export default function Overlay({
 
   return (
     <>
-      <div className="game-overlay">
-        <button onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
-          {paused ? 'Resume' : 'Pause'}
+    <div className="game-overlay">
+      <button type="button" onClick={togglePause} aria-label={paused ? 'Resume' : 'Pause'}>
+        {paused ? 'Resume' : 'Pause'}
+      </button>
+      {onReset && (
+        <button type="button" onClick={onReset} aria-label="Reset Game">
+          Reset
         </button>
-        {onReset && (
-          <button onClick={onReset} aria-label="Reset Game">
-            Reset
-          </button>
-        )}
-        <button onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
-          {muted ? 'Sound' : 'Mute'}
-        </button>
+      )}
+      <button type="button" onClick={toggleSound} aria-label={muted ? 'Unmute' : 'Mute'}>
+        {muted ? 'Unmute' : 'Mute'}
+      </button>
         <span className="fps">{fps} FPS</span>
       </div>
       {toast && (

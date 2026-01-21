@@ -54,6 +54,50 @@ export const createBoard = (
   rng: () => number = Math.random,
 ): CandyCell[] => Array.from({ length: width * width }, () => createCandyCell(randomGem(pool, rng)));
 
+export const findFirstPossibleMove = (
+  board: readonly CandyCell[],
+  width = BOARD_WIDTH,
+): [number, number] | null => {
+  const size = board.length;
+  const rows = Math.floor(size / width);
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < width; col += 1) {
+      const index = row * width + col;
+      if (col + 1 < width) {
+        const swapped = swapCandies(board, index, index + 1);
+        if (findMatches(swapped, width).length > 0) return [index, index + 1];
+      }
+      if (row + 1 < rows) {
+        const swapped = swapCandies(board, index, index + width);
+        if (findMatches(swapped, width).length > 0) return [index, index + width];
+      }
+    }
+  }
+
+  return null;
+};
+
+export const hasPossibleMoves = (
+  board: readonly CandyCell[],
+  width = BOARD_WIDTH,
+): boolean => Boolean(findFirstPossibleMove(board, width));
+
+export const createPlayableBoard = (
+  width = BOARD_WIDTH,
+  pool: readonly GemId[] = DEFAULT_POOL,
+  rng: () => number = Math.random,
+  maxAttempts = 30,
+): CandyCell[] => {
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const seeded = createBoard(width, pool, rng);
+    const { board: stable } = resolveBoard(seeded, width, pool, rng);
+    if (hasPossibleMoves(stable, width)) return stable;
+  }
+
+  return resolveBoard(createBoard(width, pool, rng), width, pool, rng).board;
+};
+
 export const findMatches = (
   board: readonly CandyCell[],
   width = BOARD_WIDTH,
@@ -273,4 +317,3 @@ export function useCandyCrushStats() {
 
   return { bestScore, bestStreak, updateStats };
 }
-
