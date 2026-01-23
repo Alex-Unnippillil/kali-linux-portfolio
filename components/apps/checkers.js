@@ -127,11 +127,25 @@ const Checkers = () => {
     true,
   );
 
-  const captureMoves = getAllMoves(board, turn, true).filter(
+  const capturesAvailable = getAllMoves(board, turn, requireCapture).filter(
     (move) => move.captured,
   ).length;
   const movesToDraw = Math.max(0, 40 - history.length);
+  const redPiecesRemaining = board.reduce(
+    (sum, row) => sum + row.filter((p) => p && p.color === 'red').length,
+    0,
+  );
+  const blackPiecesRemaining = board.reduce(
+    (sum, row) => sum + row.filter((p) => p && p.color === 'black').length,
+    0,
+  );
+  const capturedPieces = {
+    red: Math.max(0, 12 - redPiecesRemaining),
+    black: Math.max(0, 12 - blackPiecesRemaining),
+  };
 
+
+  
   // load wins
   useEffect(() => {
     const stored = localStorage.getItem('checkersWins');
@@ -365,8 +379,6 @@ const Checkers = () => {
     setHintMoves([]);
   };
 
-  const capturesLeft = moves.filter((move) => move.captured).length;
-  const movesToDraw = Math.max(0, 40 - history.length);
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
@@ -378,8 +390,9 @@ const Checkers = () => {
           <p className="mt-2 text-gray-300">Forced capture is active.</p>
         )}
         <div className="mt-3 flex flex-wrap gap-4 text-gray-300">
-          <span>Captures left: {capturesLeft}</span>
+          <span>Captures available: {capturesAvailable}</span>
           <span>Moves to draw: {movesToDraw}</span>
+          <span>Captured pieces: R {capturedPieces.red} | B {capturedPieces.black}</span>
         </div>
       </div>
       <div className="w-56 mb-4">
