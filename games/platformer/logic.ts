@@ -137,6 +137,17 @@ export function parseLevel(grid: string[]): LevelParse {
   return { width, height, tiles, spawn, goal, coins, platforms };
 }
 
+/**
+ * Returns the aligned spawn position for a player rectangle.
+ * Keeps spawn consistent between initial placement and respawns.
+ */
+export function getPlayerSpawn(level: LevelParse, playerW: number, playerH: number) {
+  return {
+    x: level.spawn.x + (TILE_SIZE - playerW) / 2,
+    y: level.spawn.y + (TILE_SIZE - playerH),
+  };
+}
+
 function overlaps(a: { x: number; y: number; w: number; h: number }, b: { x: number; y: number; w: number; h: number }) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
@@ -253,8 +264,9 @@ export function step(state: GameState, input: InputState, dt: number): GameState
     const respawnTimer = Math.max(0, next.respawnTimer - dt);
     next.respawnTimer = respawnTimer;
     if (respawnTimer === 0) {
-      next.player.x = state.level.spawn.x;
-      next.player.y = state.level.spawn.y;
+      const spawnPos = getPlayerSpawn(state.level, next.player.w, next.player.h);
+      next.player.x = spawnPos.x;
+      next.player.y = spawnPos.y;
       next.player.vx = 0;
       next.player.vy = 0;
       next.status = 'running';
