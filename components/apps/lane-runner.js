@@ -646,13 +646,15 @@ const LaneRunner = () => {
                   Calibrate
                 </button>
                 <div className="flex items-center gap-2">
-                  <label className="opacity-80">Sensitivity</label>
+                  <label htmlFor="lane-runner-sensitivity" className="opacity-80">Sensitivity</label>
                   <input
+                    id="lane-runner-sensitivity"
                     type="range"
                     min="0.5"
                     max="2"
                     step="0.1"
                     value={sensitivity}
+                    aria-label="Sensitivity"
                     onChange={(e) => setSensitivity(parseFloat(e.target.value))}
                   />
                   <span className="tabular-nums w-10 text-right">
@@ -663,7 +665,7 @@ const LaneRunner = () => {
             )}
             {tiltSupport.needsPermission && tiltAllowed === false && (
               <div className="text-xs opacity-75">
-                Some browsers require permission. Tap "Enable tilt" first.
+                Some browsers require permission. Tap &quot;Enable tilt&quot; first.
               </div>
             )}
           </div>
@@ -745,6 +747,7 @@ const LaneRunner = () => {
             accept="application/json"
             ref={fileRef}
             className="hidden"
+            aria-label="Import lane runner save"
             onChange={(e) => {
               const file = e.target.files && e.target.files[0];
               if (file) handleImport(file);

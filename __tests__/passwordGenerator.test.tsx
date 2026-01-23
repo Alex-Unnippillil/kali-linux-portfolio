@@ -41,11 +41,11 @@ describe('PasswordGenerator', () => {
   });
 
   it('updates entropy label when presets change', () => {
-    const { getByRole, getByText } = render(<PasswordGenerator />);
+    const { getByRole, getByText, getAllByText } = render(<PasswordGenerator />);
     const initial = getByText(/bits/i).textContent;
     fireEvent.click(getByRole('button', { name: /Memorable/i }));
     const afterPreset = getByText(/bits/i).textContent;
     expect(afterPreset).not.toBe(initial);
-    expect(getByText(/Weak/i)).toBeInTheDocument();
+    expect(getAllByText(/Weak/i).length).toBeGreaterThan(0);
   });
 });

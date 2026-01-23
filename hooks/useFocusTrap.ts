@@ -146,7 +146,7 @@ export const useFocusTrap = (
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
+    window.addEventListener('keydown', handleKeyDown, true);
     const handleFocus = (event: FocusEvent) => {
       // `window` focus events can have non-Node targets (e.g. Window), which would
       // throw if passed to `Node.contains`. Prefer the actual active element.
@@ -168,7 +168,7 @@ export const useFocusTrap = (
       window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
       window.clearTimeout(focusRetryTimeoutId);
-      document.removeEventListener('keydown', handleKeyDown, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('focus', handleFocus, true);
 
       const restoreTarget = restoreFocusNode ?? previouslyFocused;
