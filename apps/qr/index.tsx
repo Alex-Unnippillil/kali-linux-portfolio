@@ -178,7 +178,7 @@ export default function QR() {
                   <div className="space-y-1">
                     <p className="text-sm font-semibold">Preview & actions</p>
                     <p className="text-xs text-kali-text/70">
-                      Use these controls to download, share, or test your QR code directly from this window.
+                      Download or share this code, then open your phone camera to scan it.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -425,4 +425,3 @@ export default function QR() {
     </div>
   );
 }
-

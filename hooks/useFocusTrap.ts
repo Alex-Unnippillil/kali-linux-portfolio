@@ -89,7 +89,9 @@ export const useFocusTrap = (
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const restoreFocusNode = restoreFocusRef?.current ?? null;
 
-    focusFirstElement();
+    const initialFocusTimeout = window.setTimeout(() => {
+      focusFirstElement();
+    }, 0);
 
     const ensureFocusInside = () => {
       if (!container.contains(document.activeElement)) {
@@ -153,6 +155,7 @@ export const useFocusTrap = (
       window.cancelAnimationFrame(rafId);
       window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
+      window.clearTimeout(initialFocusTimeout);
       container.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('focus', handleFocus, true);
 

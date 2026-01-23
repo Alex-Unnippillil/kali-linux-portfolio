@@ -1136,7 +1136,7 @@ const FlappyBird = () => {
               setStarted(true);
             }}
           >
-            Start Flight
+            Start
           </button>
         </div>
       )}
@@ -1219,3 +1219,5 @@ const FlappyBird = () => {
   );
 
 };
+
+export default FlappyBird;

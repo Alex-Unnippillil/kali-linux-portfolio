@@ -127,6 +127,11 @@ const Checkers = () => {
     true,
   );
 
+  const captureMoves = getAllMoves(board, turn, true).filter(
+    (move) => move.captured,
+  ).length;
+  const movesToDraw = Math.max(0, 40 - history.length);
+
   // load wins
   useEffect(() => {
     const stored = localStorage.getItem('checkersWins');
@@ -362,6 +367,20 @@ const Checkers = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="mb-4 w-full max-w-xl rounded-lg border border-white/10 bg-black/30 p-4 text-sm text-white">
+        <p className="text-xs font-semibold uppercase tracking-wide text-white/60">
+          Match briefing
+        </p>
+        <p className="mt-2">It's {turn === 'red' ? "Red" : "Black"}'s move.</p>
+        <p className="mt-1 text-white/80">Tap the Hint button to preview the best capture route.</p>
+        <p className="mt-1 text-white/80">
+          {requireCapture ? 'Forced capture is active.' : 'Forced capture is off.'}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-4 text-xs text-white/70">
+          <span>Captures left: {captureMoves}</span>
+          <span>Moves to draw: {movesToDraw}</span>
+        </div>
+      </div>
       <div className="w-56 mb-4">
         <input
           type="range"
@@ -439,4 +458,3 @@ export default function CheckersApp() {
     </GameLayout>
   );
 }
-

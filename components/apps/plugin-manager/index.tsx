@@ -239,11 +239,10 @@ export default function PluginManager() {
         {filteredPlugins.map((p) => {
           const isInstalled = installed[p.id] !== undefined;
           return (
-            <li key={p.id} className="list-none">
-              <article
-                className="flex flex-col gap-4 rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-5 shadow-kali-panel transition hover:border-[color:var(--color-accent)] focus-within:border-[color:var(--color-accent)]"
-                title={p.description || undefined}
-              >
+          <li key={p.id} className="list-none" title={p.description || undefined}>
+            <article
+              className="flex flex-col gap-4 rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-5 shadow-kali-panel transition hover:border-[color:var(--color-accent)] focus-within:border-[color:var(--color-accent)]"
+            >
                 <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold leading-tight">{p.id}</h2>
@@ -265,7 +264,9 @@ export default function PluginManager() {
                 <dl className="grid grid-cols-1 gap-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)] sm:grid-cols-2">
                   <div className="flex flex-col">
                     <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">Sandbox</dt>
-                    <dd className="text-[color:var(--color-text)]">{p.sandbox === 'worker' ? 'Worker' : 'Iframe'}</dd>
+                    <dd className="text-[color:var(--color-text)]">
+                      Sandbox: {p.sandbox === 'worker' ? 'Worker' : 'Iframe'}
+                    </dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">Package size</dt>
@@ -280,8 +281,9 @@ export default function PluginManager() {
                         : 'bg-kali-accent hover:bg-[color:color-mix(in_srgb,var(--color-accent)_85%,#000000)]'
                     }`}
                     onClick={() => install(p)}
+                    disabled={isInstalled}
                   >
-                    {isInstalled ? 'Update plugin' : 'Install plugin'}
+                    {isInstalled ? 'Installed' : 'Install'}
                   </button>
                   <button
                     className="rounded-full border border-[color:var(--kali-border)] px-4 py-2 text-sm font-semibold text-[color:var(--color-text)] transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-accent)] disabled:cursor-not-allowed disabled:border-[color:color-mix(in_srgb,var(--kali-border)_70%,transparent)] disabled:text-[color:color-mix(in_srgb,var(--color-text)_45%,transparent)]"
@@ -290,7 +292,7 @@ export default function PluginManager() {
                     aria-disabled={!isInstalled}
                     aria-label={isInstalled ? `Run ${p.id}` : `Run ${p.id} (install required)`}
                   >
-                    Run sandbox
+                    Run
                   </button>
                 </div>
               </article>
