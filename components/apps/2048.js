@@ -271,6 +271,7 @@ const Game2048 = () => {
   const [milestoneValue, setMilestoneValue] = useState(0);
   const [paused, setPaused] = useState(false);
   const moveLock = useRef(false);
+  const moveUnlockRef = useRef(null);
   const workerRef = useRef(null);
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
@@ -316,7 +317,6 @@ const Game2048 = () => {
       }, 200);
       return () => {
         clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
       };
     }
   }, [animCells]);
@@ -339,7 +339,6 @@ const Game2048 = () => {
       }, 400);
       return () => {
         clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
       };
     }
   }, [mergeCells]);
@@ -385,6 +384,14 @@ const Game2048 = () => {
       moveLock.current = false;
     }
   }, [animCells, mergeCells]);
+
+  useEffect(() => {
+    return () => {
+      if (moveUnlockRef.current !== null) {
+        clearTimeout(moveUnlockRef.current);
+      }
+    };
+  }, []);
 
   const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
 
@@ -476,8 +483,17 @@ const Game2048 = () => {
       else if (y === 1) result = moveDown(board);
       else return;
       const { board: moved, merged, score: gained, mergedCells } = result;
+      if (boardsEqual(board, moved)) {
+        return;
+      }
       if (!boardsEqual(board, moved)) {
         moveLock.current = true;
+        if (moveUnlockRef.current !== null) {
+          clearTimeout(moveUnlockRef.current);
+        }
+        moveUnlockRef.current = window.setTimeout(() => {
+          moveLock.current = false;
+        }, 450);
         const rngState = serializeRng();
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
         setHistory((h) => [

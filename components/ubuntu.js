@@ -88,6 +88,10 @@ export default class Ubuntu extends Component {
                                 schedule(finalizeBoot);
                         };
 
+                        if (isTestEnv) {
+                                finalizeBoot();
+                                return;
+                        }
                         if (bootStartTime !== null) {
                                 const elapsed = performance.now() - bootStartTime;
                                 const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
