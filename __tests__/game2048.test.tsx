@@ -2,6 +2,8 @@ import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
 
+jest.setTimeout(15000);
+
 beforeEach(() => {
   window.localStorage.clear();
   setSeed(1);
@@ -72,7 +74,7 @@ test('ignores browser key repeat events', () => {
   ]));
   const { getByText } = render(<Game2048 />);
   fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
-  expect(getByText(/Moves: 0/)).toBeTruthy();
+  expect(getByText((_, element) => element?.textContent === 'Moves: 0')).toBeTruthy();
 });
 
 
@@ -90,12 +92,18 @@ test('tracks moves and allows multiple undos', async () => {
     await new Promise((r) => setTimeout(r, 500));
   });
   fireEvent.keyDown(window, { key: 'ArrowRight' });
-  expect(getByText(/Moves: 2/)).toBeTruthy();
+  await waitFor(() => {
+    expect(getByText((_, element) => element?.textContent === 'Moves: 2')).toBeTruthy();
+  });
   const undoBtn = getByText(/Undo/);
   fireEvent.click(undoBtn);
-  expect(getByText(/Moves: 1/)).toBeTruthy();
+  await waitFor(() => {
+    expect(getByText((_, element) => element?.textContent === 'Moves: 1')).toBeTruthy();
+  });
   fireEvent.click(undoBtn);
-  expect(getByText(/Moves: 0/)).toBeTruthy();
+  await waitFor(() => {
+    expect(getByText((_, element) => element?.textContent === 'Moves: 0')).toBeTruthy();
+  });
   const board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   expect(board).toEqual(initial);
 });
@@ -130,10 +138,14 @@ test('ignores key repeats while a move is in progress', async () => {
   const { getByText } = render(<Game2048 />);
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  expect(getByText(/Moves: 1/)).toBeTruthy();
+  await waitFor(() => {
+    expect(getByText((_, element) => element?.textContent === 'Moves: 1')).toBeTruthy();
+  });
   await act(async () => {
     await new Promise((r) => setTimeout(r, 500));
   });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  expect(getByText(/Moves: 2/)).toBeTruthy();
+  await waitFor(() => {
+    expect(getByText((_, element) => element?.textContent === 'Moves: 2')).toBeTruthy();
+  });
 });

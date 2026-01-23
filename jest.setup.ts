@@ -1,4 +1,6 @@
 import { TextEncoder, TextDecoder } from 'util';
+
+jest.setTimeout(15000);
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {

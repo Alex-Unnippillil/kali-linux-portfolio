@@ -68,7 +68,7 @@ function BootingScreen(props) {
                 window.clearInterval(intervalId)
             }
         }
-    }, [isBooting])
+    }, [isBooting, props.disableMessageSequence])
 
     const bootMessages = BOOT_MESSAGES
 

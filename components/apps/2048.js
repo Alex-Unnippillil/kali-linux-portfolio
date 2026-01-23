@@ -324,7 +324,7 @@ const Game2048 = () => {
         clearTimeout(t);
       };
     }
-  }, [animCells]);
+  }, [animCells, isTestEnv]);
 
   useEffect(() => {
     if (mergeCells.size > 0) {
@@ -350,7 +350,7 @@ const Game2048 = () => {
         clearTimeout(t);
       };
     }
-  }, [mergeCells]);
+  }, [mergeCells, isTestEnv]);
 
   useEffect(() => {
     if (scorePop) {
@@ -395,9 +395,10 @@ const Game2048 = () => {
   }, [animCells, mergeCells]);
 
   useEffect(() => {
+    const moveUnlockTimer = moveUnlockRef.current;
     return () => {
-      if (moveUnlockRef.current !== null) {
-        clearTimeout(moveUnlockRef.current);
+      if (moveUnlockTimer !== null) {
+        clearTimeout(moveUnlockTimer);
       }
     };
   }, []);
@@ -573,6 +574,7 @@ const Game2048 = () => {
       bestMap,
       setBestMap,
       record,
+      isTestEnv,
       milestoneValue,
       setGlowCells,
       setMilestoneValue,
