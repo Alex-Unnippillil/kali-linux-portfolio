@@ -400,6 +400,7 @@ const Checkers = () => {
           type="range"
           min="0"
           max="2"
+          aria-label="Difficulty"
           value={[ 'easy', 'medium', 'hard' ].indexOf(difficulty)}
           onChange={(e) =>
             setDifficulty(['easy', 'medium', 'hard'][parseInt(e.target.value, 10)])
@@ -417,11 +418,14 @@ const Checkers = () => {
         width={BOARD_PIXELS}
         height={BOARD_PIXELS}
         onClick={handleClick}
+        role="img"
+        aria-label="Checkers board"
         className="mb-2"
       />
       <label className="mb-2 text-sm">
         <input
           type="checkbox"
+          aria-label="Require capture"
           checked={requireCapture}
           onChange={(e) => setRequireCapture(e.target.checked)}
           className="mr-1"

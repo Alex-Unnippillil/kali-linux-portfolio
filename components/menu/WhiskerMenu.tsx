@@ -194,6 +194,16 @@ const WhiskerMenu: React.FC = () => {
     const focusSearchInput = () => {
       const input = searchInputRef.current;
       if (!input) return;
+      const menu = menuRef.current;
+      const activeElement = document.activeElement;
+      if (
+        menu &&
+        activeElement instanceof HTMLElement &&
+        menu.contains(activeElement) &&
+        activeElement !== input
+      ) {
+        return;
+      }
       input.focus();
       if (typeof input.setSelectionRange === 'function') {
         const length = input.value.length;
