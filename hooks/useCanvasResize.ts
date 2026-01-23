@@ -29,13 +29,16 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     };
 
     resize();
-    const ro = new ResizeObserver(resize);
     const parent = canvas.parentElement;
-    if (parent) ro.observe(parent);
+    const ro =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(resize)
+        : null;
+    if (parent && ro) ro.observe(parent);
     window.addEventListener('resize', resize);
     return () => {
       window.removeEventListener('resize', resize);
-      ro.disconnect();
+      ro?.disconnect();
     };
   }, [baseWidth, baseHeight]);
 
