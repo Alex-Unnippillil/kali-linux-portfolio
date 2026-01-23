@@ -1,0 +1,221 @@
+import { Scenario } from './simulator';
+
+const baseArpTable = [
+  { ip: '10.0.0.1', mac: '00:16:3e:5e:6c:01', vendor: 'Gateway Labs', status: 'stable' },
+  { ip: '10.0.0.22', mac: 'f0:de:f1:0a:88:22', vendor: 'Victim Workstation', status: 'stable' },
+  { ip: '10.0.0.44', mac: 'c0:ff:ee:12:34:56', vendor: 'Attacker Sandbox', status: 'stable' },
+];
+
+export const SCENARIOS: Scenario[] = [
+  {
+    id: 'normal',
+    name: 'Normal traffic',
+    description: 'Baseline capture session with standard host-to-gateway traffic.',
+    timeline: [
+      {
+        title: 'Initialize capture session',
+        description: 'Load the local-only capture profile and verify hosts are idle.',
+        start: 0,
+        end: 1,
+      },
+      {
+        title: 'Observe baseline traffic',
+        description: 'Monitor deterministic packet traces across the standard route.',
+        start: 2,
+        end: 4,
+      },
+      {
+        title: 'Summarize findings',
+        description: 'Review captured metrics and confirm the network stays stable.',
+        start: 5,
+        end: 6,
+      },
+    ],
+    initialArpTable: baseArpTable,
+    initialMetrics: {
+      packets: 0,
+      alerts: 0,
+      filters: 0,
+      hosts: 3,
+    },
+    events: [
+      { time: 1, type: 'log', level: 'info', message: 'Capture initialized on sandbox interface.' },
+      { time: 2, type: 'trace', message: 'Victim → Gateway: DNS query for docs.lab' },
+      { time: 2, type: 'flow', from: 'Victim', to: 'Gateway', label: 'DNS', tone: 'normal' },
+      { time: 2, type: 'metric', key: 'packets', value: 12 },
+      { time: 3, type: 'trace', message: 'Gateway → Victim: DNS response for docs.lab' },
+      { time: 3, type: 'flow', from: 'Gateway', to: 'Victim', label: 'DNS', tone: 'normal' },
+      { time: 3, type: 'metric', key: 'packets', value: 24 },
+      { time: 4, type: 'trace', message: 'Victim → Gateway: HTTPS request for /dashboard' },
+      { time: 4, type: 'flow', from: 'Victim', to: 'Gateway', label: 'HTTPS', tone: 'normal' },
+      { time: 4, type: 'metric', key: 'packets', value: 36 },
+      { time: 5, type: 'log', level: 'info', message: 'Baseline session complete. No anomalies detected.' },
+      { time: 6, type: 'metric', key: 'alerts', value: 0 },
+    ],
+  },
+  {
+    id: 'arp-poison',
+    name: 'ARP poisoning reenactment',
+    description: 'Simulate forged ARP replies and observe rerouted flows.',
+    timeline: [
+      {
+        title: 'Select targets',
+        description: 'Mark the victim and gateway entries in the ARP cache.',
+        start: 0,
+        end: 1,
+      },
+      {
+        title: 'Replay spoofed replies',
+        description: 'Simulated ARP replies update cache mappings deterministically.',
+        start: 2,
+        end: 4,
+      },
+      {
+        title: 'Monitor redirected traffic',
+        description: 'Traffic visually flows through the attacker node.',
+        start: 5,
+        end: 7,
+      },
+    ],
+    initialArpTable: baseArpTable,
+    initialMetrics: {
+      packets: 0,
+      alerts: 0,
+      filters: 1,
+      hosts: 3,
+    },
+    events: [
+      { time: 1, type: 'log', level: 'info', message: 'Targets locked for ARP reenactment.' },
+      {
+        time: 2,
+        type: 'arp',
+        action: 'update',
+        entry: { ip: '10.0.0.22', mac: 'c0:ff:ee:12:34:56', vendor: 'Attacker Sandbox', status: 'poisoned' },
+      },
+      {
+        time: 2,
+        type: 'log',
+        level: 'warn',
+        message: 'Simulated ARP reply: victim now associates gateway with attacker MAC.',
+      },
+      {
+        time: 3,
+        type: 'arp',
+        action: 'update',
+        entry: { ip: '10.0.0.1', mac: 'c0:ff:ee:12:34:56', vendor: 'Attacker Sandbox', status: 'poisoned' },
+      },
+      {
+        time: 3,
+        type: 'log',
+        level: 'warn',
+        message: 'Simulated ARP reply: gateway now associates victim with attacker MAC.',
+      },
+      { time: 4, type: 'metric', key: 'alerts', value: 2 },
+      { time: 5, type: 'trace', message: 'Victim → Attacker: HTTP session start' },
+      { time: 5, type: 'flow', from: 'Victim', to: 'Attacker', label: 'HTTP', tone: 'warning' },
+      { time: 5, type: 'metric', key: 'packets', value: 18 },
+      { time: 6, type: 'trace', message: 'Attacker → Gateway: HTTP relay' },
+      { time: 6, type: 'flow', from: 'Attacker', to: 'Gateway', label: 'HTTP', tone: 'warning' },
+      { time: 6, type: 'metric', key: 'packets', value: 34 },
+      { time: 7, type: 'log', level: 'info', message: 'Reenactment complete. Restore ARP cache to exit.' },
+    ],
+  },
+  {
+    id: 'dns-spoof',
+    name: 'DNS spoof reenactment',
+    description: 'Show spoofed responses and highlight redirected flows.',
+    timeline: [
+      {
+        title: 'Activate DNS monitor',
+        description: 'Enable inspection on DNS queries inside the sandbox.',
+        start: 0,
+        end: 1,
+      },
+      {
+        title: 'Replay spoofed response',
+        description: 'Replace the real response with a deterministic fixture.',
+        start: 2,
+        end: 3,
+      },
+      {
+        title: 'Trace redirected request',
+        description: 'Track the client as it follows the spoofed destination.',
+        start: 4,
+        end: 6,
+      },
+    ],
+    initialArpTable: baseArpTable,
+    initialMetrics: {
+      packets: 0,
+      alerts: 0,
+      filters: 2,
+      hosts: 3,
+    },
+    events: [
+      { time: 1, type: 'log', level: 'info', message: 'DNS inspection enabled for lab.local.' },
+      { time: 2, type: 'trace', message: 'Victim → Attacker: DNS query for portal.lab.local' },
+      { time: 2, type: 'flow', from: 'Victim', to: 'Attacker', label: 'DNS', tone: 'warning' },
+      { time: 2, type: 'metric', key: 'packets', value: 9 },
+      {
+        time: 3,
+        type: 'log',
+        level: 'warn',
+        message: 'Spoofed DNS response served: portal.lab.local → 10.0.0.99.',
+      },
+      { time: 3, type: 'metric', key: 'alerts', value: 1 },
+      { time: 4, type: 'trace', message: 'Victim → Attacker: HTTPS to 10.0.0.99' },
+      { time: 4, type: 'flow', from: 'Victim', to: 'Attacker', label: 'HTTPS', tone: 'alert' },
+      { time: 4, type: 'metric', key: 'packets', value: 21 },
+      { time: 5, type: 'trace', message: 'Attacker → Gateway: relayed HTTPS session' },
+      { time: 5, type: 'flow', from: 'Attacker', to: 'Gateway', label: 'HTTPS', tone: 'alert' },
+      { time: 6, type: 'log', level: 'info', message: 'Spoofed destination logged for review.' },
+    ],
+  },
+  {
+    id: 'filter-demo',
+    name: 'Filter effect demo',
+    description: 'Apply drop/replace rules to simulated packet strings.',
+    timeline: [
+      {
+        title: 'Load sample filter',
+        description: 'Pick a sample rule set from the editor library.',
+        start: 0,
+        end: 1,
+      },
+      {
+        title: 'Simulate rule execution',
+        description: 'Preview how deterministic packets would be filtered.',
+        start: 2,
+        end: 4,
+      },
+      {
+        title: 'Review outcomes',
+        description: 'Confirm the logs and metrics before exporting filters.',
+        start: 5,
+        end: 6,
+      },
+    ],
+    initialArpTable: baseArpTable,
+    initialMetrics: {
+      packets: 0,
+      alerts: 0,
+      filters: 3,
+      hosts: 3,
+    },
+    events: [
+      { time: 1, type: 'log', level: 'info', message: 'Filter compiler loaded with sandbox fixtures.' },
+      { time: 2, type: 'trace', message: 'Packet input: HTTP GET /admin' },
+      { time: 2, type: 'flow', from: 'Victim', to: 'Gateway', label: 'HTTP', tone: 'normal' },
+      { time: 2, type: 'metric', key: 'packets', value: 8 },
+      { time: 3, type: 'trace', message: 'Rule applied: drop /admin' },
+      { time: 3, type: 'metric', key: 'alerts', value: 1 },
+      { time: 4, type: 'trace', message: 'Packet input: DNS query lab.local' },
+      { time: 4, type: 'metric', key: 'packets', value: 16 },
+      { time: 5, type: 'log', level: 'info', message: 'Filter output ready for review.' },
+      { time: 6, type: 'metric', key: 'alerts', value: 1 },
+    ],
+  },
+];
+
+export const getScenarioById = (id: Scenario['id']) =>
+  SCENARIOS.find((scenario) => scenario.id === id) ?? SCENARIOS[0];

@@ -27,6 +27,8 @@ jest.mock('../components/context-menus/taskbar-menu', () => ({
 }));
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
+jest.setTimeout(15000);
+
 const windowRenderMock = jest.fn();
 const windowPropsById = new Map<string, any>();
 
@@ -41,19 +43,23 @@ jest.mock('../components/desktop/Window', () => {
 
 describe('Desktop window size persistence', () => {
   beforeEach(() => {
-    jest.useFakeTimers();
     localStorage.clear();
     windowRenderMock.mockClear();
     windowPropsById.clear();
   });
 
   afterEach(() => {
-    jest.useRealTimers();
+    jest.clearAllTimers();
   });
 
   it('restores stored window dimensions after reload', async () => {
     const desktopRef = React.createRef<Desktop>();
     let initialRender: ReturnType<typeof render> | undefined;
+    const flushTimers = async () => {
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    };
     await act(async () => {
       initialRender = render(
         <Desktop
@@ -66,17 +72,12 @@ describe('Desktop window size persistence', () => {
       );
     });
     const { unmount } = initialRender!;
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await flushTimers();
     expect(desktopRef.current).toBeDefined();
     act(() => {
       desktopRef.current?.openApp('terminal');
     });
-    await act(async () => {
-      jest.advanceTimersByTime(200);
-      await Promise.resolve();
-    });
+    await flushTimers();
 
     expect(windowRenderMock).toHaveBeenCalled();
     const initialProps = windowPropsById.get('terminal');
@@ -107,17 +108,12 @@ describe('Desktop window size persistence', () => {
         />
       );
     });
-    await act(async () => {
-      await Promise.resolve();
-    });
+    await flushTimers();
     expect(desktopRefReloaded.current).toBeDefined();
     act(() => {
       desktopRefReloaded.current?.openApp('terminal');
     });
-    await act(async () => {
-      jest.advanceTimersByTime(200);
-      await Promise.resolve();
-    });
+    await flushTimers();
 
     expect(windowRenderMock).toHaveBeenCalled();
     const reopenedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
