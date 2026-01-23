@@ -5,7 +5,7 @@ import BeefPage from '../apps/beef/index';
 jest.mock('next/image', () => ({
   __esModule: true,
   default: function MockedImage(props: React.ImgHTMLAttributes<HTMLImageElement>) {
-    const { src, alt, ...rest } = props;
+    const { src, alt, priority, sizes, placeholder, ...rest } = props;
     return <img src={typeof src === 'string' ? src : ''} alt={alt ?? ''} {...rest} />;
   },
 }));

@@ -1,6 +1,6 @@
 'use client';
 
-const STACKBLITZ_EMBED_URL =
+export const STACKBLITZ_EMBED_URL =
   'https://stackblitz.com/~/github.com/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md';
 
 const STACKBLITZ_IFRAME_ALLOW =
@@ -13,13 +13,21 @@ export default function VsCode() {
     <div className="h-full w-full overflow-hidden rounded-md border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]">
       <iframe
         src={STACKBLITZ_EMBED_URL}
-        title="StackBlitz - kali-linux-portfolio"
+        title="Visual Studio Code (StackBlitz)"
         className="h-full w-full border-0"
         allow={STACKBLITZ_IFRAME_ALLOW}
         sandbox={STACKBLITZ_IFRAME_SANDBOX}
         allowFullScreen
         loading="lazy"
       />
+      <a
+        href={STACKBLITZ_EMBED_URL}
+        target="_blank"
+        rel="noreferrer"
+        className="sr-only"
+      >
+        Open in StackBlitz
+      </a>
     </div>
   );
 }

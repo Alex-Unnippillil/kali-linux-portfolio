@@ -222,7 +222,6 @@ const WhiskerMenu: React.FC = () => {
   }, [isOpen]);
 
   useFocusTrap(menuRef, isOpen, {
-    initialFocusRef: searchInputRef,
     restoreFocusRef: buttonRef,
   });
 

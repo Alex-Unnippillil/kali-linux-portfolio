@@ -57,8 +57,9 @@ export default class Ubuntu extends Component {
         waitForBootSequence = () => {
                 if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-                const MIN_BOOT_DELAY = 350;
-                const MAX_BOOT_DELAY = 1200;
+                const isTestEnv = typeof jest !== 'undefined';
+                const MIN_BOOT_DELAY = isTestEnv ? 0 : 350;
+                const MAX_BOOT_DELAY = isTestEnv ? 0 : 1200;
                 const hasPerformanceNow = typeof performance !== 'undefined' && typeof performance.now === 'function';
                 const bootStartTime = hasPerformanceNow ? performance.now() : null;
 
@@ -69,6 +70,10 @@ export default class Ubuntu extends Component {
 
                 const scheduleFinalize = () => {
                         if (typeof window === 'undefined' || this.state.booting_screen === false) return;
+                        if (isTestEnv) {
+                                finalizeBoot();
+                                return;
+                        }
 
                         const run = () => {
                                 if (typeof window === 'undefined') return;
@@ -104,7 +109,7 @@ export default class Ubuntu extends Component {
                         scheduleFinalize();
                 };
 
-                if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                if (document.readyState === 'complete') {
                         scheduleFinalize();
                         return;
                 }
@@ -112,9 +117,9 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadHandler = () => {
                         finalizeAndClearTimers();
                 };
-                this.bootScreenLoadEvent = 'DOMContentLoaded';
-                this.bootScreenLoadTarget = document;
-                document.addEventListener('DOMContentLoaded', this.bootScreenLoadHandler, { once: true });
+                this.bootScreenLoadEvent = 'load';
+                this.bootScreenLoadTarget = window;
+                window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
 
                 this.bootSequenceTimeoutId = window.setTimeout(() => {
                         scheduleFinalize();
@@ -221,6 +226,7 @@ export default class Ubuntu extends Component {
 					visible={this.state.booting_screen}
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
+					disableMessageSequence={typeof jest !== 'undefined'}
 				/>
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                 <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />

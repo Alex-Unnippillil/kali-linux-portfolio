@@ -360,8 +360,23 @@ const Checkers = () => {
     setHintMoves([]);
   };
 
+  const capturesLeft = moves.filter((move) => move.captured).length;
+  const movesToDraw = Math.max(0, 40 - history.length);
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <div className="mb-4 w-full max-w-lg rounded border border-gray-700 bg-gray-900/50 p-3 text-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">Match briefing</p>
+        <p className="mt-2">{`It's ${turn === 'red' ? "Red's" : "Black's"} move.`}</p>
+        <p className="mt-2 text-gray-300">Tap the Hint button to highlight a recommended capture sequence.</p>
+        {requireCapture && (
+          <p className="mt-2 text-gray-300">Forced capture is active.</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-4 text-gray-300">
+          <span>Captures left: {capturesLeft}</span>
+          <span>Moves to draw: {movesToDraw}</span>
+        </div>
+      </div>
       <div className="w-56 mb-4">
         <input
           type="range"
@@ -439,4 +454,3 @@ export default function CheckersApp() {
     </GameLayout>
   );
 }
-

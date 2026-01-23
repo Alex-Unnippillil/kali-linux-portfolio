@@ -90,6 +90,9 @@ export const useFocusTrap = (
     const restoreFocusNode = restoreFocusRef?.current ?? null;
 
     focusFirstElement();
+    const focusRetryTimeoutId = window.setTimeout(() => {
+      focusFirstElement();
+    }, 0);
 
     const ensureFocusInside = () => {
       if (!container.contains(document.activeElement)) {
@@ -107,6 +110,18 @@ export const useFocusTrap = (
         return;
       }
 
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const active = document.activeElement as HTMLElement | null;
+      const current =
+        target && container.contains(target)
+          ? target
+          : active && container.contains(active)
+          ? active
+          : null;
+      if (!current) {
+        return;
+      }
+
       const focusableElements = getFocusableElements();
 
       if (focusableElements.length === 0) {
@@ -116,23 +131,22 @@ export const useFocusTrap = (
 
       const first = focusableElements[0];
       const last = focusableElements[focusableElements.length - 1];
-      const current = document.activeElement as HTMLElement | null;
 
       if (event.shiftKey) {
-        if (!current || !container.contains(current) || current === first) {
+        if (current === first) {
           event.preventDefault();
           last.focus({ preventScroll: true });
         }
         return;
       }
 
-      if (!current || !container.contains(current) || current === last) {
+      if (current === last) {
         event.preventDefault();
         first.focus({ preventScroll: true });
       }
     };
 
-    container.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
     const handleFocus = (event: FocusEvent) => {
       // `window` focus events can have non-Node targets (e.g. Window), which would
       // throw if passed to `Node.contains`. Prefer the actual active element.
@@ -153,7 +167,8 @@ export const useFocusTrap = (
       window.cancelAnimationFrame(rafId);
       window.clearTimeout(timeoutId);
       window.clearInterval(intervalId);
-      container.removeEventListener('keydown', handleKeyDown);
+      window.clearTimeout(focusRetryTimeoutId);
+      document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('focus', handleFocus, true);
 
       const restoreTarget = restoreFocusNode ?? previouslyFocused;

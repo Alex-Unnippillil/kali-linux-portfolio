@@ -63,6 +63,7 @@ const FIREFOX_ALLOWED_ORIGINS = [
   'https://developer.mozilla.org',
   'https://en.wikipedia.org',
   'https://www.google.com',
+  'https://example.com',
 ];
 
 const Firefox: React.FC = () => {

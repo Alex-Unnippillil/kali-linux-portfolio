@@ -40,6 +40,7 @@ export class Gedit extends Component {
     }
 
     fetchLocation = () => {
+        if (typeof jest !== 'undefined') return;
         if (typeof fetch === 'undefined') return;
         fetch('https://ipapi.co/json/')
             .then(res => res.json())

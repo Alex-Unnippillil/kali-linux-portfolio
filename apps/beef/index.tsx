@@ -355,6 +355,57 @@ const BeefPage: React.FC = () => {
           </p>
         )}
 
+      <section className="border-b border-kali-border/70 bg-[color:var(--kali-panel)] px-4 py-3 text-sm">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className={statCardClass}>
+            <p className="text-xs uppercase tracking-wide text-kali-text/60">Active hooks</p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-2xl font-semibold text-kali-text">3</span>
+              <span className="text-xs text-kali-text/60">of 5 targets</span>
+            </div>
+            <p className="mt-1 text-xs text-kali-primary">+1 new hook this session</p>
+          </div>
+          <div className={statCardClass}>
+            <p className="text-xs uppercase tracking-wide text-kali-text/60">Campaign status</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full border border-kali-primary/45 bg-kali-primary/18 px-2 py-0.5 text-xs font-semibold text-kali-primary">
+                <span aria-hidden className="text-base leading-none">●</span>
+                Live
+              </span>
+              <span className="text-xs text-kali-text/60">(simulated)</span>
+            </div>
+            <p className="mt-1 text-xs text-kali-text/75">Operator guidance active</p>
+          </div>
+          <div className={statCardClass}>
+            <p className="text-xs uppercase tracking-wide text-kali-text/60">Last check-in</p>
+            <div className="mt-1 text-lg font-semibold text-kali-text">{lastCheckIn}</div>
+            <p className="mt-1 text-xs text-kali-text/75">Hooked client telemetry received</p>
+          </div>
+        </div>
+        <nav aria-label="BeEF campaign timeline" className="mt-4">
+          <ol className="grid gap-3 sm:grid-cols-3">
+            {timelineSteps.map((step) => (
+              <li key={step.label}>
+                <div className="flex items-center gap-3 rounded-xl border border-kali-border/60 bg-[color:var(--kali-panel)] px-3 py-3 shadow-inner shadow-[0_0_24px_rgba(15,148,210,0.08)]">
+                  <span
+                    className={clsx(
+                      'flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold uppercase tracking-wide',
+                      timelineBadgeClasses[step.state],
+                    )}
+                    aria-hidden="true"
+                  >
+                    {timelineStateIcon[step.state]}
+                  </span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-kali-text/70">{step.label}</p>
+                    <p className="text-xs text-kali-text/60">{timelineStateLabel[step.state]}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </nav>
+      </section>
       <div className="flex-1 overflow-auto bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,transparent)] p-4 pt-2">
         <BeefApp />
       </div>

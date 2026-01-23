@@ -207,7 +207,7 @@ export class Desktop extends Component {
         snapGrid: [8, 8],
     };
 
-    constructor(props) {
+    constructor(props = {}) {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);

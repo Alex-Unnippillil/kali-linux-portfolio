@@ -65,6 +65,13 @@ const ContactApp: React.FC = () => {
       }
     }
     (async () => {
+      const meta = document.querySelector<HTMLMetaElement>(
+        'meta[name="csrf-token"]'
+      );
+      if (meta?.content) {
+        setCsrfToken(meta.content);
+        return;
+      }
       try {
         const res = await fetch("/api/contact", { credentials: "same-origin" });
         if (res.ok) {
@@ -172,7 +179,7 @@ const ContactApp: React.FC = () => {
         </div>
         {fallback && (
           <div
-            role="status"
+            role="note"
             className="flex items-start gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-warning)_16%,var(--kali-panel))] px-5 py-4 text-sm text-[color:var(--kali-text)] shadow-lg shadow-kali-panel"
           >
             <span

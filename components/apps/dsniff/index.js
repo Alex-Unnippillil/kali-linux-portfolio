@@ -168,7 +168,7 @@ const Credential = ({ cred }) => {
       {cred.password && (
         <>
           <span className="text-slate-500">•</span>
-          <span>{hidden ? '•••' : cred.password}</span>
+          <span>{hidden ? '***' : cred.password}</span>
           <button
             className="ml-1 rounded px-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:text-emerald-200"
             onClick={() => setShow(!show)}
@@ -721,7 +721,7 @@ const Dsniff = () => {
                 className="inline-flex items-center rounded-md border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-200 transition hover:border-emerald-400/70 hover:bg-emerald-500/20"
                 onClick={addFilter}
               >
-                Add filter
+                Add
               </button>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">

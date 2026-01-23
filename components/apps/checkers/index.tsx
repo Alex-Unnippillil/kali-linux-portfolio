@@ -177,10 +177,26 @@ const Checkers = () => {
     focusBoard();
   }, []);
 
+  const moveLabel = game.turnState.turn === 'red' ? "It's Red's move." : "It's Black's move.";
+  const capturesLeft = forced.size;
+  const movesToDraw = Math.max(0, 40 - game.noCaptureMoves);
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-kali-background text-kali-text p-4">
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
+      </div>
+      <div className="mb-4 w-full max-w-3xl rounded-lg border border-kali-border/60 bg-kali-panel p-4 text-sm text-kali-text shadow-inner">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-kali-text/70">Match briefing</h2>
+        <p className="mt-2">{moveLabel}</p>
+        <p className="mt-2 text-kali-text/80">Tap the Hint button to highlight a recommended capture sequence.</p>
+        {rule === 'forced' && (
+          <p className="mt-2 text-kali-text/80">Forced capture is active.</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-4 text-kali-text/70">
+          <span>Captures left: {capturesLeft}</span>
+          <span>Moves to draw: {movesToDraw}</span>
+        </div>
       </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}

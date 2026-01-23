@@ -107,7 +107,7 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
     colors.forEach((color) => {
       const rgbText = hexToRgbString(color);
       const swatch = document.createElement('button');
-      const swatchTooltip = rgbText ? `${color} (${rgbText})` : color;
+      const swatchTooltip = rgbText ? `${color} / ${rgbText}` : color;
       const focusRingStyle =
         '0 0 0 3px rgba(15, 23, 42, 0.8), 0 0 0 5px rgba(59, 130, 246, 0.75)';
       swatch.type = 'button';
@@ -124,8 +124,8 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
       swatch.style.cursor = 'pointer';
       swatch.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
       swatch.style.outline = 'none';
-      swatch.title = `Copy ${swatchTooltip} to clipboard`;
-      swatch.setAttribute('aria-label', `Copy ${swatchTooltip} to clipboard`);
+      swatch.title = swatchTooltip;
+      swatch.setAttribute('aria-label', `Copy ${swatchTooltip}`);
       swatch.setAttribute('data-color', color);
 
       const handleSelection = () => {
