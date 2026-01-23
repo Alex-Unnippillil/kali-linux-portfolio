@@ -28,6 +28,9 @@ const hasMatchingOrigin = (origin: string, pattern: string) => {
 const isAllowedSrc = (src: string, allowedOrigins: string[]) => {
   try {
     const url = new URL(src);
+    if (allowedOrigins.includes('*')) {
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    }
     return allowedOrigins.some((pattern) => hasMatchingOrigin(url.origin, pattern));
   } catch {
     return false;

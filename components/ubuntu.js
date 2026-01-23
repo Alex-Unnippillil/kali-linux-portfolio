@@ -57,8 +57,9 @@ export default class Ubuntu extends Component {
         waitForBootSequence = () => {
                 if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-                const MIN_BOOT_DELAY = 350;
-                const MAX_BOOT_DELAY = 1200;
+                const isTestEnv = process.env.NODE_ENV === 'test';
+                const MIN_BOOT_DELAY = isTestEnv ? 0 : 350;
+                const MAX_BOOT_DELAY = isTestEnv ? 0 : 1200;
                 const hasPerformanceNow = typeof performance !== 'undefined' && typeof performance.now === 'function';
                 const bootStartTime = hasPerformanceNow ? performance.now() : null;
 
@@ -79,6 +80,10 @@ export default class Ubuntu extends Component {
                                 schedule(finalizeBoot);
                         };
 
+                        if (isTestEnv) {
+                                finalizeBoot();
+                                return;
+                        }
                         if (bootStartTime !== null) {
                                 const elapsed = performance.now() - bootStartTime;
                                 const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
@@ -112,9 +117,9 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadHandler = () => {
                         finalizeAndClearTimers();
                 };
-                this.bootScreenLoadEvent = 'DOMContentLoaded';
-                this.bootScreenLoadTarget = document;
-                document.addEventListener('DOMContentLoaded', this.bootScreenLoadHandler, { once: true });
+                this.bootScreenLoadEvent = 'load';
+                this.bootScreenLoadTarget = window;
+                window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
 
                 this.bootSequenceTimeoutId = window.setTimeout(() => {
                         scheduleFinalize();

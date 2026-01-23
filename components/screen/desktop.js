@@ -209,6 +209,7 @@ export class Desktop extends Component {
 
     constructor(props) {
         super(props);
+        const safeProps = props || {};
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceKeys = new Set([
@@ -221,14 +222,14 @@ export class Desktop extends Component {
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
             id: 'default',
-            accent: (props.desktopTheme && props.desktopTheme.accent) || '#1793d1',
-            wallpaperUrl: props.desktopTheme && props.desktopTheme.wallpaperUrl,
-            fallbackWallpaperUrl: (props.desktopTheme && props.desktopTheme.fallbackWallpaperUrl) || '/wallpapers/wall-2.webp',
-            wallpaperName: (props.desktopTheme && props.desktopTheme.wallpaperName) || 'wall-2',
-            overlay: props.desktopTheme ? props.desktopTheme.overlay : undefined,
-            useKaliWallpaper: Boolean(props.desktopTheme && props.desktopTheme.useKaliWallpaper),
+            accent: (safeProps.desktopTheme && safeProps.desktopTheme.accent) || '#1793d1',
+            wallpaperUrl: safeProps.desktopTheme && safeProps.desktopTheme.wallpaperUrl,
+            fallbackWallpaperUrl: (safeProps.desktopTheme && safeProps.desktopTheme.fallbackWallpaperUrl) || '/wallpapers/wall-2.webp',
+            wallpaperName: (safeProps.desktopTheme && safeProps.desktopTheme.wallpaperName) || 'wall-2',
+            overlay: safeProps.desktopTheme ? safeProps.desktopTheme.overlay : undefined,
+            useKaliWallpaper: Boolean(safeProps.desktopTheme && safeProps.desktopTheme.useKaliWallpaper),
         };
-        const initialTheme = this.normalizeTheme(props.desktopTheme);
+        const initialTheme = this.normalizeTheme(safeProps.desktopTheme);
         this.workspaceThemes = Array.from({ length: this.workspaceCount }, () => ({ ...initialTheme }));
         this.initFavourite = {};
         this.allWindowClosed = false;

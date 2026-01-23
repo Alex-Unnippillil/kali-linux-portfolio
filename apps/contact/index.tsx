@@ -65,6 +65,20 @@ const ContactApp: React.FC = () => {
       }
     }
     (async () => {
+      const metaToken = document.querySelector<HTMLMetaElement>(
+        'meta[name="csrf-token"]'
+      );
+      if (metaToken?.content) {
+        setCsrfToken(metaToken.content);
+        return;
+      }
+      if (process.env.NEXT_PUBLIC_STATIC_EXPORT === "true") {
+        setFallback(true);
+        setError(
+          "The form is unavailable in this preview. Use the email options above."
+        );
+        return;
+      }
       try {
         const res = await fetch("/api/contact", { credentials: "same-origin" });
         if (res.ok) {
@@ -77,10 +91,6 @@ const ContactApp: React.FC = () => {
       } catch {
         /* ignore */
       }
-      setFallback(true);
-      setError(
-        "The form is unavailable in this preview. Use the email options above."
-      );
     })();
   }, []);
 
@@ -172,7 +182,7 @@ const ContactApp: React.FC = () => {
         </div>
         {fallback && (
           <div
-            role="status"
+            role="note"
             className="flex items-start gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-warning)_16%,var(--kali-panel))] px-5 py-4 text-sm text-[color:var(--kali-text)] shadow-lg shadow-kali-panel"
           >
             <span
@@ -335,7 +345,7 @@ const ContactApp: React.FC = () => {
                   </svg>
                 </div>
                 {emailError && (
-                  <FormError id="contact-email-error" className="mt-2">
+                  <FormError id="contact-email-error" className="mt-2" role="alert">
                     {emailError}
                   </FormError>
                 )}
@@ -380,7 +390,7 @@ const ContactApp: React.FC = () => {
                   </svg>
                 </div>
                 {messageError && (
-                  <FormError id="contact-message-error" className="mt-2">
+                  <FormError id="contact-message-error" className="mt-2" role="alert">
                     {messageError}
                   </FormError>
                 )}
@@ -392,11 +402,11 @@ const ContactApp: React.FC = () => {
               onChange={(e) => setHoneypot(e.target.value)}
               aria-hidden="true"
             />
-            {error && <FormError>{error}</FormError>}
+            {error && <FormError role="alert">{error}</FormError>}
             <div className="space-y-3">
               <button
                 type="submit"
-                disabled={submitting || fallback}
+                disabled={submitting}
                 className="flex h-12 w-full items-center justify-center rounded-lg bg-[color:var(--kali-control)] px-4 text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_12px_38px_color-mix(in_srgb,var(--kali-control)_35%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_92%,var(--kali-text)_8%)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Sending..." : "Send message"}
