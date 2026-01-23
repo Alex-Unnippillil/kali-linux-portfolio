@@ -484,7 +484,6 @@ const Game2048 = () => {
       else return;
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (boardsEqual(board, moved)) {
-        setMoves((m) => m + 1);
         return;
       }
       if (!boardsEqual(board, moved)) {
