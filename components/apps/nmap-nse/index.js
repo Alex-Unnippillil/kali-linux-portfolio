@@ -84,8 +84,13 @@ const NmapNSEApp = () => {
   const [scriptOptions, setScriptOptions] = useState({});
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [consoleLines, setConsoleLines] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
   const [toast, setToast] = useState('');
+  const consoleRef = useRef(null);
   const outputRef = useRef(null);
+  const runTimeoutRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
   useEffect(() => {
@@ -97,6 +102,14 @@ const NmapNSEApp = () => {
       .then((r) => r.json())
       .then(setResults)
       .catch(() => setResults({ hosts: [] }));
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (runTimeoutRef.current) {
+        clearTimeout(runTimeoutRef.current);
+      }
+    };
   }, []);
 
   const toggleScript = (name) => {
@@ -154,6 +167,92 @@ const NmapNSEApp = () => {
     }
   };
 
+  const consoleText = consoleLines.join('\n');
+
+  const copyConsole = async () => {
+    if (!consoleText.trim()) return;
+    try {
+      await navigator.clipboard.writeText(consoleText);
+      setToast('Console output copied');
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const selectConsole = () => {
+    const el = consoleRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    setToast('Console output selected');
+  };
+
+  const handleConsoleKey = (e) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      copyConsole();
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      selectConsole();
+    }
+  };
+
+  const isValidTarget = (value) => {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    const ipv4 =
+      /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+    const hostname =
+      /^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$/;
+    return ipv4.test(trimmed) || hostname.test(trimmed);
+  };
+
+  const buildConsoleOutput = (value) => {
+    const timestamp = new Date().toLocaleString();
+    return [
+      `Starting Nmap 7.93 ( https://nmap.org ) at ${timestamp}`,
+      `Nmap scan report for ${value}`,
+      `Host is up (0.042s latency).`,
+      `Not shown: 995 closed tcp ports (reset)`,
+      `PORT     STATE SERVICE`,
+      `22/tcp   open  ssh`,
+      `80/tcp   open  http`,
+      `443/tcp  open  https`,
+      `| http-title:`,
+      `|_  Welcome to ${value}`,
+      `| ssl-cert:`,
+      `|   Subject: commonName=${value}`,
+      `|   Not valid before: 2023-04-01T00:00:00`,
+      `|_  Not valid after:  2024-04-01T23:59:59`,
+      `Nmap done: 1 IP address (1 host up) scanned in 5.23 seconds`
+    ];
+  };
+
+  const runScan = () => {
+    if (!isValidTarget(target)) {
+      setErrorMessage('Enter a valid IP address or hostname.');
+      return;
+    }
+    setErrorMessage('');
+    setConsoleLines([]);
+    setIsRunning(true);
+    if (runTimeoutRef.current) {
+      clearTimeout(runTimeoutRef.current);
+    }
+    try {
+      runTimeoutRef.current = setTimeout(() => {
+        setConsoleLines(buildConsoleOutput(target.trim()));
+        setIsRunning(false);
+      }, 1200);
+    } catch (e) {
+      setConsoleLines(['Tool failed to run']);
+      setIsRunning(false);
+    }
+  };
+
   const selectOutput = () => {
     const el = outputRef.current;
     if (!el || typeof window === 'undefined') return;
@@ -205,10 +304,20 @@ const NmapNSEApp = () => {
             type="text"
             id="target"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onChange={(e) => {
+              setTarget(e.target.value);
+              if (errorMessage) setErrorMessage('');
+            }}
             aria-label="Scan target"
+            aria-invalid={Boolean(errorMessage)}
+            aria-describedby={errorMessage ? 'target-error' : undefined}
             className="w-full rounded-lg border border-white/10 bg-kali-dark px-3 py-2 text-sm text-kali-text placeholder-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           />
+          {errorMessage && (
+            <p id="target-error" className="mt-1 text-sm text-kali-warning">
+              {errorMessage}
+            </p>
+          )}
         </div>
         <div className="mb-4">
           <label className="mb-1 block text-sm" htmlFor="scripts">
@@ -301,6 +410,53 @@ const NmapNSEApp = () => {
           >
             Copy Command
           </button>
+        </div>
+        <div className="mb-6">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Console</h2>
+            <button
+              type="button"
+              onClick={runScan}
+              disabled={isRunning}
+              className="rounded px-3 py-1 text-sm font-semibold text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus bg-kali-control hover:bg-kali-control/90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isRunning ? 'Running...' : 'Run'}
+            </button>
+          </div>
+          <div
+            ref={consoleRef}
+            tabIndex={0}
+            onKeyDown={handleConsoleKey}
+            className="max-h-56 overflow-y-auto whitespace-pre-wrap rounded border border-white/10 bg-kali-dark p-3 font-mono text-sm text-kali-terminal focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+          >
+            {isRunning && consoleLines.length === 0 && (
+              <span>Running scan, please wait...</span>
+            )}
+            {!isRunning && consoleLines.length === 0 && (
+              <span className="text-white/60">
+                Run the scan to see simulated output.
+              </span>
+            )}
+            {consoleLines.map((line, idx) => (
+              <div key={`${line}-${idx}`}>{line}</div>
+            ))}
+          </div>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={copyConsole}
+              className="rounded px-3 py-1 text-sm font-medium text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus bg-kali-surface-muted hover:bg-kali-surface/80"
+            >
+              Copy Console
+            </button>
+            <button
+              type="button"
+              onClick={selectConsole}
+              className="rounded px-3 py-1 text-sm font-medium text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus bg-kali-surface-muted hover:bg-kali-surface/80"
+            >
+              Select All
+            </button>
+          </div>
         </div>
       </div>
       <div className="md:w-1/2 overflow-y-auto bg-kali-surface-raised p-4">
