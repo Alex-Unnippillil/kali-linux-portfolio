@@ -855,7 +855,7 @@ const apps = [
     icon: '/themes/Yaru/apps/nikto.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayNikto,
   },
   {
