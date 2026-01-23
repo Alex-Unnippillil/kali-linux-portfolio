@@ -73,6 +73,11 @@ if (typeof global.Headers === 'undefined') {
   global.Headers = Headers;
 }
 
+if (typeof performance !== 'undefined' && !('markResourceTiming' in performance)) {
+  // @ts-ignore
+  performance.markResourceTiming = () => {};
+}
+
 // jsdom does not provide a global Image constructor which is used by
 // some components (e.g. window borders). A minimal mock is sufficient
 // for our tests because we only rely on the instance existing.

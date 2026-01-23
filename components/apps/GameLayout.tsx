@@ -208,9 +208,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   // Show tutorial overlay on first visit
   useEffect(() => {
-    if (process.env.NODE_ENV === 'test') {
-      return;
-    }
+    if (typeof jest !== 'undefined') return;
     try {
       const key = `seen_tutorial_${gameId}`;
       if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {

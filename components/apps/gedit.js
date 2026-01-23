@@ -40,7 +40,7 @@ export class Gedit extends Component {
     }
 
     fetchLocation = () => {
-        if (process.env.NODE_ENV === 'test') return;
+        if (typeof jest !== 'undefined') return;
         if (typeof fetch === 'undefined') return;
         fetch('https://ipapi.co/json/')
             .then(res => res.json())

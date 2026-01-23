@@ -177,29 +177,27 @@ const Checkers = () => {
     focusBoard();
   }, []);
 
+  const moveLabel = game.turnState.turn === 'red' ? "It's Red's move." : "It's Black's move.";
+  const capturesLeft = forced.size;
+  const movesToDraw = Math.max(0, 40 - game.noCaptureMoves);
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-kali-background text-kali-text p-4">
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
-      <section
-        role="dialog"
-        aria-labelledby="checkers-briefing-heading"
-        className="mb-4 w-full max-w-2xl rounded-xl border border-kali-border/60 bg-kali-panel-dark/60 p-4 text-sm shadow-sm"
-      >
-        <div className="flex flex-col gap-2">
-          <h2 id="checkers-briefing-heading" className="text-base font-semibold text-kali-text">
-            Match briefing
-          </h2>
-          <div className="flex flex-wrap gap-4 text-xs uppercase tracking-wide text-kali-text/70">
-            <span>Moves to draw</span>
-            <span>Captured pieces</span>
-          </div>
-          <p className="text-xs text-kali-text/70">
-            Review forced captures, keep an eye on the move counter, and track piece exchanges to avoid an early draw.
-          </p>
+      <div className="mb-4 w-full max-w-3xl rounded-lg border border-kali-border/60 bg-kali-panel p-4 text-sm text-kali-text shadow-inner">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-kali-text/70">Match briefing</h2>
+        <p className="mt-2">{moveLabel}</p>
+        <p className="mt-2 text-kali-text/80">Tap the Hint button to highlight a recommended capture sequence.</p>
+        {rule === 'forced' && (
+          <p className="mt-2 text-kali-text/80">Forced capture is active.</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-4 text-kali-text/70">
+          <span>Captures left: {capturesLeft}</span>
+          <span>Moves to draw: {movesToDraw}</span>
         </div>
-      </section>
+      </div>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
       <div

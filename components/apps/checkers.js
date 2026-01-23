@@ -127,11 +127,25 @@ const Checkers = () => {
     true,
   );
 
-  const captureMoves = getAllMoves(board, turn, true).filter(
+  const capturesAvailable = getAllMoves(board, turn, requireCapture).filter(
     (move) => move.captured,
   ).length;
   const movesToDraw = Math.max(0, 40 - history.length);
+  const redPiecesRemaining = board.reduce(
+    (sum, row) => sum + row.filter((p) => p && p.color === 'red').length,
+    0,
+  );
+  const blackPiecesRemaining = board.reduce(
+    (sum, row) => sum + row.filter((p) => p && p.color === 'black').length,
+    0,
+  );
+  const capturedPieces = {
+    red: Math.max(0, 12 - redPiecesRemaining),
+    black: Math.max(0, 12 - blackPiecesRemaining),
+  };
 
+
+  
   // load wins
   useEffect(() => {
     const stored = localStorage.getItem('checkersWins');
@@ -365,21 +379,22 @@ const Checkers = () => {
     setHintMoves([]);
   };
 
+
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <section
-        role="dialog"
-        aria-labelledby="checkers-briefing-heading"
-        className="mb-4 w-full max-w-lg rounded-lg border border-white/10 bg-black/40 p-4 text-sm"
-      >
-        <h2 id="checkers-briefing-heading" className="text-base font-semibold">
-          Match briefing
-        </h2>
-        <div className="mt-2 flex flex-wrap gap-4 text-xs uppercase tracking-wide text-white/70">
-          <span>Moves to draw</span>
-          <span>Captured pieces</span>
+      <div className="mb-4 w-full max-w-lg rounded border border-gray-700 bg-gray-900/50 p-3 text-sm">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-300">Match briefing</p>
+        <p className="mt-2">{`It's ${turn === 'red' ? "Red's" : "Black's"} move.`}</p>
+        <p className="mt-2 text-gray-300">Tap the Hint button to highlight a recommended capture sequence.</p>
+        {requireCapture && (
+          <p className="mt-2 text-gray-300">Forced capture is active.</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-4 text-gray-300">
+          <span>Captures available: {capturesAvailable}</span>
+          <span>Moves to draw: {movesToDraw}</span>
+          <span>Captured pieces: R {capturedPieces.red} | B {capturedPieces.black}</span>
         </div>
-      </section>
+      </div>
       <div className="w-56 mb-4">
         <input
           type="range"

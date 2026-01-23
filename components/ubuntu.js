@@ -70,7 +70,7 @@ export default class Ubuntu extends Component {
 
                 const scheduleFinalize = () => {
                         if (typeof window === 'undefined' || this.state.booting_screen === false) return;
-                        if (process.env.NODE_ENV === 'test') {
+                        if (isTestEnv) {
                                 finalizeBoot();
                                 return;
                         }
@@ -117,7 +117,7 @@ export default class Ubuntu extends Component {
                         scheduleFinalize();
                 };
 
-                if (document.readyState === 'complete' || document.readyState === 'interactive') {
+                if (document.readyState === 'complete') {
                         scheduleFinalize();
                         return;
                 }
@@ -129,11 +129,9 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadTarget = window;
                 window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
 
-                if (!isTestEnv) {
-                        this.bootSequenceTimeoutId = window.setTimeout(() => {
-                                scheduleFinalize();
-                        }, MAX_BOOT_DELAY);
-                }
+                this.bootSequenceTimeoutId = window.setTimeout(() => {
+                        scheduleFinalize();
+                }, MAX_BOOT_DELAY);
         };
 
 	getLocalData = () => {
@@ -236,6 +234,7 @@ export default class Ubuntu extends Component {
 					visible={this.state.booting_screen}
 					isShutDown={this.state.shutDownScreen}
 					turnOn={this.turnOn}
+					disableMessageSequence={typeof jest !== 'undefined'}
 				/>
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                 <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />

@@ -75,18 +75,11 @@ const ContactApp: React.FC = () => {
       return;
     }
     (async () => {
-      const metaToken = document.querySelector<HTMLMetaElement>(
+      const meta = document.querySelector<HTMLMetaElement>(
         'meta[name="csrf-token"]'
       );
-      if (metaToken?.content) {
-        setCsrfToken(metaToken.content);
-        return;
-      }
-      if (process.env.NEXT_PUBLIC_STATIC_EXPORT === "true") {
-        setFallback(true);
-        setError(
-          "The form is unavailable in this preview. Use the email options above."
-        );
+      if (meta?.content) {
+        setCsrfToken(meta.content);
         return;
       }
       try {

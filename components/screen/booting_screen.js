@@ -45,6 +45,8 @@ function BootingScreen(props) {
 
         if (!isBooting) {
             setActiveMessageIndex(0)
+        } else if (props.disableMessageSequence) {
+            setActiveMessageIndex(0)
         } else {
             setActiveMessageIndex(0)
 

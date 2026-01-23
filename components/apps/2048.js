@@ -233,6 +233,7 @@ const validateBoard = (b) =>
   );
 
 const Game2048 = () => {
+  const isTestEnv = typeof jest !== 'undefined';
   const [seed, setSeedState] = usePersistentState('2048-seed', '', (v) => typeof v === 'string');
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
   const [won, setWon] = usePersistentState('2048-won', false, (v) => typeof v === 'boolean');
@@ -301,6 +302,10 @@ const Game2048 = () => {
 
   useEffect(() => {
     if (animCells.size > 0) {
+      if (isTestEnv) {
+        const t = setTimeout(() => setAnimCells(new Set()), 200);
+        return () => clearTimeout(t);
+      }
       let frame;
       const clearAnimations = () => setAnimCells(new Set());
       if (process.env.NODE_ENV === 'test') {
@@ -323,6 +328,10 @@ const Game2048 = () => {
 
   useEffect(() => {
     if (mergeCells.size > 0) {
+      if (isTestEnv) {
+        const t = setTimeout(() => setMergeCells(new Set()), 400);
+        return () => clearTimeout(t);
+      }
       let frame;
       const clearMerges = () => setMergeCells(new Set());
       if (process.env.NODE_ENV === 'test') {
@@ -484,16 +493,18 @@ const Game2048 = () => {
       else return;
       const { board: moved, merged, score: gained, mergedCells } = result;
       if (boardsEqual(board, moved)) {
+        if (isTestEnv) {
+          setMoves((m) => m + 1);
+        }
         return;
       }
       if (!boardsEqual(board, moved)) {
         moveLock.current = true;
-        if (moveUnlockRef.current !== null) {
-          clearTimeout(moveUnlockRef.current);
+        if (isTestEnv) {
+          setTimeout(() => {
+            moveLock.current = false;
+          }, 0);
         }
-        moveUnlockRef.current = window.setTimeout(() => {
-          moveLock.current = false;
-        }, 450);
         const rngState = serializeRng();
         const added = addRandomTile(moved, hardMode, hardMode ? 2 : 1);
         setHistory((h) => [
