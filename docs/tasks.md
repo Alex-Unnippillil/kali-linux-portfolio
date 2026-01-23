@@ -2,6 +2,12 @@
 
 This document tracks planned improvements and new features for the desktop portfolio apps.
 
+## Release Notes (2025-02-14)
+- Desktop shell: added stable window frame test IDs and focused-window context for app-level input gating.
+- Pinball: refined HUD, ball saver, multiplier combo, focus-safe input handling, and touch/gamepad controls.
+- Tests: strengthened pinball coverage for ball saver, multiplier activation, and focus safety.
+- Verification: `yarn verify:all` (smoke step needs Playwright browsers), `yarn test -w=1` (Jest warns about open handles), `yarn build`.
+
 ## Foundation
 - Add dynamic app factory at `utils/createDynamicApp.js` to unify dynamic imports and GA events.
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
@@ -131,4 +137,3 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Source high-resolution SVG replacements with permissive licenses suited for redistribution and attribution notes.
 - Replace bitmap logos in the repo with the curated SVGs and update any manifest or config references that expect new filenames.
 - Run a visual regression pass in the desktop shell to confirm icons render crisply at launcher, dock, and window chrome sizes.
-

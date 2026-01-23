@@ -10,7 +10,9 @@ describe('VsCode app', () => {
     expect(frame.tagName).toBe('IFRAME');
     expect(frame).toHaveAttribute('src', STACKBLITZ_EMBED_URL);
 
-    const openExternally = screen.getByRole('link', { name: 'Open in StackBlitz' });
-    expect(openExternally).toHaveAttribute('href', expect.stringContaining('stackblitz.com'));
+    const openLinks = screen.getAllByRole('link', { name: 'Open in StackBlitz' });
+    const primaryLink =
+      openLinks.find((link) => !link.classList.contains('sr-only')) ?? openLinks[0];
+    expect(primaryLink).toHaveAttribute('href', expect.stringContaining('stackblitz.com'));
   });
 });

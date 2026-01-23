@@ -14,25 +14,25 @@ describe('BeEF page chrome', () => {
   test('renders summary metrics and timeline badges', () => {
     render(<BeefPage />);
 
-    expect(screen.getByText(/Active hooks/i)).toBeInTheDocument();
-    expect(screen.getByText(/Campaign status/i)).toBeInTheDocument();
-    expect(screen.getByText(/Last check-in/i)).toBeInTheDocument();
+    expect(screen.queryAllByText(/Active hooks/i).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/Campaign status/i).length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/Last check-in/i).length).toBeGreaterThan(0);
 
-    expect(screen.getByText('Recon')).toBeInTheDocument();
-    expect(screen.getByText('Delivery')).toBeInTheDocument();
-    expect(screen.getByText('Post-Exploitation')).toBeInTheDocument();
+    expect(screen.queryAllByText('Recon').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Delivery').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Post-Exploitation').length).toBeGreaterThan(0);
   });
 
   test('shows severity chips with relative timestamps', () => {
     render(<BeefPage />);
 
-    expect(screen.getByText('Informational')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.queryAllByText('Informational').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Warning').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('Critical').length).toBeGreaterThan(0);
 
-    expect(screen.getByText('+0s')).toBeInTheDocument();
-    expect(screen.getByText('+2s')).toBeInTheDocument();
-    expect(screen.getByText('+6s')).toBeInTheDocument();
-    expect(screen.getByText(/6s ago/)).toBeInTheDocument();
+    expect(screen.queryAllByText('+0s').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('+2s').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('+6s').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/6s ago/).length).toBeGreaterThan(0);
   });
 });

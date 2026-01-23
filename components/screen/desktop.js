@@ -1480,11 +1480,6 @@ export class Desktop extends Component {
             this.persistIconSizePreset(normalizedPreset, normalizedBucket);
         }
         if (!this._isMounted) {
-            this.state = {
-                ...this.state,
-                iconSizePreset: normalizedPreset,
-                iconSizeBucket: normalizedBucket,
-            };
             return;
         }
 
@@ -4764,6 +4759,12 @@ export class Desktop extends Component {
             const size = persistedSizes;
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const baseContext = this.state.window_context[id] || {};
+            const context = {
+                ...baseContext,
+                isFocused: Boolean(focused_windows[id]),
+                windowId: id,
+            };
             const props = {
                 title: app.title,
                 id: app.id,
@@ -4785,7 +4786,7 @@ export class Desktop extends Component {
                 onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
-                context: this.state.window_context[id],
+                context,
             };
 
             return <Window key={id} {...props} />;

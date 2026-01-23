@@ -17,8 +17,10 @@ export const shouldTilt = (
 export const useTiltSensor = (
   threshold: number,
   onTilt: () => void,
+  enabled = true,
 ): void => {
   useEffect(() => {
+    if (!enabled) return;
     if (typeof window === 'undefined') return;
     const handler = (e: DeviceMotionEvent) => {
       if (shouldTilt(e.accelerationIncludingGravity, threshold)) onTilt();
@@ -39,5 +41,5 @@ export const useTiltSensor = (
     return () => {
       if (listening) window.removeEventListener('devicemotion', handler);
     };
-  }, [threshold, onTilt]);
+  }, [enabled, threshold, onTilt]);
 };

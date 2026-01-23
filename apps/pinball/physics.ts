@@ -22,13 +22,16 @@ const BUMPER_LABEL = "bumper";
 const SLING_LABEL = "sling";
 const TARGET_LABEL = "target";
 
+type Lane = "left" | "right";
+type HitType = "bumper" | "sling" | "target" | "lane" | "flipper";
+
 export interface ThemeConfig {
   bg: string;
   flipper: string;
 }
 
 export interface PinballCallbacks {
-  onScore: (points: number) => void;
+  onScore: (points: number, meta?: { type?: HitType; lane?: Lane }) => void;
   onBallLost?: () => void;
 }
 
@@ -57,8 +60,6 @@ interface LaneGlow {
   left: boolean;
   right: boolean;
 }
-
-type Lane = keyof LaneGlow;
 
 export function createPinballWorld(
   canvas: HTMLCanvasElement,
@@ -244,7 +245,7 @@ export function createPinballWorld(
   const dropTarget = (target: Matter.Body) => {
     if (targetStates.get(target)) return;
     targetStates.set(target, true);
-    callbacks.onScore(250);
+    callbacks.onScore(250, { type: "target" });
     const timer = window.setTimeout(() => {
       targetStates.set(target, false);
     }, 4000);
@@ -264,25 +265,25 @@ export function createPinballWorld(
       }
       if (bodies.includes(ball) && bodies.includes(leftLane)) {
         lightLane("left");
-        callbacks.onScore(100);
+        callbacks.onScore(100, { type: "lane", lane: "left" });
       }
       if (bodies.includes(ball) && bodies.includes(rightLane)) {
         lightLane("right");
-        callbacks.onScore(100);
+        callbacks.onScore(100, { type: "lane", lane: "right" });
       }
       bumpers.forEach((bumper) => {
         if (bodies.includes(ball) && bodies.includes(bumper)) {
           const { x, y } = pair.collision.supports[0];
           sparks.push({ x, y, life: 1, hue: 50 });
           flashBumper(bumper);
-          callbacks.onScore(50);
+          callbacks.onScore(50, { type: "bumper" });
         }
       });
       slings.forEach((sling) => {
         if (bodies.includes(ball) && bodies.includes(sling)) {
           const { x, y } = pair.collision.supports[0];
           sparks.push({ x, y, life: 1, hue: 150 });
-          callbacks.onScore(25);
+          callbacks.onScore(25, { type: "sling" });
         }
       });
       targets.forEach((target) => {
@@ -404,9 +405,19 @@ export function createPinballWorld(
   };
 
   const setBounce = (value: number) => {
-    leftFlipper.restitution = value;
-    rightFlipper.restitution = value;
+    const normalized = Math.min(Math.max(value, 0), 1);
+    leftFlipper.restitution = normalized;
+    rightFlipper.restitution = normalized;
+    ball.restitution = 0.8 + normalized * 0.2;
+    bumpers.forEach((bumper) => {
+      bumper.restitution = 1 + normalized * 0.5;
+    });
+    slings.forEach((sling) => {
+      sling.restitution = 0.8 + normalized * 0.4;
+    });
   };
+
+  setBounce(bounce);
 
   const setTheme = (value: ThemeConfig) => {
     (render.options as any).background = value.bg;

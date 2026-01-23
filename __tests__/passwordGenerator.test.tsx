@@ -26,9 +26,9 @@ describe('PasswordGenerator', () => {
 
   it('updates entropy when options change', () => {
     const { getByLabelText, getByText } = render(<PasswordGenerator />);
-    const initial = getByText(/bits/i).textContent;
+    const initial = getByText(/Entropy:/i).textContent;
     fireEvent.change(getByLabelText(/Length/i), { target: { value: '20' } });
-    const updated = getByText(/bits/i).textContent;
+    const updated = getByText(/Entropy:/i).textContent;
     expect(updated).not.toBe(initial);
   });
 
@@ -42,10 +42,10 @@ describe('PasswordGenerator', () => {
 
   it('updates entropy label when presets change', () => {
     const { getByRole, getByText } = render(<PasswordGenerator />);
-    const initial = getByText(/bits/i).textContent;
+    const initial = getByText(/Entropy:/i).textContent;
     fireEvent.click(getByRole('button', { name: /Memorable/i }));
-    const afterPreset = getByText(/bits/i).textContent;
+    const afterPreset = getByText(/Entropy:/i).textContent;
     expect(afterPreset).not.toBe(initial);
-    expect(getByText(/Weak/i)).toBeInTheDocument();
+    expect(getByText(/Entropy:/i)).toHaveTextContent(/Weak/i);
   });
 });

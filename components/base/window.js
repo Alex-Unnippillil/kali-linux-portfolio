@@ -1745,6 +1745,8 @@ export class Window extends Component {
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
+                        data-window-id={this.id}
+                        data-testid={this.id ? `window-frame-${this.id}` : 'window-frame'}
                         role="dialog"
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
@@ -1767,6 +1769,7 @@ export class Window extends Component {
                             </>
                         )}
                         <WindowTopBar
+                            id={this.id}
                             title={this.props.title}
                             onKeyDown={this.handleTitleBarKeyDown}
                             onBlur={this.releaseGrab}
@@ -1800,7 +1803,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ id, title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
     return (
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
@@ -1813,6 +1816,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onDoubleClick={onDoubleClick}
             data-window-titlebar=""
             data-window-drag-handle=""
+            data-testid={id ? `window-titlebar-${id}` : 'window-titlebar'}
         >
             <span className={styles.windowTitleBalancer} aria-hidden="true" />
             <div className={`${styles.windowTitle} text-sm font-bold`} title={title}>

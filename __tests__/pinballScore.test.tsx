@@ -18,7 +18,10 @@ jest.mock("../apps/pinball/physics", () => {
   };
 
   let callbacks:
-    | { onScore: (value: number) => void; onBallLost?: () => void }
+    | {
+        onScore: (value: number, meta?: { type?: string; lane?: string }) => void;
+        onBallLost?: () => void;
+      }
     | null = null;
 
   return {
@@ -121,8 +124,10 @@ describe("Pinball scoring", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText("000150")).toBeInTheDocument();
-      expect(screen.getByText(/HI 000150/)).toBeInTheDocument();
+      expect(screen.getByTestId("pinball-score")).toHaveTextContent("000150");
+      expect(screen.getByTestId("pinball-high-score")).toHaveTextContent(
+        "000150",
+      );
     });
 
     unmount();
@@ -130,7 +135,9 @@ describe("Pinball scoring", () => {
     render(<Pinball />);
 
     await waitFor(() => {
-      expect(screen.getByText(/HI 000150/)).toBeInTheDocument();
+      expect(screen.getByTestId("pinball-high-score")).toHaveTextContent(
+        "000150",
+      );
     });
   });
 });
@@ -140,13 +147,13 @@ describe("Pinball ball lifecycle", () => {
     const { __callbacks, __world } = require("../apps/pinball/physics");
     render(<Pinball />);
 
-    const launchButton = screen.getByRole("button", { name: /launch ball/i });
+    const launchButton = screen.getByTestId("pinball-launch-button");
     expect(launchButton).toBeEnabled();
-    expect(screen.getByText(/Balls: 3/)).toBeInTheDocument();
+    expect(screen.getByTestId("pinball-balls")).toHaveTextContent("3");
 
     fireEvent.click(launchButton);
     expect(__world().launchBall).toHaveBeenCalledWith(0.8);
-    expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
+    expect(screen.getByTestId("pinball-launch-button")).toBeDisabled();
 
     const callbacks = __callbacks();
     act(() => {
@@ -154,10 +161,18 @@ describe("Pinball ball lifecycle", () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByText(/Balls: 2/)).toBeInTheDocument();
+      expect(screen.getByTestId("pinball-balls")).toHaveTextContent("3");
     });
 
-    expect(screen.getByRole("button", { name: /launch ball/i })).toBeEnabled();
+    expect(screen.getByTestId("pinball-launch-button")).toBeEnabled();
+
+    act(() => {
+      callbacks?.onBallLost?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pinball-balls")).toHaveTextContent("2");
+    });
 
     act(() => {
       callbacks?.onBallLost?.();
@@ -171,7 +186,49 @@ describe("Pinball ball lifecycle", () => {
       ).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
+    expect(screen.getByTestId("pinball-launch-button")).toBeDisabled();
     expect(__world().resetBall.mock.calls.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("saves the ball during the grace period after launch", async () => {
+    const { __callbacks } = require("../apps/pinball/physics");
+    render(<Pinball />);
+
+    fireEvent.click(screen.getByTestId("pinball-launch-button"));
+    expect(screen.getByTestId("pinball-ball-saver")).toHaveTextContent(/active/i);
+
+    act(() => {
+      __callbacks()?.onBallLost?.();
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pinball-balls")).toHaveTextContent("3");
+    });
+  });
+
+  it("activates a multiplier when both lanes are hit", async () => {
+    const { __callbacks } = require("../apps/pinball/physics");
+    render(<Pinball />);
+
+    act(() => {
+      __callbacks()?.onScore(100, { type: "lane", lane: "left" });
+      __callbacks()?.onScore(100, { type: "lane", lane: "right" });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pinball-multiplier")).toHaveTextContent(/2x/i);
+    });
+  });
+
+  it("ignores keyboard input when the window is not focused", () => {
+    const { __world } = require("../apps/pinball/physics");
+    render(<Pinball isFocused={false} />);
+
+    __world().setLeftFlipper.mockClear();
+
+    const playfield = screen.getByTestId("pinball-playfield");
+    fireEvent.keyDown(playfield, { code: "ArrowLeft" });
+
+    expect(__world().setLeftFlipper).not.toHaveBeenCalled();
   });
 });
