@@ -17,11 +17,15 @@ const PLAYER_HEIGHT = 22;
 const PLAYER_Y_BOTTOM = HEIGHT - 40;
 const PLAYER_Y_TOP = PLAYER_Y_BOTTOM - PLAYER_HEIGHT;
 const OBSTACLE_HEIGHT = 22;
+const PICKUP_SIZE = 16;
+const MAX_LIVES = 5;
 
 const BASE_SPEEDS = [100, 120, 140];
 const ACCEL_BASE = 10;
 const MAX_DT = 0.05;
 const HIT_INVULN_SECONDS = 1.1;
+const PICKUP_INTERVAL = 12;
+const POST_HIT_SPAWN_DELAY = 0.6;
 
 const DIFFICULTY_PRESETS = {
   easy: { speedMul: 0.9, accelMul: 0.85, spawnMul: 0.9 },
@@ -102,7 +106,7 @@ const LaneRunner = () => {
     DIFFICULTY_PRESETS[difficulty] || DIFFICULTY_PRESETS.normal;
 
   // Runtime state
-  const [running, setRunning] = useState(true); // true = not paused
+  const [paused, setPaused] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [tiltAllowed, setTiltAllowed] = useState(false);
   const [tiltOffset, setTiltOffset] = useState(0);
@@ -123,9 +127,14 @@ const LaneRunner = () => {
   const ctxRef = useRef(null);
   const laneRef = useRef(1);
   const obstaclesRef = useRef([]);
+  const pickupsRef = useRef([]);
   const speedsRef = useRef([...BASE_SPEEDS]);
   const elapsedRef = useRef(0);
   const spawnRef = useRef(0);
+  const spawnCooldownRef = useRef(0);
+  const lastSpawnLaneRef = useRef(null);
+  const lastSpawnAtRef = useRef(0);
+  const pickupTimerRef = useRef(0);
   const scoreRef = useRef(0);
   const livesRef = useRef(3);
   const invulnRef = useRef(0);
@@ -138,9 +147,14 @@ const LaneRunner = () => {
   const resetGame = useCallback(() => {
     laneRef.current = 1;
     obstaclesRef.current = [];
+    pickupsRef.current = [];
     speedsRef.current = BASE_SPEEDS.map((s) => s * difficultyCfg.speedMul);
     elapsedRef.current = 0;
     spawnRef.current = 0;
+    spawnCooldownRef.current = 0;
+    lastSpawnLaneRef.current = null;
+    lastSpawnAtRef.current = 0;
+    pickupTimerRef.current = 0;
     scoreRef.current = 0;
     livesRef.current = 3;
     invulnRef.current = 0;
@@ -148,7 +162,7 @@ const LaneRunner = () => {
     roadOffsetRef.current = 0;
     setHud({ score: 0, speed: speedsRef.current[1], lives: 3 });
     setGameOver(false);
-    setRunning(true);
+    setPaused(false);
   }, [difficultyCfg.speedMul]);
 
   // Initialize or re-init when difficulty changes.
@@ -204,23 +218,15 @@ const LaneRunner = () => {
   useEffect(() => {
     if (control !== 'keys') return;
     const onKeyDown = (e) => {
+      if (paused || gameOver) return;
       const key = e.key;
       if (key === mapping.left) laneRef.current = Math.max(0, laneRef.current - 1);
       if (key === mapping.right)
         laneRef.current = Math.min(LANES - 1, laneRef.current + 1);
-
-      if (key === mapping.pause) {
-        setRunning((r) => !r);
-        e.preventDefault();
-      }
-
-      if (key === mapping.restart) {
-        if (gameOver) resetGame();
-      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [control, mapping, gameOver, resetGame]);
+  }, [control, mapping.left, mapping.right, paused, gameOver]);
 
   // Touch/swipe controls (works for mouse too).
   useEffect(() => {
@@ -229,10 +235,15 @@ const LaneRunner = () => {
     if (control !== 'touch' && control !== 'keys') return;
 
     const onPointerDown = (e) => {
+      if (paused || gameOver) return;
+      e.preventDefault();
+      if (canvas.setPointerCapture) canvas.setPointerCapture(e.pointerId);
       swipeStartRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
     };
 
     const onPointerUp = (e) => {
+      if (paused || gameOver) return;
+      e.preventDefault();
       const start = swipeStartRef.current;
       swipeStartRef.current = null;
       if (!start) return;
@@ -245,15 +256,17 @@ const LaneRunner = () => {
       if (dx > 0) laneRef.current = Math.min(LANES - 1, laneRef.current + 1);
     };
 
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointerup', onPointerUp);
-    canvas.addEventListener('pointercancel', onPointerUp);
+    canvas.style.touchAction = 'none';
+    canvas.style.userSelect = 'none';
+    canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+    canvas.addEventListener('pointerup', onPointerUp, { passive: false });
+    canvas.addEventListener('pointercancel', onPointerUp, { passive: false });
     return () => {
       canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointerup', onPointerUp);
       canvas.removeEventListener('pointercancel', onPointerUp);
     };
-  }, [canvasRef, control]);
+  }, [canvasRef, control, paused, gameOver]);
 
   // Device orientation controls
   useEffect(() => {
@@ -315,6 +328,18 @@ const LaneRunner = () => {
       ctx.restore();
     }
 
+    // Pickups
+    for (const p of pickupsRef.current) {
+      const x = p.lane * LANE_WIDTH + 14;
+      const w = LANE_WIDTH - 28;
+      ctx.save();
+      ctx.fillStyle = '#22c55e';
+      ctx.shadowColor = 'rgba(34,197,94,0.6)';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(x, p.y, w, PICKUP_SIZE);
+      ctx.restore();
+    }
+
     // Player
     const px = lane * LANE_WIDTH + 10;
     const pw = LANE_WIDTH - 20;
@@ -357,16 +382,34 @@ const LaneRunner = () => {
       ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
       ctx.fillText('Press R to restart', WIDTH / 2 - 55, HEIGHT / 2 + 14);
       ctx.restore();
-    } else if (!running) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.35)';
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      ctx.fillStyle = '#fff';
-      ctx.font = '16px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
-      ctx.fillText('Paused', WIDTH / 2 - 28, HEIGHT / 2);
-      ctx.restore();
     }
-  }, [gameOver, running]);
+  }, [gameOver]);
+
+  const getAvailableLanes = useCallback((obstacles, minDistance) => {
+    const lanes = [];
+    for (let i = 0; i < LANES; i += 1) {
+      const blocked = obstacles.some(
+        (o) => o.lane === i && o.y < minDistance
+      );
+      if (!blocked) lanes.push(i);
+    }
+    return lanes;
+  }, []);
+
+  const pickSpawnLane = useCallback(
+    (obstacles, minDistance) => {
+      const candidates = getAvailableLanes(obstacles, minDistance);
+      const pool = candidates.length ? candidates : [0, 1, 2];
+      const lastLane = lastSpawnLaneRef.current;
+      const timeSinceLast = elapsedRef.current - lastSpawnAtRef.current;
+      const filtered =
+        pool.length > 1 && lastLane !== null && timeSinceLast < 1.4
+          ? pool.filter((lane) => lane !== lastLane)
+          : pool;
+      return filtered[Math.floor(Math.random() * filtered.length)];
+    },
+    [getAvailableLanes]
+  );
 
   // Core game loop
   useGameLoop(
@@ -397,15 +440,40 @@ const LaneRunner = () => {
       }
       obstaclesRef.current = obstacles.filter((o) => o.y < HEIGHT + OBSTACLE_HEIGHT);
 
+      // Pickups advance
+      const pickups = pickupsRef.current;
+      for (const p of pickups) {
+        p.y += speeds[p.lane] * dt;
+      }
+      pickupsRef.current = pickups.filter((p) => p.y < HEIGHT + PICKUP_SIZE);
+
       // Spawn new obstacles
       const baseGap = 1.05 / difficultyCfg.spawnMul;
       const gap = Math.max(0.35, baseGap - c * 0.55);
-      if (spawnRef.current >= gap) {
-        obstaclesRef.current.push({
-          lane: Math.floor(Math.random() * LANES),
-          y: -OBSTACLE_HEIGHT,
-        });
+      spawnCooldownRef.current = Math.max(0, spawnCooldownRef.current - dt);
+      if (spawnRef.current >= gap && spawnCooldownRef.current <= 0) {
+        const lane = pickSpawnLane(
+          obstaclesRef.current,
+          OBSTACLE_HEIGHT * 2.6
+        );
+        obstaclesRef.current.push({ lane, y: -OBSTACLE_HEIGHT });
+        lastSpawnLaneRef.current = lane;
+        lastSpawnAtRef.current = elapsedRef.current;
         spawnRef.current = 0;
+      }
+
+      // Spawn extra life pickup
+      pickupTimerRef.current += dt;
+      if (
+        pickupTimerRef.current >= PICKUP_INTERVAL &&
+        livesRef.current < MAX_LIVES
+      ) {
+        const lane = pickSpawnLane(
+          obstaclesRef.current,
+          OBSTACLE_HEIGHT * 2.2
+        );
+        pickupsRef.current.push({ lane, y: -PICKUP_SIZE });
+        pickupTimerRef.current = 0;
       }
 
       // Tilt based lane changes
@@ -442,14 +510,36 @@ const LaneRunner = () => {
 
           if (livesRef.current > 0) {
             obstaclesRef.current = [];
+            pickupsRef.current = [];
+            spawnRef.current = 0;
+            spawnCooldownRef.current = POST_HIT_SPAWN_DELAY;
             laneRef.current = 1;
           } else {
             setGameOver(true);
-            setRunning(false);
+            setPaused(false);
             hGameOver();
             const finalScore = Math.floor(scoreRef.current);
             if (finalScore > highScore) setHighScore(finalScore);
           }
+        }
+      }
+
+      // Pickup collision
+      if (pickupsRef.current.length) {
+        const collected = [];
+        for (const p of pickupsRef.current) {
+          if (p.lane !== laneRef.current) continue;
+          const pTop = p.y;
+          const pBottom = p.y + PICKUP_SIZE;
+          if (pTop <= PLAYER_Y_BOTTOM && pBottom >= PLAYER_Y_TOP) {
+            collected.push(p);
+          }
+        }
+        if (collected.length) {
+          pickupsRef.current = pickupsRef.current.filter(
+            (p) => !collected.includes(p)
+          );
+          livesRef.current = Math.min(MAX_LIVES, livesRef.current + collected.length);
         }
       }
 
@@ -469,7 +559,7 @@ const LaneRunner = () => {
 
       draw();
     },
-    running && !gameOver
+    !paused && !gameOver
   );
 
   // Ensure we draw a paused/game over frame when loop stops.
@@ -606,6 +696,9 @@ const LaneRunner = () => {
             <option value="hard">Hard</option>
           </select>
         </div>
+        <div className="text-xs opacity-75">
+          Extra life pickups appear periodically and cap at {MAX_LIVES} lives.
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -668,16 +761,25 @@ const LaneRunner = () => {
     return `Speed ${s}`;
   }, [hud.speed]);
 
+  const pauseHotkeys = useMemo(
+    () => Array.from(new Set([mapping.pause, 'space'])).filter(Boolean),
+    [mapping.pause]
+  );
+  const restartHotkeys = useMemo(
+    () => Array.from(new Set([mapping.restart, 'r'])).filter(Boolean),
+    [mapping.restart]
+  );
+
   return (
     <GameLayout
       gameId="lane-runner"
       title="Lane Runner"
-      running={running}
-      onRunningChange={setRunning}
-      onPauseChange={() => {
-        // draw a paused overlay immediately
+      onPauseChange={(nextPaused) => {
+        setPaused(nextPaused);
         draw();
       }}
+      pauseHotkeys={pauseHotkeys}
+      restartHotkeys={restartHotkeys}
       score={hud.score}
       highScore={highScore}
       lives={hud.lives}
@@ -686,12 +788,12 @@ const LaneRunner = () => {
       badge={difficulty}
       gameOver={gameOver}
       onRestart={resetGame}
-      settings={settings}
+      settingsPanel={settings}
     >
       <div className="relative h-full w-full flex items-center justify-center bg-black">
         <canvas
           ref={canvasRef}
-          className="w-full h-full"
+          className="w-full h-full touch-none"
           aria-label="Lane Runner game canvas"
         />
 
