@@ -7,6 +7,8 @@ import {
   saveBookmarks,
   loadBookmarks,
   extractStrings,
+  savePatches,
+  loadPatches,
 } from '../components/apps/radare2/utils';
 
 describe('Radare2 utilities', () => {
@@ -50,6 +52,12 @@ describe('Radare2 utilities', () => {
     saveBookmarks('b.bin', bmB);
     expect(loadBookmarks('a.bin')).toEqual(bmA);
     expect(loadBookmarks('b.bin')).toEqual(bmB);
+  });
+
+  test('stores patches per file', () => {
+    const patches = [{ offset: 1, value: 'ff' }];
+    savePatches('a.bin', patches);
+    expect(loadPatches('a.bin')).toEqual(patches);
   });
 
   test('extracts ASCII and UTF-16 strings', () => {

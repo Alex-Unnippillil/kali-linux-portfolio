@@ -24,10 +24,12 @@ describe('Radare2 analysis sidebar', () => {
   it('renders sidebar summary and updates bookmark count', () => {
     render(<Radare2 initialData={sample} />);
 
-    expect(screen.getByText('Analysis Summary')).toBeInTheDocument();
+    expect(screen.getByText('Inspector')).toBeInTheDocument();
     expect(screen.getByTestId('process-name')).toHaveTextContent('demo.bin');
     const bookmarkCount = screen.getByTestId('bookmark-count');
     expect(bookmarkCount).toHaveTextContent('0');
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Disassembly' }));
 
     const bookmarkButton = screen.getByRole('button', {
       name: /Bookmark address 0x1000/i,
@@ -39,6 +41,8 @@ describe('Radare2 analysis sidebar', () => {
 
   it('filters instructions using quick heuristics', () => {
     render(<Radare2 initialData={sample} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Disassembly' }));
 
     const memoryWritesFilter = screen.getByRole('button', {
       name: /Memory Writes \(2\)/i,
