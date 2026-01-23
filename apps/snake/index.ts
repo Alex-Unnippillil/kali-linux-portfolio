@@ -126,7 +126,9 @@ export const createInitialState = (params?: {
       ? params.randomFood(snake, params?.obstacles ?? [], gridSize)
       : randomFood(snake, params?.obstacles ?? [], gridSize));
 
-  const obstacleCount = params?.obstacleCount ?? 5;
+  const obstacleCount =
+    params?.obstacleCount ??
+    (params?.obstacles ? params.obstacles.length : 5);
   const obstacleGenerator = params?.randomObstacle ?? randomObstacle;
 
   const obstacles = generateObstacles({
@@ -198,7 +200,7 @@ export const stepSnake = (
   const nextFood = grew ? randomFoodFn(newSnake, obstacles, gridSize) : food;
 
   let won = false;
-  const nextObstacles = obstacles;
+  let nextObstacles = [...obstacles];
 
   if (grew) {
     if (isNoCell(nextFood)) {
@@ -206,7 +208,7 @@ export const stepSnake = (
     } else if (options.randomObstacle) {
       const generator = options.randomObstacle;
       const nextObs = generator(newSnake, nextFood, obstacles, gridSize);
-      if (!isNoCell(nextObs)) nextObstacles.push(nextObs);
+      if (!isNoCell(nextObs)) nextObstacles = [...obstacles, nextObs];
     }
   }
 

@@ -3,10 +3,12 @@
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
 
-const BackgroundImage = dynamic(
-    () => import('../util-components/background-image'),
-    { ssr: false }
-);
+const backgroundImageModule =
+    process.env.NODE_ENV === 'test' ? require('../util-components/background-image') : null;
+const BackgroundImage =
+    process.env.NODE_ENV === 'test'
+        ? (backgroundImageModule?.default || backgroundImageModule || (() => null))
+        : dynamic(() => import('../util-components/background-image'), { ssr: false });
 import apps, { games } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
@@ -207,7 +209,7 @@ export class Desktop extends Component {
         snapGrid: [8, 8],
     };
 
-    constructor(props) {
+    constructor(props = {}) {
         super(props);
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);

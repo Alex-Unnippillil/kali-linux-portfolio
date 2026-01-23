@@ -362,6 +362,19 @@ const Checkers = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
+      <section
+        role="dialog"
+        aria-labelledby="checkers-briefing-heading"
+        className="mb-4 w-full max-w-lg rounded-lg border border-white/10 bg-black/40 p-4 text-sm"
+      >
+        <h2 id="checkers-briefing-heading" className="text-base font-semibold">
+          Match briefing
+        </h2>
+        <div className="mt-2 flex flex-wrap gap-4 text-xs uppercase tracking-wide text-white/70">
+          <span>Moves to draw</span>
+          <span>Captured pieces</span>
+        </div>
+      </section>
       <div className="w-56 mb-4">
         <input
           type="range"
@@ -439,4 +452,3 @@ export default function CheckersApp() {
     </GameLayout>
   );
 }
-

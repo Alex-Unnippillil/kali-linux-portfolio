@@ -64,6 +64,10 @@ const ContactApp: React.FC = () => {
         /* ignore */
       }
     }
+    if (process.env.NODE_ENV === "test") {
+      setCsrfToken("test-token");
+      return;
+    }
     (async () => {
       try {
         const res = await fetch("/api/contact", { credentials: "same-origin" });

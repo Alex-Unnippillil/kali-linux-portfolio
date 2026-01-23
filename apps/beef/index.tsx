@@ -137,6 +137,58 @@ const BeefPage: React.FC = () => {
   ];
 
   const lastCheckIn = formatSince(logs[logs.length - 1]?.offsetSeconds ?? 0);
+  const statsPanel = (
+    <div className="grid w-full grid-cols-1 gap-3 text-sm sm:grid-cols-3 lg:w-auto">
+      <div className={statCardClass}>
+        <p className="text-xs uppercase tracking-wide text-kali-text/60">Active hooks</p>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="text-2xl font-semibold text-kali-text">3</span>
+          <span className="text-xs text-kali-text/60">of 5 targets</span>
+        </div>
+        <p className="mt-1 text-xs text-kali-primary">+1 new hook this session</p>
+      </div>
+      <div className={statCardClass}>
+        <p className="text-xs uppercase tracking-wide text-kali-text/60">Campaign status</p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 rounded-full border border-kali-primary/45 bg-kali-primary/18 px-2 py-0.5 text-xs font-semibold text-kali-primary">
+            <span aria-hidden className="text-base leading-none">●</span>
+            Live
+          </span>
+          <span className="text-xs text-kali-text/60">(simulated)</span>
+        </div>
+        <p className="mt-1 text-xs text-kali-text/75">Operator guidance active</p>
+      </div>
+      <div className={statCardClass}>
+        <p className="text-xs uppercase tracking-wide text-kali-text/60">Last check-in</p>
+        <div className="mt-1 text-lg font-semibold text-kali-text">{lastCheckIn}</div>
+        <p className="mt-1 text-xs text-kali-text/75">Hooked client telemetry received</p>
+      </div>
+    </div>
+  );
+  const timelinePanel = (
+    <nav aria-label="BeEF campaign timeline">
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {timelineSteps.map((step) => (
+          <li key={step.label}>
+            <div className="flex items-center gap-3 rounded-xl border border-kali-border/60 bg-[color:var(--kali-panel)] px-3 py-3 shadow-inner shadow-[0_0_24px_rgba(15,148,210,0.08)]">
+              <span
+                aria-hidden
+                className={`flex h-9 w-9 items-center justify-center rounded-full border text-base font-semibold ${timelineBadgeClasses[step.state]}`}
+              >
+                {timelineStateIcon[step.state]}
+              </span>
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-kali-text">{step.label}</span>
+                <span className="text-[11px] uppercase tracking-wide text-kali-text/60">
+                  {timelineStateLabel[step.state]}
+                </span>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
 
   const frameClasses = useMemo(
     () =>
@@ -177,32 +229,7 @@ const BeefPage: React.FC = () => {
               <p className="text-sm text-kali-text/75">Browser Exploitation Framework training lane</p>
             </div>
           </div>
-          <div className="grid w-full grid-cols-1 gap-3 text-sm sm:grid-cols-3 lg:w-auto">
-            <div className={statCardClass}>
-              <p className="text-xs uppercase tracking-wide text-kali-text/60">Active hooks</p>
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className="text-2xl font-semibold text-kali-text">3</span>
-                <span className="text-xs text-kali-text/60">of 5 targets</span>
-              </div>
-              <p className="mt-1 text-xs text-kali-primary">+1 new hook this session</p>
-            </div>
-            <div className={statCardClass}>
-              <p className="text-xs uppercase tracking-wide text-kali-text/60">Campaign status</p>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full border border-kali-primary/45 bg-kali-primary/18 px-2 py-0.5 text-xs font-semibold text-kali-primary">
-                  <span aria-hidden className="text-base leading-none">●</span>
-                  Live
-                </span>
-                <span className="text-xs text-kali-text/60">(simulated)</span>
-              </div>
-              <p className="mt-1 text-xs text-kali-text/75">Operator guidance active</p>
-            </div>
-            <div className={statCardClass}>
-              <p className="text-xs uppercase tracking-wide text-kali-text/60">Last check-in</p>
-              <div className="mt-1 text-lg font-semibold text-kali-text">{lastCheckIn}</div>
-              <p className="mt-1 text-xs text-kali-text/75">Hooked client telemetry received</p>
-            </div>
-          </div>
+          {statsPanel}
         </div>
         <div className="flex items-center gap-2 self-end text-kali-text/80 lg:self-start">
           <img
@@ -231,30 +258,7 @@ const BeefPage: React.FC = () => {
         </div>
       </header>
 
-      <div className="px-4 pt-3">
-        <nav aria-label="BeEF campaign timeline">
-          <ol className="grid gap-3 sm:grid-cols-3">
-            {timelineSteps.map((step) => (
-              <li key={step.label}>
-                <div className="flex items-center gap-3 rounded-xl border border-kali-border/60 bg-[color:var(--kali-panel)] px-3 py-3 shadow-inner shadow-[0_0_24px_rgba(15,148,210,0.08)]">
-                  <span
-                    aria-hidden
-                    className={`flex h-9 w-9 items-center justify-center rounded-full border text-base font-semibold ${timelineBadgeClasses[step.state]}`}
-                  >
-                    {timelineStateIcon[step.state]}
-                  </span>
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-kali-text">{step.label}</span>
-                    <span className="text-[11px] uppercase tracking-wide text-kali-text/60">
-                      {timelineStateLabel[step.state]}
-                    </span>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </nav>
-      </div>
+      <div className="px-4 pt-3">{timelinePanel}</div>
       </div>
     );
   }
@@ -279,7 +283,6 @@ const BeefPage: React.FC = () => {
               width={24}
               height={24}
               className="drop-shadow"
-              priority
             />
             <div className="flex items-center gap-2">
               <h1 className="text-base font-semibold">BeEF Demo</h1>
@@ -356,6 +359,10 @@ const BeefPage: React.FC = () => {
         )}
 
       <div className="flex-1 overflow-auto bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,transparent)] p-4 pt-2">
+        <div className="mb-4 flex flex-col gap-4">
+          {statsPanel}
+          {timelinePanel}
+        </div>
         <BeefApp />
       </div>
 

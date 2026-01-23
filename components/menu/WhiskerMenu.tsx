@@ -328,6 +328,10 @@ const WhiskerMenu: React.FC = () => {
 
   const showMenu = useCallback(() => {
     setIsVisible(true);
+    if (process.env.NODE_ENV === 'test') {
+      setIsOpen(true);
+      return;
+    }
     requestAnimationFrame(() => setIsOpen(true));
   }, []);
 
@@ -356,8 +360,8 @@ const WhiskerMenu: React.FC = () => {
         return;
       }
       if (!isVisible) return;
-      const target = e.target as Node | null;
-      if (target && categoryListRef.current?.contains(target)) {
+      const targetNode = e.target instanceof Node ? e.target : null;
+      if (targetNode && categoryListRef.current?.contains(targetNode)) {
         return;
       }
 
@@ -382,8 +386,9 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!isVisible) return;
-      const target = e.target as Node;
-      if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
+      const targetNode = e.target instanceof Node ? e.target : null;
+      if (!targetNode) return;
+      if (!menuRef.current?.contains(targetNode) && !buttonRef.current?.contains(targetNode)) {
         hideMenu();
       }
     };

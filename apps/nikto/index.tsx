@@ -430,13 +430,13 @@ const NiktoPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-kali-text">Scan Summary</h2>
               <div className="flex flex-wrap gap-2 text-xs">
                 <span className="rounded-full border border-kali-severity-high/50 bg-kali-severity-high/15 px-3 py-1 font-semibold text-kali-severity-high">
-                  Critical {summary.critical}
+                  Critical: {summary.critical}
                 </span>
                 <span className="rounded-full border border-kali-severity-medium/50 bg-kali-severity-medium/15 px-3 py-1 font-semibold text-kali-severity-medium">
-                  Warning {summary.warning}
+                  Warning: {summary.warning}
                 </span>
                 <span className="rounded-full border border-kali-severity-low/50 bg-kali-severity-low/15 px-3 py-1 font-semibold text-kali-severity-low">
-                  Info {summary.info}
+                  Info: {summary.info}
                 </span>
               </div>
             </div>
@@ -453,4 +453,3 @@ const NiktoPage: React.FC = () => {
 };
 
 export default NiktoPage;
-

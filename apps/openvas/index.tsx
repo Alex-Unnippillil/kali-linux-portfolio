@@ -514,32 +514,40 @@ const OpenVASReport: React.FC = () => {
                     </span>
                   </button>
                   {expanded[key] && (
-                    <div className="space-y-4 bg-[color:var(--kali-panel)] px-6 py-4 text-sm">
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Description</p>
-                        <p className="text-sm text-gray-200">{f.description}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Remediation</p>
-                        <p className="text-sm text-amber-300">{f.remediation}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs uppercase tracking-wide text-gray-400">Timeline</p>
-                        <ul className="space-y-2 text-xs text-gray-300">
-                          {f.timeline.map((event) => (
-                            <li
-                              key={`${f.id}-${event.date}-${event.event}`}
-                              className="flex gap-3 rounded-lg px-3 py-2"
-                              style={{
-                                background: 'color-mix(in srgb, var(--kali-panel-highlight) 85%, transparent)',
-                              }}
-                            >
-                              <span className="w-24 text-gray-400">{event.date}</span>
-                              <span className="flex-1">{event.event}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
+                    <div className="bg-[color:var(--kali-panel)]">
+                      <table className="w-full">
+                        <tbody>
+                          <tr>
+                            <td className="space-y-4 px-6 py-4 text-sm">
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-gray-400">Description</p>
+                                <p className="text-sm text-gray-200">{f.description}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-gray-400">Remediation</p>
+                                <p className="text-sm text-amber-300">{f.remediation}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-gray-400">Timeline</p>
+                                <ul className="space-y-2 text-xs text-gray-300">
+                                  {f.timeline.map((event) => (
+                                    <li
+                                      key={`${f.id}-${event.date}-${event.event}`}
+                                      className="flex gap-3 rounded-lg px-3 py-2"
+                                      style={{
+                                        background: 'color-mix(in srgb, var(--kali-panel-highlight) 85%, transparent)',
+                                      }}
+                                    >
+                                      <span className="w-24 text-gray-400">{event.date}</span>
+                                      <span className="flex-1">{event.event}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
