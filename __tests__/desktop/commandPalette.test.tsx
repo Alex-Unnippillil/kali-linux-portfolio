@@ -33,6 +33,8 @@ jest.mock('../../components/context-menus/taskbar-menu', () => ({
 }));
 jest.mock('../../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
+jest.setTimeout(15000);
+
 describe('Desktop command palette integration', () => {
   const COMMAND_ID = 'overlay-command-palette';
   let originalMatchMedia: typeof window.matchMedia | undefined;

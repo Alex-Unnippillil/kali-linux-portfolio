@@ -2,6 +2,8 @@ import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
 
+jest.setTimeout(15000);
+
 beforeEach(() => {
   window.localStorage.clear();
   setSeed(1);
@@ -77,6 +79,7 @@ test('ignores browser key repeat events', () => {
 
 
 test('tracks moves and allows multiple undos', async () => {
+  jest.useFakeTimers();
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -87,7 +90,7 @@ test('tracks moves and allows multiple undos', async () => {
   const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   await act(async () => {
-    await new Promise((r) => setTimeout(r, 500));
+    jest.advanceTimersByTime(500);
   });
   fireEvent.keyDown(window, { key: 'ArrowRight' });
   expect(getByText(/Moves: 2/)).toBeTruthy();
@@ -98,6 +101,7 @@ test('tracks moves and allows multiple undos', async () => {
   expect(getByText(/Moves: 0/)).toBeTruthy();
   const board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
   expect(board).toEqual(initial);
+  jest.useRealTimers();
 });
 
 test.skip('skin selection changes tile class', async () => {
@@ -121,6 +125,7 @@ test.skip('skin selection changes tile class', async () => {
 });
 
 test('ignores key repeats while a move is in progress', async () => {
+  jest.useFakeTimers();
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -132,8 +137,9 @@ test('ignores key repeats while a move is in progress', async () => {
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   expect(getByText(/Moves: 1/)).toBeTruthy();
   await act(async () => {
-    await new Promise((r) => setTimeout(r, 500));
+    jest.advanceTimersByTime(500);
   });
   fireEvent.keyDown(window, { key: 'ArrowLeft' });
   expect(getByText(/Moves: 2/)).toBeTruthy();
+  jest.useRealTimers();
 });

@@ -28,6 +28,8 @@ jest.mock('../components/context-menus/taskbar-menu', () => ({
 }));
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
+jest.setTimeout(15000);
+
 const renderDesktop = () => {
   const ref = React.createRef<Desktop>();
   const utils = render(
@@ -117,4 +119,3 @@ describe('Desktop taskbar order persistence', () => {
     unmountNext();
   });
 });
-

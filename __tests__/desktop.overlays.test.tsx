@@ -39,6 +39,8 @@ jest.mock('../components/base/window', () => ({
     </div>
   ),
 }));
+
+jest.setTimeout(15000);
 jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
 jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
 jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);

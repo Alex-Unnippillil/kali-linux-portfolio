@@ -135,6 +135,15 @@ const KALI_LOGO_PATH =
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
+const getFocusableElements = (container: HTMLElement | null) => {
+  if (!container) return [];
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), iframe, object, embed, [contenteditable="true"], [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => element.tabIndex >= 0 && !element.hasAttribute('disabled'));
+};
+
 
 const WhiskerMenu: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -219,6 +228,33 @@ const WhiskerMenu: React.FC = () => {
         focusTimeoutRef.current = null;
       }
     };
+  }, [isOpen]);
+
+  const handleTabKey = (event: KeyboardEvent | React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Tab') return;
+    const focusable = getFocusableElements(menuRef.current);
+    if (focusable.length === 0) return;
+    if (document.activeElement && menuRef.current && !menuRef.current.contains(document.activeElement)) {
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => handleTabKey(event);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
   useFocusTrap(menuRef, isOpen, {
@@ -528,6 +564,7 @@ const WhiskerMenu: React.FC = () => {
           }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
+          onKeyDown={handleTabKey}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
               hideMenu();

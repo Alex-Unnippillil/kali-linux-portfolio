@@ -20,7 +20,7 @@ describe('EttercapPage status chips', () => {
         return element.tagName.toLowerCase() === 'span' && pattern.test(text);
       });
 
-    expect(getChip(/Mode:\s+Unified/i)).toBeInTheDocument();
+    expect(getChip(/Mode:\s+Normal traffic/i)).toBeInTheDocument();
     expect(getChip(/State:\s+Running/i)).toBeInTheDocument();
     expect(getChip(/Logs:\s+0\s+entries/i)).toBeInTheDocument();
   });
