@@ -4,8 +4,8 @@ import PasswordGenerator from '../apps/password_generator';
 
 describe('PasswordGenerator', () => {
   it('generates password of specified length', () => {
-    const { getByText, getByLabelText, getByTestId } = render(<PasswordGenerator />);
-    fireEvent.change(getByLabelText(/Length/i), { target: { value: '8' } });
+    const { getByText, getAllByLabelText, getByTestId } = render(<PasswordGenerator />);
+    fireEvent.change(getAllByLabelText(/Length/i)[0], { target: { value: '8' } });
     fireEvent.click(getByText('Generate'));
     const value = (getByTestId('password-display') as HTMLInputElement).value;
     expect(value).toHaveLength(8);
@@ -25,27 +25,27 @@ describe('PasswordGenerator', () => {
   });
 
   it('updates entropy when options change', () => {
-    const { getByLabelText, getByText } = render(<PasswordGenerator />);
-    const initial = getByText(/bits/i).textContent;
-    fireEvent.change(getByLabelText(/Length/i), { target: { value: '20' } });
-    const updated = getByText(/bits/i).textContent;
+    const { getAllByLabelText, getAllByText } = render(<PasswordGenerator />);
+    const initial = getAllByText(/bits/i)[0].textContent;
+    fireEvent.change(getAllByLabelText(/Length/i)[0], { target: { value: '20' } });
+    const updated = getAllByText(/bits/i)[0].textContent;
     expect(updated).not.toBe(initial);
   });
 
   it('applies preset configuration', () => {
-    const { getByRole, getByLabelText } = render(<PasswordGenerator />);
+    const { getByRole, getAllByLabelText } = render(<PasswordGenerator />);
     fireEvent.click(getByRole('button', { name: /High security/i }));
-    expect((getByLabelText(/Length/i) as HTMLInputElement).value).toBe('20');
-    expect((getByLabelText(/Symbols/i) as HTMLInputElement).checked).toBe(true);
-    expect((getByLabelText(/Numbers/i) as HTMLInputElement).checked).toBe(true);
+    expect((getAllByLabelText(/Length/i)[0] as HTMLInputElement).value).toBe('20');
+    expect((getAllByLabelText(/Symbols/i)[0] as HTMLInputElement).checked).toBe(true);
+    expect((getAllByLabelText(/Numbers/i)[0] as HTMLInputElement).checked).toBe(true);
   });
 
   it('updates entropy label when presets change', () => {
-    const { getByRole, getByText } = render(<PasswordGenerator />);
-    const initial = getByText(/bits/i).textContent;
+    const { getByRole, getAllByText } = render(<PasswordGenerator />);
+    const initial = getAllByText(/bits/i)[0].textContent;
     fireEvent.click(getByRole('button', { name: /Memorable/i }));
-    const afterPreset = getByText(/bits/i).textContent;
+    const afterPreset = getAllByText(/bits/i)[0].textContent;
     expect(afterPreset).not.toBe(initial);
-    expect(getByText(/Weak/i)).toBeInTheDocument();
+    expect(getAllByText(/Weak/i).length).toBeGreaterThan(0);
   });
 });

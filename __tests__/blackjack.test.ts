@@ -1,4 +1,4 @@
-import { Shoe, BlackjackGame, basicStrategy } from '../components/apps/blackjack/engine';
+import { Shoe, BlackjackGame, basicStrategy, handValue, isSoft } from '../components/apps/blackjack/engine';
 
 const card = (v: string) => ({ suit: '\u2660', value: v });
 
@@ -11,6 +11,14 @@ describe('Shoe mechanics', () => {
       shoe.draw();
     }
     expect(shoe.shuffleCount).toBe(count + 1);
+  });
+});
+
+describe('Hand totals', () => {
+  test('soft hand detection with multiple aces', () => {
+    const hand = [card('A'), card('A'), card('9')];
+    expect(handValue(hand)).toBe(21);
+    expect(isSoft(hand)).toBe(true);
   });
 });
 
@@ -85,24 +93,82 @@ describe('Game actions', () => {
     expect(game.bankroll).toBe(800);
   });
 
+  test('illegal actions throw', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('6'), card('5'), card('9'), card('7'), card('2')];
+    game.startRound(100, deck);
+    game.hit();
+    expect(() => game.double()).toThrow('Cannot double');
+    expect(() => game.split()).toThrow('Cannot split');
+    expect(() => game.surrender()).toThrow('Cannot surrender');
+  });
+
+  test('split rejected when cards length is not two', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('8'), card('8'), card('9'), card('7'), card('2')];
+    game.startRound(100, deck);
+    game.hit();
+    expect(() => game.split()).toThrow('Cannot split');
+  });
+
   test('insurance pays 2:1 on dealer blackjack', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('10'), card('10'), card('A'), card('10')];
     game.startRound(100, deck);
     game.takeInsurance();
-    game.stand();
     expect(game.bankroll).toBe(1000);
     expect(game.stats.losses).toBe(1);
   });
 
   test('dealer stands on soft 17 when configured', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000, hitSoft17: false });
-    const deck = [card('10'), card('7'), card('A'), card('6'), card('5')];
+    const deck = [card('10'), card('7'), card('A'), card('A'), card('5')];
     game.startRound(100, deck);
+    game.declineInsurance();
     game.stand();
-    expect(game.dealerHand.length).toBe(2);
+    expect(game.dealerHand.length).toBe(3);
     expect(game.bankroll).toBe(1000);
     expect(game.playerHands[0].result).toBe('push');
+  });
+
+  test('dealer hits soft 17 with multiple aces when configured', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000, hitSoft17: true });
+    const deck = [card('10'), card('7'), card('A'), card('A'), card('5'), card('2')];
+    game.startRound(100, deck);
+    game.declineInsurance();
+    game.stand();
+    expect(game.dealerHand.map((c) => c.value)).toEqual(['A', 'A', '5', '2']);
+    expect(game.playerHands[0].result).toBe('lose');
+  });
+
+  test('insurance gates actions until decision', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('9'), card('A'), card('7'), card('5')];
+    game.startRound(100, deck);
+    expect(game.insurancePending).toBe(true);
+    expect(() => game.hit()).toThrow('Resolve insurance first');
+    game.declineInsurance();
+    game.hit();
+    expect(game.playerHands[0].cards.length).toBe(3);
+  });
+
+  test('insurance resolves dealer blackjack after decision', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('10'), card('9'), card('A'), card('10')];
+    game.startRound(100, deck);
+    game.takeInsurance();
+    expect(game.roundComplete).toBe(true);
+    expect(game.revealDealerHoleCard).toBe(true);
+    expect(game.playerHands[0].result).toBe('lose');
+  });
+
+  test('blackjack on deal auto-finishes and settles', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
+    const deck = [card('A'), card('K'), card('9'), card('7')];
+    game.startRound(100, deck);
+    expect(game.playerHands[0].finished).toBe(true);
+    expect(game.roundComplete).toBe(true);
+    expect(game.bankroll).toBe(1150);
   });
 });
 
@@ -123,7 +189,6 @@ describe('Bankroll integrity', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('A'), card('K'), card('9'), card('10')];
     game.startRound(100, deck);
-    game.stand();
     expect(game.bankroll).toBe(1150);
     expect(game.playerHands[0].result).toBe('win');
   });
@@ -132,7 +197,6 @@ describe('Bankroll integrity', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('A'), card('10'), card('9'), card('6'), card('10')];
     game.startRound(100, deck);
-    game.stand();
     expect(game.bankroll).toBe(1150);
     expect(Number.isInteger(game.bankroll)).toBe(true);
   });

@@ -364,6 +364,30 @@ const WhiskerMenu: React.FC = () => {
         return;
       }
 
+      if (e.key === 'Tab') {
+        const menuNode = menuRef.current;
+        if (!menuNode) return;
+        const focusable = Array.from(
+          menuNode.querySelectorAll<HTMLElement>(
+            'a[href], area[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), iframe, object, embed, [contenteditable="true"], [tabindex]:not([tabindex="-1"])',
+          ),
+        ).filter((el) => el.tabIndex >= 0 && !el.hasAttribute('disabled'));
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        const active = document.activeElement;
+        if (e.shiftKey && active === first) {
+          e.preventDefault();
+          last.focus();
+          return;
+        }
+        if (!e.shiftKey && active === last) {
+          e.preventDefault();
+          first.focus();
+          return;
+        }
+      }
+
       if (e.key === 'Escape') {
         hideMenu();
       } else if (e.key === 'ArrowDown') {

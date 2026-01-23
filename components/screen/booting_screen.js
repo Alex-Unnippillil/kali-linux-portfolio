@@ -18,6 +18,7 @@ function BootingScreen(props) {
         typeof settingsReducedMotion === 'boolean' ? settingsReducedMotion : false,
     )
 
+    const { disableMessageSequence } = props
     const isVisible = props.visible || props.isShutDown
     const visibilityClass = isVisible ? 'visible opacity-100' : 'invisible opacity-0'
     const [activeMessageIndex, setActiveMessageIndex] = useState(0)
@@ -45,7 +46,7 @@ function BootingScreen(props) {
 
         if (!isBooting) {
             setActiveMessageIndex(0)
-        } else if (props.disableMessageSequence) {
+        } else if (disableMessageSequence) {
             setActiveMessageIndex(0)
         } else {
             setActiveMessageIndex(0)
@@ -68,7 +69,7 @@ function BootingScreen(props) {
                 window.clearInterval(intervalId)
             }
         }
-    }, [isBooting])
+    }, [disableMessageSequence, isBooting])
 
     const bootMessages = BOOT_MESSAGES
 

@@ -336,7 +336,7 @@ const Blackjack = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none">
-      <canvas ref={canvasRef} className="border border-gray-700" />
+      <canvas ref={canvasRef} className="border border-gray-700" aria-label="Blackjack table" />
       <div className="mt-2 space-x-2">
         <span>Bankroll: {bankroll}</span>
         <span>High: {high}</span>
@@ -389,6 +389,7 @@ const Blackjack = () => {
             checked={options.hitSoft17}
             onChange={(e) => setOptions((o) => ({ ...o, hitSoft17: e.target.checked }))}
             disabled={gameRef.current && gameRef.current.playerHands.length > 0}
+            aria-label="Dealer hits soft 17"
           />
           <span>Dealer hits soft 17</span>
         </label>
@@ -397,6 +398,7 @@ const Blackjack = () => {
             type="checkbox"
             checked={showHints}
             onChange={(e) => setShowHints(e.target.checked)}
+            aria-label="Show hints"
           />
           <span>Show hints</span>
         </label>
@@ -405,6 +407,7 @@ const Blackjack = () => {
             type="checkbox"
             checked={showCount}
             onChange={(e) => setShowCount(e.target.checked)}
+            aria-label="Counting overlay"
           />
           <span>Counting overlay</span>
         </label>
@@ -505,4 +508,3 @@ const Blackjack = () => {
 };
 
 export default Blackjack;
-

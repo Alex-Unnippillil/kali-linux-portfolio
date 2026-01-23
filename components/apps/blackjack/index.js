@@ -163,22 +163,26 @@ const gameReducer = (state, action) => {
         break;
     }
   } catch (e) {
-    state.setMessage(e.message);
+    state.setError(e.message);
   }
   // trigger re-render by bumping version
   return { ...state, version: state.version + 1 };
 };
 
-const Blackjack = () => {
+const Blackjack = ({ testPresetDeck } = {}) => {
   const [penetration, setPenetration] = useState(0.75);
   const gameRef = useRef(new BlackjackGame({ bankroll: 1000, penetration }));
   const [bet, setBet] = useState(0);
   const [handCount, setHandCount] = useState(1);
   const [message, setMessage] = useState('Place your bet');
+  const [errorMessage, setErrorMessage] = useState('');
   const [dealerHand, setDealerHand] = useState([]);
   const [playerHands, setPlayerHands] = useState([]);
   const [current, setCurrent] = useState(0);
-  const [showInsurance, setShowInsurance] = useState(false);
+  const [insurancePending, setInsurancePending] = useState(false);
+  const [roundComplete, setRoundComplete] = useState(false);
+  const [revealDealerHoleCard, setRevealDealerHoleCard] = useState(false);
+  const [lastRoundNet, setLastRoundNet] = useState(0);
   const [stats, setStats] = useState(gameRef.current.stats);
   const [showHints, setShowHints] = useState(true);
   const [shuffling, setShuffling] = useState(false);
@@ -200,10 +204,12 @@ const Blackjack = () => {
   const [dealerPeeking, setDealerPeeking] = useState(false);
   const [paused, setPaused] = useState(false);
   const [mapping, setKey] = useInputMapping('blackjack', DEFAULT_MAPPING);
+  const shuffleTimerRef = useRef(null);
+  const peekTimerRef = useRef(null);
 
   const [, dispatch] = useReducer(gameReducer, {
     gameRef,
-    setMessage,
+    setError: setErrorMessage,
     version: 0,
   });
 
@@ -216,6 +222,10 @@ const Blackjack = () => {
     setStats({ ...gameRef.current.stats });
     setCurrent(gameRef.current.current);
     setRunningCount(gameRef.current.shoe.runningCount);
+    setInsurancePending(gameRef.current.insurancePending);
+    setRoundComplete(gameRef.current.roundComplete);
+    setRevealDealerHoleCard(gameRef.current.revealDealerHoleCard);
+    setLastRoundNet(gameRef.current.lastRoundNet);
   }, []);
 
   const resetGame = useCallback(() => {
@@ -226,7 +236,10 @@ const Blackjack = () => {
     setDealerHand([]);
     setPlayerHands([]);
     setCurrent(0);
-    setShowInsurance(false);
+    setInsurancePending(false);
+    setRoundComplete(false);
+    setRevealDealerHoleCard(false);
+    setLastRoundNet(0);
     setStats(gameRef.current.stats);
     setShuffling(false);
     setRunningCount(gameRef.current.shoe.runningCount);
@@ -234,6 +247,7 @@ const Blackjack = () => {
     setPracticeFeedback('');
     setPracticeGuess('');
     setPracticeCard(null);
+    setErrorMessage('');
   }, [penetration]);
 
   const adjustBet = useCallback(
@@ -251,55 +265,106 @@ const Blackjack = () => {
     if (paused) return;
     try {
       setShuffling(true);
-      setTimeout(() => setShuffling(false), 500);
-      gameRef.current.startRound(bet, undefined, handCount);
+      if (shuffleTimerRef.current) {
+        clearTimeout(shuffleTimerRef.current);
+      }
+      shuffleTimerRef.current = setTimeout(() => setShuffling(false), 500);
+      const preset =
+        testPresetDeck ||
+        (typeof window !== 'undefined' &&
+          process.env.NODE_ENV === 'test' &&
+          window.__BJ_PRESET_DECK__);
+      gameRef.current.startRound(bet, preset, handCount);
       ReactGA.event({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
-      setMessage('Hit, Stand, Double, Split or Surrender');
-      setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
+      setErrorMessage('');
       update();
       if (['A', '10', 'J', 'Q', 'K'].includes(gameRef.current.dealerHand[0].value)) {
         setDealerPeeking(true);
-        setTimeout(() => setDealerPeeking(false), 1000);
+        if (peekTimerRef.current) {
+          clearTimeout(peekTimerRef.current);
+        }
+        peekTimerRef.current = setTimeout(() => setDealerPeeking(false), 1000);
       }
     } catch (e) {
-      setMessage(e.message);
+      setErrorMessage(e.message);
     }
-  }, [bet, handCount, paused, update]);
+  }, [bet, handCount, paused, testPresetDeck, update]);
 
-  const act = useCallback(
-    (type) => {
-      if (paused) return;
-      const rec = recommended();
-      if (rec && rec !== type) {
-        ReactGA.event({ category: 'Blackjack', action: 'deviation', label: `${rec}->${type}` });
-      }
-      dispatch({ type });
-      update();
-      if (gameRef.current.current >= gameRef.current.playerHands.length) {
-        setMessage('Round complete');
-        gameRef.current.playerHands.forEach((h) => {
-          if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
-        });
-      }
-    },
-    [paused, recommended, update],
-  );
-
-  const takeInsurance = useCallback(() => {
-    try {
-      gameRef.current.takeInsurance();
-      setShowInsurance(false);
-      update();
-    } catch (e) {
-      setMessage(e.message);
+  const actionState = (hand) => {
+    if (!hand || roundComplete || insurancePending) {
+      return { hit: false, stand: false, double: false, split: false, surrender: false };
     }
-  }, [update]);
+    return {
+      hit: !hand.finished && !hand.blackjack,
+      stand: !hand.finished,
+      double:
+        hand.cards.length === 2 &&
+        !hand.finished &&
+        !hand.doubled &&
+        !hand.blackjack &&
+        gameRef.current.bankroll >= hand.bet,
+      split:
+        hand.cards.length === 2 &&
+        !hand.finished &&
+        !hand.blackjack &&
+        hand.cards[0].value === hand.cards[1].value &&
+        gameRef.current.bankroll >= hand.bet,
+      surrender:
+        hand.cards.length === 2 &&
+        !hand.finished &&
+        !hand.surrendered &&
+        !hand.blackjack &&
+        !hand.isSplit,
+    };
+  };
+
+  const currentHand = playerHands[current];
+  const currentActions = currentHand ? actionState(currentHand) : null;
 
   const recommended = useCallback(() => {
     const hand = playerHands[current];
     if (!hand) return '';
     return recommendAction(hand, dealerHand[0], bankroll);
   }, [bankroll, current, dealerHand, playerHands]);
+
+  const act = useCallback(
+    (type) => {
+      if (paused) return;
+      if (!currentActions?.[type]) return;
+      const rec = recommended();
+      if (rec && rec !== type) {
+        ReactGA.event({ category: 'Blackjack', action: 'deviation', label: `${rec}->${type}` });
+      }
+      dispatch({ type });
+      update();
+      if (gameRef.current.roundComplete) {
+        gameRef.current.playerHands.forEach((h) => {
+          if (h.result) ReactGA.event({ category: 'Blackjack', action: 'result', label: h.result });
+        });
+      }
+    },
+    [currentActions, paused, recommended, update],
+  );
+
+  const takeInsurance = useCallback(() => {
+    try {
+      gameRef.current.takeInsurance();
+      setErrorMessage('');
+      update();
+    } catch (e) {
+      setErrorMessage(e.message);
+    }
+  }, [update]);
+
+  const declineInsurance = useCallback(() => {
+    try {
+      gameRef.current.declineInsurance();
+      setErrorMessage('');
+      update();
+    } catch (e) {
+      setErrorMessage(e.message);
+    }
+  }, [update]);
 
   const startPractice = useCallback(() => {
     practiceShoe.current.shuffle();
@@ -358,17 +423,25 @@ const Blackjack = () => {
         if (key === mapping.chip100) adjustBet(CHIP_VALUES[3]);
         if (key === mapping.deal && bet > 0) start();
       }
-      if (playerHands.length > 0) {
-        if (key.toLowerCase() === mapping.hit.toLowerCase()) act('hit');
-        if (key.toLowerCase() === mapping.stand.toLowerCase()) act('stand');
-        if (key.toLowerCase() === mapping.double.toLowerCase()) act('double');
-        if (key.toLowerCase() === mapping.split.toLowerCase()) act('split');
-        if (key.toLowerCase() === mapping.surrender.toLowerCase()) act('surrender');
+      if (playerHands.length > 0 && currentActions) {
+        if (key.toLowerCase() === mapping.hit.toLowerCase() && currentActions.hit) act('hit');
+        if (key.toLowerCase() === mapping.stand.toLowerCase() && currentActions.stand) act('stand');
+        if (key.toLowerCase() === mapping.double.toLowerCase() && currentActions.double) act('double');
+        if (key.toLowerCase() === mapping.split.toLowerCase() && currentActions.split) act('split');
+        if (key.toLowerCase() === mapping.surrender.toLowerCase() && currentActions.surrender)
+          act('surrender');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [act, adjustBet, bet, mapping, paused, playerHands.length, practice, start]);
+  }, [act, adjustBet, bet, currentActions, mapping, paused, playerHands.length, practice, start]);
+
+  useEffect(() => {
+    return () => {
+      if (shuffleTimerRef.current) clearTimeout(shuffleTimerRef.current);
+      if (peekTimerRef.current) clearTimeout(peekTimerRef.current);
+    };
+  }, []);
 
   const bustProbability = (hand) => {
     const total = handValue(hand.cards);
@@ -377,21 +450,23 @@ const Blackjack = () => {
     return remaining.length ? bustCards / remaining.length : 0;
   };
 
-  const renderHand = (hand, hideFirst, showProb, peeking = false, overlay = null) => (
+  const renderHand = (hand, hideFirst, showProb, peeking = false, overlay = null, totalOverride = null, testId) => (
     <div
+      data-testid={testId}
       className="relative flex flex-wrap items-center gap-2 sm:gap-3"
       title={showProb ? `Bust chance: ${(bustProbability(hand) * 100).toFixed(1)}%` : undefined}
     >
       {hand.cards.map((card, idx) => (
-        <Card
-          key={idx}
-          card={card}
-          faceDown={hideFirst && idx === 1 && playerHands.length > 0 && current < playerHands.length}
-          peeking={peeking && idx === 1}
-        />
+        <div key={`${card.value}-${card.suit}-${idx}`} data-testid={`${testId}-card-${idx}`}>
+          <Card
+            card={card}
+            faceDown={hideFirst && idx === 1 && playerHands.length > 0 && current < playerHands.length}
+            peeking={peeking && idx === 1}
+          />
+        </div>
       ))}
       <div className="min-w-[2rem] rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-2 py-1 text-center text-sm sm:text-base text-kali-text">
-        {handValue(hand.cards)}
+        {totalOverride ?? handValue(hand.cards)}
       </div>
       {overlay && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 text-xs font-semibold text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
@@ -402,25 +477,28 @@ const Blackjack = () => {
   );
 
   const rec = showHints ? recommended() : '';
+  const statusMessage = useMemo(() => {
+    if (playerHands.length === 0) return 'Place your bet';
+    if (insurancePending) return 'Insurance?';
+    if (dealerPeeking) return 'Dealer checks for blackjack';
+    if (roundComplete) {
+      const sign = lastRoundNet >= 0 ? '+' : '';
+      return `Round complete: ${sign}${lastRoundNet}`;
+    }
+    return 'Your move';
+  }, [dealerPeeking, insurancePending, lastRoundNet, playerHands.length, roundComplete]);
 
-  const actionState = (hand) => ({
-    hit: !hand.finished,
-    stand: !hand.finished,
-    double:
-      hand.cards.length === 2 &&
-      !hand.finished &&
-      !hand.doubled &&
-      gameRef.current.bankroll >= hand.bet,
-    split:
-      hand.cards.length === 2 &&
-      !hand.finished &&
-      cardValue(hand.cards[0]) === cardValue(hand.cards[1]) &&
-      gameRef.current.bankroll >= hand.bet,
-    surrender: hand.cards.length === 2 && !hand.finished && !hand.surrendered,
-  });
+  const displayMessage = errorMessage || statusMessage;
 
-  const currentHand = playerHands[current];
-  const currentActions = currentHand ? actionState(currentHand) : null;
+  useEffect(() => {
+    setMessage(displayMessage);
+  }, [displayMessage]);
+
+  useEffect(() => {
+    if (!errorMessage) return undefined;
+    const timer = setTimeout(() => setErrorMessage(''), 2500);
+    return () => clearTimeout(timer);
+  }, [errorMessage]);
 
   const settingsPanel = useMemo(
     () => (
@@ -683,9 +761,14 @@ const Blackjack = () => {
               <div className="text-sm uppercase tracking-wide text-kali-control">Dealer</div>
               {renderHand(
                 { cards: dealerHand },
-                !message.includes('complete') && current < playerHands.length,
+                !revealDealerHoleCard && current < playerHands.length,
                 false,
                 dealerPeeking,
+                null,
+                !revealDealerHoleCard && dealerHand.length > 0
+                  ? `${handValue([dealerHand[0]])}+?`
+                  : null,
+                'dealer-hand',
               )}
             </div>
           )}
@@ -696,7 +779,15 @@ const Blackjack = () => {
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <BetChips amount={hand.bet} />
-                {renderHand(hand, false, true, false, idx === current && showHints ? rec : null)}
+                {renderHand(
+                  hand,
+                  false,
+                  true,
+                  false,
+                  hand.blackjack ? 'Blackjack' : idx === current && showHints ? rec : null,
+                  null,
+                  `player-hand-${idx}`,
+                )}
               </div>
               {idx === current && playerHands.length > 0 && (
                 <div className="flex w-full flex-wrap items-center justify-center gap-2">
@@ -733,14 +824,27 @@ const Blackjack = () => {
               )}
             </div>
           ))}
-          {showInsurance && (
-            <button
-              type="button"
-              className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
-              onClick={takeInsurance}
+          {insurancePending && (
+            <div
+              className="flex flex-wrap items-center justify-center gap-2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-4 py-3"
+              aria-label="Insurance decision"
             >
-              Take Insurance
-            </button>
+              <span className="text-sm uppercase tracking-wide text-kali-control">Insurance?</span>
+              <button
+                type="button"
+                className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
+                onClick={takeInsurance}
+              >
+                Take Insurance
+              </button>
+              <button
+                type="button"
+                className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-medium`}
+                onClick={declineInsurance}
+              >
+                No Insurance
+              </button>
+            </div>
           )}
           <div className="mt-2 text-center text-base sm:text-lg" aria-live="polite" role="status">
             {message}

@@ -37,7 +37,7 @@ const SolitaireApp = createDynamicApp(() => import('./components/apps/solitaire/
 const TowerDefenseApp = createDynamicApp(() => import('./components/apps/tower-defense'), 'Tower Defense');
 const WordSearchApp = createDynamicApp(() => import('./components/apps/word-search'), 'Word Search');
 const WordleApp = createDynamicApp(() => import('./components/apps/wordle'), 'Wordle');
-const BlackjackApp = createDynamicApp(() => import('./components/apps/blackjack'), 'Blackjack');
+const BlackjackApp = createDynamicApp(() => import('./components/apps/blackjack/index'), 'Blackjack');
 const BreakoutApp = createDynamicApp(() => import('./components/apps/breakout'), 'Breakout');
 const AsteroidsApp = createDynamicApp(() => import('./components/apps/asteroids'), 'Asteroids');
 const SudokuApp = createDynamicApp(() => import('./components/apps/sudoku'), 'Sudoku');

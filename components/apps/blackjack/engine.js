@@ -83,13 +83,17 @@ export const handValue = (hand) => {
 };
 
 export const isSoft = (hand) => {
-  let total = 0;
-  let aces = 0;
+  let minTotal = 0;
+  let hasAce = false;
   hand.forEach((card) => {
-    total += cardValue(card);
-    if (card.value === 'A') aces += 1;
+    if (card.value === 'A') {
+      minTotal += 1;
+      hasAce = true;
+    } else {
+      minTotal += cardValue(card);
+    }
   });
-  return aces > 0 && total <= 21;
+  return hasAce && minTotal + 10 <= 21;
 };
 
 // Basic strategy for 4-8 decks, dealer stands on soft 17, double after split allowed
@@ -98,8 +102,8 @@ export function basicStrategy(playerCards, dealerUpCard, options = {}) {
   const up = dealerUpCard.value === 'A' ? 11 : cardValue(dealerUpCard);
   const values = playerCards.map((c) => c.value);
   const total = handValue(playerCards);
-  const pair = values.length === 2 && cardValue(playerCards[0]) === cardValue(playerCards[1]);
-  const soft = values.includes('A') && total <= 21;
+  const pair = values.length === 2 && playerCards[0].value === playerCards[1].value;
+  const soft = isSoft(playerCards);
 
   if (canSurrender) {
     if (total === 16 && [9, 10, 11].includes(up)) return 'surrender';
@@ -161,29 +165,70 @@ export class BlackjackGame {
     this.bet = 0;
     this.insuranceBet = 0;
     this.dealerBlackjack = false;
+    this.insurancePending = false;
     this.insuranceResolved = false;
+    this.revealDealerHoleCard = false;
+    this.roundComplete = false;
+    this.lastRoundNet = 0;
+    this.roundStartBankroll = this.bankroll;
+    this.playerActionTaken = false;
   }
 
   startRound(bet, presetDeck, hands = 1) {
     if (bet * hands > this.bankroll) throw new Error('Bet exceeds bankroll');
     this.resetRound();
+    this.roundStartBankroll = this.bankroll;
     this.bet = bet;
     this.bankroll -= bet * hands;
     if (presetDeck) {
       // ensure deterministic order for tests by appending cards to be drawn
       this.shoe.cards = this.shoe.cards.concat(presetDeck.slice().reverse());
     }
-    const players = Array.from({ length: hands }, () => ({
-      cards: [this.shoe.draw(), this.shoe.draw()],
-      bet,
-      finished: false,
-      doubled: false,
-      surrendered: false,
-    }));
+    const players = Array.from({ length: hands }, () => {
+      const cards = [this.shoe.draw(), this.shoe.draw()];
+      return {
+        cards,
+        bet,
+        finished: false,
+        doubled: false,
+        surrendered: false,
+        busted: false,
+        blackjack: false,
+        isSplit: false,
+      };
+    });
     const dealer = [this.shoe.draw(), this.shoe.draw()];
     this.playerHands = players;
     this.dealerHand = dealer;
     this.dealerBlackjack = handValue(dealer) === 21;
+    this.revealDealerHoleCard = false;
+    this.insurancePending = dealer[0].value === 'A';
+    this.insuranceResolved = !this.insurancePending;
+
+    this.playerHands.forEach((hand) => {
+      if (handValue(hand.cards) === 21) {
+        hand.blackjack = true;
+        hand.finished = true;
+      }
+    });
+
+    this.current = this.playerHands.findIndex((hand) => !hand.finished);
+    if (this.current === -1) {
+      this.current = this.playerHands.length;
+    }
+
+    const upcard = dealer[0];
+    const upcardIsTen = ['10', 'J', 'Q', 'K'].includes(upcard.value);
+    if (upcardIsTen) {
+      if (this.dealerBlackjack) {
+        this.revealDealerHoleCard = true;
+        this.settleRound({ dealerHasBlackjack: true, skipDealerDraw: true });
+      } else if (this.allHandsFinished()) {
+        this.settleRound({ skipDealerDraw: true });
+      }
+    } else if (!this.insurancePending && this.allHandsFinished()) {
+      this.settleRound({ skipDealerDraw: true });
+    }
     return { player: players[0], dealer };
   }
 
@@ -192,7 +237,11 @@ export class BlackjackGame {
   }
 
   hit() {
+    this.assertPlayerActionAllowed();
     const hand = this.currentHand();
+    if (!hand || hand.finished) throw new Error('Hand already finished');
+    if (hand.blackjack) throw new Error('Cannot hit');
+    this.playerActionTaken = true;
     hand.cards.push(this.shoe.draw());
     if (handValue(hand.cards) > 21) {
       hand.finished = true;
@@ -202,14 +251,22 @@ export class BlackjackGame {
   }
 
   stand() {
+    this.assertPlayerActionAllowed();
     const hand = this.currentHand();
+    if (!hand || hand.finished) throw new Error('Hand already finished');
+    this.playerActionTaken = true;
     hand.finished = true;
     this.nextHand();
   }
 
   double() {
+    this.assertPlayerActionAllowed();
     const hand = this.currentHand();
+    if (!hand) throw new Error('No active hand');
+    if (hand.finished || hand.doubled || hand.blackjack) throw new Error('Cannot double');
+    if (hand.cards.length !== 2) throw new Error('Cannot double');
     if (this.bankroll < hand.bet) throw new Error('Not enough bankroll');
+    this.playerActionTaken = true;
     this.bankroll -= hand.bet;
     hand.bet *= 2;
     hand.doubled = true;
@@ -220,20 +277,37 @@ export class BlackjackGame {
   }
 
   split() {
+    this.assertPlayerActionAllowed();
     const hand = this.currentHand();
     const card1 = hand.cards[0];
     const card2 = hand.cards[1];
-    if (cardValue(card1) !== cardValue(card2)) throw new Error('Cannot split');
+    if (!hand || hand.finished || hand.cards.length !== 2) throw new Error('Cannot split');
+    if (hand.blackjack) throw new Error('Cannot split');
+    if (card1.value !== card2.value) throw new Error('Cannot split');
     if (this.bankroll < hand.bet) throw new Error('Not enough bankroll');
+    this.playerActionTaken = true;
     this.bankroll -= hand.bet;
-    const newHand = { cards: [card2, this.shoe.draw()], bet: hand.bet, finished: false, doubled: false, surrendered: false };
+    const newHand = {
+      cards: [card2, this.shoe.draw()],
+      bet: hand.bet,
+      finished: false,
+      doubled: false,
+      surrendered: false,
+      busted: false,
+      blackjack: false,
+      isSplit: true,
+    };
     hand.cards = [card1, this.shoe.draw()];
+    hand.isSplit = true;
     this.playerHands.splice(this.current + 1, 0, newHand);
   }
 
   surrender() {
+    this.assertPlayerActionAllowed();
     const hand = this.currentHand();
-    if (hand.cards.length !== 2 || hand.finished) throw new Error('Cannot surrender');
+    if (!hand || hand.finished || hand.cards.length !== 2) throw new Error('Cannot surrender');
+    if (hand.blackjack || hand.isSplit) throw new Error('Cannot surrender');
+    this.playerActionTaken = true;
     hand.finished = true;
     hand.surrendered = true;
     this.bankroll += Math.floor(hand.bet / 2);
@@ -241,17 +315,25 @@ export class BlackjackGame {
   }
 
   takeInsurance() {
-    if (this.dealerHand[0].value !== 'A') throw new Error('Insurance not offered');
-    if (this.insuranceResolved) return;
+    if (!this.insurancePending) throw new Error('Insurance not offered');
+    if (this.insuranceResolved) throw new Error('Insurance already resolved');
+    if (this.playerActionTaken) throw new Error('Cannot take insurance after acting');
     const bet = Math.floor((this.bet * this.playerHands.length) / 2);
     if (bet > this.bankroll) throw new Error('Not enough bankroll');
     this.bankroll -= bet;
     this.insuranceBet = bet;
     this.insuranceResolved = true;
-    if (this.dealerBlackjack) {
-      // pays 2:1
-      this.bankroll += bet * 3;
-    }
+    this.insurancePending = false;
+    this.resolveInsuranceOutcome();
+  }
+
+  declineInsurance() {
+    if (!this.insurancePending) throw new Error('Insurance not offered');
+    if (this.insuranceResolved) throw new Error('Insurance already resolved');
+    if (this.playerActionTaken) throw new Error('Cannot decline insurance after acting');
+    this.insuranceResolved = true;
+    this.insurancePending = false;
+    this.resolveInsuranceOutcome();
   }
 
   nextHand() {
@@ -264,13 +346,49 @@ export class BlackjackGame {
   }
 
   dealerPlayAndSettle() {
-    if (!this.dealerBlackjack) {
-      while (
-        handValue(this.dealerHand) < 17 ||
-        (this.hitSoft17 && handValue(this.dealerHand) === 17 && isSoft(this.dealerHand) && this.dealerHand.some((c) => c.value === 'A'))
-      ) {
-        this.dealerHand.push(this.shoe.draw());
+    this.settleRound();
+  }
+
+  assertPlayerActionAllowed() {
+    if (this.roundComplete) throw new Error('Round complete');
+    if (this.insurancePending) throw new Error('Resolve insurance first');
+  }
+
+  allHandsFinished() {
+    return this.playerHands.length > 0 && this.playerHands.every((hand) => hand.finished);
+  }
+
+  resolveInsuranceOutcome() {
+    if (!this.insuranceResolved) return;
+    if (this.dealerBlackjack) {
+      this.revealDealerHoleCard = true;
+      this.settleRound({ dealerHasBlackjack: true, skipDealerDraw: true });
+    } else if (this.allHandsFinished()) {
+      this.settleRound({ skipDealerDraw: true });
+    }
+  }
+
+  settleRound({ dealerHasBlackjack = this.dealerBlackjack, skipDealerDraw = false } = {}) {
+    if (this.roundComplete) return;
+    if (!dealerHasBlackjack && !skipDealerDraw) {
+      while (true) {
+        const total = handValue(this.dealerHand);
+        if (total < 17) {
+          this.dealerHand.push(this.shoe.draw());
+          continue;
+        }
+        if (this.hitSoft17 && total === 17 && isSoft(this.dealerHand)) {
+          this.dealerHand.push(this.shoe.draw());
+          continue;
+        }
+        break;
       }
+    }
+    if (dealerHasBlackjack) {
+      this.revealDealerHoleCard = true;
+    }
+    if (dealerHasBlackjack && this.insuranceBet > 0) {
+      this.bankroll += this.insuranceBet * 3;
     }
     const dealerTotal = handValue(this.dealerHand);
     this.playerHands.forEach((hand) => {
@@ -281,12 +399,24 @@ export class BlackjackGame {
         return;
       }
       const playerTotal = handValue(hand.cards);
-      const blackjack = hand.cards.length === 2 && playerTotal === 21;
-      if (hand.busted || (!this.dealerBlackjack && dealerTotal > playerTotal && dealerTotal <= 21)) {
+      const blackjack = hand.blackjack && !hand.isSplit;
+      if (dealerHasBlackjack) {
+        if (blackjack) {
+          this.bankroll += hand.bet;
+          this.stats.pushes += 1;
+          hand.result = 'push';
+        } else {
+          this.stats.losses += 1;
+          hand.result = 'lose';
+        }
+        this.stats.hands += 1;
+        return;
+      }
+      if (hand.busted || (dealerTotal > playerTotal && dealerTotal <= 21)) {
         this.stats.losses += 1;
         hand.result = 'lose';
-      } else if (blackjack && !this.dealerBlackjack) {
-        this.bankroll += Math.floor(hand.bet * 5 / 2);
+      } else if (blackjack) {
+        this.bankroll += Math.floor((hand.bet * 5) / 2);
         this.stats.wins += 1;
         hand.result = 'win';
       } else if (dealerTotal > 21 || playerTotal > dealerTotal) {
@@ -312,6 +442,8 @@ export class BlackjackGame {
         result: h.result,
       })),
     });
+    this.roundComplete = true;
+    this.revealDealerHoleCard = true;
+    this.lastRoundNet = this.bankroll - this.roundStartBankroll;
   }
 }
-

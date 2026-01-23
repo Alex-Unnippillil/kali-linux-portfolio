@@ -405,6 +405,7 @@ const Checkers = () => {
             setDifficulty(['easy', 'medium', 'hard'][parseInt(e.target.value, 10)])
           }
           className="w-full"
+          aria-label="Difficulty"
         />
         <div className="flex justify-between text-xs">
           <span>Easy</span>
@@ -418,6 +419,7 @@ const Checkers = () => {
         height={BOARD_PIXELS}
         onClick={handleClick}
         className="mb-2"
+        aria-label="Checkers board"
       />
       <label className="mb-2 text-sm">
         <input
@@ -425,6 +427,7 @@ const Checkers = () => {
           checked={requireCapture}
           onChange={(e) => setRequireCapture(e.target.checked)}
           className="mr-1"
+          aria-label="Require capture"
         />
         Require capture
       </label>
