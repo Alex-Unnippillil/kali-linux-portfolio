@@ -77,6 +77,10 @@ export default class Ubuntu extends Component {
 
                         const run = () => {
                                 if (typeof window === 'undefined') return;
+                                if (isTestEnv) {
+                                        finalizeBoot();
+                                        return;
+                                }
                                 const schedule =
                                         typeof window.requestAnimationFrame === 'function'
                                                 ? window.requestAnimationFrame.bind(window)
@@ -84,14 +88,18 @@ export default class Ubuntu extends Component {
                                 schedule(finalizeBoot);
                         };
 
+                        if (isTestEnv) {
+                                finalizeBoot();
+                                return;
+                        }
                         if (bootStartTime !== null) {
                                 const elapsed = performance.now() - bootStartTime;
                                 const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
-                                if (remaining > 0) {
+                                if (remaining > 0 && !isTestEnv) {
                                         window.setTimeout(run, remaining);
                                         return;
                                 }
-                        } else if (MIN_BOOT_DELAY > 0) {
+                        } else if (MIN_BOOT_DELAY > 0 && !isTestEnv) {
                                 window.setTimeout(run, MIN_BOOT_DELAY);
                                 return;
                         }

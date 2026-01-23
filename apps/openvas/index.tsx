@@ -426,15 +426,15 @@ const OpenVASReport: React.FC = () => {
           </div>
         </div>
         <div className="overflow-hidden rounded-xl border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] shadow-inner">
-          <table aria-label="OpenVAS findings" className="w-full border-collapse text-sm text-gray-200">
+          <table aria-label="OpenVAS findings" className="w-full divide-y divide-[color:var(--kali-panel-border)] text-sm text-gray-200">
             <thead>
-              <tr className="bg-[color:var(--kali-panel)] text-left text-xs uppercase tracking-wide text-gray-400">
-                <th className="px-4 py-3">Host</th>
-                <th className="px-4 py-3">Vulnerability</th>
-                <th className="px-4 py-3">CVSS</th>
+              <tr className="bg-[color:var(--kali-panel)] text-xs uppercase tracking-wide text-gray-400">
+                <th className="px-4 py-3 text-left">Host</th>
+                <th className="px-4 py-3 text-left">Vulnerability</th>
+                <th className="px-4 py-3 text-left">CVSS</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[color:var(--kali-panel-border)]">
+            <tbody>
               {filteredFindings.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-gray-500">
@@ -455,97 +455,101 @@ const OpenVASReport: React.FC = () => {
                         boxShadow: `0 0 0 1px color-mix(in srgb, ${severityColor} 28%, transparent)`,
                       }
                     : {};
+                const detailsId = `openvas-details-${key}`;
                 return (
                   <React.Fragment key={key}>
-                    <tr>
-                      <td colSpan={3} className="p-0">
+                    <tr className="bg-[color:var(--kali-panel)]" style={rowStyle}>
+                      <td className="px-4 py-4 align-top text-sm">
+                        <span className="flex flex-col gap-1">
+                          <span className="font-mono text-xs text-gray-400">{f.host}</span>
+                          <span
+                            className="w-fit rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                            style={{
+                              background: 'color-mix(in srgb, var(--kali-panel-highlight) 75%, transparent)',
+                              color: 'var(--kali-terminal-text)',
+                            }}
+                          >
+                            {f.type}
+                          </span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 align-top text-sm">
                         <button
                           type="button"
                           onClick={() => toggleRow(key)}
-                          className="grid w-full grid-cols-[minmax(140px,1fr)_minmax(0,2fr)_minmax(120px,1fr)] items-stretch gap-4 bg-[color:var(--kali-panel)] px-4 py-4 text-left transition hover:bg-[color:var(--kali-panel-highlight)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-blue)]"
                           aria-expanded={!!expanded[key]}
-                          aria-label="Toggle vulnerability details"
-                          style={rowStyle}
+                          aria-controls={detailsId}
+                          className="flex w-full flex-col gap-2 text-left transition hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-blue)]"
                         >
-                          <span className="flex flex-col gap-1 text-sm">
-                            <span className="font-mono text-xs text-gray-400">{f.host}</span>
+                          <span className="font-semibold text-gray-100">{f.name}</span>
+                          <span className="text-xs text-gray-400">{f.id}</span>
+                          <span className="flex flex-wrap items-center gap-2 text-[11px]">
                             <span
-                              className="w-fit rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide"
+                              className="rounded-full border px-3 py-0.5 font-semibold uppercase tracking-wide"
+                              style={severityBadgeStyle(f.severity)}
+                            >
+                              {f.severity}
+                            </span>
+                            <span
+                              className="rounded-full px-2 py-0.5"
                               style={{
-                                background: 'color-mix(in srgb, var(--kali-panel-highlight) 75%, transparent)',
+                                background: 'color-mix(in srgb, var(--kali-panel-highlight) 65%, transparent)',
                                 color: 'var(--kali-terminal-text)',
                               }}
                             >
-                              {f.type}
-                            </span>
-                          </span>
-                          <span className="flex flex-col gap-2 text-sm">
-                            <span className="font-semibold text-gray-100">{f.name}</span>
-                            <span className="text-xs text-gray-400">{f.id}</span>
-                            <span className="flex flex-wrap items-center gap-2 text-[11px]">
-                              <span
-                                className="rounded-full border px-3 py-0.5 font-semibold uppercase tracking-wide"
-                                style={severityBadgeStyle(f.severity)}
-                              >
-                                {f.severity}
-                              </span>
-                              <span
-                                className="rounded-full px-2 py-0.5"
-                                style={{
-                                  background: 'color-mix(in srgb, var(--kali-panel-highlight) 65%, transparent)',
-                                  color: 'var(--kali-terminal-text)',
-                                }}
-                              >
-                                EPSS {(f.epss * 100).toFixed(0)}%
-                              </span>
-                            </span>
-                          </span>
-                          <span className="flex flex-col justify-center gap-2 text-xs text-gray-400">
-                            <span className="flex items-center justify-between">
-                              <span>{f.cvss.toFixed(1)}</span>
-                              <span>of 10</span>
-                            </span>
-                            <span className="relative block h-2.5 w-full rounded-full bg-[color:var(--kali-panel-highlight)]">
-                              <span
-                                className="absolute inset-y-0 left-0 rounded-full"
-                                style={{
-                                  width: `${(f.cvss / 10) * 100}%`,
-                                  background: `color-mix(in srgb, ${cvssColor(f.cvss)} 70%, transparent)`,
-                                  boxShadow: `0 0 0 1px color-mix(in srgb, ${cvssColor(f.cvss)} 35%, transparent) inset`,
-                                }}
-                              />
+                              EPSS {(f.epss * 100).toFixed(0)}%
                             </span>
                           </span>
                         </button>
                       </td>
+                      <td className="px-4 py-4 align-top text-xs text-gray-400">
+                        <span className="flex flex-col justify-center gap-2">
+                          <span className="flex items-center justify-between">
+                            <span>{f.cvss.toFixed(1)}</span>
+                            <span>of 10</span>
+                          </span>
+                          <span className="relative block h-2.5 w-full rounded-full bg-[color:var(--kali-panel-highlight)]">
+                            <span
+                              className="absolute inset-y-0 left-0 rounded-full"
+                              style={{
+                                width: `${(f.cvss / 10) * 100}%`,
+                                background: `color-mix(in srgb, ${cvssColor(f.cvss)} 70%, transparent)`,
+                                boxShadow: `0 0 0 1px color-mix(in srgb, ${cvssColor(f.cvss)} 35%, transparent) inset`,
+                              }}
+                            />
+                          </span>
+                        </span>
+                      </td>
                     </tr>
                     {expanded[key] && (
-                      <tr>
-                        <td colSpan={3} className="space-y-4 bg-[color:var(--kali-panel)] px-6 py-4 text-sm">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-400">Description</p>
-                            <p className="text-sm text-gray-200">{f.description}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-400">Remediation</p>
-                            <p className="text-sm text-amber-300">{f.remediation}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-gray-400">Timeline</p>
-                            <ul className="space-y-2 text-xs text-gray-300">
-                              {f.timeline.map((event) => (
-                                <li
-                                  key={`${f.id}-${event.date}-${event.event}`}
-                                  className="flex gap-3 rounded-lg px-3 py-2"
-                                  style={{
-                                    background: 'color-mix(in srgb, var(--kali-panel-highlight) 85%, transparent)',
-                                  }}
-                                >
-                                  <span className="w-24 text-gray-400">{event.date}</span>
-                                  <span className="flex-1">{event.event}</span>
-                                </li>
-                              ))}
-                            </ul>
+                      <tr id={detailsId}>
+                        <td colSpan={3} className="bg-[color:var(--kali-panel)] px-6 py-4 text-sm">
+                          <div className="space-y-4">
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-gray-400">Description</p>
+                              <p className="text-sm text-gray-200">{f.description}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-gray-400">Remediation</p>
+                              <p className="text-sm text-amber-300">{f.remediation}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs uppercase tracking-wide text-gray-400">Timeline</p>
+                              <ul className="space-y-2 text-xs text-gray-300">
+                                {f.timeline.map((event) => (
+                                  <li
+                                    key={`${f.id}-${event.date}-${event.event}`}
+                                    className="flex gap-3 rounded-lg px-3 py-2"
+                                    style={{
+                                      background: 'color-mix(in srgb, var(--kali-panel-highlight) 85%, transparent)',
+                                    }}
+                                  >
+                                    <span className="w-24 text-gray-400">{event.date}</span>
+                                    <span className="flex-1">{event.event}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
                           </div>
                         </td>
                       </tr>

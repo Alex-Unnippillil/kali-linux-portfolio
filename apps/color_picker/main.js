@@ -125,7 +125,7 @@ function initializeColorPicker(colorInput, swatches, hexOutput) {
       swatch.style.transition = 'transform 120ms ease, box-shadow 120ms ease';
       swatch.style.outline = 'none';
       swatch.title = swatchTooltip;
-      swatch.setAttribute('aria-label', `Copy ${swatchTooltip}`);
+      swatch.setAttribute('aria-label', `Copy ${swatchTooltip} to clipboard`);
       swatch.setAttribute('data-color', color);
 
       const handleSelection = () => {

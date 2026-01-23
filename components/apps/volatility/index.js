@@ -44,9 +44,11 @@ const severityPalette = {
   },
 };
 
-const heuristicColors = Object.fromEntries(
-  Object.entries(severityPalette).map(([key, value]) => [key, value.chip])
-);
+const heuristicColors = {
+  informational: severityPalette.informational.chip,
+  suspicious: `${severityPalette.suspicious.chip} bg-yellow-600`,
+  malicious: severityPalette.malicious.chip,
+};
 
 const rowSeverityAccent = Object.fromEntries(
   Object.entries(severityPalette).map(([key, value]) => [key, value.row])

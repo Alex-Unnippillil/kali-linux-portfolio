@@ -64,6 +64,16 @@ const ContactApp: React.FC = () => {
         /* ignore */
       }
     }
+    const metaToken =
+      typeof document !== "undefined"
+        ? document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content")
+        : null;
+    if (metaToken) {
+      setCsrfToken(metaToken);
+      return;
+    }
     (async () => {
       const meta = document.querySelector<HTMLMetaElement>(
         'meta[name="csrf-token"]'
@@ -84,10 +94,6 @@ const ContactApp: React.FC = () => {
       } catch {
         /* ignore */
       }
-      setFallback(true);
-      setError(
-        "The form is unavailable in this preview. Use the email options above."
-      );
     })();
   }, []);
 
@@ -342,7 +348,7 @@ const ContactApp: React.FC = () => {
                   </svg>
                 </div>
                 {emailError && (
-                  <FormError id="contact-email-error" className="mt-2">
+                  <FormError id="contact-email-error" className="mt-2" role="alert">
                     {emailError}
                   </FormError>
                 )}
@@ -387,7 +393,7 @@ const ContactApp: React.FC = () => {
                   </svg>
                 </div>
                 {messageError && (
-                  <FormError id="contact-message-error" className="mt-2">
+                  <FormError id="contact-message-error" className="mt-2" role="alert">
                     {messageError}
                   </FormError>
                 )}
@@ -399,11 +405,11 @@ const ContactApp: React.FC = () => {
               onChange={(e) => setHoneypot(e.target.value)}
               aria-hidden="true"
             />
-            {error && <FormError>{error}</FormError>}
+            {error && <FormError role="alert">{error}</FormError>}
             <div className="space-y-3">
               <button
                 type="submit"
-                disabled={submitting || fallback}
+                disabled={submitting}
                 className="flex h-12 w-full items-center justify-center rounded-lg bg-[color:var(--kali-control)] px-4 text-sm font-semibold uppercase tracking-wide text-[color:var(--color-inverse)] shadow-[0_12px_38px_color-mix(in_srgb,var(--kali-control)_35%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-control)_92%,var(--kali-text)_8%)] focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--kali-control)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {submitting ? "Sending..." : "Send message"}

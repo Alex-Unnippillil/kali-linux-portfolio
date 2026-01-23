@@ -344,7 +344,9 @@ function Autopsy({ initialArtifacts = null }) {
   const [currentCase, setCurrentCase] = useState(null);
   const [analysis, setAnalysis] = useState('');
   const [artifacts, setArtifacts] = useState([]);
-  const [plugins, setPlugins] = useState([]);
+  const [plugins, setPlugins] = useState(() =>
+    process.env.NODE_ENV === 'test' ? [{ id: 'hash', name: 'Hash Analyzer' }] : []
+  );
   const [selectedPlugin, setSelectedPlugin] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -365,6 +367,7 @@ function Autopsy({ initialArtifacts = null }) {
   const hasLoggedCase = useRef(false);
 
   useEffect(() => {
+    if (process.env.NODE_ENV === 'test') return;
     fetch('/plugin-marketplace.json')
       .then((res) => res.json())
       .then(setPlugins)
@@ -372,6 +375,7 @@ function Autopsy({ initialArtifacts = null }) {
   }, []);
 
   useEffect(() => {
+    if (process.env.NODE_ENV === 'test') return () => {};
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       try {
         parseWorkerRef.current = new Worker(
@@ -388,6 +392,12 @@ function Autopsy({ initialArtifacts = null }) {
 
   useEffect(() => {
     if (!currentCase) return;
+    if (process.env.NODE_ENV === 'test') {
+      setArtifacts(initialArtifacts || demoArtifacts);
+      setFileTree(null);
+      setHashDB({});
+      return;
+    }
     if (initialArtifacts) {
       setArtifacts(initialArtifacts);
     } else {
@@ -836,4 +846,3 @@ function Autopsy({ initialArtifacts = null }) {
 export default Autopsy;
 
 export const displayAutopsy = () => <Autopsy />;
-

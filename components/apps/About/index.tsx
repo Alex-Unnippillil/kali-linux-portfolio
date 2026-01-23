@@ -16,14 +16,14 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
 
   constructor(props: unknown) {
     super(props);
-    this.state = {
-      screen: <></>,
-      active_screen: 'about',
-      navbar: false,
+    const getInitialScreen = () => {
+      if (typeof window === 'undefined') return 'about';
+      try {
+        return localStorage.getItem('about-section') || 'about';
+      } catch {
+        return 'about';
+      }
     };
-  }
-
-  componentDidMount() {
     this.screens = {
       about: <About />,
       education: <Education />,
@@ -32,17 +32,34 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
       projects: <Projects projects={data.projects} />,
       resume: <Resume />,
     };
+    const initialScreen = getInitialScreen();
+    this.state = {
+      screen: this.screens[initialScreen] ?? <></>,
+      active_screen: this.screens[initialScreen] ? initialScreen : 'about',
+      navbar: false,
+    };
+  }
 
-    let lastVisitedScreen = localStorage.getItem('about-section');
-    if (!lastVisitedScreen) {
+  componentDidMount() {
+    let lastVisitedScreen = 'about';
+    try {
+      lastVisitedScreen = localStorage.getItem('about-section') || 'about';
+      if (!localStorage.getItem('about-section')) {
+        localStorage.setItem('about-section', 'about');
+      }
+    } catch {
       lastVisitedScreen = 'about';
     }
 
-    this.changeScreen({ id: lastVisitedScreen } as unknown as EventTarget & { id: string });
+    const target = this.screens[lastVisitedScreen] ? lastVisitedScreen : 'about';
+    if (target !== this.state.active_screen) {
+      this.changeScreen({ id: target } as unknown as EventTarget & { id: string });
+    }
   }
 
   changeScreen = (e: any) => {
     const screen = e.id || e.target.id;
+    if (screen === this.state.active_screen) return;
     localStorage.setItem('about-section', screen);
     ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
     this.setState({ screen: this.screens[screen], active_screen: screen });
@@ -552,4 +569,3 @@ function Resume() {
     </div>
   );
 }
-

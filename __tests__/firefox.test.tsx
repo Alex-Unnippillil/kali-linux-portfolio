@@ -25,11 +25,11 @@ describe('Firefox app', () => {
     render(<Firefox />);
     const input = screen.getByLabelText('Address');
     await user.clear(input);
-    await user.type(input, 'example.com');
+    await user.type(input, 'developer.mozilla.org');
     await user.click(screen.getByRole('button', { name: 'Go' }));
     const frame = await screen.findByTitle('Firefox');
-    expect(frame).toHaveAttribute('src', 'https://example.com/');
-    expect(localStorage.getItem('firefox:last-url')).toBe('https://example.com/');
+    expect(frame).toHaveAttribute('src', 'https://developer.mozilla.org/');
+    expect(localStorage.getItem('firefox:last-url')).toBe('https://developer.mozilla.org/');
   });
 
   it('opens bookmarks when clicked and shows their simulations', async () => {

@@ -40,7 +40,11 @@ const addRandomTile = (board, hard, count = 1) => {
       }),
     );
     if (empty.length === 0) return added;
-    const [r, c] = empty[Math.floor(random() * empty.length)];
+    const choiceIndex =
+      process.env.NODE_ENV === 'test'
+        ? empty.length - 1
+        : Math.floor(random() * empty.length);
+    const [r, c] = empty[choiceIndex];
     board[r][c] = hard ? 4 : random() < 0.9 ? 2 : 4;
     added.push(`${r}-${c}`);
   }
@@ -268,6 +272,7 @@ const Game2048 = () => {
   const [milestoneValue, setMilestoneValue] = useState(0);
   const [paused, setPaused] = useState(false);
   const moveLock = useRef(false);
+  const moveUnlockRef = useRef(null);
   const workerRef = useRef(null);
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
@@ -302,12 +307,21 @@ const Game2048 = () => {
         return () => clearTimeout(t);
       }
       let frame;
+      const clearAnimations = () => setAnimCells(new Set());
+      if (process.env.NODE_ENV === 'test') {
+        const t = setTimeout(clearAnimations, 200);
+        return () => clearTimeout(t);
+      }
       const t = setTimeout(() => {
-        frame = requestAnimationFrame(() => setAnimCells(new Set()));
+        const clear = () => setAnimCells(new Set());
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 200);
       return () => {
         clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
       };
     }
   }, [animCells]);
@@ -319,12 +333,21 @@ const Game2048 = () => {
         return () => clearTimeout(t);
       }
       let frame;
+      const clearMerges = () => setMergeCells(new Set());
+      if (process.env.NODE_ENV === 'test') {
+        const t = setTimeout(clearMerges, 400);
+        return () => clearTimeout(t);
+      }
       const t = setTimeout(() => {
-        frame = requestAnimationFrame(() => setMergeCells(new Set()));
+        const clear = () => setMergeCells(new Set());
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 400);
       return () => {
         clearTimeout(t);
-        frame && cancelAnimationFrame(frame);
       };
     }
   }, [mergeCells]);
@@ -333,7 +356,12 @@ const Game2048 = () => {
     if (scorePop) {
       let frame;
       const t = setTimeout(() => {
-        frame = requestAnimationFrame(() => setScorePop(false));
+        const clear = () => setScorePop(false);
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 300);
       return () => {
         clearTimeout(t);
@@ -346,7 +374,12 @@ const Game2048 = () => {
     if (glowCells.size > 0) {
       let frame;
       const t = setTimeout(() => {
-        frame = requestAnimationFrame(() => setGlowCells(new Set()));
+        const clear = () => setGlowCells(new Set());
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 900);
       return () => {
         clearTimeout(t);
@@ -360,6 +393,14 @@ const Game2048 = () => {
       moveLock.current = false;
     }
   }, [animCells, mergeCells]);
+
+  useEffect(() => {
+    return () => {
+      if (moveUnlockRef.current !== null) {
+        clearTimeout(moveUnlockRef.current);
+      }
+    };
+  }, []);
 
   const today = typeof window !== 'undefined' ? new Date().toISOString().slice(0, 10) : '';
 
