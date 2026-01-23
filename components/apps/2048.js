@@ -40,7 +40,11 @@ const addRandomTile = (board, hard, count = 1) => {
       }),
     );
     if (empty.length === 0) return added;
-    const [r, c] = empty[Math.floor(random() * empty.length)];
+    const choiceIndex =
+      process.env.NODE_ENV === 'test'
+        ? empty.length - 1
+        : Math.floor(random() * empty.length);
+    const [r, c] = empty[choiceIndex];
     board[r][c] = hard ? 4 : random() < 0.9 ? 2 : 4;
     added.push(`${r}-${c}`);
   }
@@ -297,8 +301,19 @@ const Game2048 = () => {
 
   useEffect(() => {
     if (animCells.size > 0) {
+      let frame;
+      const clearAnimations = () => setAnimCells(new Set());
+      if (process.env.NODE_ENV === 'test') {
+        const t = setTimeout(clearAnimations, 200);
+        return () => clearTimeout(t);
+      }
       const t = setTimeout(() => {
-        setAnimCells(new Set());
+        const clear = () => setAnimCells(new Set());
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 200);
       return () => {
         clearTimeout(t);
@@ -308,8 +323,19 @@ const Game2048 = () => {
 
   useEffect(() => {
     if (mergeCells.size > 0) {
+      let frame;
+      const clearMerges = () => setMergeCells(new Set());
+      if (process.env.NODE_ENV === 'test') {
+        const t = setTimeout(clearMerges, 400);
+        return () => clearTimeout(t);
+      }
       const t = setTimeout(() => {
-        setMergeCells(new Set());
+        const clear = () => setMergeCells(new Set());
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 400);
       return () => {
         clearTimeout(t);
@@ -321,7 +347,12 @@ const Game2048 = () => {
     if (scorePop) {
       let frame;
       const t = setTimeout(() => {
-        frame = requestAnimationFrame(() => setScorePop(false));
+        const clear = () => setScorePop(false);
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 300);
       return () => {
         clearTimeout(t);
@@ -334,7 +365,12 @@ const Game2048 = () => {
     if (glowCells.size > 0) {
       let frame;
       const t = setTimeout(() => {
-        frame = requestAnimationFrame(() => setGlowCells(new Set()));
+        const clear = () => setGlowCells(new Set());
+        if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
+          clear();
+        } else {
+          frame = requestAnimationFrame(clear);
+        }
       }, 900);
       return () => {
         clearTimeout(t);

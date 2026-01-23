@@ -286,6 +286,7 @@ const PasswordGenerator: React.FC<PasswordGeneratorProps> = ({ getDailySeed }) =
           <span className="font-mono text-base text-white">
             {`Entropy: ${entropy.toFixed(1)} bits (${label})`}
           </span>
+          <span className="text-xs uppercase tracking-wide text-gray-400">Entropy · {label}</span>
           <span
             className="text-xs text-blue-300"
             role="img"

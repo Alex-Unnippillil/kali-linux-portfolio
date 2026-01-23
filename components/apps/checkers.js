@@ -127,6 +127,11 @@ const Checkers = () => {
     true,
   );
 
+  const captureMoves = getAllMoves(board, turn, true).filter(
+    (move) => move.captured,
+  ).length;
+  const movesToDraw = Math.max(0, 40 - history.length);
+
   // load wins
   useEffect(() => {
     const stored = localStorage.getItem('checkersWins');
@@ -362,16 +367,19 @@ const Checkers = () => {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-      <div className="mb-4 w-full max-w-md rounded-lg border border-white/10 bg-black/30 p-4 text-sm shadow">
-        <h2 className="text-xs font-semibold uppercase tracking-widest text-slate-200">Match briefing</h2>
-        <p className="mt-2 text-sm text-slate-100">It's Red's move.</p>
-        <p className="mt-1 text-xs text-slate-300">Tap the Hint button to preview optimal captures.</p>
-        <p className="mt-1 text-xs text-slate-300">Forced capture is active.</p>
-        <div className="mt-3 flex flex-wrap gap-4 text-xs text-slate-200">
-          <span>Captures left: 2</span>
-          <span>Moves to draw: 40</span>
+      <section
+        role="dialog"
+        aria-labelledby="checkers-briefing-heading"
+        className="mb-4 w-full max-w-lg rounded-lg border border-white/10 bg-black/40 p-4 text-sm"
+      >
+        <h2 id="checkers-briefing-heading" className="text-base font-semibold">
+          Match briefing
+        </h2>
+        <div className="mt-2 flex flex-wrap gap-4 text-xs uppercase tracking-wide text-white/70">
+          <span>Moves to draw</span>
+          <span>Captured pieces</span>
         </div>
-      </div>
+      </section>
       <div className="w-56 mb-4">
         <input
           type="range"

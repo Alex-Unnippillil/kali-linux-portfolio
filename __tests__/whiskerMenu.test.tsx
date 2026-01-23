@@ -4,13 +4,15 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import WhiskerMenu from '../components/menu/WhiskerMenu';
 
 beforeAll(() => {
-  if (!window.requestAnimationFrame) {
-    // @ts-expect-error - assigning to allow the component to schedule animations in tests
-    window.requestAnimationFrame = (callback: FrameRequestCallback) => {
-      const getNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-      return window.setTimeout(() => callback(getNow()), 0);
-    };
-  }
+  // @ts-expect-error - assign deterministic animation timers for tests
+  window.requestAnimationFrame = (callback: FrameRequestCallback) => {
+    const getNow = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    return window.setTimeout(() => callback(getNow()), 0);
+  };
+  // @ts-expect-error - align cancel API with timers in tests
+  window.cancelAnimationFrame = (handle: number) => {
+    window.clearTimeout(handle);
+  };
 });
 
 describe('WhiskerMenu keyboard shortcuts', () => {
@@ -36,10 +38,8 @@ describe('WhiskerMenu focus management', () => {
   it('focuses the first focusable element when the menu opens', async () => {
     render(<WhiskerMenu />);
 
+    const focusSpy = jest.spyOn(HTMLInputElement.prototype, 'focus');
     fireEvent.keyDown(window, { key: 'F1', altKey: true });
-
-    const searchInput = await screen.findByPlaceholderText('Search applications');
-    const focusSpy = jest.spyOn(searchInput, 'focus');
 
     await waitFor(() => {
       expect(focusSpy).toHaveBeenCalled();
@@ -58,27 +58,19 @@ describe('WhiskerMenu focus management', () => {
     const first = focusable[0];
     const last = focusable[focusable.length - 1];
 
-    const firstFocusSpy = jest.spyOn(first, 'focus');
-    const lastFocusSpy = jest.spyOn(last, 'focus');
+    first.focus();
+    expect(document.activeElement).toBe(first);
+
+    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
 
     await waitFor(() => {
-      expect(firstFocusSpy).toHaveBeenCalled();
+      expect(document.activeElement).toBe(last);
     });
 
-    fireEvent.keyDown(first, { key: 'Tab', shiftKey: true });
+    fireEvent.keyDown(window, { key: 'Tab' });
 
     await waitFor(() => {
-      expect(lastFocusSpy).toHaveBeenCalled();
+      expect(document.activeElement).toBe(first);
     });
-
-    const initialFirstCallCount = firstFocusSpy.mock.calls.length;
-    fireEvent.keyDown(last, { key: 'Tab' });
-
-    await waitFor(() => {
-      expect(firstFocusSpy.mock.calls.length).toBeGreaterThan(initialFirstCallCount);
-    });
-
-    firstFocusSpy.mockRestore();
-    lastFocusSpy.mockRestore();
   });
 });

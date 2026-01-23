@@ -55,7 +55,16 @@ const getFaviconUrl = (url: string) => {
   }
 };
 
-const FIREFOX_ALLOWED_ORIGINS = ['*'];
+const FIREFOX_ALLOWED_ORIGINS = [
+  'https://www.kali.org',
+  'https://www.offsec.com',
+  'https://www.exploit-db.com',
+  'https://forums.kali.org',
+  'https://developer.mozilla.org',
+  'https://en.wikipedia.org',
+  'https://www.google.com',
+  'https://example.com',
+];
 
 const Firefox: React.FC = () => {
   const initialUrl = useMemo(() => {

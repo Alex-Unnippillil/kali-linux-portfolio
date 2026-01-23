@@ -8,12 +8,26 @@ const send = jest.fn();
 jest.mock('@emailjs/browser', () => ({ init: (...args: any[]) => init(...args), send: (...args: any[]) => send(...args) }));
 
 describe('Gedit component', () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     init.mockClear();
     send.mockClear();
     process.env.NEXT_PUBLIC_SERVICE_ID = 'service';
     process.env.NEXT_PUBLIC_TEMPLATE_ID = 'template';
     process.env.NEXT_PUBLIC_USER_ID = 'user';
+    global.fetch = jest.fn().mockResolvedValue({
+      json: () =>
+        Promise.resolve({
+          latitude: 37.7,
+          longitude: -122.4,
+          timezone: 'UTC',
+        }),
+    }) as any;
+  });
+
+  afterEach(() => {
+    global.fetch = originalFetch;
   });
 
   it('sends message when fields are valid', async () => {

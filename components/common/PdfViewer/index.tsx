@@ -120,7 +120,9 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
             aria-selected={page === i + 1}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
-            onFocus={() => setPage(i + 1)}
+            onFocus={() => {
+              if (page !== i + 1) setPage(i + 1);
+            }}
             ref={(el) => {
               if (el) el.getContext('2d')?.drawImage(t, 0, 0);
             }}

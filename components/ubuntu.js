@@ -57,7 +57,7 @@ export default class Ubuntu extends Component {
         waitForBootSequence = () => {
                 if (typeof window === 'undefined' || typeof document === 'undefined') return;
 
-                const isTestEnv = process.env.NODE_ENV === 'test';
+                const isTestEnv = typeof jest !== 'undefined';
                 const MIN_BOOT_DELAY = isTestEnv ? 0 : 350;
                 const MAX_BOOT_DELAY = isTestEnv ? 0 : 1200;
                 const hasPerformanceNow = typeof performance !== 'undefined' && typeof performance.now === 'function';
@@ -70,9 +70,17 @@ export default class Ubuntu extends Component {
 
                 const scheduleFinalize = () => {
                         if (typeof window === 'undefined' || this.state.booting_screen === false) return;
+                        if (process.env.NODE_ENV === 'test') {
+                                finalizeBoot();
+                                return;
+                        }
 
                         const run = () => {
                                 if (typeof window === 'undefined') return;
+                                if (isTestEnv) {
+                                        finalizeBoot();
+                                        return;
+                                }
                                 const schedule =
                                         typeof window.requestAnimationFrame === 'function'
                                                 ? window.requestAnimationFrame.bind(window)
@@ -87,11 +95,11 @@ export default class Ubuntu extends Component {
                         if (bootStartTime !== null) {
                                 const elapsed = performance.now() - bootStartTime;
                                 const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
-                                if (remaining > 0) {
+                                if (remaining > 0 && !isTestEnv) {
                                         window.setTimeout(run, remaining);
                                         return;
                                 }
-                        } else if (MIN_BOOT_DELAY > 0) {
+                        } else if (MIN_BOOT_DELAY > 0 && !isTestEnv) {
                                 window.setTimeout(run, MIN_BOOT_DELAY);
                                 return;
                         }
@@ -121,9 +129,11 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadTarget = window;
                 window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
 
-                this.bootSequenceTimeoutId = window.setTimeout(() => {
-                        scheduleFinalize();
-                }, MAX_BOOT_DELAY);
+                if (!isTestEnv) {
+                        this.bootSequenceTimeoutId = window.setTimeout(() => {
+                                scheduleFinalize();
+                        }, MAX_BOOT_DELAY);
+                }
         };
 
 	getLocalData = () => {

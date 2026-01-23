@@ -64,6 +64,16 @@ const ContactApp: React.FC = () => {
         /* ignore */
       }
     }
+    const metaToken =
+      typeof document !== "undefined"
+        ? document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content")
+        : null;
+    if (metaToken) {
+      setCsrfToken(metaToken);
+      return;
+    }
     (async () => {
       const metaToken = document.querySelector<HTMLMetaElement>(
         'meta[name="csrf-token"]'

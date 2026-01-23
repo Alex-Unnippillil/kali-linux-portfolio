@@ -242,7 +242,6 @@ export default function PluginManager() {
             <li key={p.id} className="list-none" title={p.description || undefined}>
               <article
                 className="flex flex-col gap-4 rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-5 shadow-kali-panel transition hover:border-[color:var(--color-accent)] focus-within:border-[color:var(--color-accent)]"
-                title={p.description || undefined}
               >
                 <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
@@ -265,7 +264,12 @@ export default function PluginManager() {
                 <dl className="grid grid-cols-1 gap-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)] sm:grid-cols-2">
                   <div className="flex flex-col">
                     <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">Sandbox</dt>
-                    <dd className="text-[color:var(--color-text)]">{`Sandbox: ${p.sandbox === 'worker' ? 'Worker' : 'Iframe'}`}</dd>
+                    <dd className="text-[color:var(--color-text)]">
+                      {p.sandbox === 'worker' ? 'Worker' : 'Iframe'}
+                      <span className="sr-only">
+                        {`Sandbox: ${p.sandbox === 'worker' ? 'Worker' : 'Iframe'}`}
+                      </span>
+                    </dd>
                   </div>
                   <div className="flex flex-col">
                     <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">Package size</dt>
@@ -281,7 +285,6 @@ export default function PluginManager() {
                     }`}
                     onClick={() => install(p)}
                     disabled={isInstalled}
-                    aria-disabled={isInstalled}
                   >
                     {isInstalled ? 'Installed' : 'Install'}
                   </button>

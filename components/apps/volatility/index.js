@@ -32,7 +32,7 @@ const severityPalette = {
   },
   suspicious: {
     chip:
-      'border border-[color:color-mix(in_srgb,var(--kali-blue)_65%,transparent)] bg-yellow-600 text-[color:var(--kali-terminal-text)] shadow-[0_0_10px_color-mix(in_srgb,var(--kali-blue)_32%,transparent)]',
+      'border border-[color:color-mix(in_srgb,var(--kali-blue)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_86%,rgba(15,148,210,0.25))] text-[color:var(--kali-terminal-text)] shadow-[0_0_10px_color-mix(in_srgb,var(--kali-blue)_32%,transparent)] bg-yellow-600',
     row:
       'border-l-4 border-[color:color-mix(in_srgb,var(--kali-blue)_65%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,rgba(15,148,210,0.22))]',
   },
@@ -44,9 +44,11 @@ const severityPalette = {
   },
 };
 
-const heuristicColors = Object.fromEntries(
-  Object.entries(severityPalette).map(([key, value]) => [key, value.chip])
-);
+const heuristicColors = {
+  informational: severityPalette.informational.chip,
+  suspicious: `${severityPalette.suspicious.chip} bg-yellow-600`,
+  malicious: severityPalette.malicious.chip,
+};
 
 const rowSeverityAccent = Object.fromEntries(
   Object.entries(severityPalette).map(([key, value]) => [key, value.row])

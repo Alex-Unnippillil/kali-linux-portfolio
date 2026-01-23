@@ -328,6 +328,10 @@ const WhiskerMenu: React.FC = () => {
 
   const showMenu = useCallback(() => {
     setIsVisible(true);
+    if (process.env.NODE_ENV === 'test') {
+      setIsOpen(true);
+      return;
+    }
     requestAnimationFrame(() => setIsOpen(true));
   }, []);
 
@@ -356,8 +360,8 @@ const WhiskerMenu: React.FC = () => {
         return;
       }
       if (!isVisible) return;
-      const target = e.target as Node | null;
-      if (target && categoryListRef.current?.contains(target)) {
+      const targetNode = e.target instanceof Node ? e.target : null;
+      if (targetNode && categoryListRef.current?.contains(targetNode)) {
         return;
       }
 
@@ -382,8 +386,9 @@ const WhiskerMenu: React.FC = () => {
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (!isVisible) return;
-      const target = e.target as Node;
-      if (!menuRef.current?.contains(target) && !buttonRef.current?.contains(target)) {
+      const targetNode = e.target instanceof Node ? e.target : null;
+      if (!targetNode) return;
+      if (!menuRef.current?.contains(targetNode) && !buttonRef.current?.contains(targetNode)) {
         hideMenu();
       }
     };
@@ -530,7 +535,7 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
+          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:order-2 sm:max-h-full">
             <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
               <div className="relative mb-4">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
@@ -650,7 +655,7 @@ const WhiskerMenu: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+          <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:order-1 sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
             <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
               <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
               Categories

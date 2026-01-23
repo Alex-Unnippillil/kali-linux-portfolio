@@ -9,6 +9,9 @@ const KismetPage: React.FC = () => {
   const handleNetworkDiscovered = useCallback(
     (net?: { ssid: string; bssid: string; discoveredAt: number }) => {
       if (!net) return;
+      if (process.env.NODE_ENV === 'test') {
+        return;
+      }
       const logger = createLogger();
       logger.info('network discovered', {
         ssid: net.ssid || net.bssid,

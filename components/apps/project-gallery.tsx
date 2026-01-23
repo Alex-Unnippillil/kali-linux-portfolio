@@ -26,13 +26,24 @@ const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
 
+const getInitialFilters = () => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
 const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const projects: Project[] = projectsData as Project[];
-  const [search, setSearch] = useState('');
-  const [stack, setStack] = useState('');
-  const [year, setYear] = useState('');
-  const [type, setType] = useState('');
-  const [tags, setTags] = useState<string[]>([]);
+  const initialFilters = getInitialFilters();
+  const [search, setSearch] = useState(initialFilters?.search ?? '');
+  const [stack, setStack] = useState(initialFilters?.stack ?? '');
+  const [year, setYear] = useState(initialFilters?.year ?? '');
+  const [type, setType] = useState(initialFilters?.type ?? '');
+  const [tags, setTags] = useState<string[]>(initialFilters?.tags ?? []);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
 
@@ -82,15 +93,25 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   };
 
   useEffect(() => {
+    if (initialFilters) {
+      return;
+    }
     readFilters().then((data) => {
+      const hasPersisted =
+        data &&
+        (data.search ||
+          data.stack ||
+          data.year ||
+          data.type ||
+          (Array.isArray(data.tags) && data.tags.length > 0));
+      if (!hasPersisted) return;
       setSearch(data.search || '');
       setStack(data.stack || '');
       setYear(data.year || '');
       setType(data.type || '');
       setTags(data.tags || []);
-      setAriaMessage(`Showing ${projects.length} projects`);
     });
-  }, [projects.length]);
+  }, [initialFilters, projects.length]);
 
   const stacks = useMemo(
     () => Array.from(new Set(projects.flatMap((p) => p.stack))),
