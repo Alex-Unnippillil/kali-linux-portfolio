@@ -11,7 +11,6 @@ import {
   valueToString,
   GameState,
   Card,
-  createDeck,
   findHint,
   suits,
   Suit,
@@ -43,6 +42,8 @@ type AnimatedCard = Card & {
   finalAngle?: number;
 };
 
+type DragSource = { source: 'tableau' | 'waste'; pile: number; index: number };
+
 const controlButtonClasses =
   'group relative rounded-md border border-kali-border/60 bg-[color:color-mix(in_srgb,var(--color-surface-muted)_80%,rgba(9,34,52,0.92)_20%)] px-3 py-1.5 text-sm font-semibold text-kali-text shadow-[0_3px_6px_rgba(0,0,0,0.35)] transition-all duration-200 hover:-translate-y-[1px] hover:border-kali-accent/70 hover:bg-[color:color-mix(in_srgb,var(--color-surface)_75%,rgba(25,116,186,0.35)_25%)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:opacity-60';
 
@@ -54,6 +55,24 @@ const suitLabels: Record<Suit, string> = {
   '♥': 'hearts',
   '♦': 'diamonds',
   '♣': 'clubs',
+};
+
+const safeGetItem = (key: string) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const safeSetItem = (key: string, value: string) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore storage errors (private mode, blocked storage, etc.)
+  }
 };
 
 const CardView: React.FC<{
@@ -123,11 +142,13 @@ const Solitaire = () => {
   const [game, setGame] = useState<GameState>(() =>
     initializeGame(drawMode, undefined, undefined, passLimit),
   );
-  const [drag, setDrag] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
+  const [drag, setDrag] = useState<DragSource | null>(null);
+  const [selected, setSelected] = useState<DragSource | null>(null);
   const [won, setWon] = useState(false);
   const [time, setTime] = useState(0);
   const [moves, setMoves] = useState(0);
   const [isDaily, setIsDaily] = useState(false);
+  const [dealSeed, setDealSeed] = useState<number | null>(null);
   const [stats, setStats] = useState<Stats>({
     gamesPlayed: 0,
     gamesWon: 0,
@@ -154,7 +175,7 @@ const Solitaire = () => {
   const [flying, setFlying] = useState<AnimatedCard[]>([]);
   const [autoCompleting, setAutoCompleting] = useState(false);
   const [winnableOnly, setWinnableOnly] = useState(false);
-  const [hint, setHint] = useState<{ source: 'tableau' | 'waste'; pile: number; index: number } | null>(null);
+  const [hint, setHint] = useState<DragSource | null>(null);
   const [bankroll, setBankroll] = useState(0);
   const [bankrollReady, setBankrollReady] = useState(false);
   const foundationCountRef = useRef(0);
@@ -162,10 +183,31 @@ const Solitaire = () => {
   const historyGuardRef = useRef(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [confettiSeed, setConfettiSeed] = useState(0);
+  const dropHandledRef = useRef(false);
   const statsKey = useMemo(
     () => getStatsKey(variant, drawMode, passLimit),
     [variant, drawMode, passLimit],
   );
+
+  const gaEvent = useCallback((payload: { category: string; action: string; label?: string }) => {
+    if (typeof window === 'undefined') return;
+    try {
+      ReactGA.event(payload);
+    } catch {
+      // ignore analytics errors
+    }
+  }, []);
+
+  const getDailySeed = () => Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''));
+
+  const getRandomSeed = () => {
+    if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+      const arr = new Uint32Array(1);
+      window.crypto.getRandomValues(arr);
+      return arr[0];
+    }
+    return Math.floor(Math.random() * 1_000_000_000);
+  };
 
   const cardVerticalOffset = useMemo(() => {
     if (scale < 0.7) return 18;
@@ -193,9 +235,7 @@ const Solitaire = () => {
     (updater: (prev: Stats) => Stats) => {
       setStats((prev) => {
         const next = updater(prev);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem(statsKey, JSON.stringify(next));
-        }
+        safeSetItem(statsKey, JSON.stringify(next));
         return next;
       });
     },
@@ -238,14 +278,22 @@ const Solitaire = () => {
       setBankrollReady(true);
       return;
     }
-    const savedBankroll = Number(localStorage.getItem('solitaireBankroll') || '0');
+    const savedBankroll = Number(safeGetItem('solitaireBankroll') || '0');
     setBankroll(savedBankroll);
     setBankrollReady(true);
   }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const saved = JSON.parse(localStorage.getItem(statsKey) || '{}');
+    let saved: Partial<Stats> = {};
+    const raw = safeGetItem(statsKey);
+    if (raw) {
+      try {
+        saved = JSON.parse(raw);
+      } catch {
+        saved = {};
+      }
+    }
     setStats({
       gamesPlayed: 0,
       gamesWon: 0,
@@ -294,17 +342,25 @@ const Solitaire = () => {
       v: Variant = variant,
       daily = false,
       winnable = winnableOnly,
+      options: {
+        seed?: number | null;
+        trackStats?: boolean;
+        chargeBankroll?: boolean;
+      } = {},
     ) => {
-      const seed = daily
-        ? Number(new Date().toISOString().slice(0, 10).replace(/-/g, ''))
-        : undefined;
-      let deck: Card[] | undefined;
+      const { seed: providedSeed, trackStats = true, chargeBankroll = true } = options;
+      let seed =
+        typeof providedSeed === 'number'
+          ? providedSeed
+          : daily
+            ? getDailySeed()
+            : getRandomSeed();
       if (winnable && !daily) {
         for (let attempt = 0; attempt < 1000; attempt += 1) {
-          const d = createDeck();
-          const test = initializeGame(mode, d.slice(), undefined, passLimit);
+          const candidateSeed = getRandomSeed();
+          const test = initializeGame(mode, undefined, candidateSeed, passLimit);
           if (findHint(test)) {
-            deck = d;
+            seed = candidateSeed;
             break;
           }
         }
@@ -313,8 +369,11 @@ const Solitaire = () => {
         setIsShuffling(true);
         window.setTimeout(() => setIsShuffling(false), 900);
       }
+      if (v !== variant) {
+        setVariant(v);
+      }
       historyGuardRef.current = true;
-      setGame(initializeGame(mode, deck, seed, passLimit));
+      setGame(initializeGame(mode, undefined, seed, passLimit));
       setWon(false);
       setCascade([]);
       setConfettiSeed((s) => s + 1);
@@ -322,18 +381,22 @@ const Solitaire = () => {
       setMoves(0);
       setHistory([]);
       setHint(null);
+      setSelected(null);
       setAutoCompleting(false);
       setIsDaily(daily);
+      setDealSeed(seed);
       setAriaMessage('New game started');
-      setBankroll((b) => {
-        const nb = b - 52;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('solitaireBankroll', String(nb));
-        }
-        return nb;
-      });
+      if (chargeBankroll) {
+        setBankroll((b) => {
+          const nb = b - 52;
+          safeSetItem('solitaireBankroll', String(nb));
+          return nb;
+        });
+      }
       foundationCountRef.current = 0;
-      updateStats((s) => ({ ...s, gamesPlayed: s.gamesPlayed + 1 }));
+      if (trackStats) {
+        updateStats((s) => ({ ...s, gamesPlayed: s.gamesPlayed + 1 }));
+      }
     },
     [
       drawMode,
@@ -349,12 +412,15 @@ const Solitaire = () => {
     if (bankrollReady && variant === 'klondike') start(drawMode, variant);
   }, [drawMode, variant, start, bankrollReady]);
 
+  useEffect(() => {
+    setGame((prev) => ({ ...prev, redeals: passLimit }));
+  }, [passLimit]);
+
   const vegasScore =
     game.foundations.reduce((sum, p) => sum + p.length, 0) * 5 - 52;
 
   useEffect(() => {
     if (won) {
-      if (timer.current) clearInterval(timer.current);
       updateStats((s) => {
         const bestScore = vegasScore > s.bestScore ? vegasScore : s.bestScore;
         const bestTime = s.bestTime === 0 || time < s.bestTime ? time : s.bestTime;
@@ -383,9 +449,17 @@ const Solitaire = () => {
         };
       });
       setConfettiSeed((s) => s + 1);
-      return;
     }
-    if (paused) {
+  }, [
+    won,
+    time,
+    isDaily,
+    vegasScore,
+    updateStats,
+  ]);
+
+  useEffect(() => {
+    if (won || paused) {
       if (timer.current) clearInterval(timer.current);
       return;
     }
@@ -393,25 +467,14 @@ const Solitaire = () => {
     return () => {
       if (timer.current) clearInterval(timer.current);
     };
-  }, [
-    won,
-    paused,
-    game,
-    time,
-    isDaily,
-    variant,
-    drawMode,
-    passLimit,
-    vegasScore,
-    updateStats,
-  ]);
+  }, [won, paused]);
 
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
       setWon(true);
-      ReactGA.event({ category: 'Solitaire', action: 'win' });
+      gaEvent({ category: 'Solitaire', action: 'win' });
     }
-  }, [game]);
+  }, [game, gaEvent]);
 
   useEffect(() => {
     const count = game.foundations.reduce((sum, p) => sum + p.length, 0);
@@ -419,9 +482,7 @@ const Solitaire = () => {
       const diff = count - foundationCountRef.current;
       setBankroll((b) => {
         const nb = b + diff * 5;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('solitaireBankroll', String(nb));
-        }
+        safeSetItem('solitaireBankroll', String(nb));
         return nb;
       });
     }
@@ -469,11 +530,11 @@ const Solitaire = () => {
 
   useEffect(() => {
     setAriaMessage(
-      `Score ${vegasScore}, time ${time} seconds, redeals ${
+      `Score ${vegasScore}, redeals ${
         game.redeals === Infinity ? 'infinite' : game.redeals
       }`,
     );
-  }, [vegasScore, time, game.redeals]);
+  }, [vegasScore, game.redeals]);
 
   useEffect(() => {
     if (won) setAriaMessage('You win!');
@@ -482,8 +543,9 @@ const Solitaire = () => {
   const draw = () => {
     const changed = applyMove((g) => drawFromStock(g));
     if (changed) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'draw' });
+      gaEvent({ category: 'Solitaire', action: 'move', label: 'draw' });
       setAriaMessage('Drew cards from stock');
+      setSelected(null);
     } else if (!game.stock.length && game.redeals === 0) {
       setAriaMessage('No redeals remaining');
     }
@@ -512,6 +574,63 @@ const Solitaire = () => {
     }
   };
 
+  const activeMove = useMemo(() => drag || selected, [drag, selected]);
+
+  const getActiveCard = useCallback(
+    (move: DragSource | null) => {
+      if (!move) return null;
+      if (move.source === 'waste') {
+        return game.waste[game.waste.length - 1] || null;
+      }
+      return game.tableau[move.pile]?.[move.index] || null;
+    },
+    [game],
+  );
+
+  const canMoveToTableau = useCallback(
+    (pileIndex: number, move: DragSource | null) => {
+      if (!move) return false;
+      if (move.source === 'tableau' && move.pile === pileIndex) return false;
+      if (move.source === 'tableau') {
+        const next = moveTableauToTableau(game, move.pile, move.index, pileIndex);
+        return next !== game;
+      }
+      const next = moveWasteToTableau(game, pileIndex);
+      return next !== game;
+    },
+    [game],
+  );
+
+  const canMoveToFoundation = useCallback(
+    (foundationIndex: number, move: DragSource | null) => {
+      if (!move) return false;
+      if (move.source === 'tableau') {
+        const pile = game.tableau[move.pile];
+        if (move.index !== pile.length - 1) return false;
+      }
+      const card = getActiveCard(move);
+      if (!card) return false;
+      if (suits.indexOf(card.suit) !== foundationIndex) return false;
+      const next = moveToFoundation(game, move.source, move.source === 'tableau' ? move.pile : null);
+      return next !== game;
+    },
+    [game, getActiveCard],
+  );
+
+  const clearSelection = useCallback(() => {
+    if (selected) {
+      setSelected(null);
+      setAriaMessage('Selection cleared');
+    }
+  }, [selected]);
+
+  const selectMove = useCallback(
+    (move: DragSource | null, message?: string) => {
+      setSelected(move);
+      if (message) setAriaMessage(message);
+    },
+    [],
+  );
 
   const handleDragStart = (
     source: 'tableau' | 'waste',
@@ -519,6 +638,7 @@ const Solitaire = () => {
     index: number,
     e: React.DragEvent<HTMLDivElement>,
   ) => {
+    setSelected(null);
     if (source === 'tableau') {
       const card = game.tableau[pile][index];
       if (!card.faceUp) return;
@@ -526,6 +646,7 @@ const Solitaire = () => {
     } else if (source === 'waste' && game.waste.length) {
       setDrag({ source, pile: -1, index: game.waste.length - 1 });
     }
+    dropHandledRef.current = false;
     const ghost = e.currentTarget.cloneNode(true) as HTMLDivElement;
     ghost.style.position = 'absolute';
     ghost.style.top = '-1000px';
@@ -545,13 +666,18 @@ const Solitaire = () => {
     x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
-    if (dragImageRef.current) {
-      document.body.removeChild(dragImageRef.current);
+    if (dragImageRef.current?.parentNode) {
+      dragImageRef.current.parentNode.removeChild(dragImageRef.current);
       dragImageRef.current = null;
     }
     if (dragCardRef.current) {
       dragCardRef.current.style.opacity = '';
       dragCardRef.current = null;
+    }
+    if (dropHandledRef.current) {
+      dropHandledRef.current = false;
+      finishDrag();
+      return;
     }
     if (!drag) return;
     const { clientX, clientY } = e;
@@ -560,7 +686,7 @@ const Solitaire = () => {
       (ref) => ref && isInside(ref.getBoundingClientRect(), clientX, clientY),
     );
     if (foundationIndex !== -1) {
-      dropToFoundation(foundationIndex);
+      dropToFoundation(foundationIndex, { fromDragEnd: true });
       return;
     }
 
@@ -568,7 +694,7 @@ const Solitaire = () => {
       (ref) => ref && isInside(ref.getBoundingClientRect(), clientX, clientY),
     );
     if (tableauIndex !== -1) {
-      dropToTableau(tableauIndex);
+      dropToTableau(tableauIndex, { fromDragEnd: true });
       return;
     }
     finishDrag();
@@ -693,8 +819,11 @@ const Solitaire = () => {
     play(0, game);
   }, [game, flyMove]);
 
-  const dropToTableau = (pileIndex: number) => {
+  const dropToTableau = (pileIndex: number, options: { fromDragEnd?: boolean } = {}) => {
     if (!drag) return;
+    if (!options.fromDragEnd) {
+      dropHandledRef.current = true;
+    }
     let moved = false;
     if (drag.source === 'tableau') {
       moved = applyMove((g) => moveTableauToTableau(g, drag.pile, drag.index, pileIndex));
@@ -702,39 +831,71 @@ const Solitaire = () => {
       moved = applyMove((g) => moveWasteToTableau(g, pileIndex));
     }
     if (moved) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'tableau' });
+      gaEvent({ category: 'Solitaire', action: 'move', label: 'tableau' });
       setAriaMessage('Moved cards to tableau');
+    } else {
+      setAriaMessage('Invalid move');
     }
     finishDrag();
   };
 
-  const dropToFoundation = (pileIndex: number) => {
+  const dropToFoundation = (
+    pileIndex: number,
+    options: { fromDragEnd?: boolean } = {},
+  ) => {
     if (!drag) return;
+    if (!options.fromDragEnd) {
+      dropHandledRef.current = true;
+    }
+    if (drag.source === 'tableau') {
+      const pile = game.tableau[drag.pile];
+      if (drag.index !== pile.length - 1) {
+        setAriaMessage('Only the top card can move to the foundation');
+        finishDrag();
+        return;
+      }
+    }
+    const activeCard = getActiveCard(drag);
+    if (!activeCard || suits.indexOf(activeCard.suit) !== pileIndex) {
+      setAriaMessage('That foundation is for a different suit');
+      finishDrag();
+      return;
+    }
     if (drag.source === 'tableau') {
       const current = game;
       const next = moveToFoundation(current, 'tableau', drag.pile);
       if (next !== current) {
         recordManualMove(current);
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        gaEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
         flyMove(current, next, 'tableau', drag.pile, () =>
           setAriaMessage('Moved card to foundation'),
         );
+      } else {
+        setAriaMessage('Invalid move');
       }
     } else {
       const current = game;
       const next = moveToFoundation(current, 'waste', null);
       if (next !== current) {
         recordManualMove(current);
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        gaEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
         flyMove(current, next, 'waste', null, () =>
           setAriaMessage('Moved card to foundation'),
         );
+      } else {
+        setAriaMessage('Invalid move');
       }
     }
     finishDrag();
   };
 
   const handleDoubleClick = (source: 'tableau' | 'waste', pile: number) => {
+    if (source === 'tableau') {
+      const cards = game.tableau[pile];
+      if (!cards.length) return;
+      const topIndex = cards.length - 1;
+      if (!cards[topIndex].faceUp) return;
+    }
     const current = game;
     const next = moveToFoundation(
       current,
@@ -742,7 +903,7 @@ const Solitaire = () => {
       source === 'tableau' ? pile : null,
     );
     if (next !== current) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+      gaEvent({ category: 'Solitaire', action: 'move', label: 'auto' });
       recordManualMove(current);
       flyMove(
         current,
@@ -750,6 +911,8 @@ const Solitaire = () => {
         source,
         source === 'tableau' ? pile : null,
       );
+    } else {
+      setAriaMessage('Invalid move');
     }
   };
 
@@ -783,7 +946,10 @@ const Solitaire = () => {
     if (!game.waste.length) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      handleDoubleClick('waste', 0);
+      selectMove(
+        { source: 'waste', pile: -1, index: game.waste.length - 1 },
+        `Selected waste card ${describeCard(game.waste[game.waste.length - 1])}`,
+      );
       return;
     }
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
@@ -791,7 +957,7 @@ const Solitaire = () => {
       for (let i = 0; i < game.tableau.length; i += 1) {
         const moved = applyMove((state) => moveWasteToTableau(state, i));
         if (moved) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'keyboard' });
+          gaEvent({ category: 'Solitaire', action: 'move', label: 'keyboard' });
           setAriaMessage('Moved waste card to tableau');
           return;
         }
@@ -811,7 +977,10 @@ const Solitaire = () => {
       if (!top.faceUp) return;
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        handleDoubleClick('tableau', pileIndex);
+        selectMove(
+          { source: 'tableau', pile: pileIndex, index: pile.length - 1 },
+          `Selected tableau ${pileIndex + 1} card ${describeCard(top)}`,
+        );
         return;
       }
       if (e.key === 'ArrowUp') {
@@ -829,13 +998,122 @@ const Solitaire = () => {
             return moveTableauToTableau(state, pileIndex, length - 1, i);
           });
           if (moved) {
-            ReactGA.event({ category: 'Solitaire', action: 'move', label: 'keyboard' });
+            gaEvent({ category: 'Solitaire', action: 'move', label: 'keyboard' });
             setAriaMessage('Moved tableau card to another pile');
             return;
           }
         }
       }
     };
+
+  const handleFoundationKeyDown = (index: number) =>
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      if (activeMove && canMoveToFoundation(index, activeMove)) {
+        if (activeMove.source === 'tableau') {
+          const current = game;
+          const next = moveToFoundation(current, 'tableau', activeMove.pile);
+          if (next !== current) {
+            recordManualMove(current);
+            gaEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
+            flyMove(current, next, 'tableau', activeMove.pile, () =>
+              setAriaMessage('Moved card to foundation'),
+            );
+            setSelected(null);
+            return;
+          }
+        } else {
+          const current = game;
+          const next = moveToFoundation(current, 'waste', null);
+          if (next !== current) {
+            recordManualMove(current);
+            gaEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
+            flyMove(current, next, 'waste', null, () =>
+              setAriaMessage('Moved card to foundation'),
+            );
+            setSelected(null);
+            return;
+          }
+        }
+      }
+      setAriaMessage('Invalid move');
+    };
+
+  const handleWasteClick = () => {
+    if (!game.waste.length) return;
+    const move = { source: 'waste', pile: -1, index: game.waste.length - 1 };
+    if (selected && selected.source === 'waste') {
+      clearSelection();
+      return;
+    }
+    selectMove(move, `Selected waste card ${describeCard(game.waste[game.waste.length - 1])}`);
+  };
+
+  const handleTableauCardClick = (pileIndex: number, cardIndex: number) => {
+    const card = game.tableau[pileIndex][cardIndex];
+    if (!card.faceUp) return;
+    if (selected && selected.source === 'tableau' && selected.pile === pileIndex && selected.index === cardIndex) {
+      clearSelection();
+      return;
+    }
+    selectMove(
+      { source: 'tableau', pile: pileIndex, index: cardIndex },
+      `Selected tableau ${pileIndex + 1} card ${describeCard(card)}`,
+    );
+  };
+
+  const handleTableauPileClick = (pileIndex: number) => {
+    if (!selected) return;
+    if (selected.source === 'tableau' && selected.pile === pileIndex) {
+      clearSelection();
+      return;
+    }
+    const moved = selected.source === 'tableau'
+      ? applyMove((state) => moveTableauToTableau(state, selected.pile, selected.index, pileIndex))
+      : applyMove((state) => moveWasteToTableau(state, pileIndex));
+    if (moved) {
+      gaEvent({ category: 'Solitaire', action: 'move', label: 'tableau' });
+      setAriaMessage('Moved cards to tableau');
+      setSelected(null);
+      return;
+    }
+    setAriaMessage('Invalid move');
+  };
+
+  const handleFoundationClick = (foundationIndex: number) => {
+    if (!selected) {
+      setAriaMessage('Select a card to move to the foundation');
+      return;
+    }
+    if (!canMoveToFoundation(foundationIndex, selected)) {
+      setAriaMessage('Invalid move');
+      return;
+    }
+    if (selected.source === 'tableau') {
+      const current = game;
+      const next = moveToFoundation(current, 'tableau', selected.pile);
+      if (next !== current) {
+        recordManualMove(current);
+        gaEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        flyMove(current, next, 'tableau', selected.pile, () =>
+          setAriaMessage('Moved card to foundation'),
+        );
+        setSelected(null);
+      }
+      return;
+    }
+    const current = game;
+    const next = moveToFoundation(current, 'waste', null);
+    if (next !== current) {
+      recordManualMove(current);
+      gaEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
+      flyMove(current, next, 'waste', null, () =>
+        setAriaMessage('Moved card to foundation'),
+      );
+      setSelected(null);
+    }
+  };
 
   const bestSummary = stats.bestScore
     ? `${stats.bestScore} (${stats.bestTime || 0}s)`
@@ -859,7 +1137,7 @@ const Solitaire = () => {
     (g: GameState) => {
       let next = moveToFoundation(g, 'waste', null);
       if (next !== g) {
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+        gaEvent({ category: 'Solitaire', action: 'move', label: 'auto' });
         recordManualMove(g);
         flyMove(g, next, 'waste', null, () => autoCompleteNext(next));
         return;
@@ -867,7 +1145,7 @@ const Solitaire = () => {
       for (let i = 0; i < g.tableau.length; i += 1) {
         next = moveToFoundation(g, 'tableau', i);
         if (next !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+          gaEvent({ category: 'Solitaire', action: 'move', label: 'auto' });
           recordManualMove(g);
           flyMove(g, next, 'tableau', i, () => autoCompleteNext(next));
           return;
@@ -973,6 +1251,9 @@ const Solitaire = () => {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) clearSelection();
+      }}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-between px-4 py-2 text-xs font-semibold sm:text-sm">
         <span className="rounded-full bg-black/35 px-3 py-1 shadow-sm">Moves: {moves}</span>
@@ -1041,7 +1322,7 @@ const Solitaire = () => {
               <button
                 type="button"
                 className={controlButtonClasses}
-                onClick={() => start(drawMode, variant, isDaily)}
+                onClick={() => start(drawMode, variant, false)}
               >
                 New Deal
               </button>
@@ -1076,7 +1357,7 @@ const Solitaire = () => {
               value={variant}
               onChange={(e) => {
                 const v = e.target.value as Variant;
-                ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: v });
+                gaEvent({ category: 'Solitaire', action: 'variant_select', label: v });
                 setVariant(v);
               }}
             >
@@ -1131,7 +1412,7 @@ const Solitaire = () => {
               className={controlButtonClasses}
               onClick={() => {
                 const mode = drawMode === 1 ? 3 : 1;
-                ReactGA.event({
+                gaEvent({
                   category: 'Solitaire',
                   action: 'variant_select',
                   label: mode === 1 ? 'draw1' : 'draw3',
@@ -1148,7 +1429,7 @@ const Solitaire = () => {
               onClick={() => {
                 const opts = [3, 1, Infinity];
                 const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
-                ReactGA.event({
+                gaEvent({
                   category: 'Solitaire',
                   action: 'variant_select',
                   label: `passes_${next === Infinity ? 'unlimited' : next}`,
@@ -1171,14 +1452,25 @@ const Solitaire = () => {
             <button
               type="button"
               className={controlButtonClasses}
-              onClick={() => start(drawMode, variant, isDaily)}
+              onClick={() =>
+                start(drawMode, variant, isDaily, {
+                  seed: dealSeed,
+                  trackStats: false,
+                  chargeBankroll: false,
+                })
+              }
               title="Restart this deal"
             >
               Restart
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap items-start gap-4 rounded-xl bg-black/25 p-4 shadow-inner shadow-black/70">
+        <div
+          className="flex flex-wrap items-start gap-4 rounded-xl bg-black/25 p-4 shadow-inner shadow-black/70"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) clearSelection();
+          }}
+        >
           <div className="flex flex-col items-center gap-2">
             <span className="text-[0.7rem] uppercase tracking-widest text-kali-subtle">Stock</span>
             <div
@@ -1211,6 +1503,7 @@ const Solitaire = () => {
               aria-label={game.waste.length ? `Waste card ${describeCard(game.waste[game.waste.length - 1])}` : 'Empty waste pile'}
               onKeyDown={handleWasteKeyDown}
               onDoubleClick={() => handleDoubleClick('waste', 0)}
+              onClick={handleWasteClick}
               draggable={!!game.waste.length}
               onDragStart={(e) => handleDragStart('waste', -1, game.waste.length - 1, e)}
               onDragEnd={handleDragEnd}
@@ -1218,6 +1511,8 @@ const Solitaire = () => {
                 drag && drag.source === 'waste' ? 'opacity-0' : ''
               } ${
                 hint && hint.source === 'waste' ? 'ring-4 ring-yellow-400/80' : ''
+              } ${
+                selected && selected.source === 'waste' ? 'ring-4 ring-kali-accent/80' : ''
               }`}
             >
               {game.waste.length ? (
@@ -1240,7 +1535,13 @@ const Solitaire = () => {
                   }}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => dropToFoundation(i)}
-                  className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                  onClick={() => handleFoundationClick(i)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={handleFoundationKeyDown(i)}
+                  className={`focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+                    canMoveToFoundation(i, activeMove) ? 'ring-4 ring-kali-accent/70' : ''
+                  }`}
                 >
                   {pile.length ? (
                     <CardView
@@ -1249,29 +1550,49 @@ const Solitaire = () => {
                       disableFlip
                     />
                   ) : (
-                    <div className="sol-slot" aria-label={`Empty foundation slot ${i + 1}`} />
+                    <div
+                      className="sol-slot sol-slot-foundation"
+                      aria-label={`Empty foundation slot ${i + 1}`}
+                    >
+                      <span className="sol-foundation-placeholder" aria-hidden="true">
+                        {suits[i]}
+                      </span>
+                    </div>
                   )}
                 </div>
               </div>
             ))}
           </div>
         </div>
-        <div className="flex flex-1 flex-wrap items-start gap-4 rounded-xl bg-black/20 p-4 shadow-inner shadow-black/70">
+        <div
+          className="flex flex-1 flex-wrap items-start gap-4 rounded-xl bg-black/20 p-4 shadow-inner shadow-black/70"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) clearSelection();
+          }}
+        >
           {game.tableau.map((pile, i) => (
             <div
               key={`t-${i}`}
               ref={(el) => {
                 tableauRefs.current[i] = el;
               }}
-              className="relative flex-1 rounded-xl border border-white/5 bg-black/25 px-1 pb-4 pt-2 shadow-[0_18px_30px_rgba(0,0,0,0.45)]"
+              className={`relative flex-1 rounded-xl border border-white/5 bg-black/25 px-1 pb-4 pt-2 shadow-[0_18px_30px_rgba(0,0,0,0.45)] ${
+                canMoveToTableau(i, activeMove) ? 'ring-2 ring-kali-accent/60' : ''
+              }`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => dropToTableau(i)}
+              onClick={() => handleTableauPileClick(i)}
             >
               {pile.length === 0 && (
                 <div className="sol-slot mx-auto" aria-label={`Empty tableau pile ${i + 1}`} />
               )}
               {pile.map((card, idx) => {
                 const isTop = idx === pile.length - 1;
+                const isSelected =
+                  selected &&
+                  selected.source === 'tableau' &&
+                  selected.pile === i &&
+                  idx >= selected.index;
                 const highlighted =
                   hint &&
                   hint.source === 'tableau' &&
@@ -1289,7 +1610,9 @@ const Solitaire = () => {
                       idx >= drag.index
                         ? 'opacity-0'
                         : ''
-                    } ${highlighted ? 'ring-4 ring-yellow-400/80' : ''}`}
+                    } ${highlighted ? 'ring-4 ring-yellow-400/80' : ''} ${
+                      isSelected ? 'ring-4 ring-kali-accent/70' : ''
+                    }`}
                     style={{
                       top: idx * cardVerticalOffset,
                       filter: 'drop-shadow(0 12px 18px rgba(0,0,0,0.45))',
@@ -1298,6 +1621,10 @@ const Solitaire = () => {
                     onDoubleClick={() => handleDoubleClick('tableau', i)}
                     onDragStart={(e) => handleDragStart('tableau', i, idx, e)}
                     onDragEnd={handleDragEnd}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTableauCardClick(i, idx);
+                    }}
                     role={card.faceUp && isTop ? 'button' : undefined}
                     tabIndex={card.faceUp && isTop ? 0 : -1}
                     onKeyDown={card.faceUp && isTop ? handleTableauKeyDown(i) : undefined}
@@ -1394,6 +1721,17 @@ const Solitaire = () => {
           border: 2px dashed rgba(148, 210, 255, 0.4);
           background: rgba(8, 16, 24, 0.42);
           box-shadow: inset 0 0 16px rgba(0, 0, 0, 0.5);
+        }
+        .sol-slot-foundation {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: rgba(148, 210, 255, 0.7);
+        }
+        .sol-foundation-placeholder {
+          font-size: 2.2rem;
+          font-weight: 700;
+          text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
         }
         .sol-confetti {
           position: absolute;
