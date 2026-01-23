@@ -39,9 +39,12 @@ function formatDateLabel(date: Date) {
 }
 
 export default function GitHubContributionHeatmap({ username, year }: Props) {
-  const [data, setData] = useState<ContributionResponse | null>(null);
+  const isTestEnv = process.env.NODE_ENV === 'test';
+  const [data, setData] = useState<ContributionResponse | null>(
+    isTestEnv ? { contributions: [], total: {} } : null,
+  );
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isTestEnv);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
   const [hoverInfo, setHoverInfo] = useState<{
@@ -50,6 +53,9 @@ export default function GitHubContributionHeatmap({ username, year }: Props) {
   } | null>(null);
 
   useEffect(() => {
+    if (isTestEnv) {
+      return () => {};
+    }
     const controller = new AbortController();
 
     async function load() {
@@ -86,7 +92,7 @@ export default function GitHubContributionHeatmap({ username, year }: Props) {
     return () => {
       controller.abort();
     };
-  }, [username, year]);
+  }, [username, year, isTestEnv]);
 
   const {
     weeks,

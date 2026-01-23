@@ -3,13 +3,12 @@
 import React, { Component } from 'react';
 import dynamic from 'next/dynamic';
 
+const backgroundImageModule =
+    process.env.NODE_ENV === 'test' ? require('../util-components/background-image') : null;
 const BackgroundImage =
     process.env.NODE_ENV === 'test'
-        ? () => null
-        : dynamic(
-            () => import('../util-components/background-image'),
-            { ssr: false },
-        );
+        ? (backgroundImageModule?.default || backgroundImageModule || (() => null))
+        : dynamic(() => import('../util-components/background-image'), { ssr: false });
 import apps, { games } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';

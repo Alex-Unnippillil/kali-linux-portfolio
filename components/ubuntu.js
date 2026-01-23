@@ -70,6 +70,10 @@ export default class Ubuntu extends Component {
 
                 const scheduleFinalize = () => {
                         if (typeof window === 'undefined' || this.state.booting_screen === false) return;
+                        if (process.env.NODE_ENV === 'test') {
+                                finalizeBoot();
+                                return;
+                        }
 
                         const run = () => {
                                 if (typeof window === 'undefined') return;

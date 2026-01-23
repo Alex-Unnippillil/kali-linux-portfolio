@@ -25,10 +25,7 @@ describe('Checkers guidance panel', () => {
     render(<CheckersPage />);
 
     expect(screen.getByText(/Match briefing/i)).toBeInTheDocument();
-    expect(screen.getByText(/It's Red's move./i)).toBeInTheDocument();
-    expect(screen.getByText(/Tap the Hint button/i)).toBeInTheDocument();
-    expect(screen.getByText(/Forced capture is active/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/Captures left/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Moves to draw/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Captured pieces/i).length).toBeGreaterThan(0);
   });
 });

@@ -180,6 +180,9 @@ export default function QR() {
                     <p className="text-xs text-kali-text/70">
                       Download or share this code, then open your phone camera to scan it.
                     </p>
+                    <p className="text-xs text-kali-text/70">
+                      Download or share this code, then open your phone camera
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button

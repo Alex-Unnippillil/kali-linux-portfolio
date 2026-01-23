@@ -239,10 +239,10 @@ export default function PluginManager() {
         {filteredPlugins.map((p) => {
           const isInstalled = installed[p.id] !== undefined;
           return (
-          <li key={p.id} className="list-none" title={p.description || undefined}>
-            <article
-              className="flex flex-col gap-4 rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-5 shadow-kali-panel transition hover:border-[color:var(--color-accent)] focus-within:border-[color:var(--color-accent)]"
-            >
+            <li key={p.id} className="list-none" title={p.description || undefined}>
+              <article
+                className="flex flex-col gap-4 rounded-xl border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-5 shadow-kali-panel transition hover:border-[color:var(--color-accent)] focus-within:border-[color:var(--color-accent)]"
+              >
                 <header className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold leading-tight">{p.id}</h2>
@@ -265,7 +265,10 @@ export default function PluginManager() {
                   <div className="flex flex-col">
                     <dt className="text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">Sandbox</dt>
                     <dd className="text-[color:var(--color-text)]">
-                      Sandbox: {p.sandbox === 'worker' ? 'Worker' : 'Iframe'}
+                      {p.sandbox === 'worker' ? 'Worker' : 'Iframe'}
+                      <span className="sr-only">
+                        {`Sandbox: ${p.sandbox === 'worker' ? 'Worker' : 'Iframe'}`}
+                      </span>
                     </dd>
                   </div>
                   <div className="flex flex-col">
