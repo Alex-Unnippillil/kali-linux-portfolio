@@ -117,7 +117,7 @@ export default function EttercapPage() {
         value: started ? 'Running' : 'Idle',
       },
       {
-        label: 'Log entries',
+        label: 'Logs',
         value: `${logs.length} ${logs.length === 1 ? 'entry' : 'entries'}`,
       },
     ],
@@ -260,4 +260,3 @@ export default function EttercapPage() {
     </div>
   );
 }
-

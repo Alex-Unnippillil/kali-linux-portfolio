@@ -69,6 +69,10 @@ export default class Ubuntu extends Component {
 
                 const scheduleFinalize = () => {
                         if (typeof window === 'undefined' || this.state.booting_screen === false) return;
+                        if (process.env.NODE_ENV === 'test') {
+                                finalizeBoot();
+                                return;
+                        }
 
                         const run = () => {
                                 if (typeof window === 'undefined') return;
@@ -112,9 +116,9 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadHandler = () => {
                         finalizeAndClearTimers();
                 };
-                this.bootScreenLoadEvent = 'DOMContentLoaded';
-                this.bootScreenLoadTarget = document;
-                document.addEventListener('DOMContentLoaded', this.bootScreenLoadHandler, { once: true });
+                this.bootScreenLoadEvent = 'load';
+                this.bootScreenLoadTarget = window;
+                window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
 
                 this.bootSequenceTimeoutId = window.setTimeout(() => {
                         scheduleFinalize();

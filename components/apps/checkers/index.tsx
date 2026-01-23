@@ -182,6 +182,24 @@ const Checkers = () => {
       <div aria-live="polite" className="sr-only">
         {ariaMessage}
       </div>
+      <section
+        role="dialog"
+        aria-labelledby="checkers-briefing-heading"
+        className="mb-4 w-full max-w-2xl rounded-xl border border-kali-border/60 bg-kali-panel-dark/60 p-4 text-sm shadow-sm"
+      >
+        <div className="flex flex-col gap-2">
+          <h2 id="checkers-briefing-heading" className="text-base font-semibold text-kali-text">
+            Match briefing
+          </h2>
+          <div className="flex flex-wrap gap-4 text-xs uppercase tracking-wide text-kali-text/70">
+            <span>Moves to draw</span>
+            <span>Captured pieces</span>
+          </div>
+          <p className="text-xs text-kali-text/70">
+            Review forced captures, keep an eye on the move counter, and track piece exchanges to avoid an early draw.
+          </p>
+        </div>
+      </section>
       {winner && <div className="mb-2 text-xl">{winner} wins!</div>}
       {draw && <div className="mb-2 text-xl">Draw!</div>}
       <div

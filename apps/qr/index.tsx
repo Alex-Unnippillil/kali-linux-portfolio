@@ -180,6 +180,9 @@ export default function QR() {
                     <p className="text-xs text-kali-text/70">
                       Use these controls to download, share, or test your QR code directly from this window.
                     </p>
+                    <p className="text-xs text-kali-text/70">
+                      Download or share this code, then open your phone camera
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
@@ -425,4 +428,3 @@ export default function QR() {
     </div>
   );
 }
-
