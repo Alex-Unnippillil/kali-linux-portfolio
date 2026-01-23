@@ -89,7 +89,9 @@ export const useFocusTrap = (
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const restoreFocusNode = restoreFocusRef?.current ?? null;
 
-    focusFirstElement();
+    const initialFocusTimeout = window.setTimeout(() => {
+      focusFirstElement();
+    }, 0);
 
     const ensureFocusInside = () => {
       if (!container.contains(document.activeElement)) {

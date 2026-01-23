@@ -211,6 +211,7 @@ export class Desktop extends Component {
 
     constructor(props = {}) {
         super(props);
+        this._isMounted = false;
         this.workspaceCount = 4;
         this.workspaceStacks = Array.from({ length: this.workspaceCount }, () => []);
         this.workspaceKeys = new Set([
@@ -1477,6 +1478,14 @@ export class Desktop extends Component {
         this.baseDesktopPadding = { ...presetConfig.padding };
         if (persist) {
             this.persistIconSizePreset(normalizedPreset, normalizedBucket);
+        }
+        if (!this._isMounted) {
+            this.state = {
+                ...this.state,
+                iconSizePreset: normalizedPreset,
+                iconSizeBucket: normalizedBucket,
+            };
+            return;
         }
 
         const applyLayout = () => {
@@ -3568,6 +3577,7 @@ export class Desktop extends Component {
 
 
     componentDidMount() {
+        this._isMounted = true;
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -3670,6 +3680,7 @@ export class Desktop extends Component {
     }
 
     componentWillUnmount() {
+        this._isMounted = false;
         this.removeEventListeners();
         this.removeContextListeners();
         document.removeEventListener('keydown', this.handleGlobalShortcut);
@@ -5198,9 +5209,6 @@ export class Desktop extends Component {
                 const closed_windows = { ...this.state.closed_windows, [objId]: false }; // openes app's window
                 const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
                 const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
-                if (process.env.NODE_ENV === 'test') {
-                    console.info('[desktop] reopening', objId, closed_windows[objId], minimized_windows[objId]);
-                }
                 this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
                     const nextState = { closed_windows, favourite_apps, minimized_windows };
                     if (context) {

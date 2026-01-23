@@ -284,6 +284,7 @@ export default function PluginManager() {
                         : 'bg-kali-accent hover:bg-[color:color-mix(in_srgb,var(--color-accent)_85%,#000000)]'
                     }`}
                     onClick={() => install(p)}
+                    disabled={isInstalled}
                   >
                     {isInstalled ? 'Installed' : 'Install'}
                   </button>

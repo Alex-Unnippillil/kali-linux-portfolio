@@ -127,6 +127,11 @@ const Checkers = () => {
     true,
   );
 
+  const captureMoves = getAllMoves(board, turn, true).filter(
+    (move) => move.captured,
+  ).length;
+  const movesToDraw = Math.max(0, 40 - history.length);
+
   // load wins
   useEffect(() => {
     const stored = localStorage.getItem('checkersWins');

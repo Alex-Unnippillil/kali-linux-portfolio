@@ -32,6 +32,16 @@ export default function VsCode() {
         allowFullScreen
         loading="lazy"
       />
+      <div className="border-t border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-xs text-[color:var(--kali-text-muted)]">
+        <a
+          href={STACKBLITZ_EMBED_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-[color:var(--color-accent)] hover:underline"
+        >
+          Open in StackBlitz
+        </a>
+      </div>
     </div>
   );
 }

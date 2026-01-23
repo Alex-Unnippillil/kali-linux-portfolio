@@ -64,8 +64,14 @@ const ContactApp: React.FC = () => {
         /* ignore */
       }
     }
-    if (process.env.NODE_ENV === "test") {
-      setCsrfToken("test-token");
+    const metaToken =
+      typeof document !== "undefined"
+        ? document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content")
+        : null;
+    if (metaToken) {
+      setCsrfToken(metaToken);
       return;
     }
     (async () => {
@@ -176,7 +182,7 @@ const ContactApp: React.FC = () => {
         </div>
         {fallback && (
           <div
-            role="status"
+            role="note"
             className="flex items-start gap-3 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-warning)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-warning)_16%,var(--kali-panel))] px-5 py-4 text-sm text-[color:var(--kali-text)] shadow-lg shadow-kali-panel"
           >
             <span

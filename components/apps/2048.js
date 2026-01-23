@@ -301,6 +301,11 @@ const Game2048 = () => {
   useEffect(() => {
     if (animCells.size > 0) {
       let frame;
+      const clearAnimations = () => setAnimCells(new Set());
+      if (process.env.NODE_ENV === 'test') {
+        const t = setTimeout(clearAnimations, 200);
+        return () => clearTimeout(t);
+      }
       const t = setTimeout(() => {
         const clear = () => setAnimCells(new Set());
         if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {
@@ -319,6 +324,11 @@ const Game2048 = () => {
   useEffect(() => {
     if (mergeCells.size > 0) {
       let frame;
+      const clearMerges = () => setMergeCells(new Set());
+      if (process.env.NODE_ENV === 'test') {
+        const t = setTimeout(clearMerges, 400);
+        return () => clearTimeout(t);
+      }
       const t = setTimeout(() => {
         const clear = () => setMergeCells(new Set());
         if (process.env.NODE_ENV === 'test' || typeof requestAnimationFrame !== 'function') {

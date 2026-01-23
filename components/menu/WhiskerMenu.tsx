@@ -535,72 +535,7 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
-            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
-              <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
-              Categories
-            </div>
-            <div
-              ref={categoryListRef}
-              className="-mx-1 flex gap-2 overflow-x-auto px-2 pb-3 pt-3 sm:mx-0 sm:max-h-full sm:flex-1 sm:flex-col sm:gap-1 sm:overflow-y-auto sm:px-2 sm:py-3"
-              role="listbox"
-              aria-label="Application categories"
-              aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
-              tabIndex={0}
-              onKeyDown={handleCategoryKeyDown}
-              style={{
-                WebkitOverflowScrolling: 'touch',
-                scrollSnapType: isDesktop
-                  ? undefined
-                  : ('x proximity' as React.CSSProperties['scrollSnapType']),
-              }}
-            >
-              {categoryConfigs.map((cat, index) => (
-                <button
-                  key={cat.id}
-                  ref={(el) => {
-                    categoryButtonRefs.current[index] = el;
-                  }}
-                  type="button"
-                  className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${
-                    category === cat.id
-                      ? 'bg-[#1d2c43] text-white shadow-[inset_0_0_0_1px_rgba(83,185,255,0.35)]'
-                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
-                  }`}
-                  style={{ scrollSnapAlign: 'start' }}
-                  role="option"
-                  aria-selected={category === cat.id}
-                  onClick={() => {
-                    setCategory(cat.id);
-                    setCategoryHighlight(index);
-                  }}
-                >
-                  <span className="hidden w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff] sm:inline-flex">{String(index + 1).padStart(2, '0')}</span>
-                  <span className="flex items-center gap-2">
-                    <Image
-                      src={cat.icon}
-                      alt=""
-                      width={20}
-                      height={20}
-                      className="h-5 w-5 opacity-80 group-hover:opacity-100"
-                      sizes="20px"
-                    />
-                    <span>{cat.label}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
-                <div>
-                  <p className="text-sm font-semibold text-white">kali</p>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:max-h-full">
+          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:order-2 sm:max-h-full">
             <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
               <div className="relative mb-4">
                 <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
@@ -718,6 +653,71 @@ const WhiskerMenu: React.FC = () => {
                   ))}
                 </ul>
               )}
+            </div>
+          </div>
+          <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:order-1 sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
+            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
+              <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
+              Categories
+            </div>
+            <div
+              ref={categoryListRef}
+              className="-mx-1 flex gap-2 overflow-x-auto px-2 pb-3 pt-3 sm:mx-0 sm:max-h-full sm:flex-1 sm:flex-col sm:gap-1 sm:overflow-y-auto sm:px-2 sm:py-3"
+              role="listbox"
+              aria-label="Application categories"
+              aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
+              tabIndex={0}
+              onKeyDown={handleCategoryKeyDown}
+              style={{
+                WebkitOverflowScrolling: 'touch',
+                scrollSnapType: isDesktop
+                  ? undefined
+                  : ('x proximity' as React.CSSProperties['scrollSnapType']),
+              }}
+            >
+              {categoryConfigs.map((cat, index) => (
+                <button
+                  key={cat.id}
+                  ref={(el) => {
+                    categoryButtonRefs.current[index] = el;
+                  }}
+                  type="button"
+                  className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${
+                    category === cat.id
+                      ? 'bg-[#1d2c43] text-white shadow-[inset_0_0_0_1px_rgba(83,185,255,0.35)]'
+                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
+                  }`}
+                  style={{ scrollSnapAlign: 'start' }}
+                  role="option"
+                  aria-selected={category === cat.id}
+                  onClick={() => {
+                    setCategory(cat.id);
+                    setCategoryHighlight(index);
+                  }}
+                >
+                  <span className="hidden w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff] sm:inline-flex">{String(index + 1).padStart(2, '0')}</span>
+                  <span className="flex items-center gap-2">
+                    <Image
+                      src={cat.icon}
+                      alt=""
+                      width={20}
+                      height={20}
+                      className="h-5 w-5 opacity-80 group-hover:opacity-100"
+                      sizes="20px"
+                    />
+                    <span>{cat.label}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
+                <div>
+                  <p className="text-sm font-semibold text-white">kali</p>
+                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
