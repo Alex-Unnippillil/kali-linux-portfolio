@@ -646,8 +646,12 @@ const LaneRunner = () => {
                   Calibrate
                 </button>
                 <div className="flex items-center gap-2">
-                  <label className="opacity-80">Sensitivity</label>
+                  <label htmlFor="lr-sensitivity" className="opacity-80">
+                    Sensitivity
+                  </label>
                   <input
+                    id="lr-sensitivity"
+                    aria-label="Tilt sensitivity"
                     type="range"
                     min="0.5"
                     max="2"
@@ -663,7 +667,7 @@ const LaneRunner = () => {
             )}
             {tiltSupport.needsPermission && tiltAllowed === false && (
               <div className="text-xs opacity-75">
-                Some browsers require permission. Tap "Enable tilt" first.
+                Some browsers require permission. Tap &quot;Enable tilt&quot; first.
               </div>
             )}
           </div>
@@ -745,6 +749,7 @@ const LaneRunner = () => {
             accept="application/json"
             ref={fileRef}
             className="hidden"
+            aria-label="Import lane runner settings"
             onChange={(e) => {
               const file = e.target.files && e.target.files[0];
               if (file) handleImport(file);

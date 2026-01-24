@@ -5,11 +5,8 @@ const { defaults = {}, urls = [], scenarios = [{}] } = JSON.parse(
 );
 
 async function loadPa11y() {
-  try {
-    const mod = await import('pa11y');
-    return mod.default || mod;
-  } catch (error) {
-    if (error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND') {
+  const mod = await import('pa11y').catch((error) => {
+    if (error?.code === 'ERR_MODULE_NOT_FOUND' || error?.code === 'MODULE_NOT_FOUND') {
       console.error(
         'pa11y is optional and not installed. Install it with "PUPPETEER_SKIP_DOWNLOAD=true yarn add -D pa11y" to run accessibility checks.',
       );
@@ -17,7 +14,8 @@ async function loadPa11y() {
       process.exit(1);
     }
     throw error;
-  }
+  });
+  return mod.default || mod;
 }
 
 (async () => {
@@ -35,9 +33,11 @@ async function loadPa11y() {
       const label = scenario.label ? ` (${scenario.label})` : '';
       console.log(`Testing ${url}${label}`);
       const results = await pa11y(url, options);
-      if (results.issues.length > 0) {
+      const ignore = new Set(options.ignore ?? []);
+      const issues = results.issues.filter((issue) => !ignore.has(issue.code));
+      if (issues.length > 0) {
         hasErrors = true;
-        for (const issue of results.issues) {
+        for (const issue of issues) {
           console.log(`  [${issue.code}] ${issue.message} (${issue.selector})`);
         }
       } else {

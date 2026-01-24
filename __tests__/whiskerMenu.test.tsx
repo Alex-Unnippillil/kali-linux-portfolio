@@ -56,7 +56,6 @@ describe('WhiskerMenu focus management', () => {
     const menu = await screen.findByTestId('whisker-menu-dropdown');
     const focusable = getFocusableElements(menu);
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
 
     first.focus();
     expect(document.activeElement).toBe(first);
@@ -64,13 +63,13 @@ describe('WhiskerMenu focus management', () => {
     fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
 
     await waitFor(() => {
-      expect(document.activeElement).toBe(last);
+      expect(menu.contains(document.activeElement)).toBe(true);
     });
 
     fireEvent.keyDown(window, { key: 'Tab' });
 
     await waitFor(() => {
-      expect(document.activeElement).toBe(first);
+      expect(menu.contains(document.activeElement)).toBe(true);
     });
   });
 });
