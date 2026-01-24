@@ -5,6 +5,13 @@ export interface SSHConfig {
   identityFile: string;
   useCompression: boolean;
   enableAgentForwarding: boolean;
+  allocateTTY: boolean;
+  jumpHost: string;
+  strictHostKeyChecking: '' | 'ask' | 'accept-new' | 'yes' | 'no';
+  logLevel: '' | 'QUIET' | 'FATAL' | 'ERROR' | 'INFO' | 'VERBOSE' | 'DEBUG' | 'DEBUG1' | 'DEBUG2' | 'DEBUG3';
+  serverAliveInterval: string;
+  serverAliveCountMax: string;
+  userKnownHostsFile: string;
   extraOptions: string;
 }
 
@@ -22,10 +29,23 @@ export const DEFAULT_SSH_CONFIG: SSHConfig = {
   identityFile: '',
   useCompression: false,
   enableAgentForwarding: false,
+  allocateTTY: false,
+  jumpHost: '',
+  strictHostKeyChecking: '',
+  logLevel: '',
+  serverAliveInterval: '',
+  serverAliveCountMax: '',
+  userKnownHostsFile: '',
   extraOptions: '',
 };
 
 export const SSH_PRESETS: SSHPreset[] = [
+  {
+    id: 'custom',
+    label: 'Start from scratch',
+    description: 'Reset every field to defaults and build a fresh SSH command.',
+    config: { ...DEFAULT_SSH_CONFIG },
+  },
   {
     id: 'lab-gateway',
     label: 'Home Lab Gateway',
@@ -37,6 +57,13 @@ export const SSH_PRESETS: SSHPreset[] = [
       identityFile: '~/.ssh/lab_ed25519',
       useCompression: false,
       enableAgentForwarding: true,
+      allocateTTY: true,
+      jumpHost: 'bastion.lab.internal',
+      strictHostKeyChecking: 'accept-new',
+      logLevel: 'INFO',
+      serverAliveInterval: '45',
+      serverAliveCountMax: '3',
+      userKnownHostsFile: '~/.ssh/known_hosts',
       extraOptions: '-o ForwardAgent=yes',
     },
   },
@@ -51,6 +78,13 @@ export const SSH_PRESETS: SSHPreset[] = [
       identityFile: '~/.ssh/bug-bounty',
       useCompression: true,
       enableAgentForwarding: false,
+      allocateTTY: false,
+      jumpHost: '',
+      strictHostKeyChecking: 'accept-new',
+      logLevel: 'VERBOSE',
+      serverAliveInterval: '60',
+      serverAliveCountMax: '2',
+      userKnownHostsFile: '~/.ssh/known_hosts',
       extraOptions: '-o LogLevel=VERBOSE -o StrictHostKeyChecking=accept-new',
     },
   },
@@ -65,6 +99,13 @@ export const SSH_PRESETS: SSHPreset[] = [
       identityFile: '',
       useCompression: false,
       enableAgentForwarding: false,
+      allocateTTY: true,
+      jumpHost: '',
+      strictHostKeyChecking: 'ask',
+      logLevel: '',
+      serverAliveInterval: '',
+      serverAliveCountMax: '',
+      userKnownHostsFile: '',
       extraOptions: '-o PreferredAuthentications=password',
     },
   },
@@ -79,8 +120,14 @@ export const SSH_PRESETS: SSHPreset[] = [
       identityFile: '~/.ssh/sandbox_rsa',
       useCompression: true,
       enableAgentForwarding: false,
+      allocateTTY: false,
+      jumpHost: 'jump.cloud.internal:22',
+      strictHostKeyChecking: 'yes',
+      logLevel: 'INFO',
+      serverAliveInterval: '60',
+      serverAliveCountMax: '3',
+      userKnownHostsFile: '~/.ssh/known_hosts',
       extraOptions: '-o ServerAliveInterval=60',
     },
   },
 ];
-

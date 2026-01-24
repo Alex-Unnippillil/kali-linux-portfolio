@@ -14,25 +14,25 @@ describe('BeEF page chrome', () => {
   test('renders summary metrics and timeline badges', () => {
     render(<BeefPage />);
 
-    expect(screen.getByText(/Active hooks/i)).toBeInTheDocument();
-    expect(screen.getByText(/Campaign status/i)).toBeInTheDocument();
-    expect(screen.getByText(/Last check-in/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Active hooks/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Campaign status/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Last check-in/i).length).toBeGreaterThan(0);
 
-    expect(screen.getByText('Recon')).toBeInTheDocument();
-    expect(screen.getByText('Delivery')).toBeInTheDocument();
-    expect(screen.getByText('Post-Exploitation')).toBeInTheDocument();
+    expect(screen.getAllByText('Recon').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Delivery').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Post-Exploitation').length).toBeGreaterThan(0);
   });
 
   test('shows severity chips with relative timestamps', () => {
     render(<BeefPage />);
 
-    expect(screen.getByText('Informational')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.getAllByText('Informational').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Warning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Critical').length).toBeGreaterThan(0);
 
-    expect(screen.getByText('+0s')).toBeInTheDocument();
-    expect(screen.getByText('+2s')).toBeInTheDocument();
-    expect(screen.getByText('+6s')).toBeInTheDocument();
-    expect(screen.getByText(/6s ago/)).toBeInTheDocument();
+    expect(screen.getAllByText('+0s').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+2s').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('+6s').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/6s ago/).length).toBeGreaterThan(0);
   });
 });

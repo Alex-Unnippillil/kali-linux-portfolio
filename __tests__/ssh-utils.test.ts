@@ -21,11 +21,18 @@ describe('SSH builder utilities', () => {
         identityFile: '~/.ssh/id_ed25519',
         useCompression: true,
         enableAgentForwarding: true,
+        allocateTTY: true,
+        jumpHost: 'bastion.internal',
+        strictHostKeyChecking: 'accept-new',
+        logLevel: 'VERBOSE',
+        serverAliveInterval: '30',
+        serverAliveCountMax: '2',
+        userKnownHostsFile: '~/.ssh/known_hosts',
         extraOptions: '-o LogLevel=DEBUG -o ServerAliveInterval=30',
       });
 
       expect(command).toBe(
-        'ssh -p 2222 -i ~/.ssh/id_ed25519 -C -A kali@10.0.0.5 -o LogLevel=DEBUG -o ServerAliveInterval=30'
+        'ssh -p 2222 -i ~/.ssh/id_ed25519 -C -A -t -J bastion.internal -o StrictHostKeyChecking=accept-new -o LogLevel=VERBOSE -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -o UserKnownHostsFile=~/.ssh/known_hosts -o LogLevel=DEBUG -o ServerAliveInterval=30 kali@10.0.0.5'
       );
     });
 
@@ -36,7 +43,17 @@ describe('SSH builder utilities', () => {
         extraOptions: '   -o   StrictHostKeyChecking=no\n-o UserKnownHostsFile=/dev/null  ',
       });
 
-      expect(command).toBe('ssh infra.local -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null');
+      expect(command).toBe('ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null infra.local');
+    });
+
+    it('removes duplicate ssh prefixes from extra options', () => {
+      const command = buildSSHCommand({
+        ...DEFAULT_SSH_CONFIG,
+        host: 'example.com',
+        extraOptions: 'ssh -v -o BatchMode=yes',
+      });
+
+      expect(command).toBe('ssh -v -o BatchMode=yes example.com');
     });
   });
 
@@ -76,6 +93,36 @@ describe('SSH builder utilities', () => {
 
       expect(errors).toEqual({});
     });
+
+    it('rejects control characters in the host', () => {
+      const errors = validateSSHConfig({
+        ...DEFAULT_SSH_CONFIG,
+        host: 'example.com\n',
+      });
+
+      expect(errors.host).toBe('Host cannot include control characters.');
+    });
+
+    it('rejects control characters in the identity file', () => {
+      const errors = validateSSHConfig({
+        ...DEFAULT_SSH_CONFIG,
+        host: 'example.com',
+        identityFile: '~/.ssh/id_ed25519\n',
+      });
+
+      expect(errors.identityFile).toBe('Identity file cannot include control characters.');
+    });
+
+    it('rejects non-numeric keepalive values', () => {
+      const errors = validateSSHConfig({
+        ...DEFAULT_SSH_CONFIG,
+        host: 'example.com',
+        serverAliveInterval: 'abc',
+        serverAliveCountMax: '0',
+      });
+
+      expect(errors.serverAliveInterval).toBe('ServerAliveInterval must be a positive integer.');
+      expect(errors.serverAliveCountMax).toBe('ServerAliveCountMax must be a positive integer.');
+    });
   });
 });
-

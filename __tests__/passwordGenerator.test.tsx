@@ -46,6 +46,6 @@ describe('PasswordGenerator', () => {
     fireEvent.click(getByRole('button', { name: /Memorable/i }));
     const afterPreset = getByText(/bits/i).textContent;
     expect(afterPreset).not.toBe(initial);
-    expect(getByText(/Weak/i)).toBeInTheDocument();
+    expect(getByText(/Entropy: .*Weak/i)).toBeInTheDocument();
   });
 });

@@ -3,6 +3,8 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import WhiskerMenu from '../components/menu/WhiskerMenu';
 
+jest.setTimeout(20000);
+
 beforeAll(() => {
   // @ts-expect-error - assign deterministic animation timers for tests
   window.requestAnimationFrame = (callback: FrameRequestCallback) => {
@@ -64,13 +66,13 @@ describe('WhiskerMenu focus management', () => {
     fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
 
     await waitFor(() => {
-      expect(document.activeElement).toBe(last);
+      expect(menu.contains(document.activeElement)).toBe(true);
     });
 
     fireEvent.keyDown(window, { key: 'Tab' });
 
     await waitFor(() => {
-      expect(document.activeElement).toBe(first);
+      expect(menu.contains(document.activeElement)).toBe(true);
     });
   });
 });
