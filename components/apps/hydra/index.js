@@ -493,6 +493,19 @@ const HydraApp = () => {
         toolName="Hydra"
         message="Credential testing is replayed with deterministic timing. No packets ever leave this browser."
       />
+      <div className="mb-4 flex items-center gap-3 rounded border border-white/10 bg-gray-800/60 p-3">
+        <img
+          src="/themes/Yaru/apps/hydra.svg"
+          alt="Hydra"
+          className="h-10 w-10"
+        />
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-gray-400">
+            Credential Tester
+          </p>
+          <h1 className="text-lg font-semibold">Hydra Credential Tester</h1>
+        </div>
+      </div>
       <div className="mb-2">
         <button
           onClick={runHydra}
