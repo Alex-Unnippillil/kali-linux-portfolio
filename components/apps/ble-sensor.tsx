@@ -26,6 +26,8 @@ const BleSensor: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
   const bcRef = useRef<BroadcastChannel | null>(null);
+  const deviceRef = useRef<BluetoothDevice | null>(null);
+  const disconnectHandlerRef = useRef<((event: Event) => void) | null>(null);
 
   const refreshProfiles = async () => setProfiles(await loadProfiles());
 
@@ -37,6 +39,19 @@ const BleSensor: React.FC = () => {
       bcRef.current = bc;
       return () => bc.close();
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (deviceRef.current && disconnectHandlerRef.current) {
+        deviceRef.current.removeEventListener(
+          'gattserverdisconnected',
+          disconnectHandlerRef.current
+        );
+      }
+      deviceRef.current = null;
+      disconnectHandlerRef.current = null;
+    };
   }, []);
 
   const connectWithRetry = async (
@@ -87,8 +102,23 @@ const BleSensor: React.FC = () => {
 
       const server = await connectWithRetry(device);
 
-      device.addEventListener('gattserverdisconnected', () =>
-        setError('Device disconnected.')
+      if (deviceRef.current && disconnectHandlerRef.current) {
+        deviceRef.current.removeEventListener(
+          'gattserverdisconnected',
+          disconnectHandlerRef.current
+        );
+      }
+
+      if (!disconnectHandlerRef.current) {
+        disconnectHandlerRef.current = () => {
+          setError('Device disconnected.');
+        };
+      }
+
+      deviceRef.current = device;
+      device.addEventListener(
+        'gattserverdisconnected',
+        disconnectHandlerRef.current
       );
 
       const primServices = await server.getPrimaryServices();
@@ -201,4 +231,3 @@ const BleSensor: React.FC = () => {
 
 export default BleSensor;
 export const displayBleSensor = () => <BleSensor />;
-
