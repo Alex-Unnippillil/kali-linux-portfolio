@@ -21,6 +21,12 @@ class MyDocument extends Document {
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
+          <noscript>
+            <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
+              This portfolio relies on JavaScript. Visit{' '}
+              <a href="/profile">/profile</a> for accessible content.
+            </div>
+          </noscript>
           <Main />
           <NextScript nonce={nonce} />
         </body>
