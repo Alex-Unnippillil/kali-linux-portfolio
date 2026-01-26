@@ -7,8 +7,8 @@ import { createDisplay } from '../../utils/createDynamicApp';
 
 export class Gedit extends Component {
 
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             sending: false,
             showProgress: false,
@@ -29,6 +29,7 @@ export class Gedit extends Component {
     }
 
     componentDidMount() {
+        if (this.isFileViewer()) return;
         emailjs.init(process.env.NEXT_PUBLIC_USER_ID);
         this.fetchLocation();
     }
@@ -80,6 +81,32 @@ export class Gedit extends Component {
             [`${field}Touched`]: true,
             [`${field}Error`]: value.length === 0
         });
+    }
+
+    isFileViewer = () => {
+        return this.props?.context?.mode === 'file-viewer';
+    }
+
+    renderFileViewer = () => {
+        const fileName = this.props?.context?.fileName || 'Untitled.txt';
+        const content = this.props?.context?.content || '';
+        return (
+            <div className="w-full h-full relative flex flex-col bg-ub-cool-grey text-white select-none">
+                <div className="flex items-center justify-between w-full bg-ub-gedit-light bg-opacity-60 border-b border-t border-blue-400 text-sm">
+                    <span className="font-bold ml-2">Viewing: {fileName}</span>
+                </div>
+                <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
+                    <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
+                    <textarea
+                        className="w-full h-full gedit-message font-light text-sm resize-none outline-none tracking-wider pl-6 py-2 bg-transparent"
+                        value={content}
+                        readOnly
+                        spellCheck="false"
+                        aria-label={`Contents of ${fileName}`}
+                    />
+                </div>
+            </div>
+        );
     }
 
     sendMessage = async () => {
@@ -139,6 +166,9 @@ export class Gedit extends Component {
     }
 
     render() {
+        if (this.isFileViewer()) {
+            return this.renderFileViewer();
+        }
         const nameValid = this.state.nameTouched && !this.state.nameError;
         const nameInvalid = this.state.nameTouched && this.state.nameError;
         const messageValid = this.state.messageTouched && !this.state.messageError;
