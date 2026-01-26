@@ -101,6 +101,7 @@ const HydraApp = () => {
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
   const targetInputRef = useRef(null);
+  const outputRef = useRef(null);
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -401,6 +402,27 @@ const HydraApp = () => {
       setRunning(false);
       clearSession();
     }
+  };
+
+  const copyOutput = async () => {
+    if (!output.trim() || typeof window === 'undefined') return;
+    try {
+      await navigator.clipboard.writeText(output);
+      setAnnounce('Output copied');
+    } catch {
+      // ignore
+    }
+  };
+
+  const selectOutput = () => {
+    const el = outputRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    setAnnounce('Output selected');
   };
 
   const dryRunHydra = () => {
@@ -802,7 +824,30 @@ const HydraApp = () => {
       </div>
 
       {output && (
-        <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap font-mono">{output}</pre>
+        <div className="mt-4">
+          <div className="mb-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={copyOutput}
+              className="px-3 py-1 bg-gray-700 rounded text-sm"
+            >
+              Copy Output
+            </button>
+            <button
+              type="button"
+              onClick={selectOutput}
+              className="px-3 py-1 bg-gray-700 rounded text-sm"
+            >
+              Select All
+            </button>
+          </div>
+          <pre
+            ref={outputRef}
+            className="bg-black p-2 overflow-auto h-64 whitespace-pre-wrap font-mono"
+          >
+            {output}
+          </pre>
+        </div>
       )}
       {showSaved && (
         <div className="fixed bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded text-sm">
