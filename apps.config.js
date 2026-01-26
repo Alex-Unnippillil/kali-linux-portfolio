@@ -711,7 +711,7 @@ const apps = [
     icon: '/themes/Yaru/apps/beef.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayBeef,
   },
   {
@@ -783,7 +783,7 @@ const apps = [
     icon: '/themes/Yaru/apps/metasploit.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayMetasploit,
   },
   {
@@ -792,7 +792,7 @@ const apps = [
     icon: '/themes/Yaru/apps/wireshark.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayWireshark,
   },
   {
@@ -890,7 +890,7 @@ const apps = [
     icon: '/themes/Yaru/apps/nessus.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayNessus,
   },
   {
@@ -962,7 +962,7 @@ const apps = [
     icon: '/themes/Yaru/apps/hydra.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayHydra,
   },
   {
@@ -971,7 +971,7 @@ const apps = [
     icon: '/themes/Yaru/apps/nmap-nse.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayNmapNSE,
   },
   {
@@ -1070,7 +1070,7 @@ const apps = [
     icon: '/themes/Yaru/apps/openvas.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayOpenVAS,
   },
   {
@@ -1079,7 +1079,7 @@ const apps = [
     icon: '/themes/Yaru/apps/reconng.svg',
     disabled: false,
     favourite: false,
-    desktop_shortcut: true,
+    desktop_shortcut: false,
     screen: displayReconNG,
   },
   {
