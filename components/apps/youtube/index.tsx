@@ -136,14 +136,10 @@ export default function YouTubeApp({ channelId }: Props) {
   const abortPlaylistRef = useRef<AbortController | null>(null);
 
   const loadDirectory = useCallback(async () => {
-    const networkAllowed = allowNetwork || process.env.NODE_ENV === 'test';
     if (!allowNetwork) {
-      setAllowNetwork(true);
-      setError('Network requests were disabled. Enabling network to load YouTube playlists…');
-      if (!networkAllowed) {
-        setLoadingDirectory(false);
-        return;
-      }
+      setError('Network requests are disabled. Use the banner to enable network access.');
+      setLoadingDirectory(false);
+      return;
     }
     if (!resolvedChannelId) {
       setError(
@@ -262,7 +258,7 @@ export default function YouTubeApp({ channelId }: Props) {
       setLoadingDirectory(false);
       abortDirectoryRef.current = null;
     }
-  }, [allowNetwork, hasClientApiKey, resolvedChannelId, setAllowNetwork]);
+  }, [allowNetwork, hasClientApiKey, resolvedChannelId]);
 
   useEffect(() => {
     void loadDirectory();
