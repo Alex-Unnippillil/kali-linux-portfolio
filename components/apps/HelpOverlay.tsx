@@ -153,9 +153,9 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     controls: "Arrow keys move, up rotates, space drops.",
   },
   "tower-defense": {
-    objective: "Stop enemies before they reach the end.",
+    objective: "Stop enemies before they reach the goal.",
     controls:
-      "Use Edit Map to draw paths, then click to place and upgrade towers.",
+      "Edit Route: click cells to paint the path (first is start, last is goal). Play: click to place/select towers, right-click to sell. Keyboard: arrows move cursor, Enter/Space paint/place, Delete/Backspace sells, Esc clears selection, P pauses.",
   },
   "word-search": {
     objective: "Find all listed words in the grid.",

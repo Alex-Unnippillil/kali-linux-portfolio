@@ -20,15 +20,36 @@ const RangeUpgradeTree = ({ tower }: RangeUpgradeTreeProps) => {
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    const levels = TOWER_TYPES.single.map((t) => t.range);
-    const maxRange = Math.max(...levels, 1);
+    const ranges = Array.from(
+      new Set(
+        Object.values(TOWER_TYPES)
+          .flat()
+          .map((stats) => stats.range),
+      ),
+    ).sort((a, b) => a - b);
 
-    levels.forEach((range, idx) => {
-      ctx.strokeStyle = idx + 1 <= tower.level ? '#ffff00' : '#555555';
-      const radius = (range / maxRange) * (w / 2 - 5);
+    const ringValues = ranges.length ? ranges : [tower.range];
+    const maxRange = Math.max(...ringValues, tower.range, 1);
+
+    ringValues.forEach((range, idx) => {
+      const isActive = range <= tower.range;
+      ctx.strokeStyle = isActive ? '#ffff00' : '#555555';
+      ctx.lineWidth = isActive ? 2 : 1;
+      const radius = (range / maxRange) * (w / 2 - 6);
       ctx.beginPath();
       ctx.arc(w / 2, h / 2, radius, 0, Math.PI * 2);
       ctx.stroke();
+
+      if (range === tower.range) {
+        ctx.fillStyle = '#24f0ff';
+        ctx.beginPath();
+        ctx.arc(w / 2, h / 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(`${idx + 1}`, w / 2 + radius + 2, h / 2 - 2);
     });
   }, [tower]);
 
