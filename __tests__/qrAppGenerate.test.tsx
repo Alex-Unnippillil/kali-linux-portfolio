@@ -41,8 +41,7 @@ describe('QR app generator', () => {
 
     expect(screen.getByRole('button', { name: /Download PNG/i })).toBeInTheDocument();
     expect(
-      screen.getAllByText(/Download or share this code, then open your phone camera/i)
-        .length,
+      screen.getAllByText(/Download or share this code, then open your phone camera/i).length,
     ).toBeGreaterThan(0);
   });
 });
