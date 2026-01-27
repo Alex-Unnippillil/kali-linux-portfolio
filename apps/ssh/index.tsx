@@ -1,139 +1,242 @@
 'use client';
 
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import { DEFAULT_SSH_CONFIG, SSH_PRESETS, type SSHConfig } from './config';
-import { buildSSHCommand, validateSSHConfig } from './utils';
+import { buildSSHCommand, buildSSHCommandParts, validateSSHConfig, type SSHCommandSegment } from './utils';
 
 type CopyState = 'idle' | 'copied' | 'error';
 
-type SeverityLevel = 'low' | 'medium' | 'high';
-type SessionStatus = 'active' | 'queued' | 'complete';
-
-interface SessionSummaryCard {
-  id: string;
-  label: string;
-  value: string;
-  context: string;
-  status: SessionStatus;
-}
-
-interface CommandLogEntry {
-  id: string;
-  timestamp: string;
-  command: string;
-  narrative: string;
-  status: SessionStatus;
-}
-
-interface MitigationNote {
+type TimelineStep = {
   id: string;
   title: string;
   detail: string;
-  severity: SeverityLevel;
-}
-
-const SEVERITY_STYLES: Record<SeverityLevel, string> = {
-  high: 'border-[color:color-mix(in_srgb,var(--color-severity-high)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-high)_12%,transparent)] text-[color:var(--color-severity-high)]',
-  medium:
-    'border-[color:color-mix(in_srgb,var(--color-severity-medium)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-medium)_12%,transparent)] text-[color:var(--color-severity-medium)]',
-  low: 'border-[color:color-mix(in_srgb,var(--color-severity-low)_55%,transparent)] bg-[color:color-mix(in_srgb,var(--color-severity-low)_12%,transparent)] text-[color:var(--color-severity-low)]',
 };
 
-const STATUS_STYLES: Record<SessionStatus, string> = {
-  active:
-    'border-kali-severity-low/45 bg-[color:color-mix(in_srgb,var(--color-severity-low)_14%,transparent)] text-kali-severity-low',
-  queued:
-    'border-kali-severity-medium/45 bg-[color:color-mix(in_srgb,var(--color-severity-medium)_14%,transparent)] text-kali-severity-medium',
-  complete:
-    'border-kali-accent/50 bg-[color:color-mix(in_srgb,var(--color-accent)_16%,transparent)] text-kali-accent',
+const PRESET_CUSTOM_ID = 'custom';
+
+const HOST_KEY_POLICIES: Array<{ value: SSHConfig['strictHostKeyChecking']; label: string; helper: string }> = [
+  { value: '', label: 'Default (ask)', helper: 'Prompt when a host key is new or changed.' },
+  { value: 'accept-new', label: 'Accept new', helper: 'Automatically trust new host keys.' },
+  { value: 'yes', label: 'Strict yes', helper: 'Reject unknown host keys.' },
+  { value: 'no', label: 'Strict no', helper: 'Disable host key checking entirely.' },
+  { value: 'ask', label: 'Ask every time', helper: 'Always prompt before writing host keys.' },
+];
+
+const LOG_LEVEL_OPTIONS: Array<{ value: SSHConfig['logLevel']; label: string }> = [
+  { value: '', label: 'Default' },
+  { value: 'QUIET', label: 'QUIET' },
+  { value: 'FATAL', label: 'FATAL' },
+  { value: 'ERROR', label: 'ERROR' },
+  { value: 'INFO', label: 'INFO' },
+  { value: 'VERBOSE', label: 'VERBOSE' },
+  { value: 'DEBUG', label: 'DEBUG' },
+  { value: 'DEBUG1', label: 'DEBUG1' },
+  { value: 'DEBUG2', label: 'DEBUG2' },
+  { value: 'DEBUG3', label: 'DEBUG3' },
+];
+
+const CommandPreviewPanel: React.FC<{
+  command: string;
+  previewCommand: string;
+  isReady: boolean;
+  copyState: CopyState;
+  onCopy: () => void;
+  onExportCommand: () => void;
+  onExportConfig: () => void;
+}> = ({ command, previewCommand, isReady, copyState, onCopy, onExportCommand, onExportConfig }) => {
+  const statusMessage =
+    copyState === 'copied'
+      ? 'Command copied to clipboard.'
+      : copyState === 'error'
+        ? 'Clipboard unavailable. Try manual copy.'
+        : '';
+
+  return (
+    <section className="rounded-2xl border border-kali-primary/30 bg-[var(--kali-panel)] shadow-lg">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-kali-primary/20 px-6 py-4">
+        <div>
+          <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
+            Preview
+          </span>
+          <h2 className="mt-2 text-base font-semibold text-kali-primary">Command preview</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onCopy}
+            disabled={!isReady}
+            className="rounded border border-kali-accent/60 bg-kali-accent/90 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-inverse transition hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:border-kali-accent/20 disabled:bg-kali-accent/20 disabled:opacity-50"
+          >
+            Copy command
+          </button>
+          <button
+            type="button"
+            onClick={onExportCommand}
+            disabled={!isReady}
+            className="rounded border border-kali-accent/50 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-accent transition hover:bg-kali-accent/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:border-kali-accent/15 disabled:text-kali-accent/40 disabled:opacity-60"
+          >
+            Export command
+          </button>
+          <button
+            type="button"
+            onClick={onExportConfig}
+            className="rounded border border-kali-primary/50 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-primary transition hover:bg-kali-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+          >
+            Export config
+          </button>
+        </div>
+      </header>
+      <div className="px-6 pb-6 pt-5">
+        <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--color-terminal)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-terminal)_90%,transparent_10%)] p-4">
+          <pre
+            className="max-h-48 overflow-auto text-sm leading-relaxed text-[color:var(--color-terminal)]"
+            aria-live="polite"
+            aria-label="SSH command preview"
+          >
+            {isReady ? command : previewCommand || 'ssh <host>'}
+          </pre>
+        </div>
+        <div className="mt-3 min-h-[1.5rem] text-xs" role="status" aria-live="polite">
+          {statusMessage && (
+            <span
+              className={`inline-flex rounded-full border px-3 py-1 font-semibold ${
+                copyState === 'copied'
+                  ? 'border-kali-severity-low/45 bg-[color:color-mix(in_srgb,var(--color-severity-low)_16%,transparent)] text-kali-severity-low'
+                  : 'border-kali-severity-high/45 bg-[color:color-mix(in_srgb,var(--color-severity-high)_16%,transparent)] text-kali-severity-high'
+              }`}
+            >
+              {statusMessage}
+            </span>
+          )}
+        </div>
+      </div>
+    </section>
+  );
 };
 
-const SESSION_SUMMARY: SessionSummaryCard[] = [
-  {
-    id: 'entry-node',
-    label: 'Entry node',
-    value: 'bounty.box:2222',
-    context: 'Gateway hardened with verbose logging and MFA audit trail.',
-    status: 'active',
-  },
-  {
-    id: 'credential',
-    label: 'Credential source',
-    value: '~/.ssh/bug-bounty (ed25519)',
-    context: 'Passphrase-protected key stored in local agent cache for 15m.',
-    status: 'complete',
-  },
-  {
-    id: 'pivot',
-    label: 'Pivot target',
-    value: 'internal-app@10.13.37.5',
-    context: 'Awaiting jump-host approval prior to port forwarding.',
-    status: 'queued',
-  },
-];
+const CommandBreakdownPanel: React.FC<{ segments: SSHCommandSegment[] }> = ({ segments }) => (
+  <section className="rounded-2xl border border-kali-primary/30 bg-[var(--kali-panel)] shadow-lg">
+    <header className="border-b border-kali-primary/20 px-6 py-4">
+      <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
+        Breakdown
+      </span>
+      <h2 className="mt-2 text-base font-semibold text-kali-primary">Command breakdown</h2>
+      <p className="mt-2 text-xs text-kali-text text-opacity-70">
+        Each flag is explained so you can audit the command before using it.
+      </p>
+    </header>
+    <div className="space-y-3 px-6 pb-6 pt-5">
+      {segments.map((segment) => (
+        <article
+          key={segment.id}
+          className="rounded-lg border border-kali-primary/20 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-kali-primary">{segment.label}</h3>
+            {segment.isPlaceholder && (
+              <span className="rounded-full border border-kali-severity-medium/50 bg-kali-severity-medium/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-wide text-kali-severity-medium">
+                Required
+              </span>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-kali-text text-opacity-70">{segment.description}</p>
+          <div className="mt-3 rounded-md border border-[color:color-mix(in_srgb,var(--color-terminal)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-terminal)_88%,transparent_12%)] px-3 py-2">
+            <span className="font-mono text-xs text-[color:var(--color-terminal)]">{segment.segment}</span>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+);
 
-const COMMAND_LOG: CommandLogEntry[] = [
-  {
-    id: 'connect',
-    timestamp: '00:00:02',
-    command: 'ssh -p 2222 pentest@bounty.box -i ~/.ssh/bug-bounty -C -v',
-    narrative: 'Initial connection to the hardened jump box negotiated Ed25519 keys and enabled verbose logging.',
-    status: 'complete',
-  },
-  {
-    id: 'agent-check',
-    timestamp: '00:00:11',
-    command: 'ssh-add -L | grep bounty',
-    narrative: 'Confirmed the agent holds the scoped key material before forwarding to downstream pivots.',
-    status: 'complete',
-  },
-  {
-    id: 'pivot-attempt',
-    timestamp: '00:01:27',
-    command: 'ssh internal-app@10.13.37.5 -J pentest@bounty.box -o ServerAliveInterval=60',
-    narrative: 'Queued pivot into the internal application node. Awaiting bastion approval and port checks.',
-    status: 'queued',
-  },
-];
+const SafetyNotesPanel: React.FC = () => (
+  <section className="rounded-2xl border border-kali-primary/30 bg-[var(--kali-panel)] shadow-lg">
+    <header className="border-b border-kali-primary/20 px-6 py-4">
+      <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
+        Safety
+      </span>
+      <h2 className="mt-2 text-base font-semibold text-kali-primary">Safety & notes</h2>
+    </header>
+    <div className="space-y-3 px-6 pb-6 pt-5 text-sm text-kali-text text-opacity-80">
+      <p>Only connect to systems you own or have explicit authorization to access.</p>
+      <p>
+        This builder never initiates connections; it only assembles a command for review.
+      </p>
+    </div>
+  </section>
+);
 
-const MITIGATION_NOTES: MitigationNote[] = [
-  {
-    id: 'key-rotation',
-    title: 'Rotate shared jump-box keys',
-    detail: 'Shorten the validity window for the bug bounty key pair and alert on unused authorized_keys entries.',
-    severity: 'high',
-  },
-  {
-    id: 'agent-forward',
-    title: 'Restrict agent forwarding scope',
-    detail: 'Limit agent forwarding to approved hosts and enforce per-hop confirmation prompts.',
-    severity: 'medium',
-  },
-  {
-    id: 'session-logging',
-    title: 'Enrich session logging',
-    detail: 'Stream SSH session metadata into the SIEM with correlation IDs to accelerate investigations.',
-    severity: 'low',
-  },
-];
+const TimelinePanel: React.FC<{ steps: TimelineStep[] }> = ({ steps }) => (
+  <section className="rounded-2xl border border-kali-primary/30 bg-[var(--kali-panel)] shadow-lg">
+    <header className="border-b border-kali-primary/20 px-6 py-4">
+      <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
+        Timeline
+      </span>
+      <h2 className="mt-2 text-base font-semibold text-kali-primary">Compose → Options → Ready</h2>
+    </header>
+    <ol className="space-y-4 px-6 pb-6 pt-5">
+      {steps.map((step, index) => (
+        <li key={step.id} className="flex gap-3">
+          <div className="flex flex-col items-center">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full border border-kali-primary/40 bg-kali-primary/10 text-[0.65rem] font-semibold text-kali-primary">
+              {index + 1}
+            </span>
+            {index < steps.length - 1 && (
+              <span className="mt-1 h-full w-px bg-kali-primary/30" />
+            )}
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-kali-primary">{step.title}</h3>
+            <p className="mt-1 text-xs text-kali-text text-opacity-70">{step.detail}</p>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </section>
+);
 
-const SSHBuilder: React.FC = () => {
+export const SSHBuilder: React.FC = () => {
   const [config, setConfig] = useState<SSHConfig>(DEFAULT_SSH_CONFIG);
-  const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [selectedPreset, setSelectedPreset] = useState<string>(PRESET_CUSTOM_ID);
   const [copyState, setCopyState] = useState<CopyState>('idle');
 
   const validationErrors = useMemo(() => validateSSHConfig(config), [config]);
   const isValid = useMemo(() => Object.keys(validationErrors).length === 0, [validationErrors]);
   const command = useMemo(() => buildSSHCommand(config), [config]);
+  const previewParts = useMemo(() => buildSSHCommandParts(config, { includePlaceholder: true }), [config]);
+  const previewCommand = useMemo(
+    () => previewParts.segments.map((segment) => segment.segment).join(' '),
+    [previewParts]
+  );
 
-  const updateField = <Key extends keyof SSHConfig>(key: Key, value: SSHConfig[Key]) => {
-    setConfig((current) => ({ ...current, [key]: value }));
-    setSelectedPreset('');
-    setCopyState('idle');
-  };
+  const breakdownSegments = useMemo(
+    () => previewParts.segments.filter((segment) => segment.kind !== 'command'),
+    [previewParts]
+  );
 
-  const applyPreset = (presetId: string) => {
+  useEffect(() => {
+    if (copyState === 'idle') {
+      return;
+    }
+    const timer = window.setTimeout(() => setCopyState('idle'), 2400);
+    return () => window.clearTimeout(timer);
+  }, [copyState]);
+
+  const markCustom = useCallback(() => {
+    setSelectedPreset((current) => (current === PRESET_CUSTOM_ID ? current : PRESET_CUSTOM_ID));
+  }, []);
+
+  const updateField = useCallback(
+    <Key extends keyof SSHConfig>(key: Key, value: SSHConfig[Key]) => {
+      markCustom();
+      setConfig((current) => ({ ...current, [key]: value }));
+      setCopyState('idle');
+    },
+    [markCustom]
+  );
+
+  const applyPreset = useCallback((presetId: string) => {
     setSelectedPreset(presetId);
     const preset = SSH_PRESETS.find((item) => item.id === presetId);
     if (preset) {
@@ -142,7 +245,13 @@ const SSHBuilder: React.FC = () => {
       setConfig({ ...DEFAULT_SSH_CONFIG });
     }
     setCopyState('idle');
-  };
+  }, []);
+
+  const handleReset = useCallback(() => {
+    setConfig({ ...DEFAULT_SSH_CONFIG });
+    setSelectedPreset(PRESET_CUSTOM_ID);
+    setCopyState('idle');
+  }, []);
 
   const handleCopy = async () => {
     if (!isValid || !command) {
@@ -162,7 +271,7 @@ const SSHBuilder: React.FC = () => {
     }
   };
 
-  const handleExport = () => {
+  const handleExportCommand = () => {
     if (!isValid || !command) {
       return;
     }
@@ -177,273 +286,407 @@ const SSHBuilder: React.FC = () => {
     setCopyState('idle');
   };
 
+  const handleExportConfig = () => {
+    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'ssh-config.json';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setCopyState('idle');
+  };
+
+  const timelineSteps = useMemo<TimelineStep[]>(() => {
+    const target = config.host.trim() || '<host>';
+    const authSummary = config.identityFile.trim() ? 'Identity file loaded' : 'Default SSH identity';
+    const optionSummary = [
+      config.useCompression ? 'Compression enabled' : 'No compression',
+      config.enableAgentForwarding ? 'Agent forwarding on' : 'Agent forwarding off',
+      config.jumpHost.trim() ? `Jump via ${config.jumpHost.trim()}` : 'Direct connection',
+    ].join(' · ');
+
+    return [
+      {
+        id: 'compose',
+        title: 'Compose destination',
+        detail: `${config.user.trim() ? `${config.user.trim()}@` : ''}${target}`,
+      },
+      {
+        id: 'auth',
+        title: 'Authentication prep',
+        detail: authSummary,
+      },
+      {
+        id: 'options',
+        title: 'Session options',
+        detail: optionSummary,
+      },
+      {
+        id: 'ready',
+        title: 'Ready to launch',
+        detail: 'Review the command and run it manually on an authorized system.',
+      },
+    ];
+  }, [config]);
+
+  const isCommandReady = isValid && command.trim().length > 0 && command !== 'ssh';
+
+  const selectedPresetDescription =
+    SSH_PRESETS.find((preset) => preset.id === selectedPreset)?.description ?? '';
+
   return (
-    <div className="h-full overflow-auto bg-[color:var(--kali-panel)] p-6 text-[color:var(--color-text)]">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <header className="space-y-3">
-          <h1 className="text-2xl font-semibold">SSH Command Builder</h1>
-          <p className="text-sm text-kali-severity-medium">
-            Generate an SSH command without executing it. Learn more at{' '}
-            <a
-              href="https://www.openssh.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline text-kali-accent"
-            >
-              the OpenSSH project page
-            </a>
-            .
-          </p>
-        </header>
-        <div className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-4 shadow-lg shadow-black/30">
-          <label htmlFor="ssh-preset" className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[color:var(--color-text)]/85">
-            Preset library
-          </label>
-          <select
-            id="ssh-preset"
-            value={selectedPreset}
-            onChange={(event) => applyPreset(event.target.value)}
-            className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] p-2 text-sm text-[color:var(--color-text)] focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+    <div className="h-full overflow-auto bg-kali-background p-6 text-kali-text">
+      <header className="mb-6 space-y-3">
+        <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
+          SSH Builder
+        </span>
+        <h1 className="text-2xl font-semibold">SSH Command Builder</h1>
+        <p className="text-sm text-kali-text text-opacity-70">
+          Generate an SSH command without executing it. Learn more at{' '}
+          <a
+            href="https://www.openssh.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-kali-primary underline decoration-dotted underline-offset-4 hover:opacity-80"
           >
-            <option value="">Custom configuration</option>
-            {SSH_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>
-                {preset.label}
-              </option>
-            ))}
-          </select>
-          {selectedPreset && (
-            <p className="mt-3 text-xs text-[color:var(--color-text)]/70">
-              {SSH_PRESETS.find((preset) => preset.id === selectedPreset)?.description}
-            </p>
-          )}
-        </div>
-        <form
-          onSubmit={(event) => event.preventDefault()}
-          className="space-y-4 rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_85%,transparent_15%)] p-4 shadow-lg shadow-black/30"
-        >
-          <div>
-            <label id="ssh-user-label" htmlFor="ssh-user" className="mb-1 block text-sm font-medium">
-              Username
-            </label>
-            <input
-              id="ssh-user"
-              type="text"
-              className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-[color:var(--color-text)] focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
-              value={config.user}
-              onChange={(event) => updateField('user', event.target.value)}
-              autoComplete="username"
-              aria-labelledby="ssh-user-label"
-            />
-          </div>
-          <div>
-            <label id="ssh-host-label" htmlFor="ssh-host" className="mb-1 block text-sm font-medium">
-              Host <span className="text-kali-severity-high">*</span>
-            </label>
-            <input
-              id="ssh-host"
-              type="text"
-              className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-[color:var(--color-text)] focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
-              value={config.host}
-              onChange={(event) => updateField('host', event.target.value)}
-              placeholder="server.example.com"
-              required
-              aria-invalid={validationErrors.host ? 'true' : 'false'}
-              aria-describedby={validationErrors.host ? 'ssh-host-error' : undefined}
-              aria-labelledby="ssh-host-label"
-            />
-            {validationErrors.host && (
-              <p id="ssh-host-error" className="mt-1 text-xs text-kali-severity-high">
-                {validationErrors.host}
-              </p>
-            )}
-          </div>
-          <div>
-            <label id="ssh-port-label" htmlFor="ssh-port" className="mb-1 block text-sm font-medium">
-              Port
-            </label>
-            <input
-              id="ssh-port"
-              type="number"
-              className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-[color:var(--color-text)] focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
-              value={config.port}
-              onChange={(event) => updateField('port', event.target.value)}
-              min={1}
-              max={65535}
-              placeholder="22"
-              aria-invalid={validationErrors.port ? 'true' : 'false'}
-              aria-describedby={validationErrors.port ? 'ssh-port-error' : undefined}
-              aria-labelledby="ssh-port-label"
-            />
-            {validationErrors.port && (
-              <p id="ssh-port-error" className="mt-1 text-xs text-kali-severity-high">
-                {validationErrors.port}
-              </p>
-            )}
-          </div>
-          <div>
-            <label id="ssh-identity-label" htmlFor="ssh-identity" className="mb-1 block text-sm font-medium">
-              Identity file
-            </label>
-            <input
-              id="ssh-identity"
-              type="text"
-              className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-[color:var(--color-text)] focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
-              value={config.identityFile}
-              onChange={(event) => updateField('identityFile', event.target.value)}
-              placeholder="~/.ssh/id_ed25519"
-              aria-labelledby="ssh-identity-label"
-            />
-          </div>
-          <fieldset className="space-y-2">
-            <legend className="text-sm font-medium">Session options</legend>
-            <label className="flex items-center space-x-2 text-sm">
-              <input
-                type="checkbox"
-                checked={config.useCompression}
-                onChange={(event) => updateField('useCompression', event.target.checked)}
-                className="h-4 w-4 rounded border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] accent-kali-accent"
-                aria-labelledby="ssh-compression-label"
-              />
-              <span id="ssh-compression-label">Enable compression (-C)</span>
-            </label>
-            <label className="flex items-center space-x-2 text-sm">
-              <input
-                type="checkbox"
-                checked={config.enableAgentForwarding}
-                onChange={(event) => updateField('enableAgentForwarding', event.target.checked)}
-                className="h-4 w-4 rounded border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] accent-kali-accent"
-                aria-labelledby="ssh-agent-forward-label"
-              />
-              <span id="ssh-agent-forward-label">Forward SSH agent (-A)</span>
-            </label>
-          </fieldset>
-          <div>
-            <label id="ssh-extra-label" htmlFor="ssh-extra" className="mb-1 block text-sm font-medium">
-              Extra options
-            </label>
-            <textarea
-              id="ssh-extra"
-              className="min-h-[4rem] w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-[color:var(--color-text)] focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
-              value={config.extraOptions}
-              onChange={(event) => updateField('extraOptions', event.target.value)}
-              placeholder="-o StrictHostKeyChecking=accept-new"
-              aria-labelledby="ssh-extra-label"
-            />
-            <p className="mt-1 text-xs text-[color:var(--color-text)]/60">
-              Options are appended to the command. Separate multiple flags with spaces or new lines.
-            </p>
-          </div>
-        </form>
-        <section className="space-y-6">
-          <div className="rounded-lg border border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent_15%)] bg-[color:var(--kali-terminal)] p-4 shadow-lg shadow-black/30">
-            <header className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Command Preview</h2>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  disabled={!isValid || command === 'ssh'}
-                  className="rounded border border-kali-accent/60 bg-kali-accent/90 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-inverse transition hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:border-kali-accent/20 disabled:bg-kali-accent/20 disabled:opacity-50"
-                >
-                  Copy command
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExport}
-                  disabled={!isValid || command === 'ssh'}
-                  className="rounded border border-kali-accent/50 bg-transparent px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-accent transition hover:bg-kali-accent/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus disabled:cursor-not-allowed disabled:border-kali-accent/15 disabled:text-kali-accent/40 disabled:opacity-60"
-                >
-                  Export to file
-                </button>
-              </div>
-            </header>
-            <div className="mt-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-terminal)_35%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-terminal)_90%,transparent_10%)] p-4">
-              <pre className="max-h-48 overflow-auto text-sm leading-relaxed text-[color:var(--color-terminal)]" aria-live="polite">
-                {isValid && command !== 'ssh' ? command : '# Fill in the form to generate a command'}
-              </pre>
+            the OpenSSH project page
+          </a>
+          .
+        </p>
+      </header>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <section className="rounded-2xl border border-kali-primary/30 bg-[var(--kali-panel)] shadow-lg">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-kali-primary/20 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center rounded-full border border-kali-primary/40 bg-kali-primary/10 px-2 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.28em] text-kali-primary">
+                Builder
+              </span>
+              <h2 className="text-sm font-semibold text-kali-primary">Compose simulated SSH sessions</h2>
             </div>
-            <div className="mt-3 flex flex-wrap gap-3 text-xs">
-              {copyState === 'copied' && (
-                <span className="rounded-full border border-kali-severity-low/45 bg-[color:color-mix(in_srgb,var(--color-severity-low)_16%,transparent)] px-3 py-1 font-semibold text-kali-severity-low">
-                  Command copied to clipboard.
-                </span>
-              )}
-              {copyState === 'error' && (
-                <span className="rounded-full border border-kali-severity-high/45 bg-[color:color-mix(in_srgb,var(--color-severity-high)_16%,transparent)] px-3 py-1 font-semibold text-kali-severity-high">
-                  Clipboard unavailable. Try manual copy.
-                </span>
+            <button
+              type="button"
+              onClick={handleReset}
+              className="rounded border border-kali-primary/50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-kali-primary transition hover:bg-kali-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            >
+              Reset defaults
+            </button>
+          </div>
+          <form onSubmit={(event) => event.preventDefault()} className="space-y-6 px-6 pb-6 pt-5">
+            <div>
+              <label htmlFor="ssh-preset" className="text-xs font-semibold uppercase tracking-wide text-kali-text text-opacity-80">
+                Preset workflow
+              </label>
+              <select
+                id="ssh-preset"
+                value={selectedPreset}
+                onChange={(event) => applyPreset(event.target.value)}
+                className="mt-2 w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] p-2 text-sm text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+              >
+                {SSH_PRESETS.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label}
+                  </option>
+                ))}
+              </select>
+              {selectedPresetDescription && (
+                <p className="mt-2 text-xs text-kali-text text-opacity-60">{selectedPresetDescription}</p>
               )}
             </div>
-          </div>
-          <div className="space-y-4">
-            <div>
-              <h2 className="mb-2 text-lg font-semibold">Session Summary</h2>
-              <div className="grid gap-4 md:grid-cols-3">
-                {SESSION_SUMMARY.map((card) => (
-                  <article
-                    key={card.id}
-                    className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-4 shadow-lg shadow-black/30"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--color-text)]">
-                        {card.label}
-                      </h3>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${STATUS_STYLES[card.status]}`}>
-                        {card.status}
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm font-mono text-kali-accent">{card.value}</p>
-                    <p className="mt-2 text-xs text-[color:var(--color-text)]/70">{card.context}</p>
-                  </article>
-                ))}
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-kali-primary">Connection target</h3>
+                <p className="text-xs text-kali-text text-opacity-60">
+                  Define the remote host and optional account used for the session.
+                </p>
               </div>
-            </div>
-            <div>
-              <h2 className="mb-2 text-lg font-semibold">Command Log</h2>
-              <div className="space-y-3">
-                {COMMAND_LOG.map((entry) => (
-                  <article
-                    key={entry.id}
-                    className="rounded-lg border border-[color:color-mix(in_srgb,var(--color-terminal)_28%,var(--kali-panel-border)_72%)] bg-[color:color-mix(in_srgb,var(--kali-terminal)_92%,transparent_8%)] p-4 shadow-lg shadow-black/30"
-                  >
-                    <header className="flex flex-wrap items-center justify-between gap-2 text-xs text-[color:var(--color-text)]/70">
-                      <span className="font-semibold uppercase tracking-wide">{entry.timestamp}</span>
-                      <span className={`rounded-full border px-3 py-1 font-semibold uppercase tracking-wide ${STATUS_STYLES[entry.status]}`}>
-                        {entry.status}
-                      </span>
-                    </header>
-                    <div className="mt-3 rounded-lg border border-[color:color-mix(in_srgb,var(--color-terminal)_40%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-terminal)_92%,transparent_8%)] p-3">
-                      <pre className="overflow-auto text-[0.8rem] leading-relaxed text-[color:var(--color-terminal)]">
-                        {entry.command}
-                      </pre>
-                    </div>
-                    <p className="mt-3 text-sm text-[color:var(--color-text)]/80">{entry.narrative}</p>
-                  </article>
-                ))}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label id="ssh-user-label" htmlFor="ssh-user" className="mb-1 block text-sm font-medium">
+                    Username
+                  </label>
+                  <input
+                    id="ssh-user"
+                    type="text"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.user}
+                    onChange={(event) => updateField('user', event.target.value)}
+                    autoComplete="username"
+                    aria-labelledby="ssh-user-label"
+                  />
+                  {validationErrors.user && (
+                    <p className="mt-1 text-xs text-kali-severity-high">{validationErrors.user}</p>
+                  )}
+                </div>
+                <div>
+                  <label id="ssh-host-label" htmlFor="ssh-host" className="mb-1 block text-sm font-medium">
+                    Host <span className="text-kali-severity-high">*</span>
+                  </label>
+                  <input
+                    id="ssh-host"
+                    type="text"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.host}
+                    onChange={(event) => updateField('host', event.target.value)}
+                    placeholder="server.example.com"
+                    required
+                    aria-invalid={validationErrors.host ? 'true' : 'false'}
+                    aria-describedby={validationErrors.host ? 'ssh-host-error' : undefined}
+                    aria-labelledby="ssh-host-label"
+                  />
+                  {validationErrors.host && (
+                    <p id="ssh-host-error" className="mt-1 text-xs text-kali-severity-high">
+                      {validationErrors.host}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label id="ssh-port-label" htmlFor="ssh-port" className="mb-1 block text-sm font-medium">
+                    Port
+                  </label>
+                  <input
+                    id="ssh-port"
+                    type="number"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.port}
+                    onChange={(event) => updateField('port', event.target.value)}
+                    min={1}
+                    max={65535}
+                    placeholder="22"
+                    aria-invalid={validationErrors.port ? 'true' : 'false'}
+                    aria-describedby={validationErrors.port ? 'ssh-port-error' : undefined}
+                    aria-labelledby="ssh-port-label"
+                  />
+                  {validationErrors.port && (
+                    <p id="ssh-port-error" className="mt-1 text-xs text-kali-severity-high">
+                      {validationErrors.port}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label id="ssh-identity-label" htmlFor="ssh-identity" className="mb-1 block text-sm font-medium">
+                    Identity file
+                  </label>
+                  <input
+                    id="ssh-identity"
+                    type="text"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.identityFile}
+                    onChange={(event) => updateField('identityFile', event.target.value)}
+                    placeholder="~/.ssh/id_ed25519"
+                    aria-labelledby="ssh-identity-label"
+                  />
+                  {validationErrors.identityFile && (
+                    <p className="mt-1 text-xs text-kali-severity-high">{validationErrors.identityFile}</p>
+                  )}
+                </div>
               </div>
-            </div>
-            <div>
-              <h2 className="mb-2 text-lg font-semibold">Mitigation Notes</h2>
-              <div className="space-y-3">
-                {MITIGATION_NOTES.map((note) => (
-                  <article
-                    key={note.id}
-                    className="rounded-lg border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-4 shadow-lg shadow-black/30"
-                  >
-                    <header className="flex items-center justify-between gap-2">
-                      <h3 className="text-base font-semibold text-[color:var(--color-text)]">{note.title}</h3>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide ${SEVERITY_STYLES[note.severity]}`}>
-                        {note.severity}
-                      </span>
-                    </header>
-                    <p className="mt-2 text-sm text-[color:var(--color-text)]/80">{note.detail}</p>
-                  </article>
-                ))}
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-kali-primary">Session behavior</h3>
+                <p className="text-xs text-kali-text text-opacity-60">
+                  Toggle common SSH switches used during interactive sessions.
+                </p>
               </div>
-            </div>
-          </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={config.useCompression}
+                    onChange={(event) => updateField('useCompression', event.target.checked)}
+                    className="h-4 w-4 rounded border-kali-primary/40 bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] accent-kali-accent"
+                    aria-labelledby="ssh-compression-label"
+                  />
+                  <span id="ssh-compression-label">Enable compression (-C)</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={config.enableAgentForwarding}
+                    onChange={(event) => updateField('enableAgentForwarding', event.target.checked)}
+                    className="h-4 w-4 rounded border-kali-primary/40 bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] accent-kali-accent"
+                    aria-labelledby="ssh-agent-forward-label"
+                  />
+                  <span id="ssh-agent-forward-label">Forward SSH agent (-A)</span>
+                </label>
+                <label className="flex items-center space-x-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={config.allocateTTY}
+                    onChange={(event) => updateField('allocateTTY', event.target.checked)}
+                    className="h-4 w-4 rounded border-kali-primary/40 bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] accent-kali-accent"
+                    aria-labelledby="ssh-tty-label"
+                  />
+                  <span id="ssh-tty-label">Force TTY allocation (-t)</span>
+                </label>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-kali-primary">Routing & jump hosts</h3>
+                <p className="text-xs text-kali-text text-opacity-60">
+                  Add a bastion host to route traffic through before reaching the target.
+                </p>
+              </div>
+              <div>
+                <label id="ssh-jump-label" htmlFor="ssh-jump" className="mb-1 block text-sm font-medium">
+                  Jump host (-J)
+                </label>
+                <input
+                  id="ssh-jump"
+                  type="text"
+                  className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                  value={config.jumpHost}
+                  onChange={(event) => updateField('jumpHost', event.target.value)}
+                  placeholder="bastion.example.com:22"
+                  aria-labelledby="ssh-jump-label"
+                />
+                {validationErrors.jumpHost && (
+                  <p className="mt-1 text-xs text-kali-severity-high">{validationErrors.jumpHost}</p>
+                )}
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-kali-primary">Hardening options</h3>
+                <p className="text-xs text-kali-text text-opacity-60">
+                  Map common -o settings to prevent mistakes and keep sessions resilient.
+                </p>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label htmlFor="ssh-host-key" className="mb-1 block text-sm font-medium">
+                    StrictHostKeyChecking
+                  </label>
+                  <select
+                    id="ssh-host-key"
+                    value={config.strictHostKeyChecking}
+                    onChange={(event) => updateField('strictHostKeyChecking', event.target.value as SSHConfig['strictHostKeyChecking'])}
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] p-2 text-sm text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                  >
+                    {HOST_KEY_POLICIES.map((option) => (
+                      <option key={option.value || 'default'} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs text-kali-text text-opacity-60">
+                    {HOST_KEY_POLICIES.find((option) => option.value === config.strictHostKeyChecking)?.helper}
+                  </p>
+                </div>
+                <div>
+                  <label htmlFor="ssh-log-level" className="mb-1 block text-sm font-medium">
+                    LogLevel
+                  </label>
+                  <select
+                    id="ssh-log-level"
+                    value={config.logLevel}
+                    onChange={(event) => updateField('logLevel', event.target.value as SSHConfig['logLevel'])}
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent_18%)] p-2 text-sm text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                  >
+                    {LOG_LEVEL_OPTIONS.map((option) => (
+                      <option key={option.value || 'default'} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label id="ssh-alive-interval-label" htmlFor="ssh-alive-interval" className="mb-1 block text-sm font-medium">
+                    ServerAliveInterval
+                  </label>
+                  <input
+                    id="ssh-alive-interval"
+                    type="number"
+                    min={1}
+                    placeholder="60"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.serverAliveInterval}
+                    onChange={(event) => updateField('serverAliveInterval', event.target.value)}
+                    aria-labelledby="ssh-alive-interval-label"
+                  />
+                  {validationErrors.serverAliveInterval && (
+                    <p className="mt-1 text-xs text-kali-severity-high">{validationErrors.serverAliveInterval}</p>
+                  )}
+                </div>
+                <div>
+                  <label id="ssh-alive-count-label" htmlFor="ssh-alive-count" className="mb-1 block text-sm font-medium">
+                    ServerAliveCountMax
+                  </label>
+                  <input
+                    id="ssh-alive-count"
+                    type="number"
+                    min={1}
+                    placeholder="3"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.serverAliveCountMax}
+                    onChange={(event) => updateField('serverAliveCountMax', event.target.value)}
+                    aria-labelledby="ssh-alive-count-label"
+                  />
+                  {validationErrors.serverAliveCountMax && (
+                    <p className="mt-1 text-xs text-kali-severity-high">{validationErrors.serverAliveCountMax}</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label id="ssh-known-hosts-label" htmlFor="ssh-known-hosts" className="mb-1 block text-sm font-medium">
+                    UserKnownHostsFile
+                  </label>
+                  <input
+                    id="ssh-known-hosts"
+                    type="text"
+                    placeholder="~/.ssh/known_hosts"
+                    className="w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                    value={config.userKnownHostsFile}
+                    onChange={(event) => updateField('userKnownHostsFile', event.target.value)}
+                    aria-labelledby="ssh-known-hosts-label"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="space-y-4">
+              <div>
+                <h3 className="text-sm font-semibold text-kali-primary">Extra options</h3>
+                <p className="text-xs text-kali-text text-opacity-60">
+                  Add any additional flags (one per line). They will remain before the destination host.
+                </p>
+              </div>
+              <div>
+                <label id="ssh-extra-label" htmlFor="ssh-extra" className="mb-1 block text-sm font-medium">
+                  Extra options
+                </label>
+                <textarea
+                  id="ssh-extra"
+                  className="min-h-[4rem] w-full rounded border border-kali-primary/30 bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent_12%)] p-2 text-kali-text focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
+                  value={config.extraOptions}
+                  onChange={(event) => updateField('extraOptions', event.target.value)}
+                  placeholder="-o StrictHostKeyChecking=accept-new"
+                  aria-labelledby="ssh-extra-label"
+                />
+              </div>
+            </section>
+          </form>
         </section>
+
+        <div className="space-y-6">
+          <CommandPreviewPanel
+            command={command}
+            previewCommand={previewCommand}
+            isReady={isCommandReady}
+            copyState={copyState}
+            onCopy={handleCopy}
+            onExportCommand={handleExportCommand}
+            onExportConfig={handleExportConfig}
+          />
+          <CommandBreakdownPanel segments={breakdownSegments} />
+          <TimelinePanel steps={timelineSteps} />
+          <SafetyNotesPanel />
+        </div>
       </div>
     </div>
   );

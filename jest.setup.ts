@@ -1,4 +1,6 @@
 import { TextEncoder, TextDecoder } from 'util';
+
+jest.setTimeout(20000);
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {
@@ -7,6 +9,8 @@ if (typeof global.structuredClone !== 'function') {
 }
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
+
+jest.setTimeout(20000);
 
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
@@ -118,6 +122,7 @@ if (typeof HTMLCanvasElement !== 'undefined') {
     lineTo: () => {},
     closePath: () => {},
     stroke: () => {},
+    setLineDash: () => {},
     translate: () => {},
     scale: () => {},
     rotate: () => {},

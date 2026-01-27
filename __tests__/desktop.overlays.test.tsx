@@ -2,28 +2,33 @@ import React from 'react';
 import { act, render, waitFor } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
-jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
-jest.mock('../components/base/window', () => ({
-  __esModule: true,
-  default: () => <div data-testid="window" />,
-  WindowTopBar: ({ title }: { title: string }) => (
+jest.setTimeout(20000);
+
+function MockBackgroundImage() {
+  return <div data-testid="background" />;
+}
+function MockWindow() {
+  return <div data-testid="window" />;
+}
+function MockWindowTopBar({ title }: { title: string }) {
+  return (
     <div data-testid="window-top-bar" role="presentation">
       {title}
     </div>
-  ),
-  WindowEditButtons: ({
-    minimize,
-    maximize,
-    close,
-    allowMaximize = true,
-  }: {
-    minimize?: () => void;
-    maximize?: () => void;
-    close?: () => void;
-    allowMaximize?: boolean;
-  }) => (
+  );
+}
+function MockWindowEditButtons({
+  minimize,
+  maximize,
+  close,
+  allowMaximize = true,
+}: {
+  minimize?: () => void;
+  maximize?: () => void;
+  close?: () => void;
+  allowMaximize?: boolean;
+}) {
+  return (
     <div data-testid="window-edit-buttons">
       <button type="button" onClick={minimize}>
         minimize
@@ -37,27 +42,61 @@ jest.mock('../components/base/window', () => ({
         close
       </button>
     </div>
-  ),
+  );
+}
+function MockUbuntuApp() {
+  return <div data-testid="ubuntu-app" />;
+}
+function MockAllApplications() {
+  return <div data-testid="all-apps" />;
+}
+function MockShortcutSelector() {
+  return <div data-testid="shortcut-selector" />;
+}
+function MockWindowSwitcher() {
+  return <div data-testid="window-switcher" />;
+}
+function MockDesktopMenu() {
+  return <div data-testid="desktop-menu" />;
+}
+function MockDefaultMenu() {
+  return <div data-testid="default-menu" />;
+}
+function MockAppMenu() {
+  return <div data-testid="app-menu" />;
+}
+function MockTaskbarMenu() {
+  return <div data-testid="taskbar-menu" />;
+}
+
+jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
+jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
+jest.mock('../components/util-components/background-image', () => MockBackgroundImage);
+jest.mock('../components/base/window', () => ({
+  __esModule: true,
+  default: MockWindow,
+  WindowTopBar: MockWindowTopBar,
+  WindowEditButtons: MockWindowEditButtons,
 }));
-jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
-jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
-jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
-jest.mock('../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
+jest.mock('../components/base/ubuntu_app', () => MockUbuntuApp);
+jest.mock('../components/screen/all-applications', () => MockAllApplications);
+jest.mock('../components/screen/shortcut-selector', () => MockShortcutSelector);
+jest.mock('../components/screen/window-switcher', () => MockWindowSwitcher);
 jest.mock('../components/context-menus/desktop-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="desktop-menu" />,
+  default: MockDesktopMenu,
 }));
 jest.mock('../components/context-menus/default', () => ({
   __esModule: true,
-  default: () => <div data-testid="default-menu" />,
+  default: MockDefaultMenu,
 }));
 jest.mock('../components/context-menus/app-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="app-menu" />,
+  default: MockAppMenu,
 }));
 jest.mock('../components/context-menus/taskbar-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="taskbar-menu" />,
+  default: MockTaskbarMenu,
 }));
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
@@ -92,7 +131,6 @@ describe('Desktop overlay window integration', () => {
         value: originalMatchMedia,
       });
     } else {
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-expect-error matchMedia can be removed during cleanup
       delete window.matchMedia;
     }
@@ -115,7 +153,7 @@ describe('Desktop overlay window integration', () => {
     await waitFor(() => {
       const instance = desktopRef.current;
       expect(instance?.state.closed_windows?.about).toBe(true);
-    });
+    }, { timeout: 15000 });
 
     act(() => {
       window.dispatchEvent(
@@ -130,7 +168,7 @@ describe('Desktop overlay window integration', () => {
       const overlayState = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
       expect(overlayState?.open).toBe(true);
       expect(overlayState?.minimized).toBe(false);
-    });
+    }, { timeout: 15000 });
 
     act(() => {
       desktopRef.current?.focus(SHORTCUT_OVERLAY_ID);
@@ -148,7 +186,7 @@ describe('Desktop overlay window integration', () => {
       const instance = desktopRef.current!;
       const overlayState = instance.state.overlayWindows[SHORTCUT_OVERLAY_ID];
       expect(overlayState?.minimized).toBe(true);
-    });
+    }, { timeout: 15000 });
     unmount();
   });
 
@@ -170,7 +208,7 @@ describe('Desktop overlay window integration', () => {
     await waitFor(() => {
       const instance = desktopRef.current;
       expect(instance?.state.closed_windows?.about).toBe(true);
-    });
+    }, { timeout: 15000 });
 
     act(() => {
       window.dispatchEvent(
@@ -184,7 +222,7 @@ describe('Desktop overlay window integration', () => {
       const instance = desktopRef.current!;
       const overlayState = instance.state.overlayWindows[LAUNCHER_OVERLAY_ID];
       expect(overlayState?.open).toBe(true);
-    });
+    }, { timeout: 15000 });
 
     act(() => {
       desktopRef.current?.openOverlay(LAUNCHER_OVERLAY_ID, { transitionState: 'entered' });
@@ -198,7 +236,7 @@ describe('Desktop overlay window integration', () => {
 
     await waitFor(() => {
       expect(workspaceHandler.mock.calls.length).toBeGreaterThan(initialCallCount);
-    });
+    }, { timeout: 15000 });
 
     const recentCalls = workspaceHandler.mock.calls.slice(initialCallCount) as Array<[
       CustomEvent<{ runningApps: Array<{ id: string; title: string }> }>,

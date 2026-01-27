@@ -40,9 +40,8 @@ describe('QR app generator', () => {
     render(<QR />);
 
     expect(screen.getByRole('button', { name: /Download PNG/i })).toBeInTheDocument();
-    const helperCopy = screen.getAllByText((content) =>
-      content.startsWith('Download or share this code'),
-    );
-    expect(helperCopy.length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Download or share this code, then open your phone camera/i).length,
+    ).toBeGreaterThan(0);
   });
 });

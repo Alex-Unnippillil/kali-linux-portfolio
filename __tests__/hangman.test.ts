@@ -53,8 +53,12 @@ describe('hangman engine', () => {
     const catGame = createGame({ category: 'family' });
     expect(FAMILY_WORDS.includes(catGame.word)).toBe(true);
 
-    importWordList('colors', ['red', 'blue']);
-    const customGame = createGame({ category: 'colors' });
+    const nextDict = importWordList('colors', ['red', 'blue']);
+    const customGame = createGame({
+      category: 'colors',
+      dictionaries: nextDict,
+      rng: () => 0.4,
+    });
     expect(['red', 'blue']).toContain(customGame.word);
   });
 });
