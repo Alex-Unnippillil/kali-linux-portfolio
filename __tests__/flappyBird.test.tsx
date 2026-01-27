@@ -26,4 +26,11 @@ describe('FlappyBird', () => {
     fireEvent.click(screen.getByText('Start'));
     expect(await screen.findByText('Score: 0')).toBeInTheDocument();
   });
+
+  it('shows settings controls in the menu overlay', () => {
+    render(<FlappyBird />);
+    expect(screen.getByLabelText('Difficulty')).toBeInTheDocument();
+    expect(screen.getByLabelText('Practice mode')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ghost run')).toBeInTheDocument();
+  });
 });

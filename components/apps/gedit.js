@@ -154,18 +154,18 @@ export class Gedit extends Component {
                 <div className="relative flex-grow flex flex-col bg-ub-gedit-dark font-normal windowMainScreen">
                     <div className="absolute left-0 top-0 h-full px-2 bg-ub-gedit-darker"></div>
                     <div className="relative">
-                        <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} onBlur={this.handleBlur('name')} aria-invalid={nameInvalid} aria-describedby="name-status" className={`w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent ${nameInvalid ? 'border border-red-500' : nameValid ? 'border border-emerald-500' : ''}`} placeholder="Your Email / Name :" spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-name" value={this.state.name} onChange={this.handleChange('name')} onBlur={this.handleBlur('name')} aria-label="Your email or name" aria-invalid={nameInvalid} aria-describedby="name-status" className={`w-full text-ubt-gedit-orange focus:bg-ub-gedit-light outline-none font-medium text-sm pl-6 py-0.5 bg-transparent ${nameInvalid ? 'border border-red-500' : nameValid ? 'border border-emerald-500' : ''}`} placeholder="Your Email / Name :" spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold light text-sm text-ubt-gedit-blue">1</span>
                         <p id="name-status" className={`text-xs mt-1 ${nameInvalid ? 'text-red-400' : nameValid ? 'text-emerald-400' : 'sr-only'}`} aria-live="polite">
                             {nameInvalid ? 'Name must not be empty' : nameValid ? 'Looks good' : ''}
                         </p>
                     </div>
                     <div className="relative">
-                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
+                        <input id="sender-subject" value={this.state.subject} onChange={this.handleChange('subject')} aria-label="Subject" className=" w-full my-1 text-ubt-gedit-blue focus:bg-ub-gedit-light gedit-subject outline-none text-sm font-normal pl-6 py-0.5 bg-transparent" placeholder="subject (may be a feedback for this website!)" spellCheck="false" autoComplete="off" type="text" />
                         <span className="absolute left-1 top-1/2 transform -translate-y-1/2 font-bold  text-sm text-ubt-gedit-blue">2</span>
                     </div>
                     <div className="relative flex-grow">
-                        <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} onBlur={this.handleBlur('message')} aria-invalid={messageInvalid} aria-describedby="message-status" className={`w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent ${messageInvalid ? 'border border-red-500' : messageValid ? 'border border-emerald-500' : ''}`} placeholder="Message" spellCheck="false" autoComplete="none" type="text" />
+                        <textarea id="sender-message" value={this.state.message} onChange={this.handleChange('message')} onBlur={this.handleBlur('message')} aria-label="Message" aria-invalid={messageInvalid} aria-describedby="message-status" className={`w-full gedit-message font-light text-sm resize-none h-full windowMainScreen outline-none tracking-wider pl-6 py-1 bg-transparent ${messageInvalid ? 'border border-red-500' : messageValid ? 'border border-emerald-500' : ''}`} placeholder="Message" spellCheck="false" autoComplete="none" type="text" />
                         <span className="absolute left-1 top-1 font-bold  text-sm text-ubt-gedit-blue">3</span>
                         <p id="message-status" className={`text-xs mt-1 ${messageInvalid ? 'text-red-400' : messageValid ? 'text-emerald-400' : 'sr-only'}`} aria-live="polite">
                             {messageInvalid ? 'Message must not be empty' : messageValid ? 'Looks good' : ''}

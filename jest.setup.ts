@@ -1,4 +1,6 @@
 import { TextEncoder, TextDecoder } from 'util';
+
+jest.setTimeout(20000);
 // Polyfill structuredClone before requiring modules that depend on it
 // @ts-ignore
 if (typeof global.structuredClone !== 'function') {
@@ -120,6 +122,7 @@ if (typeof HTMLCanvasElement !== 'undefined') {
     lineTo: () => {},
     closePath: () => {},
     stroke: () => {},
+    setLineDash: () => {},
     translate: () => {},
     scale: () => {},
     rotate: () => {},

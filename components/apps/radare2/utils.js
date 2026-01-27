@@ -1,9 +1,31 @@
 export const SNIPPET_KEY = 'r2-snippets';
+const NOTES_PREFIX = 'r2-notes-';
+const BOOKMARK_PREFIX = 'r2-bookmarks-';
+const PATCHES_PREFIX = 'r2-patches-';
+
+const safeStorageGet = (key) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    return null;
+  }
+};
+
+const safeStorageSet = (key, value) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    /* ignore storage errors */
+  }
+};
 
 export const loadSnippets = () => {
+  const raw = safeStorageGet(SNIPPET_KEY);
+  if (!raw) return [];
   try {
-    const raw = localStorage.getItem(SNIPPET_KEY);
-    return raw ? JSON.parse(raw) : [];
+    return JSON.parse(raw);
   } catch (e) {
     return [];
   }
@@ -12,7 +34,7 @@ export const loadSnippets = () => {
 export const saveSnippet = (name, command) => {
   const snippets = loadSnippets();
   const newSnippets = [...snippets, { name, command }];
-  localStorage.setItem(SNIPPET_KEY, JSON.stringify(newSnippets));
+  safeStorageSet(SNIPPET_KEY, JSON.stringify(newSnippets));
   return newSnippets;
 };
 
@@ -85,31 +107,45 @@ export const extractStrings = (hex, baseAddr = '0x0') => {
   return results;
 };
 
-const NOTES_PREFIX = 'r2-notes-';
-const BOOKMARK_PREFIX = 'r2-bookmarks-';
-
 export const loadNotes = (file) => {
+  const raw = safeStorageGet(NOTES_PREFIX + file);
+  if (!raw) return [];
   try {
-    const raw = localStorage.getItem(NOTES_PREFIX + file);
-    return raw ? JSON.parse(raw) : [];
+    return JSON.parse(raw);
   } catch (e) {
     return [];
   }
 };
 
 export const saveNotes = (file, notes) => {
-  localStorage.setItem(NOTES_PREFIX + file, JSON.stringify(notes));
+  safeStorageSet(NOTES_PREFIX + file, JSON.stringify(notes));
 };
 
 export const loadBookmarks = (file) => {
+  const raw = safeStorageGet(BOOKMARK_PREFIX + file);
+  if (!raw) return [];
   try {
-    const raw = localStorage.getItem(BOOKMARK_PREFIX + file);
-    return raw ? JSON.parse(raw) : [];
+    return JSON.parse(raw);
   } catch (e) {
     return [];
   }
 };
 
 export const saveBookmarks = (file, bookmarks) => {
-  localStorage.setItem(BOOKMARK_PREFIX + file, JSON.stringify(bookmarks));
+  safeStorageSet(BOOKMARK_PREFIX + file, JSON.stringify(bookmarks));
+};
+
+export const loadPatches = (file) => {
+  const raw = safeStorageGet(PATCHES_PREFIX + file);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+export const savePatches = (file, patches) => {
+  safeStorageSet(PATCHES_PREFIX + file, JSON.stringify(patches));
 };

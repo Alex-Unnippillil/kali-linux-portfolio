@@ -63,13 +63,13 @@ describe('WhiskerMenu focus management', () => {
     first.focus();
     expect(document.activeElement).toBe(first);
 
-    fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
 
     await waitFor(() => {
       expect(menu.contains(document.activeElement)).toBe(true);
     });
 
-    fireEvent.keyDown(window, { key: 'Tab' });
+    fireEvent.keyDown(document, { key: 'Tab' });
 
     await waitFor(() => {
       expect(menu.contains(document.activeElement)).toBe(true);

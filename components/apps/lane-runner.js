@@ -646,18 +646,18 @@ const LaneRunner = () => {
                   Calibrate
                 </button>
                 <div className="flex items-center gap-2">
-                  <label htmlFor="lr-sensitivity" className="opacity-80">
+                  <label htmlFor="lr-tilt-sensitivity" className="opacity-80">
                     Sensitivity
                   </label>
                   <input
-                    id="lr-sensitivity"
+                    id="lr-tilt-sensitivity"
                     type="range"
                     min="0.5"
                     max="2"
                     step="0.1"
                     value={sensitivity}
                     onChange={(e) => setSensitivity(parseFloat(e.target.value))}
-                    aria-label="Sensitivity"
+                    aria-label="Tilt sensitivity"
                   />
                   <span className="tabular-nums w-10 text-right">
                     {sensitivity.toFixed(1)}
