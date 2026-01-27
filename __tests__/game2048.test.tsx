@@ -3,6 +3,7 @@ import { render, fireEvent, act, waitFor } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
 
 beforeEach(() => {
+  jest.useRealTimers();
   window.localStorage.clear();
   setSeed(1);
   window.localStorage.setItem('2048-seed', new Date().toISOString().slice(0, 10));

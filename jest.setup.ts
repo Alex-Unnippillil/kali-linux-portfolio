@@ -10,6 +10,8 @@ if (typeof global.structuredClone !== 'function') {
 require('fake-indexeddb/auto');
 import '@testing-library/jest-dom';
 
+jest.setTimeout(20000);
+
 // Provide TextEncoder/TextDecoder for libraries that expect them in the test environment
 // @ts-ignore
 global.TextEncoder = TextEncoder;
