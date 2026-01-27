@@ -1,4 +1,9 @@
-import { createGame, spawnUFO, advanceWave } from '../apps/games/space-invaders';
+import {
+  createGame,
+  spawnUFO,
+  advanceWave,
+  stepGame,
+} from '../apps/games/space-invaders';
 
 describe('space-invaders logic', () => {
   test('initializes with shields and inactive ufo', () => {
@@ -21,5 +26,32 @@ describe('space-invaders logic', () => {
     advanceWave(game);
     expect(game.stage).toBe(2);
     expect(game.invaders.length).toBeGreaterThan(initialCount);
+  });
+
+  test('paused step prevents player movement', () => {
+    const game = createGame();
+    const startX = game.player.x;
+    stepGame(game, { left: false, right: true, fire: false }, 1, {
+      paused: true,
+    });
+    expect(game.player.x).toBe(startX);
+  });
+
+  test('game over updates high score', () => {
+    const game = createGame();
+    game.highScore = 10;
+    game.score = 20;
+    game.lives = 1;
+    game.bullets.push({
+      x: game.player.x + 1,
+      y: game.player.y + 1,
+      dx: 0,
+      dy: 0,
+      active: true,
+      owner: 'enemy',
+    });
+    stepGame(game, { left: false, right: false, fire: false }, 0.016);
+    expect(game.gameOver).toBe(true);
+    expect(game.highScore).toBe(20);
   });
 });
