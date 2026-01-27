@@ -139,6 +139,7 @@
     "jest-environment-jsdom": "30.0.5",
     "magic-string": "0.30.18",
     "node-mocks-http": "1.17.2",
+    "pa11y": "^9.0.1",
     "playwright-core": "^1.55.0",
     "sharp": "^0.34.3",
     "test-exclude": "7.0.1",

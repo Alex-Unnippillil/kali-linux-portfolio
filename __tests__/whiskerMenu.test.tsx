@@ -58,7 +58,6 @@ describe('WhiskerMenu focus management', () => {
     const menu = await screen.findByTestId('whisker-menu-dropdown');
     const focusable = getFocusableElements(menu);
     const first = focusable[0];
-    const last = focusable[focusable.length - 1];
 
     first.focus();
     expect(document.activeElement).toBe(first);
