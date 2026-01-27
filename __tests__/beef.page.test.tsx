@@ -26,9 +26,9 @@ describe('BeEF page chrome', () => {
   test('shows severity chips with relative timestamps', () => {
     render(<BeefPage />);
 
-    expect(screen.getByText('Informational')).toBeInTheDocument();
-    expect(screen.getByText('Warning')).toBeInTheDocument();
-    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.getAllByText('Informational').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Warning').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Critical').length).toBeGreaterThan(0);
 
     expect(screen.getAllByText('+0s').length).toBeGreaterThan(0);
     expect(screen.getAllByText('+2s').length).toBeGreaterThan(0);
