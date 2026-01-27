@@ -654,7 +654,6 @@ const LaneRunner = () => {
                     max="2"
                     step="0.1"
                     value={sensitivity}
-                    aria-label="Sensitivity"
                     onChange={(e) => setSensitivity(parseFloat(e.target.value))}
                     aria-label="Tilt sensitivity"
                   />
