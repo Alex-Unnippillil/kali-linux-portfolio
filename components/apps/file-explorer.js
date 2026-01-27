@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
 import Breadcrumbs from '../ui/Breadcrumbs';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
+import { DEFAULT_HOME_PATH, useFileSystemStore } from '../../stores/fileSystemStore';
 
 export async function openFileDialog(options = {}) {
   if (typeof window !== 'undefined' && window.showOpenFilePicker) {
@@ -63,7 +64,7 @@ export async function saveFileDialog(options = {}) {
 }
 
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
-  const [supported, setSupported] = useState(true);
+  const [nativeSupported, setNativeSupported] = useState(true);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
@@ -73,8 +74,15 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [previewData, setPreviewData] = useState(null);
   const workerRef = useRef(null);
   const fallbackInputRef = useRef(null);
+  const [vfsPath, setVfsPath] = useState(context?.vfsPath || DEFAULT_HOME_PATH);
 
   const hasWorker = typeof Worker !== 'undefined';
+  const vfsTree = useFileSystemStore((state) => state.tree);
+  const listDirectory = useFileSystemStore((state) => state.listDirectory);
+  const readFile = useFileSystemStore((state) => state.readFile);
+  const writeFile = useFileSystemStore((state) => state.writeFile);
+  const getEntry = useFileSystemStore((state) => state.getEntry);
+  const resolvePath = useFileSystemStore((state) => state.resolvePath);
   const {
     supported: opfsSupported,
     root,
@@ -98,6 +106,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const vfsEnabled = !nativeSupported || Boolean(context?.useVfs);
+  const vfsEntries = useMemo(
+    () => (vfsEnabled ? listDirectory(vfsPath) : []),
+    [vfsEnabled, listDirectory, vfsPath, vfsTree],
+  );
 
   const hasUnsavedChanges = useMemo(
     () => currentFile && content !== savedContent,
@@ -106,7 +119,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
-    setSupported(ok);
+    setNativeSupported(ok);
   }, []);
 
   useEffect(() => {
@@ -130,6 +143,24 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (!requested) return;
     openPath(requested);
   }, [context, initialPath, pathProp, opfsSupported, root, openPath]);
+
+  useEffect(() => {
+    if (!vfsEnabled) return;
+    const target = context?.vfsPath;
+    if (!target) return;
+    const resolved = resolvePath(target, vfsPath);
+    const entry = getEntry(resolved);
+    if (!entry) return;
+    if (entry.type === 'directory') {
+      setVfsPath(resolved);
+      return;
+    }
+    if (entry.type === 'file') {
+      const parent = resolved.split('/').slice(0, -1).join('/') || '/';
+      setVfsPath(parent);
+      openVfsFileByPath(resolved);
+    }
+  }, [context?.vfsPath, getEntry, openVfsFileByPath, resolvePath, vfsEnabled, vfsPath]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -235,6 +266,23 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
     return { type: 'text', text };
   };
+
+  const openVfsFileByPath = useCallback(
+    (filePath) => {
+      const resolved = resolvePath(filePath, vfsPath);
+      const result = readFile(resolved);
+      if (!result.ok) {
+        setLocationError(result.message || 'Unable to open file.');
+        return;
+      }
+      const fileName = resolved.split('/').pop() || 'untitled';
+      setCurrentFile({ name: fileName, path: resolved });
+      setContent(result.content || '');
+      setSavedContent(result.content || '');
+      setPreviewData(buildPreview(fileName, new Blob([result.content || '']), result.content || ''));
+    },
+    [readFile, resolvePath, vfsPath, setLocationError],
+  );
 
   const ensureSaved = async () => {
     if (!hasUnsavedChanges) return true;
@@ -349,7 +397,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
   }, [previewData]);
 
-  if (!supported) {
+  if (!nativeSupported && !vfsEnabled) {
     return (
       <div className="p-4 flex flex-col h-full">
         <input
@@ -388,6 +436,160 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             </button>
           </>
         )}
+      </div>
+    );
+  }
+
+  if (vfsEnabled) {
+    const breadcrumbs = vfsPath
+      .split('/')
+      .filter(Boolean)
+      .reduce((acc, segment) => {
+        const prev = acc.length ? acc[acc.length - 1].path : '';
+        const nextPath = `${prev}/${segment}`;
+        acc.push({ name: segment, path: nextPath });
+        return acc;
+      }, [{ name: '/', path: '' }]);
+
+    const openVfsFile = async (entry) => {
+      if (!entry) return;
+      const filePath = `${vfsPath.replace(/\/$/, '')}/${entry.name}`;
+      openVfsFileByPath(filePath);
+    };
+
+    const openVfsDir = (entry) => {
+      if (!entry) return;
+      setCurrentFile(null);
+      setContent('');
+      setSavedContent('');
+      setPreviewData(null);
+      setVfsPath(`${vfsPath.replace(/\/$/, '')}/${entry.name}`);
+    };
+
+    const navigateVfsBreadcrumb = (index) => {
+      if (index === 0) {
+        setCurrentFile(null);
+        setContent('');
+        setSavedContent('');
+        setPreviewData(null);
+        setVfsPath('/');
+        return;
+      }
+      const target = breadcrumbs[index];
+      if (target) {
+        setCurrentFile(null);
+        setContent('');
+        setSavedContent('');
+        setPreviewData(null);
+        setVfsPath(target.path || '/');
+      }
+    };
+
+    const saveVfsFile = () => {
+      if (!currentFile?.path) return;
+      const result = writeFile(currentFile.path, content);
+      if (!result.ok) {
+        setLocationError(result.message || 'Failed to save file.');
+        return;
+      }
+      setSavedContent(content);
+    };
+
+    return (
+      <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
+        <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
+          <button
+            onClick={() => setVfsPath(DEFAULT_HOME_PATH)}
+            className="px-2 py-1 bg-black bg-opacity-50 rounded"
+          >
+            Home
+          </button>
+          <Breadcrumbs
+            path={breadcrumbs.map((crumb) => ({ name: crumb.name }))}
+            onNavigate={navigateVfsBreadcrumb}
+          />
+          {locationError && (
+            <div className="text-xs text-red-300" role="status">
+              {locationError}
+            </div>
+          )}
+          {currentFile && (
+            <div className="flex items-center space-x-2 ml-auto">
+              {hasUnsavedChanges && (
+                <span className="text-xs text-yellow-200" aria-live="polite">
+                  Unsaved changes
+                </span>
+              )}
+              <button
+                onClick={saveVfsFile}
+                disabled={!hasUnsavedChanges}
+                className={`px-2 py-1 rounded ${
+                  hasUnsavedChanges
+                    ? 'bg-green-700 hover:bg-green-600'
+                    : 'bg-black bg-opacity-40 cursor-not-allowed'
+                }`}
+              >
+                {hasUnsavedChanges ? 'Save changes' : 'Saved'}
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-1 overflow-hidden">
+          <div className="w-40 overflow-auto border-r border-gray-600">
+            <div className="p-2 font-bold">Directories</div>
+            {vfsEntries.filter((entry) => entry.type === 'directory').map((entry, i) => (
+              <div
+                key={`${entry.name}-${i}`}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openVfsDir(entry)}
+              >
+                {entry.name}
+              </div>
+            ))}
+            <div className="p-2 font-bold">Files</div>
+            {vfsEntries.filter((entry) => entry.type === 'file').map((entry, i) => (
+              <div
+                key={`${entry.name}-${i}`}
+                className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                onClick={() => openVfsFile(entry)}
+              >
+                {entry.name}
+              </div>
+            ))}
+          </div>
+          <div className="flex-1 flex flex-col">
+            {currentFile && (
+              <div className="flex flex-col flex-1 overflow-auto">
+                <div className="flex items-center justify-between px-2 py-1 border-b border-gray-600 bg-black bg-opacity-20">
+                  <div className="font-semibold">{currentFile.name}</div>
+                  {loading && <div className="text-xs text-gray-300">Loading...</div>}
+                </div>
+                {previewData && (
+                  <div className="p-2 border-b border-gray-700 overflow-auto max-h-64 bg-black bg-opacity-20">
+                    {previewData.type === 'image' && (
+                      <img src={previewData.url} alt={`${currentFile.name} preview`} className="max-h-60 mx-auto" />
+                    )}
+                    {previewData.type === 'json' && (
+                      <pre className="whitespace-pre-wrap text-xs bg-black bg-opacity-30 p-2 rounded">{previewData.text}</pre>
+                    )}
+                    {previewData.type === 'markdown' && (
+                      <div
+                        className="prose prose-invert max-w-none"
+                        dangerouslySetInnerHTML={{ __html: previewData.html }}
+                      />
+                    )}
+                  </div>
+                )}
+                <textarea
+                  className="flex-1 p-2 bg-ub-cool-grey outline-none"
+                  value={content}
+                  onChange={onChange}
+                  aria-label="File content"
+                />
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   }

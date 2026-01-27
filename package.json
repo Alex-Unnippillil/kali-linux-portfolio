@@ -105,7 +105,8 @@
     "three": "^0.179.1",
     "turndown": "^7.2.1",
     "typescript": "5.8.2",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.10.2",
