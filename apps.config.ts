@@ -1,6 +1,27 @@
 import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
-
 import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
+
+export type AppDisplay = (
+  addFolder?: unknown,
+  openApp?: (id: string) => void,
+  context?: Record<string, unknown>,
+) => JSX.Element;
+
+export interface AppConfig {
+  id: string;
+  title: string;
+  icon: string;
+  disabled: boolean;
+  favourite: boolean;
+  desktop_shortcut: boolean;
+  screen: AppDisplay;
+  resizable?: boolean;
+  allowMaximize?: boolean;
+  defaultWidth?: number;
+  defaultHeight?: number;
+  defaultSize?: { width: number; height: number };
+  isFolder?: boolean;
+}
 
 // Dynamic applications and games
 const TerminalApp = createDynamicApp(() => import('./components/apps/terminal'), 'Terminal');
@@ -76,7 +97,7 @@ const GomokuApp = createDynamicApp(() => import('./components/apps/gomoku'), 'Go
 const PinballApp = createDynamicApp(() => import('./components/apps/pinball'), 'Pinball');
 const VolatilityApp = createDynamicApp(() => import('./components/apps/volatility'), 'Volatility');
 
-const KismetApp = createDynamicApp(() => import('./components/apps/kismet.jsx'), 'Kismet');
+const KismetApp = createDynamicApp(() => import('./components/apps/kismet'), 'Kismet');
 
 const HashcatApp = createDynamicApp(() => import('./components/apps/hashcat'), 'Hashcat');
 const MsfPostApp = createDynamicApp(() => import('./components/apps/msf-post'), 'Metasploit Post');
@@ -217,7 +238,7 @@ const displayScreenRecorder = createDisplay(ScreenRecorderApp);
 const displayNikto = createDisplay(NiktoApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
-const utilityList = [
+const utilityList: AppConfig[] = [
   {
     id: 'qr',
     title: 'QR Tool',
@@ -295,13 +316,13 @@ const utilityList = [
 export const utilities = utilityList;
 
 // Default window sizing for games to prevent oversized frames
-export const gameDefaults = {
+export const gameDefaults: Pick<AppConfig, 'defaultWidth' | 'defaultHeight'> = {
   defaultWidth: 50,
   defaultHeight: 60,
 };
 
 // Games list used for the "Games" folder on the desktop
-const gameList = [
+const gameList: AppConfig[] = [
   {
     id: '2048',
     title: '2048',
@@ -615,9 +636,9 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games: AppConfig[] = gameList.map((game) => ({ ...gameDefaults, ...game }));
 
-const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
+const folderApps: AppConfig[] = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   id: folder.id,
   title: folder.title,
   icon: folder.icon || '/themes/Yaru/system/folder.png',
@@ -630,7 +651,7 @@ const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   defaultHeight: 70,
 }));
 
-const apps = [
+const apps: AppConfig[] = [
   ...folderApps,
   {
     id: 'firefox',

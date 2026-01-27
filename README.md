@@ -116,7 +116,7 @@ playwright/           # Playwright helpers for end-to-end testing
 
 **Windowing model.** `components/screen/desktop.js` maintains the global window registry, handles z-index ordering, and orchestrates dock shortcuts, favorites, and analytics events.
 
-**Dynamic app registry.** [`apps.config.js`](./apps.config.js) registers desktop apps with `createDynamicApp`, wrapping heavy apps in dynamic imports to reduce the initial bundle. Each app exports a `prefetch()` helper so tiles can warm bundles on hover or keyboard focus.
+**Dynamic app registry.** [`apps.config.ts`](./apps.config.ts) registers desktop apps with `createDynamicApp`, wrapping heavy apps in dynamic imports to reduce the initial bundle. Each app exports a `prefetch()` helper so tiles can warm bundles on hover or keyboard focus.
 
 **Game layout.** Games share `components/apps/GameLayout.tsx`, which renders a standardized header, help toggle, and status footer. Gamepad bindings live in `components/apps/Games/common/input-remap` and persist to the Origin Private File System (OPFS) via `utils/opfs.ts`.
 
@@ -127,7 +127,7 @@ playwright/           # Playwright helpers for end-to-end testing
 - **Boot & Lock Flow** – The desktop boots through a splash animation, transitions to a lock screen, and finally reveals the workspace. Auth is simulated; unlocking simply animates the transition.
 - **Window Controls** – Windows are draggable, resizable, and keyboard focusable. Header controls hook into desktop state to minimize, maximize, or close.
 - **Context Menus** – Right-click menus are powered by `components/context-menus/desktopContextMenu.tsx` and adjust options based on selection (wallpapers, new notes, etc.).
-- **Dock & Favorites** – Dock entries and “All Applications” tiles are sourced from `apps.config.js`. Favorites persist through `usePersistentState`.
+- **Dock & Favorites** – Dock entries and “All Applications” tiles are sourced from `apps.config.ts`. Favorites persist through `usePersistentState`.
 - **Terminal** – `/apps/terminal` emulates a shell with commands like `help`, `clear`, `whoami`, and canned security tool outputs.
 - **Gamepad Support** – `utils/gamepad.ts` polls `navigator.getGamepads()` and normalizes input. Games may expose haptic feedback via `gamepad.vibrationActuator` where available.
 

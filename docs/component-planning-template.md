@@ -69,7 +69,7 @@ For each directory listed below, capture the following:
 
 ## components/apps
 ### Current State
-- Hosts utility, media, game, and security-simulator apps registered through `apps.config.js` with dynamic imports and shared layout primitives.
+- Hosts utility, media, game, and security-simulator apps registered through `apps.config.ts` with dynamic imports and shared layout primitives.
 
 ### Tech Debt
 - Many apps still hand-roll registration instead of using a shared factory, leading to inconsistent window sizes and analytics hooks.【F:docs/tasks.md†L6-L15】

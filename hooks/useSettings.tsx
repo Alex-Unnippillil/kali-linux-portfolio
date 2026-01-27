@@ -3,43 +3,16 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useState,
   ReactNode,
   useRef,
 } from 'react';
-import {
-  getAccent as loadAccent,
-  setAccent as saveAccent,
-  getWallpaper as loadWallpaper,
-  setWallpaper as saveWallpaper,
-  getUseKaliWallpaper as loadUseKaliWallpaper,
-  setUseKaliWallpaper as saveUseKaliWallpaper,
-  getDensity as loadDensity,
-  setDensity as saveDensity,
-  getReducedMotion as loadReducedMotion,
-  setReducedMotion as saveReducedMotion,
-  getFontScale as loadFontScale,
-  setFontScale as saveFontScale,
-  getHighContrast as loadHighContrast,
-  setHighContrast as saveHighContrast,
-  getLargeHitAreas as loadLargeHitAreas,
-  setLargeHitAreas as saveLargeHitAreas,
-  getPongSpin as loadPongSpin,
-  setPongSpin as savePongSpin,
-  getAllowNetwork as loadAllowNetwork,
-  setAllowNetwork as saveAllowNetwork,
-  getHaptics as loadHaptics,
-  setHaptics as saveHaptics,
-  defaults,
-} from '../utils/settingsStore';
+import { defaults, Density, useSettingsStore } from '../utils/settingsStore';
 import {
   DesktopTheme,
   DESKTOP_THEME_PRESETS,
   resolveDesktopTheme,
-  getTheme as loadTheme,
   setTheme as saveTheme,
 } from '../utils/theme';
-type Density = 'regular' | 'compact';
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -134,37 +107,34 @@ export const SettingsContext = createContext<SettingsContextValue>({
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [accent, setAccent] = useState<string>(defaults.accent);
-  const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
-  const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
-  const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
-  const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
-  const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
-  const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const {
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    density,
+    reducedMotion,
+    fontScale,
+    highContrast,
+    largeHitAreas,
+    pongSpin,
+    allowNetwork,
+    haptics,
+    theme,
+    setAccent,
+    setWallpaper,
+    setUseKaliWallpaper,
+    setDensity,
+    setReducedMotion,
+    setFontScale,
+    setHighContrast,
+    setLargeHitAreas,
+    setPongSpin,
+    setAllowNetwork,
+    setHaptics,
+    setTheme,
+  } = useSettingsStore();
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
-      setHaptics(await loadHaptics());
-      setTheme(loadTheme());
-    })();
-  }, []);
 
   useEffect(() => {
     saveTheme(theme);
@@ -184,16 +154,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
   }, [accent]);
-
-  useEffect(() => {
-    saveWallpaper(wallpaper);
-  }, [wallpaper]);
-
-  useEffect(() => {
-    saveUseKaliWallpaper(useKaliWallpaper);
-  }, [useKaliWallpaper]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -218,35 +179,25 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
   }, [density]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('reduced-motion', reducedMotion);
-    saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
 
   useEffect(() => {
     document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
-    saveFontScale(fontScale);
   }, [fontScale]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('high-contrast', highContrast);
-    saveHighContrast(highContrast);
   }, [highContrast]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
-    saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
 
   useEffect(() => {
-    savePongSpin(pongSpin);
-  }, [pongSpin]);
-
-  useEffect(() => {
-    saveAllowNetwork(allowNetwork);
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
@@ -296,7 +247,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork]);
 
   useEffect(() => {
-    saveHaptics(haptics);
   }, [haptics]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
@@ -380,4 +330,3 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export const useSettings = () => useContext(SettingsContext);
-

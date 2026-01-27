@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import KismetApp from '../components/apps/kismet.jsx';
+import KismetApp from '../components/apps/kismet';
 import KismetPage from '../apps/kismet';
 
 const clearLocalStorage = () => {

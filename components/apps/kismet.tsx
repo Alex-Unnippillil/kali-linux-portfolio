@@ -3,17 +3,83 @@ import fixturesCapture from './kismet/sampleCapture.json';
 import fixturesClients from './kismet/sampleClients.json';
 import ouiVendors from './kismet/oui.json';
 
+interface DiscoveredNetwork {
+  ssid: string;
+  bssid: string;
+  discoveredAt: number;
+}
+
+type OnNetworkDiscovered = (network: DiscoveredNetwork) => void;
+
+type ChannelCounts = Record<number, number>;
+
+type TimeCounts = Record<number, number>;
+
+interface NetworkRecord {
+  ssid: string;
+  bssid: string;
+  channel?: number | null;
+  frames: number;
+  vendor?: string;
+  avgSignal?: number;
+}
+
+interface NetworkDataset {
+  networks: NetworkRecord[];
+  channelCounts: ChannelCounts;
+  timeCounts: TimeCounts;
+}
+
+interface FixtureEntry {
+  ssid: string;
+  bssid?: string;
+  channel?: number | null;
+  signal?: number;
+}
+
+interface ClientFixture {
+  mac: string;
+  history: Array<{ ssid?: string; bssid: string }>;
+}
+
+interface ClientHistoryEntry {
+  ssid?: string;
+  bssid: string;
+  channel?: number | null;
+  vendor?: string;
+}
+
+interface ClientRecord {
+  mac: string;
+  vendor: string;
+  history: ClientHistoryEntry[];
+}
+
+interface PcapPacket {
+  tsSec: number;
+  tsUsec: number;
+  data: Uint8Array;
+}
+
+interface NetworkState {
+  ssid: string;
+  bssid: string;
+  channel?: number | null;
+  frames: number;
+  signalSamples: number[];
+}
+
 // Helper to convert bytes to MAC address string
-const macToString = (bytes) =>
+const macToString = (bytes: Uint8Array) =>
   Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
     .join(':');
 
 // Parse a single 802.11 management frame (beacon/probe response)
-const parseMgmtFrame = (frame) => {
+const parseMgmtFrame = (frame: Uint8Array) => {
   const bssid = macToString(frame.slice(16, 22));
   let ssid = '';
-  let channel;
+  let channel: number | undefined;
 
   // Skip header (24 bytes) + fixed params (12 bytes)
   let off = 36;
@@ -33,9 +99,9 @@ const parseMgmtFrame = (frame) => {
 };
 
 // Parse packets from a pcap ArrayBuffer
-const parsePcap = (arrayBuffer, onNetwork) => {
+const parsePcap = (arrayBuffer: ArrayBuffer, onNetwork?: OnNetworkDiscovered): NetworkDataset => {
   const dv = new DataView(arrayBuffer);
-  const packets = [];
+  const packets: PcapPacket[] = [];
   let offset = 24; // global header
   while (offset + 16 <= dv.byteLength) {
     const tsSec = dv.getUint32(offset, true);
@@ -47,9 +113,9 @@ const parsePcap = (arrayBuffer, onNetwork) => {
     offset += inclLen;
   }
 
-  const networks = {};
-  const channelCounts = {};
-  const timeCounts = {};
+  const networks: Record<string, NetworkState> = {};
+  const channelCounts: ChannelCounts = {};
+  const timeCounts: TimeCounts = {};
   const startTime = packets[0]?.tsSec || 0;
 
   for (const pkt of packets) {
@@ -66,7 +132,7 @@ const parsePcap = (arrayBuffer, onNetwork) => {
     const info = parseMgmtFrame(frame);
     const key = info.bssid || info.ssid;
     if (!networks[key]) {
-      networks[key] = { ...info, frames: 0 };
+      networks[key] = { ...info, frames: 0, signalSamples: [] };
       onNetwork?.({
         ssid: info.ssid,
         bssid: info.bssid,
@@ -88,7 +154,7 @@ const parsePcap = (arrayBuffer, onNetwork) => {
   };
 };
 
-const ChannelChart = ({ data }) => {
+const ChannelChart = ({ data }: { data: ChannelCounts }) => {
   const channels = Object.keys(data)
     .map(Number)
     .sort((a, b) => a - b);
@@ -98,20 +164,20 @@ const ChannelChart = ({ data }) => {
       className="flex h-40 items-end space-x-1 text-kali-muted"
       aria-label="Channel chart"
     >
-      {channels.map((c) => (
-        <div key={c} className="flex flex-col items-center">
+      {channels.map((channel) => (
+        <div key={channel} className="flex flex-col items-center">
           <div
             className="w-4 rounded-sm bg-[var(--color-accent)]"
-            style={{ height: `${(data[c] / max) * 100}%` }}
+            style={{ height: `${(data[channel] / max) * 100}%` }}
           />
-          <span className="mt-1 text-xs">{c}</span>
+          <span className="mt-1 text-xs">{channel}</span>
         </div>
       ))}
     </div>
   );
 };
 
-const TimeChart = ({ data }) => {
+const TimeChart = ({ data }: { data: TimeCounts }) => {
   const times = Object.keys(data)
     .map(Number)
     .sort((a, b) => a - b);
@@ -140,13 +206,16 @@ const TimeChart = ({ data }) => {
 
 const getVendor = (mac = '') => {
   const prefix = mac.slice(0, 8).toUpperCase();
-  return ouiVendors[prefix] || 'Unknown vendor';
+  return (ouiVendors as Record<string, string>)[prefix] || 'Unknown vendor';
 };
 
-const aggregateFixtures = (capture, onNetwork) => {
-  const map = {};
-  const channelCounts = {};
-  const timeCounts = {};
+const aggregateFixtures = (
+  capture: FixtureEntry[],
+  onNetwork?: OnNetworkDiscovered,
+): NetworkDataset => {
+  const map: Record<string, NetworkState> = {};
+  const channelCounts: ChannelCounts = {};
+  const timeCounts: TimeCounts = {};
   const discoveredAt = Date.now();
 
   capture.forEach((entry, idx) => {
@@ -196,7 +265,10 @@ const aggregateFixtures = (capture, onNetwork) => {
   return { networks, channelCounts, timeCounts };
 };
 
-const annotateClients = (clients, networkLookup) =>
+const annotateClients = (
+  clients: ClientFixture[],
+  networkLookup: Map<string, NetworkRecord>,
+): ClientRecord[] =>
   clients.map((client) => {
     const vendor = getVendor(client.mac);
     const history = client.history.map((entry) => {
@@ -210,17 +282,17 @@ const annotateClients = (clients, networkLookup) =>
     return { ...client, vendor, history };
   });
 
-const buildNetworkLookup = (nets) => {
-  const map = new Map();
-  nets.forEach((n) => {
-    if (!map.has(n.bssid)) {
-      map.set(n.bssid, n);
+const buildNetworkLookup = (nets: NetworkRecord[]) => {
+  const map = new Map<string, NetworkRecord>();
+  nets.forEach((network) => {
+    if (!map.has(network.bssid)) {
+      map.set(network.bssid, network);
     }
   });
   return map;
 };
 
-const summarizeFixtures = (nets, counts) => {
+const summarizeFixtures = (nets: NetworkRecord[], counts: ChannelCounts) => {
   const totalNetworks = nets.length;
   const totalFrames = nets.reduce((sum, net) => sum + net.frames, 0);
   const busiestChannel = Object.keys(counts)
@@ -233,14 +305,18 @@ const summarizeFixtures = (nets, counts) => {
   };
 };
 
-const KismetApp = ({ onNetworkDiscovered }) => {
-  const [networks, setNetworks] = useState([]);
-  const [networkSource, setNetworkSource] = useState('fixtures');
-  const [channels, setChannels] = useState({});
-  const [times, setTimes] = useState({});
-  const [clients, setClients] = useState([]);
-  const [channelFilter, setChannelFilter] = useState('all');
-  const [deviceFilter, setDeviceFilter] = useState('all');
+interface KismetAppProps {
+  onNetworkDiscovered?: OnNetworkDiscovered;
+}
+
+const KismetApp = ({ onNetworkDiscovered }: KismetAppProps) => {
+  const [networks, setNetworks] = useState<NetworkRecord[]>([]);
+  const [networkSource, setNetworkSource] = useState<'fixtures' | 'upload'>('fixtures');
+  const [channels, setChannels] = useState<ChannelCounts>({});
+  const [times, setTimes] = useState<TimeCounts>({});
+  const [clients, setClients] = useState<ClientRecord[]>([]);
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [deviceFilter, setDeviceFilter] = useState<string>('all');
   const [labMode, setLabMode] = useState(false);
   const [error, setError] = useState('');
 
@@ -256,7 +332,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
     loadLabMode();
   }, []);
 
-  const applyDataset = (dataset, source = 'fixtures') => {
+  const applyDataset = (dataset: NetworkDataset, source: 'fixtures' | 'upload' = 'fixtures') => {
     const normalized = dataset.networks.map((net) => ({
       ...net,
       vendor: net.vendor || getVendor(net.bssid),
@@ -267,14 +343,14 @@ const KismetApp = ({ onNetworkDiscovered }) => {
     setNetworkSource(source);
     const lookup = buildNetworkLookup(normalized);
     if (source === 'fixtures') {
-      setClients(annotateClients(fixturesClients, lookup));
+      setClients(annotateClients(fixturesClients as ClientFixture[], lookup));
     } else {
       setClients([]);
     }
   };
 
   useEffect(() => {
-    const dataset = aggregateFixtures(fixturesCapture, onNetworkDiscovered);
+    const dataset = aggregateFixtures(fixturesCapture as FixtureEntry[], onNetworkDiscovered);
     applyDataset(dataset, 'fixtures');
   }, [onNetworkDiscovered]);
 
@@ -296,16 +372,16 @@ const KismetApp = ({ onNetworkDiscovered }) => {
     setLabMode(false);
   };
 
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0];
+  const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file) return;
     const buffer = await file.arrayBuffer();
     try {
-      const { networks, channelCounts, timeCounts } = parsePcap(
+      const { networks: parsedNetworks, channelCounts, timeCounts } = parsePcap(
         buffer,
         onNetworkDiscovered,
       );
-      applyDataset({ networks, channelCounts, timeCounts }, 'upload');
+      applyDataset({ networks: parsedNetworks, channelCounts, timeCounts }, 'upload');
       setChannelFilter('all');
       setDeviceFilter('all');
       setError('');
@@ -315,7 +391,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
   };
 
   const resetToFixtures = () => {
-    const dataset = aggregateFixtures(fixturesCapture, onNetworkDiscovered);
+    const dataset = aggregateFixtures(fixturesCapture as FixtureEntry[], onNetworkDiscovered);
     applyDataset(dataset, 'fixtures');
     setChannelFilter('all');
     setDeviceFilter('all');
@@ -414,7 +490,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                 aria-label="Channel filter"
                 className="w-36 rounded-lg border border-kali-border/60 bg-kali-dark p-1.5 text-xs text-[color:var(--kali-text)] shadow-sm focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
                 value={channelFilter}
-                onChange={(e) => setChannelFilter(e.target.value)}
+                onChange={(event) => setChannelFilter(event.target.value)}
               >
                 <option value="all">All channels</option>
                 {Object.keys(channels)
@@ -438,7 +514,7 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                   aria-label="Device vendor filter"
                   className="w-44 rounded-lg border border-kali-border/60 bg-kali-dark p-1.5 text-xs text-[color:var(--kali-text)] shadow-sm focus:border-kali-accent focus:outline-none focus:ring-1 focus:ring-kali-accent/40"
                   value={deviceFilter}
-                  onChange={(e) => setDeviceFilter(e.target.value)}
+                  onChange={(event) => setDeviceFilter(event.target.value)}
                 >
                   <option value="all">All vendors</option>
                   {vendorOptions.map((vendor) => (
@@ -495,13 +571,16 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                         </tr>
                       </thead>
                       <tbody className="text-[color:color-mix(in_srgb,var(--kali-text)_92%,transparent)]">
-                        {filteredNetworks.map((n) => (
-                          <tr key={n.bssid} className="odd:bg-[color:var(--color-surface-muted)]">
-                            <td className="px-4 py-2">{n.ssid || '(hidden)'}</td>
-                            <td className="px-4 py-2 font-mono text-xs">{n.bssid}</td>
-                            <td className="px-4 py-2">{n.channel ?? '-'}</td>
-                            <td className="px-4 py-2">{n.vendor}</td>
-                            <td className="px-4 py-2">{n.frames}</td>
+                        {filteredNetworks.map((network) => (
+                          <tr
+                            key={network.bssid}
+                            className="odd:bg-[color:var(--color-surface-muted)]"
+                          >
+                            <td className="px-4 py-2">{network.ssid || '(hidden)'}</td>
+                            <td className="px-4 py-2 font-mono text-xs">{network.bssid}</td>
+                            <td className="px-4 py-2">{network.channel ?? '-'}</td>
+                            <td className="px-4 py-2">{network.vendor}</td>
+                            <td className="px-4 py-2">{network.frames}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -527,8 +606,13 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                       </thead>
                       <tbody className="text-[color:color-mix(in_srgb,var(--kali-text)_92%,transparent)]">
                         {filteredClients.map((client) => (
-                          <tr key={client.mac} className="odd:bg-[color:var(--color-surface-muted)]">
-                            <td className="px-4 py-2 font-mono text-[0.7rem]">{client.mac}</td>
+                          <tr
+                            key={client.mac}
+                            className="odd:bg-[color:var(--color-surface-muted)]"
+                          >
+                            <td className="px-4 py-2 font-mono text-[0.7rem]">
+                              {client.mac}
+                            </td>
                             <td className="px-4 py-2">{client.vendor}</td>
                             <td className="px-4 py-2">
                               <ul className="list-disc space-y-1 pl-4 text-[0.75rem]">
@@ -536,7 +620,10 @@ const KismetApp = ({ onNetworkDiscovered }) => {
                                   <li key={`${client.mac}-${idx}`}>
                                     {entry.ssid || '(hidden)'} – {entry.bssid}
                                     {entry.channel != null && (
-                                      <span className="text-kali-muted"> (ch {entry.channel})</span>
+                                      <span className="text-kali-muted">
+                                        {' '}
+                                        (ch {entry.channel})
+                                      </span>
                                     )}
                                   </li>
                                 ))}
@@ -578,4 +665,3 @@ const KismetApp = ({ onNetworkDiscovered }) => {
 };
 
 export default KismetApp;
-

@@ -1,6 +1,11 @@
 import React, { useEffect, useState } from 'react';
 
-const redactedLogs = [
+interface RedactedLogEntry {
+  time: string;
+  message: string;
+}
+
+const redactedLogs: RedactedLogEntry[] = [
   {
     time: '2024-05-01 10:15:32',
     message: 'Harvested credentials from [REDACTED] domain controller',
@@ -20,7 +25,7 @@ const redactedLogs = [
 ];
 
 const MetasploitPost = () => {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents] = useState<RedactedLogEntry[]>([]);
 
   useEffect(() => {
     let idx = 0;
@@ -38,13 +43,17 @@ const MetasploitPost = () => {
       tabIndex={0}
       aria-label="Metasploit post-exploitation timeline"
     >
-      <h2 className="mb-4 text-lg font-semibold text-kali-text">Post-Exploitation Timeline</h2>
+      <h2 className="mb-4 text-lg font-semibold text-kali-text">
+        Post-Exploitation Timeline
+      </h2>
       <ul className="relative space-y-4 border-l border-kali-primary/40 pl-6">
-        {events.map((e) => (
-          <li key={e.time} className="relative pl-6 text-sm text-kali-text/90">
+        {events.map((event) => (
+          <li key={event.time} className="relative pl-6 text-sm text-kali-text/90">
             <span className="absolute left-0 top-2 flex h-3 w-3 -translate-x-1/2 items-center justify-center rounded-full bg-kali-primary ring-2 ring-kali-primary/40 ring-offset-2 ring-offset-[var(--kali-panel)]" />
-            <time className="block text-xs uppercase tracking-wide text-kali-text/60">{e.time}</time>
-            <p className="mt-1 text-kali-text/90">{e.message}</p>
+            <time className="block text-xs uppercase tracking-wide text-kali-text/60">
+              {event.time}
+            </time>
+            <p className="mt-1 text-kali-text/90">{event.message}</p>
           </li>
         ))}
       </ul>

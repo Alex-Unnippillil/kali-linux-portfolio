@@ -4,7 +4,7 @@ This document tracks planned improvements and new features for the desktop portf
 
 ## Foundation
 - Add dynamic app factory at `utils/createDynamicApp.js` to unify dynamic imports and GA events.
-- Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
+- Replace app imports in `apps.config.ts` with the factory and `createDisplay` helper.
 - Register apps and games uniformly with `display*` helpers and small default window sizes.
 - Ensure new utilities have Jest tests mirroring existing ones.
 - Fix terminal build by importing `@xterm/xterm/css/xterm.css` and registering `FitAddon`.
@@ -51,7 +51,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Replace static content with resume widget loaded from JSON; show skills as chips and project links.
 
 ### Settings
-- Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.js`.
+- Add theme picker, wallpaper selector, and "reset desktop" clearing `localStorage` in `settingsStore.ts`.
 
 ### Resource Monitor
 - Display `performance.memory` data and FPS from `performance.now()` deltas.
@@ -123,7 +123,7 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Pinball
 
 ## Housekeeping
-- Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
+- Keep `apps.config.ts` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
 
 ### App Icon Refresh
