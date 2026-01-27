@@ -656,6 +656,7 @@ const LaneRunner = () => {
                     value={sensitivity}
                     aria-label="Sensitivity"
                     onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+                    aria-label="Tilt sensitivity"
                   />
                   <span className="tabular-nums w-10 text-right">
                     {sensitivity.toFixed(1)}

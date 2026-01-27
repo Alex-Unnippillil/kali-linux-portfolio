@@ -8,10 +8,66 @@ import {
 
 const WIDTH = 400;
 const HEIGHT = 300;
+const GRAVITY_VARIANTS = [
+  { name: "Easy", value: 0.2 },
+  { name: "Normal", value: 0.4 },
+  { name: "Hard", value: 0.6 },
+];
+const STORAGE_KEYS = {
+  birdSkin: "flappy-bird-skin",
+  pipeSkin: "flappy-pipe-skin",
+  gravity: "flappy-gravity-variant",
+  practice: "flappy-practice",
+  ghost: "flappy-ghost",
+  reducedMotion: "flappy-reduced-motion",
+  highHz: "flappy-120hz",
+  hitbox: "flappy-hitbox",
+};
+
+const readStorageValue = (key) => {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const readStorageNumber = (key, fallback, { min = 0, max = Infinity } = {}) => {
+  const raw = readStorageValue(key);
+  const parsed = raw === null ? NaN : Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < min || parsed > max) return fallback;
+  return parsed;
+};
+
+const readStorageBoolean = (key, fallback) => {
+  const raw = readStorageValue(key);
+  if (raw === null) return fallback;
+  return raw === "1" || raw === "true";
+};
+
+const writeStorageValue = (key, value) => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    /* ignore */
+  }
+};
+
+const getPrefersReducedMotion = () => {
+  if (typeof window === "undefined") return false;
+  if (typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+};
 
 const FlappyBird = () => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
+  const containerRef = useRef(null);
   const liveRef = useRef(null);
+  const keyHandlerRef = useRef(null);
+  const applySettingsRef = useRef(null);
   const [started, setStarted] = useState(false);
   const [gameState, setGameState] = useState("menu");
   const [skin, setSkin] = useState(0);
@@ -30,12 +86,37 @@ const FlappyBird = () => {
   const [showTouchControls, setShowTouchControls] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
   const [bestOverall, setBestOverall] = useState(0);
+  const [isFocused, setIsFocused] = useState(false);
+  const [settings, setSettings] = useState({
+    gravityVariant: 1,
+    practiceMode: false,
+    showGhost: true,
+    reducedMotion: false,
+    highHz: false,
+    showHitbox: false,
+  });
+  const settingsRef = useRef(settings);
+
+  const announce = useCallback((message) => {
+    if (liveRef.current) {
+      liveRef.current.textContent = message;
+    }
+  }, []);
+
+  const focusCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    requestAnimationFrame(() => {
+      canvas.focus();
+    });
+  }, [canvasRef]);
 
   const resumeGame = useCallback(() => {
     pausedRef.current = false;
     setPaused(false);
     setGameState("running");
-  }, []);
+    focusCanvas();
+  }, [focusCanvas]);
 
   const pauseGame = useCallback(() => {
     pausedRef.current = true;
@@ -120,14 +201,24 @@ const FlappyBird = () => {
   }, [paused]);
 
   useEffect(() => {
-    try {
-      setSkin(parseInt(localStorage.getItem("flappy-bird-skin") || "0", 10));
-      setPipeSkinIndex(
-        parseInt(localStorage.getItem("flappy-pipe-skin") || "0", 10),
-      );
-    } catch {
-      /* ignore */
-    }
+    const maxGravityIndex = GRAVITY_VARIANTS.length - 1;
+    setSkin(readStorageNumber(STORAGE_KEYS.birdSkin, 0, { min: 0 }));
+    setPipeSkinIndex(readStorageNumber(STORAGE_KEYS.pipeSkin, 0, { min: 0 }));
+    setSettings((current) => ({
+      ...current,
+      gravityVariant: readStorageNumber(STORAGE_KEYS.gravity, 1, {
+        min: 0,
+        max: maxGravityIndex,
+      }),
+      practiceMode: readStorageBoolean(STORAGE_KEYS.practice, false),
+      showGhost: readStorageBoolean(STORAGE_KEYS.ghost, true),
+      reducedMotion: readStorageBoolean(
+        STORAGE_KEYS.reducedMotion,
+        getPrefersReducedMotion(),
+      ),
+      highHz: readStorageBoolean(STORAGE_KEYS.highHz, false),
+      showHitbox: readStorageBoolean(STORAGE_KEYS.hitbox, false),
+    }));
   }, []);
 
   useEffect(() => {
@@ -142,6 +233,118 @@ const FlappyBird = () => {
   }, []);
 
   useEffect(() => {
+    settingsRef.current = settings;
+    if (applySettingsRef.current) {
+      applySettingsRef.current(settings);
+    }
+  }, [settings]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.birdSkin, String(skin));
+  }, [skin]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.pipeSkin, String(pipeSkinIndex));
+  }, [pipeSkinIndex]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.gravity, String(settings.gravityVariant));
+  }, [settings.gravityVariant]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.practice, settings.practiceMode ? "1" : "0");
+  }, [settings.practiceMode]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.ghost, settings.showGhost ? "1" : "0");
+  }, [settings.showGhost]);
+
+  useEffect(() => {
+    writeStorageValue(
+      STORAGE_KEYS.reducedMotion,
+      settings.reducedMotion ? "1" : "0",
+    );
+  }, [settings.reducedMotion]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.highHz, settings.highHz ? "1" : "0");
+  }, [settings.highHz]);
+
+  useEffect(() => {
+    writeStorageValue(STORAGE_KEYS.hitbox, settings.showHitbox ? "1" : "0");
+  }, [settings.showHitbox]);
+
+  useEffect(() => {
+    if (!started) return;
+    const handleVisibility = () => {
+      if (document.hidden && gameState === "running") {
+        pauseGame();
+      }
+    };
+    const handleBlur = () => {
+      if (gameState === "running") {
+        pauseGame();
+      }
+    };
+    window.addEventListener("blur", handleBlur);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("blur", handleBlur);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, [gameState, pauseGame, started]);
+
+  const updateSetting = useCallback(
+    (key, value, message) => {
+      setSettings((prev) => ({ ...prev, [key]: value }));
+      if (message) announce(message);
+    },
+    [announce],
+  );
+
+  const handleFocusCapture = useCallback(() => {
+    setIsFocused(true);
+  }, []);
+
+  const handleBlurCapture = useCallback(() => {
+    requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      if (
+        containerRef.current &&
+        activeElement instanceof HTMLElement &&
+        !containerRef.current.contains(activeElement)
+      ) {
+        setIsFocused(false);
+      }
+    });
+  }, []);
+
+  const handleRootKeyDown = useCallback(
+    (event) => {
+      if (!keyHandlerRef.current) return;
+      if (document.activeElement !== canvasRef.current) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["input", "textarea", "select", "option"].includes(
+            target.tagName.toLowerCase(),
+          ))
+      ) {
+        return;
+      }
+      keyHandlerRef.current(event);
+    },
+    [canvasRef],
+  );
+
+  useEffect(() => {
+    if (started) {
+      focusCanvas();
+    }
+  }, [focusCanvas, started]);
+
+  useEffect(() => {
     if (!started) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -151,24 +354,9 @@ const FlappyBird = () => {
 
     const width = WIDTH;
     const height = HEIGHT;
-    let reduceMotion =
-      localStorage.getItem("flappy-reduced-motion") === "1" ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    let practiceMode = localStorage.getItem("flappy-practice") === "1";
-
-    const GRAVITY_VARIANTS = [
-      { name: "Easy", value: 0.2 },
-      { name: "Normal", value: 0.4 },
-      { name: "Hard", value: 0.6 },
-    ];
-    let gravityVariant = parseInt(
-      localStorage.getItem("flappy-gravity-variant") || "1",
-      10,
-    );
-    if (gravityVariant < 0 || gravityVariant >= GRAVITY_VARIANTS.length) {
-      gravityVariant = 1;
-    }
+    let reduceMotion = settingsRef.current.reducedMotion;
+    let practiceMode = settingsRef.current.practiceMode;
+    let gravityVariant = settingsRef.current.gravityVariant;
 
     const skinFrames =
       birdFrames.current.length > 0
@@ -181,7 +369,7 @@ const FlappyBird = () => {
     let birdFrameTimer = 0;
     const birdFrameDelay = 6;
 
-    let showHitbox = localStorage.getItem("flappy-hitbox") === "1";
+    let showHitbox = settingsRef.current.showHitbox;
 
     let bird = { x: 50, y: height / 2, vy: 0 };
     let gravity = GRAVITY_VARIANTS[gravityVariant].value;
@@ -205,7 +393,8 @@ const FlappyBird = () => {
     let crashParticlesSpawned = false;
     let birdAngle = 0;
     let loopId = 0;
-    let highHz = localStorage.getItem("flappy-120hz") === "1";
+    let showGhost = settingsRef.current.showGhost;
+    let highHz = settingsRef.current.highHz;
     let fps = highHz ? 120 : 60;
 
     let particles = [];
@@ -678,7 +867,7 @@ const FlappyBird = () => {
 
       drawParticles();
 
-      if (ghostRun && ghostFrame < ghostRun.pos.length) {
+      if (showGhost && ghostRun && ghostFrame < ghostRun.pos.length) {
         ctx.save();
         ctx.globalAlpha = 0.3;
         ctx.fillStyle = "gray";
@@ -891,7 +1080,7 @@ const FlappyBird = () => {
       }
 
       draw();
-      if (ghostRun && ghostFrame < ghostRun.pos.length) {
+      if (showGhost && ghostRun && ghostFrame < ghostRun.pos.length) {
         ghostFrame += 1;
       }
     }
@@ -915,7 +1104,47 @@ const FlappyBird = () => {
       if (loopId) cancelAnimationFrame(loopId);
     }
 
+    function applySettings(nextSettings) {
+      const nextGravity = Math.min(
+        GRAVITY_VARIANTS.length - 1,
+        Math.max(0, Number(nextSettings.gravityVariant)),
+      );
+      if (nextGravity !== gravityVariant) {
+        gravityVariant = nextGravity;
+        gravity = GRAVITY_VARIANTS[gravityVariant].value;
+        loadRecord();
+        ghostFrame = 0;
+      }
+      if (nextSettings.practiceMode !== practiceMode) {
+        practiceMode = nextSettings.practiceMode;
+        gap = practiceMode ? practiceGap : baseGap;
+        if (running) startLoop();
+      }
+      if (nextSettings.reducedMotion !== reduceMotion) {
+        reduceMotion = nextSettings.reducedMotion;
+        initDecor();
+      }
+      if (nextSettings.highHz !== highHz) {
+        highHz = nextSettings.highHz;
+        if (running) startLoop();
+      }
+      if (nextSettings.showHitbox !== showHitbox) {
+        showHitbox = nextSettings.showHitbox;
+      }
+      if (nextSettings.showGhost !== showGhost) {
+        showGhost = nextSettings.showGhost;
+        ghostFrame = 0;
+      }
+    }
+
     function handleKey(e) {
+      if (
+        e.code === "Space" ||
+        e.code === "ArrowUp" ||
+        e.code === "ArrowDown"
+      ) {
+        e.preventDefault();
+      }
       if (pausedRef.current) {
         if (e.code === "Escape" || e.code === "Space") {
           resumeGame();
@@ -950,29 +1179,37 @@ const FlappyBird = () => {
           startGame(lastRun.seed);
         }
       } else if (e.code === "KeyF") {
-        highHz = !highHz;
-        localStorage.setItem("flappy-120hz", highHz ? "1" : "0");
-        if (running) startLoop();
+        updateSetting(
+          "highHz",
+          !settingsRef.current.highHz,
+          `120 Hz ${settingsRef.current.highHz ? "off" : "on"}`,
+        );
       } else if (e.code === "KeyM") {
-        reduceMotion = !reduceMotion;
-        localStorage.setItem("flappy-reduced-motion", reduceMotion ? "1" : "0");
-        if (liveRef.current)
-          liveRef.current.textContent = `Reduced motion ${reduceMotion ? "on" : "off"}`;
-        initDecor();
+        updateSetting(
+          "reducedMotion",
+          !settingsRef.current.reducedMotion,
+          `Reduced motion ${settingsRef.current.reducedMotion ? "off" : "on"}`,
+        );
       } else if (e.code === "KeyP") {
-        practiceMode = !practiceMode;
-        localStorage.setItem("flappy-practice", practiceMode ? "1" : "0");
-        if (liveRef.current)
-          liveRef.current.textContent = practiceMode
-            ? "Practice mode on"
-            : "Practice mode off";
-        startGame();
+        updateSetting(
+          "practiceMode",
+          !settingsRef.current.practiceMode,
+          settingsRef.current.practiceMode ? "Practice mode off" : "Practice mode on",
+        );
+      } else if (e.code === "KeyT") {
+        updateSetting(
+          "showGhost",
+          !settingsRef.current.showGhost,
+          settingsRef.current.showGhost ? "Ghost off" : "Ghost on",
+        );
       } else if (e.code === "KeyG" && !running) {
-        gravityVariant = (gravityVariant + 1) % GRAVITY_VARIANTS.length;
-        localStorage.setItem("flappy-gravity-variant", String(gravityVariant));
-        loadRecord();
-        if (liveRef.current)
-          liveRef.current.textContent = `Gravity: ${GRAVITY_VARIANTS[gravityVariant].name}`;
+        const nextGravity =
+          (settingsRef.current.gravityVariant + 1) % GRAVITY_VARIANTS.length;
+        updateSetting(
+          "gravityVariant",
+          nextGravity,
+          `Difficulty: ${GRAVITY_VARIANTS[nextGravity].name}`,
+        );
       } else if (e.code === "KeyX" && !running) {
         const key = GRAVITY_VARIANTS[gravityVariant].name;
         delete records[key];
@@ -983,24 +1220,24 @@ const FlappyBird = () => {
       } else if (e.code === "KeyB") {
         birdSkin = (birdSkin + 1) % skinFrames.length;
         setSkin(birdSkin);
-        localStorage.setItem("flappy-bird-skin", String(birdSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Bird skin ${birdSkin + 1}`;
       } else if (e.code === "KeyO") {
         pipeSkin = (pipeSkin + 1) % pipeSkins.length;
         setPipeSkinIndex(pipeSkin);
-        localStorage.setItem("flappy-pipe-skin", String(pipeSkin));
         if (liveRef.current)
           liveRef.current.textContent = `Pipe skin ${pipeSkin + 1}`;
       } else if (e.code === "KeyH") {
-        showHitbox = !showHitbox;
-        localStorage.setItem("flappy-hitbox", showHitbox ? "1" : "0");
-        if (liveRef.current)
-          liveRef.current.textContent = showHitbox ? "Hitbox on" : "Hitbox off";
+        updateSetting(
+          "showHitbox",
+          !settingsRef.current.showHitbox,
+          settingsRef.current.showHitbox ? "Hitbox off" : "Hitbox on",
+        );
       }
     }
 
     function handlePointer() {
+      focusCanvas();
       if (pausedRef.current) {
         resumeGame();
       } else if (running) {
@@ -1010,9 +1247,10 @@ const FlappyBird = () => {
       }
     }
 
+    applySettingsRef.current = applySettings;
+    keyHandlerRef.current = handleKey;
     startGameRef.current = startGame;
 
-    window.addEventListener("keydown", handleKey, { passive: false });
     canvas.addEventListener("mousedown", handlePointer);
     canvas.addEventListener("touchstart", handlePointer, { passive: true });
 
@@ -1020,17 +1258,177 @@ const FlappyBird = () => {
 
     return () => {
       startGameRef.current = null;
-      window.removeEventListener("keydown", handleKey);
+      keyHandlerRef.current = null;
+      applySettingsRef.current = null;
       canvas.removeEventListener("mousedown", handlePointer);
       canvas.removeEventListener("touchstart", handlePointer);
       stopLoop();
     };
-  }, [canvasRef, started, pipeSkinIndex, skin, pauseGame, resumeGame, syncLeaderboard]);
+  }, [
+    canvasRef,
+    started,
+    pipeSkinIndex,
+    skin,
+    pauseGame,
+    resumeGame,
+    syncLeaderboard,
+    updateSetting,
+    focusCanvas,
+  ]);
 
   const leaderboardItems = leaderboard.slice(0, 5);
+  const settingsHelp = [
+    "Space / tap to flap",
+    "Esc to pause or resume",
+    "R to replay last, Shift+R for best (game over)",
+    "B for bird skin, O for pipe skin",
+    "G cycles difficulty (game over)",
+    "T ghost toggle · M reduced motion · P practice",
+    "F 120 Hz toggle · H hitbox",
+  ];
+
+  const SettingsPanel = ({ heading }) => (
+    <div className="rounded-lg bg-white/10 p-4 backdrop-blur">
+      {heading && <h3 className="text-lg font-semibold">{heading}</h3>}
+      <div className="mt-3 space-y-3 text-sm text-white/90">
+        <label className="flex flex-col text-sm">
+          <span className="text-xs uppercase tracking-widest text-white/60">Difficulty</span>
+          <select
+            className="mt-1 rounded border border-white/20 bg-white/90 px-3 py-2 text-black"
+            value={settings.gravityVariant}
+            onChange={(e) => {
+              const next = parseInt(e.target.value, 10);
+              updateSetting(
+                "gravityVariant",
+                next,
+                `Difficulty: ${GRAVITY_VARIANTS[next].name}`,
+              );
+            }}
+          >
+            {GRAVITY_VARIANTS.map((variant, index) => (
+              <option key={variant.name} value={index}>
+                {variant.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold">Practice mode</span>
+            <span className="block text-xs text-white/60">
+              Wider gaps with collision relaxed.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/40 bg-white/80 text-sky-500 focus:ring-sky-400"
+            aria-label="Practice mode"
+            checked={settings.practiceMode}
+            onChange={(e) =>
+              updateSetting(
+                "practiceMode",
+                e.target.checked,
+                e.target.checked ? "Practice mode on" : "Practice mode off",
+              )
+            }
+          />
+        </label>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold">Ghost run</span>
+            <span className="block text-xs text-white/60">
+              Show the best run overlay.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/40 bg-white/80 text-sky-500 focus:ring-sky-400"
+            aria-label="Ghost run"
+            checked={settings.showGhost}
+            onChange={(e) =>
+              updateSetting(
+                "showGhost",
+                e.target.checked,
+                e.target.checked ? "Ghost on" : "Ghost off",
+              )
+            }
+          />
+        </label>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold">Reduced motion</span>
+            <span className="block text-xs text-white/60">
+              Calms background animation.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/40 bg-white/80 text-sky-500 focus:ring-sky-400"
+            aria-label="Reduced motion"
+            checked={settings.reducedMotion}
+            onChange={(e) =>
+              updateSetting(
+                "reducedMotion",
+                e.target.checked,
+                e.target.checked ? "Reduced motion on" : "Reduced motion off",
+              )
+            }
+          />
+        </label>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold">120 Hz mode</span>
+            <span className="block text-xs text-white/60">
+              Higher refresh for smoother play.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/40 bg-white/80 text-sky-500 focus:ring-sky-400"
+            aria-label="120 Hz mode"
+            checked={settings.highHz}
+            onChange={(e) =>
+              updateSetting(
+                "highHz",
+                e.target.checked,
+                e.target.checked ? "120 Hz on" : "120 Hz off",
+              )
+            }
+          />
+        </label>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold">Hitbox overlay</span>
+            <span className="block text-xs text-white/60">
+              Draw collision bounds.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/40 bg-white/80 text-sky-500 focus:ring-sky-400"
+            aria-label="Hitbox overlay"
+            checked={settings.showHitbox}
+            onChange={(e) =>
+              updateSetting(
+                "showHitbox",
+                e.target.checked,
+                e.target.checked ? "Hitbox on" : "Hitbox off",
+              )
+            }
+          />
+        </label>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="relative h-full w-full">
+    <div
+      ref={containerRef}
+      className="relative h-full w-full"
+      onKeyDown={handleRootKeyDown}
+      onFocusCapture={handleFocusCapture}
+      onBlurCapture={handleBlurCapture}
+    >
       {started && (
         <button
           type="button"
@@ -1061,14 +1459,15 @@ const FlappyBird = () => {
 
       <canvas
         ref={canvasRef}
-        className="h-full w-full bg-black"
+        className={`h-full w-full touch-none bg-black focus:outline-none focus:ring-2 focus:ring-sky-400 ${isFocused ? "ring-2 ring-sky-400" : ""}`}
         role="img"
         aria-label="Flappy Bird game"
+        tabIndex={0}
       />
 
       {gameState === "menu" && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-6 bg-black/80 p-6 text-white transition-opacity duration-300">
-          <div className="grid w-full max-w-3xl gap-6 md:grid-cols-2">
+          <div className="grid w-full max-w-4xl gap-6 md:grid-cols-2">
             <div className="space-y-4 text-left">
               <label className="flex flex-col text-sm">
                 <span className="text-xs uppercase tracking-widest text-white/60">Bird Skin</span>
@@ -1098,10 +1497,17 @@ const FlappyBird = () => {
                   ))}
                 </select>
               </label>
+              <SettingsPanel heading="Settings" />
               <div className="rounded-lg bg-white/10 p-4 text-xs uppercase tracking-widest text-white/70">
-                <p>Space / tap to flap</p>
-                <p className="mt-1">Esc to pause · R to replay · G to cycle gravity</p>
-                <p className="mt-1">B to change bird · O to change pipes</p>
+                <p className="text-white">How to play</p>
+                <ul className="mt-2 space-y-1 text-[11px] uppercase tracking-widest text-white/70">
+                  {settingsHelp.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11px] text-white/60">
+                  Click the game area to focus before using keys.
+                </p>
               </div>
             </div>
             <div className="rounded-lg bg-white/10 p-4 backdrop-blur">
@@ -1126,12 +1532,6 @@ const FlappyBird = () => {
           <button
             className="w-40 rounded-full bg-sky-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow-lg transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-300"
             onClick={() => {
-              try {
-                localStorage.setItem("flappy-bird-skin", String(skin));
-                localStorage.setItem("flappy-pipe-skin", String(pipeSkinIndex));
-              } catch {
-                /* ignore */
-              }
               resumeGame();
               setStarted(true);
             }}
@@ -1143,17 +1543,20 @@ const FlappyBird = () => {
 
       {gameState === "paused" && (
         <div className="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-4 bg-black/60 p-6 text-white transition-opacity duration-300">
-          <div className="rounded-lg bg-white/10 px-6 py-4 text-center shadow-lg backdrop-blur">
-            <h3 className="text-2xl font-semibold">Paused</h3>
-            <p className="mt-2 text-sm text-white/80">Score: {scoreRef.current}</p>
-            <p className="text-sm text-white/60">Best this mode: {bestRef.current}</p>
+          <div className="grid w-full max-w-3xl gap-4 md:grid-cols-2">
+            <div className="rounded-lg bg-white/10 px-6 py-4 text-center shadow-lg backdrop-blur">
+              <h3 className="text-2xl font-semibold">Paused</h3>
+              <p className="mt-2 text-sm text-white/80">Score: {scoreRef.current}</p>
+              <p className="text-sm text-white/60">Best this mode: {bestRef.current}</p>
+              <button
+                className="mt-4 w-full rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white shadow hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-300"
+                onClick={resumeGame}
+              >
+                Resume
+              </button>
+            </div>
+            <SettingsPanel heading="Settings" />
           </div>
-          <button
-            className="w-36 rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white shadow hover:bg-emerald-400 focus:outline-none focus:ring-4 focus:ring-emerald-300"
-            onClick={resumeGame}
-          >
-            Resume
-          </button>
         </div>
       )}
 

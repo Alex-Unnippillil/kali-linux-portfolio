@@ -2,28 +2,56 @@ import React from 'react';
 import { act, render } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
 
+function MockBackgroundImage() {
+  return <div data-testid="background" />;
+}
+function MockUbuntuApp() {
+  return <div data-testid="ubuntu-app" />;
+}
+function MockAllApplications() {
+  return <div data-testid="all-apps" />;
+}
+function MockShortcutSelector() {
+  return <div data-testid="shortcut-selector" />;
+}
+function MockWindowSwitcher() {
+  return <div data-testid="window-switcher" />;
+}
+function MockDesktopMenu() {
+  return <div data-testid="desktop-menu" />;
+}
+function MockDefaultMenu() {
+  return <div data-testid="default-menu" />;
+}
+function MockAppMenu() {
+  return <div data-testid="app-menu" />;
+}
+function MockTaskbarMenu() {
+  return <div data-testid="taskbar-menu" />;
+}
+
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
-jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
-jest.mock('../components/base/ubuntu_app', () => () => <div data-testid="ubuntu-app" />);
-jest.mock('../components/screen/all-applications', () => () => <div data-testid="all-apps" />);
-jest.mock('../components/screen/shortcut-selector', () => () => <div data-testid="shortcut-selector" />);
-jest.mock('../components/screen/window-switcher', () => () => <div data-testid="window-switcher" />);
+jest.mock('../components/util-components/background-image', () => MockBackgroundImage);
+jest.mock('../components/base/ubuntu_app', () => MockUbuntuApp);
+jest.mock('../components/screen/all-applications', () => MockAllApplications);
+jest.mock('../components/screen/shortcut-selector', () => MockShortcutSelector);
+jest.mock('../components/screen/window-switcher', () => MockWindowSwitcher);
 jest.mock('../components/context-menus/desktop-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="desktop-menu" />,
+  default: MockDesktopMenu,
 }));
 jest.mock('../components/context-menus/default', () => ({
   __esModule: true,
-  default: () => <div data-testid="default-menu" />,
+  default: MockDefaultMenu,
 }));
 jest.mock('../components/context-menus/app-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="app-menu" />,
+  default: MockAppMenu,
 }));
 jest.mock('../components/context-menus/taskbar-menu', () => ({
   __esModule: true,
-  default: () => <div data-testid="taskbar-menu" />,
+  default: MockTaskbarMenu,
 }));
 jest.mock('../utils/recentStorage', () => ({ addRecentApp: jest.fn() }));
 
@@ -32,11 +60,16 @@ const windowPropsById = new Map<string, any>();
 
 jest.mock('../components/desktop/Window', () => {
   const React = require('react');
-  return React.forwardRef((props: any, _ref: any) => {
+  const MockDesktopWindow = React.forwardRef((props: any, _ref: any) => {
     windowRenderMock(props);
     windowPropsById.set(props.id, props);
     return null;
   });
+  MockDesktopWindow.displayName = 'MockDesktopWindow';
+  return {
+    __esModule: true,
+    default: MockDesktopWindow,
+  };
 });
 
 describe('Desktop window size persistence', () => {
@@ -74,7 +107,7 @@ describe('Desktop window size persistence', () => {
       desktopRef.current?.openApp('terminal');
     });
     await act(async () => {
-      jest.advanceTimersByTime(200);
+      jest.runOnlyPendingTimers();
       await Promise.resolve();
     });
 
@@ -115,7 +148,7 @@ describe('Desktop window size persistence', () => {
       desktopRefReloaded.current?.openApp('terminal');
     });
     await act(async () => {
-      jest.advanceTimersByTime(200);
+      jest.runOnlyPendingTimers();
       await Promise.resolve();
     });
 

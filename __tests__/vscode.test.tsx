@@ -11,7 +11,6 @@ describe('VsCode app', () => {
     expect(frame).toHaveAttribute('src', STACKBLITZ_EMBED_URL);
 
     const openExternally = screen.getAllByRole('link', { name: 'Open in StackBlitz' });
-    expect(openExternally.length).toBeGreaterThan(0);
     expect(openExternally[0]).toHaveAttribute('href', expect.stringContaining('stackblitz.com'));
   });
 });
