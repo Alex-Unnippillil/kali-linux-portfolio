@@ -95,6 +95,7 @@ export interface SettingsState extends SettingsValues {
   setHaptics: (value: boolean) => void;
   setTheme: (value: string) => void;
   reset: () => void;
+  hasHydrated: boolean;
 }
 
 const pickSettings = (state: SettingsValues) => ({
@@ -116,6 +117,7 @@ export const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       ...resolveDefaults(),
+      hasHydrated: false,
       setAccent: (accent) => set({ accent }),
       setWallpaper: (wallpaper) => set({ wallpaper }),
       setUseKaliWallpaper: (useKaliWallpaper) => set({ useKaliWallpaper }),
@@ -137,7 +139,9 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'desktop-settings',
       storage: createJSONStorage(() => storage),
       partialize: (state) => pickSettings(state),
-      onRehydrateStorage: () => undefined,
+      onRehydrateStorage: () => (state) => {
+        state.hasHydrated = true;
+      },
     },
   ),
 );

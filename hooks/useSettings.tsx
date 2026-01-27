@@ -120,6 +120,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     allowNetwork,
     haptics,
     theme,
+    hasHydrated,
     setAccent,
     setWallpaper,
     setUseKaliWallpaper,
@@ -292,6 +293,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     setWallpaper,
     setUseKaliWallpaper,
   ]);
+
+  // Don't render children until hydration is complete to avoid flashing defaults
+  if (!hasHydrated) {
+    return null;
+  }
 
   return (
     <SettingsContext.Provider
