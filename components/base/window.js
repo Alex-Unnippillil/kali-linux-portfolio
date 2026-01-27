@@ -1501,6 +1501,9 @@ export class Window extends Component {
 
     closeWindow = () => {
         this.setWinowsPosition();
+        if (typeof this.props.onCloseStart === 'function') {
+            this.props.onCloseStart();
+        }
         this.setState({ closed: true, preMaximizeBounds: null }, () => {
             this.deactivateOverlay();
             const prefersReducedMotion = typeof window !== 'undefined'
@@ -1714,6 +1717,7 @@ export class Window extends Component {
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
+                    disabled={Boolean(this.props.disableDragging)}
                     defaultPosition={{ x: this.startX, y: this.startY }}
                     bounds={{
                         left: viewportLeft - DRAG_BOUNDS_PADDING,
@@ -1735,7 +1739,7 @@ export class Window extends Component {
                         className={[
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
-                            this.props.minimized ? styles.windowFrameMinimized : '',
+                            this.props.minimized && !this.props.suppressMinimizedStyles ? styles.windowFrameMinimized : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',

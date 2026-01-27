@@ -957,7 +957,7 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} group relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
@@ -968,15 +968,22 @@ export default class Navbar extends PureComponent {
                                                 className="h-6 w-6"
                                         />
                                         {badgeNode}
-                                        {isActive && (
+                                        {isRunning && (
                                                 <span
                                                         aria-hidden="true"
                                                         data-testid="running-indicator"
-                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
+                                                        className={`absolute -bottom-1 left-1/2 h-1.5 w-3 -translate-x-1/2 rounded-full ${isFocused ? 'bg-sky-200 shadow-[0_0_6px_rgba(125,211,252,0.85)]' : 'bg-white/70'}`}
                                                 />
                                         )}
                                 </span>
                                 <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                <span
+                                        role="tooltip"
+                                        aria-hidden="true"
+                                        className="pointer-events-none absolute -top-1 left-1/2 z-50 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-slate-900/90 px-2 py-1 text-[0.65rem] text-white opacity-0 shadow-lg transition-opacity duration-100 group-hover:opacity-100 group-focus-visible:opacity-100"
+                                >
+                                        {app.title}
+                                </span>
                         </button>
                 );
         };
