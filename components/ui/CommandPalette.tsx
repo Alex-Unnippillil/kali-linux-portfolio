@@ -1,8 +1,10 @@
 "use client";
 
+import { evaluate } from 'mathjs';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useFileSystemStore } from '../../stores/fileSystemStore';
 
-type CommandPaletteItemType = 'app' | 'window' | 'action';
+type CommandPaletteItemType = 'app' | 'window' | 'action' | 'file' | 'calculation';
 
 type BasicItem = {
   id: string;
@@ -30,6 +32,8 @@ const SECTION_METADATA: Record<CommandPaletteItemType, { label: string }> = {
   window: { label: 'Recent Windows' },
   app: { label: 'Applications' },
   action: { label: 'Settings & Actions' },
+  file: { label: 'Files' },
+  calculation: { label: 'Calculations' },
 };
 
 const isMacLike = (): boolean => {
@@ -76,14 +80,55 @@ export default function CommandPalette({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const vfsTree = useFileSystemStore((state) => state.tree);
+  const searchFiles = useFileSystemStore((state) => state.searchFiles);
+
+  const fileItems = useMemo(() => {
+    const term = query.trim();
+    if (!term) return [];
+    const results = searchFiles(term);
+    return results.map((result) => ({
+      id: encodeURIComponent(result.path),
+      title: result.name,
+      subtitle: result.path,
+      icon: '/themes/Yaru/apps/gedit.png',
+      keywords: ['file', result.path],
+      data: { path: result.path },
+    }));
+  }, [query, searchFiles, vfsTree]);
+
+  const calculationItems = useMemo(() => {
+    const expression = query.trim();
+    if (!expression) return [];
+    if (!/^[0-9+*/().\s-]+$/.test(expression)) return [];
+    try {
+      const value = evaluate(expression);
+      const valueString = typeof value === 'string' ? value : String(value);
+      if (!valueString) return [];
+      return [
+        {
+          id: `calc-${encodeURIComponent(expression)}`,
+          title: valueString,
+          subtitle: `Result for ${expression}`,
+          icon: '/themes/Yaru/apps/calc.svg',
+          keywords: ['calculate', 'math', expression],
+          data: { action: 'copy-calculation', value: valueString },
+        },
+      ];
+    } catch {
+      return [];
+    }
+  }, [query]);
 
   const sections = useMemo(() => {
     return [
       { type: 'window' as const, label: SECTION_METADATA.window.label, items: buildItems(recentWindows, 'window') },
       { type: 'app' as const, label: SECTION_METADATA.app.label, items: buildItems(apps, 'app') },
       { type: 'action' as const, label: SECTION_METADATA.action.label, items: buildItems(settingsActions, 'action') },
+      { type: 'file' as const, label: SECTION_METADATA.file.label, items: buildItems(fileItems, 'file') },
+      { type: 'calculation' as const, label: SECTION_METADATA.calculation.label, items: buildItems(calculationItems, 'calculation') },
     ];
-  }, [apps, recentWindows, settingsActions]);
+  }, [apps, recentWindows, settingsActions, fileItems, calculationItems]);
 
   const filteredSections = useMemo(() => {
     const term = query.trim().toLowerCase();
@@ -227,7 +272,7 @@ export default function CommandPalette({
       <header className="space-y-2">
         <h2 className="text-xl font-semibold tracking-wide">Command Palette</h2>
         <p className="text-sm text-white/70">
-          Search across applications, recent windows, and settings. Use the arrow keys to navigate and Enter to run a command.
+          Search across applications, recent windows, settings, files, and quick calculations. Use the arrow keys to navigate and Enter to run a command.
         </p>
       </header>
 
@@ -243,7 +288,7 @@ export default function CommandPalette({
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Search apps, windows, and settings"
+            placeholder="Search apps, windows, settings, files, or math"
             autoComplete="off"
             spellCheck={false}
             className="w-full rounded-lg border border-white/10 bg-white/10 px-4 py-2 text-sm text-white shadow-inner focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60"

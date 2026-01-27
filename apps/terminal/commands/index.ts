@@ -63,15 +63,28 @@ const help: CommandHandler = (args, ctx) => {
   );
 };
 
-const ls: CommandHandler = (_args, ctx) => {
-  const entries = Object.keys(ctx.files);
-  ctx.writeLine(entries.length ? entries.join('  ') : '');
+const ls: CommandHandler = (args, ctx) => {
+  const target = args.trim() || ctx.cwd;
+  const resolved = ctx.vfs.resolvePath(target, ctx.cwd);
+  const entries = ctx.vfs.listDirectory(resolved);
+  if (!entries.length) {
+    ctx.writeLine('');
+    return;
+  }
+  const names = entries.map((entry) => entry.name);
+  ctx.writeLine(names.join('  '));
 };
 
 const cat: CommandHandler = async (args, ctx) => {
   const target = args.trim();
   if (!target) {
     ctx.writeLine('Usage: cat <file>');
+    return;
+  }
+  const resolved = ctx.vfs.resolvePath(target, ctx.cwd);
+  const vfsRead = ctx.vfs.readFile(resolved);
+  if (vfsRead.ok) {
+    ctx.writeLine(vfsRead.content || '');
     return;
   }
   if (target in ctx.files) {
@@ -107,6 +120,79 @@ const date: CommandHandler = (_args, ctx) => {
   ctx.writeLine(new Date().toString());
 };
 
+const pwd: CommandHandler = (_args, ctx) => {
+  ctx.writeLine(ctx.cwd);
+};
+
+const cd: CommandHandler = (args, ctx) => {
+  const target = args.trim() || '~';
+  const resolved = ctx.vfs.resolvePath(target, ctx.cwd);
+  const entry = ctx.vfs.getEntry(resolved);
+  if (!entry) {
+    ctx.writeLine(`cd: ${target}: No such file or directory`);
+    return;
+  }
+  if (entry.type !== 'directory') {
+    ctx.writeLine(`cd: ${target}: Not a directory`);
+    return;
+  }
+  ctx.setCwd(resolved);
+};
+
+const mkdir: CommandHandler = (args, ctx) => {
+  if (!args.trim()) {
+    ctx.writeLine('Usage: mkdir [-p] <dir>');
+    return;
+  }
+  const parts = args.split(' ').map((part) => part.trim()).filter(Boolean);
+  const recursive = parts.includes('-p');
+  const targets = parts.filter((part) => part !== '-p');
+  if (!targets.length) {
+    ctx.writeLine('mkdir: missing operand');
+    return;
+  }
+  targets.forEach((target) => {
+    const result = ctx.vfs.createDirectory(target, { cwd: ctx.cwd, recursive });
+    if (!result.ok) {
+      ctx.writeLine(`mkdir: ${target}: ${result.message || 'unable to create directory'}`);
+    }
+  });
+};
+
+const touch: CommandHandler = (args, ctx) => {
+  if (!args.trim()) {
+    ctx.writeLine('Usage: touch <file>');
+    return;
+  }
+  const targets = args.split(' ').map((part) => part.trim()).filter(Boolean);
+  targets.forEach((target) => {
+    const result = ctx.vfs.createFile(target, '', { cwd: ctx.cwd });
+    if (!result.ok) {
+      ctx.writeLine(`touch: ${target}: ${result.message || 'unable to create file'}`);
+    }
+  });
+};
+
+const rm: CommandHandler = (args, ctx) => {
+  if (!args.trim()) {
+    ctx.writeLine('Usage: rm [-r] <path>');
+    return;
+  }
+  const parts = args.split(' ').map((part) => part.trim()).filter(Boolean);
+  const recursive = parts.includes('-r') || parts.includes('-rf') || parts.includes('-fr');
+  const targets = parts.filter((part) => !part.startsWith('-'));
+  if (!targets.length) {
+    ctx.writeLine('rm: missing operand');
+    return;
+  }
+  targets.forEach((target) => {
+    const result = ctx.vfs.removePath(target, { cwd: ctx.cwd, recursive });
+    if (!result.ok) {
+      ctx.writeLine(`rm: ${target}: ${result.message || 'unable to remove path'}`);
+    }
+  });
+};
+
 const commandList: CommandDefinition[] = [
   { name: 'help', description: 'Show this index or details for a single command.', usage: 'help [command]', handler: help },
   { name: 'man', description: 'Read the simulated manual pages.', usage: 'man <command>', handler: man },
@@ -118,6 +204,11 @@ const commandList: CommandDefinition[] = [
   { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
   { name: 'about', description: 'Show information about this terminal.', handler: about },
   { name: 'date', description: 'Print the current date.', handler: date },
+  { name: 'pwd', description: 'Print the working directory.', handler: pwd },
+  { name: 'cd', description: 'Change the working directory.', usage: 'cd [path]', handler: cd },
+  { name: 'mkdir', description: 'Create a directory.', usage: 'mkdir [-p] <dir>', handler: mkdir },
+  { name: 'touch', description: 'Create a file.', usage: 'touch <file>', handler: touch },
+  { name: 'rm', description: 'Remove a file or directory.', usage: 'rm [-r] <path>', handler: rm },
   { name: 'grep', description: 'Search through text (simulated).', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
   { name: 'jq', description: 'Filter JSON input (simulated).', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
 ];

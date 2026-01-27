@@ -31,6 +31,7 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { DEFAULT_DESKTOP_PATH, fileSystemStore } from '../../stores/fileSystemStore';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -221,6 +222,7 @@ export class Desktop extends Component {
             'window_positions',
             'window_sizes',
         ]);
+        this.vfsUnsubscribe = null;
         this.windowSizeStorageKey = 'desktop_window_sizes';
         this.defaultThemeConfig = {
             id: 'default',
@@ -349,6 +351,7 @@ export class Desktop extends Component {
             closedShelfOpen: false,
             appBadges: {},
             taskbarOrder: this.loadTaskbarOrder(),
+            vfsDesktopEntries: [],
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -420,6 +423,40 @@ export class Desktop extends Component {
         }
 
     }
+
+    syncVfsDesktopEntries = () => {
+        const entries = fileSystemStore.getState().listDirectory(DEFAULT_DESKTOP_PATH);
+        this.setState({ vfsDesktopEntries: entries }, () => {
+            this.ensureIconPositions(this.getDesktopIconIds());
+        });
+    };
+
+    getDesktopIconEntries = (state = this.state) => {
+        const entries = Array.isArray(state.vfsDesktopEntries) ? state.vfsDesktopEntries : [];
+        const icons = [];
+        entries.forEach((entry) => {
+            if (!entry) return;
+            if (entry.type === 'app' && entry.appId) {
+                const app = this.getAppById(entry.appId);
+                if (app) {
+                    icons.push({ id: app.id, type: 'app', app, entry });
+                }
+                return;
+            }
+            const id = `vfs-${entry.id}`;
+            icons.push({ id, type: entry.type, entry });
+        });
+        return icons;
+    };
+
+    getDesktopIconIds = (state = this.state) => {
+        return this.getDesktopIconEntries(state).map((entry) => entry.id);
+    };
+
+    getDesktopIconIndex = (id) => {
+        const icons = this.getDesktopIconEntries();
+        return icons.findIndex((entry) => entry.id === id);
+    };
 
     createEmptyWorkspaceState = () => ({
         focused_windows: createOverlayFlagMap(false),
@@ -2151,6 +2188,8 @@ export class Desktop extends Component {
     };
 
     getCommandPaletteSettingsActions = () => {
+        const theme = this.props.theme || 'default';
+        const isDark = theme === 'dark';
         const actions = [
             {
                 id: 'command-open-settings',
@@ -2160,7 +2199,37 @@ export class Desktop extends Component {
                 keywords: ['settings', 'preferences', 'control'],
                 data: { action: 'open-settings', target: 'settings' },
             },
+            {
+                id: 'command-change-wallpaper',
+                title: 'Change Wallpaper',
+                subtitle: 'Open wallpaper settings',
+                icon: this.normalizePaletteIconPath('/themes/Yaru/system/user-desktop.png'),
+                keywords: ['wallpaper', 'background', 'desktop', 'theme'],
+                data: { action: 'open-settings', target: 'wallpaper' },
+            },
         ];
+
+        if (typeof this.props.setTheme === 'function') {
+            actions.push({
+                id: 'command-toggle-dark-mode',
+                title: isDark ? 'Disable Dark Mode' : 'Enable Dark Mode',
+                subtitle: 'Toggle dark theme',
+                icon: this.normalizePaletteIconPath('/themes/Yaru/status/display-brightness-symbolic.svg'),
+                keywords: ['dark mode', 'theme', 'appearance'],
+                data: { action: 'set-theme', theme: isDark ? 'default' : 'dark' },
+            });
+        }
+
+        if (typeof this.props.setUseKaliWallpaper === 'function') {
+            actions.push({
+                id: 'command-toggle-kali-wallpaper',
+                title: this.props.useKaliWallpaper ? 'Disable Kali Wallpaper' : 'Enable Kali Wallpaper',
+                subtitle: 'Toggle Kali gradient wallpaper',
+                icon: this.normalizePaletteIconPath('/themes/Yaru/status/icons8-kali-linux.svg'),
+                keywords: ['kali', 'wallpaper', 'gradient'],
+                data: { action: 'toggle-kali-wallpaper' },
+            });
+        }
 
         const presets = [
             { preset: 'small', title: 'Use small desktop icons', keywords: ['small', 'icons', 'desktop'] },
@@ -2233,6 +2302,27 @@ export class Desktop extends Component {
             this.openApp('settings');
             return true;
         }
+        if (actionType === 'set-theme') {
+            const theme = item?.data?.theme;
+            if (theme && typeof this.props.setTheme === 'function') {
+                this.props.setTheme(theme);
+                return true;
+            }
+        }
+        if (actionType === 'toggle-kali-wallpaper') {
+            if (typeof this.props.setUseKaliWallpaper === 'function') {
+                this.props.setUseKaliWallpaper(!this.props.useKaliWallpaper);
+                return true;
+            }
+        }
+        if (actionType === 'copy-calculation') {
+            const value = item?.data?.value;
+            if (!value) return false;
+            if (navigator?.clipboard?.writeText) {
+                navigator.clipboard.writeText(String(value)).catch(() => {});
+            }
+            return true;
+        }
         if (actionType === 'set-icon-size') {
             const preset = item?.data?.preset;
             if (preset && this.iconSizePresets?.[preset]) {
@@ -2245,11 +2335,19 @@ export class Desktop extends Component {
 
     handleCommandPaletteSelect = (item) => {
         if (!item || typeof item !== 'object') return;
-        if (item.type === 'action') {
+        if (item.type === 'action' || item.type === 'calculation') {
             const handled = this.handleCommandPaletteAction(item);
             if (handled) {
                 this.closeCommandPalette();
             }
+            return;
+        }
+        if (item.type === 'file') {
+            const path = item?.data?.path;
+            if (path) {
+                this.openApp('files', { useVfs: true, vfsPath: path });
+            }
+            this.closeCommandPalette();
             return;
         }
         if (item.id) {
@@ -2585,8 +2683,7 @@ export class Desktop extends Component {
     };
 
     getDesktopAppIndex = (id) => {
-        const appsOnDesktop = this.state.desktop_apps || [];
-        return appsOnDesktop.indexOf(id);
+        return this.getDesktopIconIndex(id);
     };
 
     describeKeyboardIconPosition = (position) => {
@@ -2701,7 +2798,7 @@ export class Desktop extends Component {
 
     calculateSelectionForState = (state, appId, modifiers = {}) => {
         if (!appId) return null;
-        const desktopApps = Array.isArray(state.desktop_apps) ? state.desktop_apps : [];
+        const desktopApps = this.getDesktopIconIds(state);
         const prevSelected = state.selectedIcons instanceof Set ? state.selectedIcons : new Set();
         const prevAnchor = state.selectionAnchorId ?? null;
         const multi = Boolean(modifiers.multi);
@@ -3109,6 +3206,28 @@ export class Desktop extends Component {
         }
     };
 
+    handleVfsIconKeyDown = (event, entry) => {
+        if (!entry || !event) return;
+        if (event.key === 'Enter' || event.key === ' ' || event.key === 'Spacebar') {
+            event.preventDefault();
+            this.openVfsEntry(entry);
+        }
+    };
+
+    getVfsEntryByIconId = (id) => {
+        if (!id) return null;
+        const entries = Array.isArray(this.state.vfsDesktopEntries) ? this.state.vfsDesktopEntries : [];
+        return entries.find((entry) => `vfs-${entry.id}` === id) || null;
+    };
+
+    openVfsEntry = (entry) => {
+        const resolvedEntry = entry?.entry || entry;
+        const target = resolvedEntry?.name;
+        if (!target) return;
+        const path = `${DEFAULT_DESKTOP_PATH}/${target}`;
+        this.openApp('files', { useVfs: true, vfsPath: path });
+    };
+
     handleIconBlur = (_event, appId) => {
         const moveState = this.state.keyboardMoveState;
         if (moveState && moveState.id === appId) {
@@ -3408,7 +3527,12 @@ export class Desktop extends Component {
         const shouldActivate = isTouch || (!selectionChanged && !hadMultiIntent && !(event.ctrlKey || event.metaKey || event.shiftKey));
         this.setState({ draggingIconId: null }, () => {
             if (shouldActivate) {
-                this.openApp(dragState.id);
+                const vfsEntry = this.getVfsEntryByIconId(dragState.id);
+                if (vfsEntry) {
+                    this.openVfsEntry({ entry: vfsEntry, type: vfsEntry.type, id: dragState.id });
+                } else {
+                    this.openApp(dragState.id);
+                }
             }
         });
     };
@@ -3428,7 +3552,7 @@ export class Desktop extends Component {
     };
 
     realignIconPositions = () => {
-        const desktopApps = this.state.desktop_apps || [];
+        const desktopApps = this.getDesktopIconIds();
         if (!desktopApps.length) return;
         this.setState((prevState) => {
             const current = prevState.desktop_icon_positions || {};
@@ -3581,6 +3705,12 @@ export class Desktop extends Component {
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
+        this.syncVfsDesktopEntries();
+        this.vfsUnsubscribe = fileSystemStore.subscribe(
+            (state) => state.tree,
+            () => this.syncVfsDesktopEntries(),
+        );
+
         if (typeof window !== 'undefined') {
             window.addEventListener('workspace-select', this.handleExternalWorkspaceSelect);
             window.addEventListener('workspace-request', this.broadcastWorkspaceState);
@@ -3710,6 +3840,10 @@ export class Desktop extends Component {
         if (this.allAppsEnterRaf && typeof cancelAnimationFrame === 'function') {
             cancelAnimationFrame(this.allAppsEnterRaf);
             this.allAppsEnterRaf = null;
+        }
+        if (this.vfsUnsubscribe) {
+            this.vfsUnsubscribe();
+            this.vfsUnsubscribe = null;
         }
         this.deactivateAllAppsFocusTrap();
     }
@@ -3894,6 +4028,11 @@ export class Desktop extends Component {
                         desktop_shortcut: true,
                         isFolder: true,
                         screen: () => null,
+                    });
+                }
+                if (title) {
+                    fileSystemStore.getState().createDirectory(`${DEFAULT_DESKTOP_PATH}/${title}`, {
+                        recursive: true,
                     });
                 }
                 addedIds.push(normalizedId);
@@ -4553,7 +4692,7 @@ export class Desktop extends Component {
             favourite_apps,
             desktop_apps,
         }, () => {
-            this.ensureIconPositions(desktop_apps);
+            this.ensureIconPositions(this.getDesktopIconIds());
             if (typeof callback === 'function') callback();
             this.broadcastWorkspaceState();
         });
@@ -4610,7 +4749,7 @@ export class Desktop extends Component {
             favourite_apps,
             desktop_apps,
         }, () => {
-            this.ensureIconPositions(desktop_apps);
+            this.ensureIconPositions(this.getDesktopIconIds());
             this.broadcastWorkspaceState();
         });
         this.initFavourite = { ...favourite_apps };
@@ -4626,12 +4765,12 @@ export class Desktop extends Component {
 
     renderDesktopApps = () => {
         const {
-            desktop_apps: desktopApps,
             desktop_icon_positions: positions = {},
             draggingIconId,
             keyboardMoveState,
         } = this.state;
-        if (!desktopApps || desktopApps.length === 0) return null;
+        const desktopEntries = this.getDesktopIconEntries();
+        if (!desktopEntries.length) return null;
 
         const hasOpenWindows = this.hasVisibleWindows();
         const blockIcons = hasOpenWindows && !draggingIconId;
@@ -4641,29 +4780,14 @@ export class Desktop extends Component {
         const hoveredIconId = this.state.hoveredIconId;
         const marqueeSelection = this.state.marqueeSelection;
 
-        const icons = desktopApps.map((appId, index) => {
-            const app = this.getAppById(appId);
-            if (!app) return null;
-
-            const props = {
-                name: app.title,
-                id: app.id,
-                icon: app.icon,
-                openApp: this.openApp,
-                disabled: this.state.disabled_apps[app.id],
-                prefetch: app.screen?.prefetch,
-                style: this.desktopIconVariables,
-                accentVariables: this.desktopAccentVariables,
-            };
-
-            const position = (keyboardMoveState && keyboardMoveState.id === appId && keyboardMoveState.position)
+        const icons = desktopEntries.map((entry, index) => {
+            const position = (keyboardMoveState && keyboardMoveState.id === entry.id && keyboardMoveState.position)
                 ? keyboardMoveState.position
-                : (positions[appId] || this.computeGridPosition(index));
-            const isKeyboardMoving = Boolean(keyboardMoveState && keyboardMoveState.id === appId);
-            const isDragging = draggingIconId === appId || isKeyboardMoving;
-            const isSelected = selectionSet.has(appId);
-            const isHovered = hoveredIconId === appId;
-            const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
+                : (positions[entry.id] || this.computeGridPosition(index));
+            const isKeyboardMoving = Boolean(keyboardMoveState && keyboardMoveState.id === entry.id);
+            const isDragging = draggingIconId === entry.id || isKeyboardMoving;
+            const isSelected = selectionSet.has(entry.id);
+            const isHovered = hoveredIconId === entry.id;
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
@@ -4673,25 +4797,76 @@ export class Desktop extends Component {
                 zIndex: isDragging ? 60 : iconBaseZIndex,
             };
 
+            if (entry.type === 'app' && entry.app) {
+                const app = entry.app;
+                const props = {
+                    name: app.title,
+                    id: app.id,
+                    icon: app.icon,
+                    openApp: this.openApp,
+                    disabled: this.state.disabled_apps[app.id],
+                    prefetch: app.screen?.prefetch,
+                    style: this.desktopIconVariables,
+                    accentVariables: this.desktopAccentVariables,
+                };
+                const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
+                return (
+                    <div
+                        key={app.id}
+                        style={wrapperStyle}
+                        onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
+                        onPointerMove={this.handleIconPointerMove}
+                        onPointerUp={this.handleIconPointerUp}
+                        onPointerCancel={this.handleIconPointerCancel}
+                        onClickCapture={this.handleIconClickCapture}
+                        onPointerEnter={() => this.handleIconPointerEnter(app.id)}
+                        onPointerLeave={() => this.handleIconPointerLeave(app.id)}
+                    >
+                        <UbuntuApp
+                            {...props}
+                            draggable={false}
+                            isBeingDragged={isDragging}
+                            onKeyDown={(event) => this.handleIconKeyDown(event, app)}
+                            onBlur={(event) => this.handleIconBlur(event, app.id)}
+                            assistiveHint={assistiveHint}
+                            isSelected={isSelected}
+                            isHovered={isHovered}
+                        />
+                    </div>
+                );
+            }
+
+            const entryName = entry.entry?.name || 'file';
+            const icon = entry.type === 'directory'
+                ? '/themes/Yaru/system/folder.png'
+                : '/themes/Yaru/apps/gedit.png';
+            const assistiveHint = `Press Enter to open ${entryName}.`;
             return (
                 <div
-                    key={app.id}
+                    key={entry.id}
                     style={wrapperStyle}
-                    onPointerDown={(event) => this.handleIconPointerDown(event, app.id)}
+                    onPointerDown={(event) => this.handleIconPointerDown(event, entry.id)}
                     onPointerMove={this.handleIconPointerMove}
                     onPointerUp={this.handleIconPointerUp}
                     onPointerCancel={this.handleIconPointerCancel}
                     onClickCapture={this.handleIconClickCapture}
-                    onPointerEnter={() => this.handleIconPointerEnter(app.id)}
-                    onPointerLeave={() => this.handleIconPointerLeave(app.id)}
+                    onPointerEnter={() => this.handleIconPointerEnter(entry.id)}
+                    onPointerLeave={() => this.handleIconPointerLeave(entry.id)}
                 >
                     <UbuntuApp
-                        {...props}
+                        name={entryName}
+                        displayName={entryName}
+                        id={entry.id}
+                        icon={icon}
+                        openApp={() => this.openVfsEntry(entry)}
+                        disabled={false}
                         draggable={false}
                         isBeingDragged={isDragging}
-                        onKeyDown={(event) => this.handleIconKeyDown(event, app)}
-                        onBlur={(event) => this.handleIconBlur(event, app.id)}
+                        onKeyDown={(event) => this.handleVfsIconKeyDown(event, entry)}
+                        onBlur={(event) => this.handleIconBlur(event, entry.id)}
                         assistiveHint={assistiveHint}
+                        style={this.desktopIconVariables}
+                        accentVariables={this.desktopAccentVariables}
                         isSelected={isSelected}
                         isHovered={isHovered}
                     />
@@ -5427,6 +5602,11 @@ export class Desktop extends Component {
         const appIndex = apps.findIndex(app => app.id === app_id);
         if (appIndex === -1) return;
         apps[appIndex].desktop_shortcut = true;
+        fileSystemStore.getState().addDesktopAppEntry({
+            id: apps[appIndex].id,
+            title: apps[appIndex].title,
+            icon: apps[appIndex].icon,
+        });
         let shortcuts = [];
         try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
         if (!shortcuts.includes(app_id)) {
@@ -5447,6 +5627,11 @@ export class Desktop extends Component {
                     const appIndex = apps.findIndex(app => app.id === id);
                     if (appIndex !== -1) {
                         apps[appIndex].desktop_shortcut = true;
+                        fileSystemStore.getState().addDesktopAppEntry({
+                            id: apps[appIndex].id,
+                            title: apps[appIndex].title,
+                            icon: apps[appIndex].icon,
+                        });
                     }
                 });
             } catch (e) {
@@ -5484,6 +5669,9 @@ export class Desktop extends Component {
             desktop_shortcut: true,
             isFolder: true,
             screen: () => null,
+        });
+        fileSystemStore.getState().createDirectory(`${DEFAULT_DESKTOP_PATH}/${folder_name}`, {
+            recursive: true,
         });
         this.ensureFolderEntry(folderAppId);
         // store in local storage
@@ -5702,7 +5890,7 @@ export class Desktop extends Component {
 export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
-    const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const { density, fontScale, largeHitAreas, desktopTheme, theme, setTheme, useKaliWallpaper, setUseKaliWallpaper } = useSettings();
     return (
         <Desktop
             {...props}
@@ -5712,6 +5900,10 @@ export default function DesktopWithSnap(props) {
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            theme={theme}
+            setTheme={setTheme}
+            useKaliWallpaper={useKaliWallpaper}
+            setUseKaliWallpaper={setUseKaliWallpaper}
         />
     );
 }

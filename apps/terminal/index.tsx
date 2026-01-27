@@ -15,6 +15,7 @@ import useOPFS from '../../hooks/useOPFS';
 import commandRegistry, { CommandContext, CommandDefinition, getCommandList } from './commands';
 import TerminalContainer from './components/Terminal';
 import { createSessionManager } from './utils/sessionManager';
+import { DEFAULT_HOME_PATH, fileSystemStore } from '../../stores/fileSystemStore';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -103,12 +104,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const [copyStatus, setCopyStatus] = useState('');
   const settingsLoadedRef = useRef(false);
   const historyLoadedRef = useRef(false);
+  const cwdRef = useRef(DEFAULT_HOME_PATH);
   const contextRef = useRef<CommandContext>({
     writeLine: () => {},
     files: filesRef.current,
     history: historyRef.current,
     aliases: aliasesRef.current,
     safeMode: safeModeRef.current,
+    cwd: cwdRef.current,
+    setCwd: (path) => {
+      cwdRef.current = path;
+      contextRef.current.cwd = path;
+    },
     setAlias: (n, v) => {
       aliasesRef.current[n] = v;
     },
@@ -116,6 +123,24 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     clear: () => {},
     openApp,
     listCommands: () => Object.values(registryRef.current),
+    vfs: {
+      resolvePath: (path: string, nextCwd?: string) =>
+        fileSystemStore.getState().resolvePath(path, nextCwd),
+      listDirectory: (path: string) =>
+        fileSystemStore.getState().listDirectory(path),
+      getEntry: (path: string) =>
+        fileSystemStore.getState().getEntry(path),
+      createDirectory: (path: string, options) =>
+        fileSystemStore.getState().createDirectory(path, options),
+      createFile: (path: string, content, options) =>
+        fileSystemStore.getState().createFile(path, content, options),
+      writeFile: (path: string, content: string, options) =>
+        fileSystemStore.getState().writeFile(path, content, options),
+      readFile: (path: string, options) =>
+        fileSystemStore.getState().readFile(path, options),
+      removePath: (path: string, options) =>
+        fileSystemStore.getState().removePath(path, options),
+    },
   });
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [paletteInput, setPaletteInput] = useState('');
@@ -275,6 +300,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, [deleteFile, opfsSupported, persistHistory, restoreHistory]);
 
   contextRef.current.writeLine = writeLine;
+  contextRef.current.cwd = cwdRef.current;
 
   const prompt = useCallback(() => {
     if (!termRef.current) return;
@@ -284,8 +310,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const pathColor = '\x1b[38;2;248;196;108m';
     const symbolColor = '\x1b[38;2;234;241;252m';
     const reset = '\x1b[0m';
+    const currentCwd = cwdRef.current;
+    const displayPath = currentCwd.startsWith(DEFAULT_HOME_PATH)
+      ? `~${currentCwd.slice(DEFAULT_HOME_PATH.length) || ''}`
+      : currentCwd;
     termRef.current.writeln(
-      `${accent}┌──(${reset}${userColor}kali${reset}${accent}㉿${reset}${hostColor}kali${reset}${accent})-[${reset}${pathColor}~${reset}${accent}]${reset}`,
+      `${accent}┌──(${reset}${userColor}kali${reset}${accent}㉿${reset}${hostColor}kali${reset}${accent})-[${reset}${pathColor}${displayPath}${reset}${accent}]${reset}`,
     );
     termRef.current.write(`${accent}└─${reset} ${symbolColor}$${reset} `);
   }, []);
