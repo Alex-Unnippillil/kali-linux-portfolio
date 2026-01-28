@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {
@@ -42,6 +41,57 @@ const isStringArray = (value) =>
 
 const isDifficulty = (value) =>
   typeof value === 'string' && Object.keys(DIFFICULTY_PRESETS).includes(value);
+
+const launchConfetti = (pieces = 90) => {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  const confettiContainer = document.createElement('div');
+  confettiContainer.style.position = 'fixed';
+  confettiContainer.style.top = '0';
+  confettiContainer.style.left = '0';
+  confettiContainer.style.width = '100%';
+  confettiContainer.style.height = '100%';
+  confettiContainer.style.pointerEvents = 'none';
+  confettiContainer.style.overflow = 'hidden';
+  confettiContainer.style.zIndex = '9999';
+  document.body.appendChild(confettiContainer);
+
+  const colors = ['#60a5fa', '#34d399', '#fbbf24', '#f472b6'];
+  const duration = 2800;
+  const maxDelay = 200;
+  const piecesWithDelay = [];
+
+  for (let i = 0; i < pieces; i += 1) {
+    const confetto = document.createElement('div');
+    const size = 4 + Math.random() * 4;
+    const delay = Math.random() * maxDelay;
+    confetto.style.position = 'absolute';
+    confetto.style.width = `${size}px`;
+    confetto.style.height = `${size}px`;
+    confetto.style.backgroundColor = colors[i % colors.length];
+    confetto.style.top = '0px';
+    confetto.style.left = `${Math.random() * 100}%`;
+    confetto.style.opacity = '1';
+    confetto.style.borderRadius = '2px';
+    confetto.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+    confetto.style.transition = `transform ${duration}ms ease-out, opacity ${duration}ms ease-out`;
+    confetto.style.transitionDelay = `${delay}ms`;
+    confettiContainer.appendChild(confetto);
+    piecesWithDelay.push(confetto);
+  }
+
+  requestAnimationFrame(() => {
+    piecesWithDelay.forEach((element) => {
+      const drift = (Math.random() - 0.5) * window.innerWidth * 0.45;
+      const rotation = Math.random() * 720;
+      element.style.transform = `translate3d(${drift}px, ${window.innerHeight + 90}px, 0) rotate(${rotation}deg)`;
+      element.style.opacity = '0';
+    });
+  });
+
+  setTimeout(() => {
+    confettiContainer.remove();
+  }, duration + maxDelay + 200);
+};
 
 const Hangman = () => {
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -176,7 +226,7 @@ const Hangman = () => {
       if (game.status === 'won') {
         setAnnouncement(`You won! The phrase was ${game.word}.`);
         if (!reduceMotionRef.current) {
-          confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+          launchConfetti(90);
         }
       } else {
         setAnnouncement(`You lost. The phrase was ${game.word}.`);
