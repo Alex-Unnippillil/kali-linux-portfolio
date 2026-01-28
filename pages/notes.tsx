@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@supabase/supabase-js';
 
 interface NotesPageState {
   notes: unknown[] | null;
@@ -19,17 +18,23 @@ export default function NotesPage() {
       setState({ notes: null, error: 'supabase_unavailable' });
       return;
     }
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    supabase
-      .from('notes')
-      .select()
-      .then(({ data, error }) => {
-        if (error) {
-          setState({ notes: null, error: error.message });
-        } else {
-          setState({ notes: data ?? null });
+    fetch(`${supabaseUrl}/rest/v1/notes?select=*`, {
+      headers: {
+        apikey: supabaseKey,
+        Authorization: `Bearer ${supabaseKey}`,
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(errorText || 'Request failed');
         }
+        return res.json();
+      })
+      .then((data) => setState({ notes: data ?? null }))
+      .catch((err: Error) => {
+        console.error('Failed to fetch notes', err);
+        setState({ notes: null, error: err.message });
       });
   }, []);
 
@@ -39,4 +44,3 @@ export default function NotesPage() {
 
   return <pre>{JSON.stringify(state.notes, null, 2)}</pre>;
 }
-
