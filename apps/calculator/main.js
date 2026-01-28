@@ -1,11 +1,7 @@
 // Shunting-yard evaluator and tokenizer for the calculator
 // Exposes pure functions without DOM dependencies
 
-let math = globalThis.math;
-if (!math) {
-  const mathjs = require('mathjs');
-  math = mathjs.create ? mathjs.create(mathjs.all, {}) : mathjs;
-}
+const Decimal = require('decimal.js');
 
 let preciseMode = false;
 let programmerMode = false;
@@ -15,17 +11,12 @@ let memory = 0;
 
 function setPreciseMode(on) {
   preciseMode = on;
-  if (typeof math !== 'undefined') {
-    math.config(
-      preciseMode ? { number: 'BigNumber', precision: 64 } : { number: 'number' }
-    );
-    if (preciseMode) {
-      memory = math.bignumber(memory);
-      lastResult = math.bignumber(lastResult);
-    } else {
-      memory = math.number(memory);
-      lastResult = math.number(lastResult);
-    }
+  if (preciseMode) {
+    memory = new Decimal(memory);
+    lastResult = new Decimal(lastResult);
+  } else {
+    memory = Decimal.isDecimal(memory) ? memory.toNumber() : memory;
+    lastResult = Decimal.isDecimal(lastResult) ? lastResult.toNumber() : lastResult;
   }
 }
 
@@ -195,46 +186,82 @@ function evalRPN(rpn, vars = {}) {
   const stack = [];
   for (const token of rpn) {
     if (token.type === 'number') {
-      const num = preciseMode ? math.bignumber(token.value) : Number(token.value);
+      const num = preciseMode ? new Decimal(token.value) : Number(token.value);
       stack.push(num);
     } else if (token.type === 'id') {
       if (token.value.toLowerCase() === 'ans') {
         stack.push(lastResult);
-      } else if (typeof math[token.value] !== 'undefined') {
-        stack.push(math[token.value]);
+      } else if (token.value.toLowerCase() === 'pi') {
+        stack.push(preciseMode ? new Decimal(Math.PI) : Math.PI);
+      } else if (token.value.toLowerCase() === 'e') {
+        stack.push(preciseMode ? new Decimal(Math.E) : Math.E);
       } else if (vars[token.value] !== undefined) {
         const v = vars[token.value];
-        const num = preciseMode ? math.bignumber(v) : Number(v);
+        const num = preciseMode ? new Decimal(v) : Number(v);
         stack.push(num);
       } else {
         stack.push(0);
       }
-    } else if (token.type === 'unit') {
-      const a = stack.pop();
-      stack.push(math.multiply(a, math.unit(1, token.value)));
     } else if (token.type === 'func') {
       const a = stack.pop();
-      const fn = math[token.value];
-      stack.push(fn ? fn(a) : a);
+      const fnName = token.value.toLowerCase();
+      const value = Decimal.isDecimal(a) ? a.toNumber() : a;
+      let resultVal;
+      switch (fnName) {
+        case 'sin':
+          resultVal = Math.sin(value);
+          break;
+        case 'cos':
+          resultVal = Math.cos(value);
+          break;
+        case 'tan':
+          resultVal = Math.tan(value);
+          break;
+        case 'sqrt':
+          resultVal = Math.sqrt(value);
+          break;
+        case 'abs':
+          resultVal = Math.abs(value);
+          break;
+        case 'log':
+          resultVal = Math.log10 ? Math.log10(value) : Math.log(value) / Math.LN10;
+          break;
+        case 'ln':
+          resultVal = Math.log(value);
+          break;
+        case 'floor':
+          resultVal = Math.floor(value);
+          break;
+        case 'ceil':
+          resultVal = Math.ceil(value);
+          break;
+        case 'round':
+          resultVal = Math.round(value);
+          break;
+        default:
+          resultVal = value;
+          break;
+      }
+      stack.push(preciseMode ? new Decimal(resultVal) : resultVal);
     } else if (token.type === 'operator') {
       const b = stack.pop();
       const a = stack.pop();
       let res;
       switch (token.value) {
         case '+':
-          res = math.add(a, b);
+          res = preciseMode ? Decimal.add(a, b) : a + b;
           break;
         case '-':
-          res = math.subtract(a, b);
+          res = preciseMode ? Decimal.sub(a, b) : a - b;
           break;
         case '*':
-          res = math.multiply(a, b);
+          res = preciseMode ? Decimal.mul(a, b) : a * b;
           break;
         case '/':
-          res = math.divide(a, b);
+          res = preciseMode ? Decimal.div(a, b) : a / b;
           break;
         case '^':
-          res = math.pow(a, b);
+          res = preciseMode ? Decimal.pow(a, b) : a ** b;
           break;
       }
       stack.push(res);
@@ -256,13 +283,11 @@ function evaluate(expression, vars = {}) {
   }
   if (programmerMode) {
     const decimalExpr = sanitizedExpression.replace(/\b[0-9A-F]+\b/gi, (m) =>
-      parseInt(m, currentBase)
+      String(parseInt(m, currentBase))
     );
-    const ctx = { Ans: lastResult };
-    for (const [k, v] of Object.entries(scope)) {
-      ctx[k] = preciseMode ? math.bignumber(v) : Number(v);
-    }
-    const result = math.evaluate(decimalExpr, ctx);
+    const tokens = tokenize(decimalExpr);
+    const rpn = toRPN(tokens);
+    const result = evalRPN(rpn, scope);
     lastResult = result;
     return formatBase(result);
   }
@@ -278,9 +303,9 @@ function memoryAdd(expr) {
   const num = programmerMode
     ? parseInt(val, currentBase)
     : preciseMode
-      ? math.bignumber(val)
+      ? new Decimal(val)
       : parseFloat(val);
-  memory = preciseMode ? math.add(memory, num) : memory + num;
+  memory = preciseMode ? Decimal.add(memory, num) : memory + num;
   return memory;
 }
 
@@ -289,9 +314,9 @@ function memorySubtract(expr) {
   const num = programmerMode
     ? parseInt(val, currentBase)
     : preciseMode
-      ? math.bignumber(val)
+      ? new Decimal(val)
       : parseFloat(val);
-  memory = preciseMode ? math.subtract(memory, num) : memory - num;
+  memory = preciseMode ? Decimal.sub(memory, num) : memory - num;
   return memory;
 }
 

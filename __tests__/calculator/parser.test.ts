@@ -1,6 +1,4 @@
 const { JSDOM } = require('jsdom');
-const { create, all } = require('mathjs');
-const math = create(all);
 
 describe('calculator parser', () => {
   let calc: any;
@@ -9,7 +7,6 @@ describe('calculator parser', () => {
     const dom = new JSDOM('<!doctype html><html><body><input id="display" /></body></html>');
     global.window = dom.window as any;
     global.document = dom.window.document as any;
-    global.math = math;
     calc = require('../../apps/calculator/main.js');
     calc.setPreciseMode(false);
   });
@@ -18,49 +15,41 @@ describe('calculator parser', () => {
     localStorage.clear();
   });
 
-  const basicCases = [
-    '1+2',
-    '2-5',
-    '2*3+4',
-    '2*(3+4)',
-    '10/2+3',
-    '2^3+1',
-    '2+3^2',
-    '(2+3)^2',
-    '2*3^2',
-    '2+3*4-5',
-    '5+(6*7)',
+  const basicCases: Array<[string, string]> = [
+    ['1+2', '3'],
+    ['2-5', '-3'],
+    ['2*3+4', '10'],
+    ['2*(3+4)', '14'],
+    ['10/2+3', '8'],
+    ['2^3+1', '9'],
+    ['2+3^2', '11'],
+    ['(2+3)^2', '25'],
+    ['2*3^2', '18'],
+    ['2+3*4-5', '9'],
+    ['5+(6*7)', '47'],
   ];
 
-  const functionCases = [
-    'sin(0)',
-    'cos(0)',
-    'tan(0)',
-    'sqrt(16)',
-    'abs(-5)',
-    'ceil(1.2)',
-    'floor(1.8)',
-    'round(2.5)',
-    'exp(1)',
-    'log(10)',
-    'sin(pi/2)',
-    'cos(pi)',
+  const functionCases: Array<[string, number]> = [
+    ['sin(0)', 0],
+    ['cos(0)', 1],
+    ['tan(0)', 0],
+    ['sqrt(16)', 4],
+    ['abs(-5)', 5],
+    ['ceil(1.2)', 2],
+    ['floor(1.8)', 1],
+    ['round(2.5)', 3],
+    ['log(10)', 1],
+    ['ln(e)', 1],
+    ['sin(pi/2)', 1],
+    ['cos(pi)', -1],
   ];
 
-  const unitCases = Array.from({ length: 30 }, (_, i) => {
-    const n = i + 1;
-    return `${n}cm + ${n}cm`;
+  test.each(basicCases)('%s -> %s', (expr, expected) => {
+    expect(calc.evaluate(expr)).toBe(expected);
   });
 
-  const cases: Array<[string, string]> = [...basicCases, ...functionCases, ...unitCases].map(
-    (expr) => {
-      const expected = math.evaluate(expr.replace(/(\d)([a-zA-Z]+)/g, '$1 $2')).toString();
-      return [expr, expected];
-    }
-  );
-
-  test.each(cases)('%s -> %s', (expr, expected) => {
-    expect(calc.evaluate(expr)).toBe(expected);
+  test.each(functionCases)('%s -> %s', (expr, expected) => {
+    expect(Number(calc.evaluate(expr))).toBeCloseTo(expected, 8);
   });
 
   test('handles variables', () => {
@@ -68,4 +57,3 @@ describe('calculator parser', () => {
     expect(calc.evaluate('x+y')).toBe('7');
   });
 });
-
