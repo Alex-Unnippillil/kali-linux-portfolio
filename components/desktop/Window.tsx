@@ -1,11 +1,14 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import BaseWindow from "../base/window";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   clampWindowPositionWithinViewport,
   clampWindowTopPosition,
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
 import { useDesktopZIndex } from "./zIndexManager";
+import useIsMobile from "../../hooks/useIsMobile";
+import usePrefersReducedMotion from "../../hooks/usePrefersReducedMotion";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -58,6 +61,11 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       ...rest
     } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
+    const isMobile = useIsMobile();
+    const prefersReducedMotion = usePrefersReducedMotion();
+    const [isClosing, setIsClosing] = useState(false);
+    const [minimizeOffset, setMinimizeOffset] = useState({ x: 0, y: 0 });
+    const [transformOrigin, setTransformOrigin] = useState<string | undefined>(undefined);
     const {
       baseZIndex,
       registerWindow,
@@ -160,6 +168,50 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
 
     const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
 
+    const updateMotionMetrics = useCallback(() => {
+      if (typeof window === "undefined") return;
+      const instance = innerRef.current;
+      const node = instance && typeof instance.getWindowNode === "function"
+        ? instance.getWindowNode()
+        : null;
+      if (!node || typeof node.getBoundingClientRect !== "function") return;
+
+      const rect = node.getBoundingClientRect();
+      const windowCenterX = rect.left + rect.width / 2;
+      const windowCenterY = rect.top + rect.height / 2;
+      setTransformOrigin(`${windowCenterX}px ${windowCenterY}px`);
+
+      if (!windowId) return;
+      const taskbarButton = document.querySelector(
+        `button[data-context="taskbar"][data-app-id="${windowId}"]`,
+      );
+      if (!(taskbarButton instanceof HTMLElement)) {
+        setMinimizeOffset({ x: 0, y: 0 });
+        return;
+      }
+
+      const taskbarRect = taskbarButton.getBoundingClientRect();
+      const targetX = taskbarRect.left + taskbarRect.width / 2;
+      const targetY = taskbarRect.top + taskbarRect.height / 2;
+      setMinimizeOffset({
+        x: targetX - windowCenterX,
+        y: targetY - windowCenterY,
+      });
+    }, [windowId]);
+
+    useLayoutEffect(() => {
+      updateMotionMetrics();
+    }, [updateMotionMetrics, props.minimized, isMobile]);
+
+    useEffect(() => {
+      if (typeof window === "undefined") return undefined;
+      const handleResize = () => updateMotionMetrics();
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
+    }, [updateMotionMetrics]);
+
     useEffect(() => {
       if (typeof window === "undefined") return undefined;
       const handler = () => clampToViewport();
@@ -169,15 +221,80 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       };
     }, [clampToViewport]);
 
+    const resolvedInitialX = isMobile ? 0 : props.initialX;
+    const resolvedInitialY = isMobile ? 0 : props.initialY;
+    const resolvedDefaultWidth = isMobile ? 100 : rest.defaultWidth;
+    const resolvedDefaultHeight = isMobile ? 100 : rest.defaultHeight;
+    const resolvedMinWidth = isMobile ? 100 : rest.minWidth;
+    const resolvedMinHeight = isMobile ? 100 : rest.minHeight;
+    const resolvedResizable = isMobile ? false : rest.resizable;
+    const minimizeScale = isMobile ? 0.82 : 0.7;
+
+    const motionTransition = useMemo(() => {
+      if (prefersReducedMotion) {
+        return { duration: 0 };
+      }
+      return { type: "spring", stiffness: 320, damping: 28, mass: 0.7 };
+    }, [prefersReducedMotion]);
+
+    const motionAnimate = isClosing
+      ? {
+        opacity: 0,
+        scale: 0.95,
+        x: 0,
+        y: 0,
+        transition: motionTransition,
+      }
+      : props.minimized
+      ? {
+        opacity: 0,
+        scale: minimizeScale,
+        x: minimizeOffset.x,
+        y: minimizeOffset.y,
+        transition: motionTransition,
+        transitionEnd: { visibility: "hidden" },
+      }
+      : {
+        opacity: 1,
+        scale: 1,
+        x: 0,
+        y: 0,
+        transition: motionTransition,
+        visibility: "visible",
+      };
+
     return (
-      <BaseWindow
-        ref={assignRef}
-        {...rest}
-        id={id}
-        focus={handleFocus}
-        isFocused={isFocused}
-        zIndex={computedZIndex}
-      />
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={windowId || "window"}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={motionAnimate}
+          exit={{ opacity: 0, scale: 0.95 }}
+          style={{
+            transformOrigin: transformOrigin || "center",
+            pointerEvents: props.minimized || isClosing ? "none" : "auto",
+          }}
+        >
+          <BaseWindow
+            ref={assignRef}
+            {...rest}
+            id={id}
+            focus={handleFocus}
+            isFocused={isFocused}
+            zIndex={computedZIndex}
+            initialX={resolvedInitialX}
+            initialY={resolvedInitialY}
+            defaultWidth={resolvedDefaultWidth}
+            defaultHeight={resolvedDefaultHeight}
+            minWidth={resolvedMinWidth}
+            minHeight={resolvedMinHeight}
+            resizable={resolvedResizable}
+            disableDragging={isMobile}
+            suppressMinimizedStyles
+            onCloseStart={() => setIsClosing(true)}
+          />
+        </motion.div>
+      </AnimatePresence>
     );
   },
 );
