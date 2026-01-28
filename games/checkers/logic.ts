@@ -27,7 +27,21 @@ export type GameState = {
   positionCounts: Map<string, number>;
 };
 
+export type SerializedGameState = Omit<GameState, 'positionCounts'> & {
+  positionCounts: [string, number][];
+};
+
 const otherColor = (color: Color): Color => (color === 'red' ? 'black' : 'red');
+
+export const serializeGameState = (state: GameState): SerializedGameState => ({
+  ...state,
+  positionCounts: Array.from(state.positionCounts.entries()),
+});
+
+export const hydrateGameState = (state: SerializedGameState): GameState => ({
+  ...state,
+  positionCounts: new Map(state.positionCounts),
+});
 
 export const createGameState = (mode: RuleMode): GameState => {
   const board = createBoard();
