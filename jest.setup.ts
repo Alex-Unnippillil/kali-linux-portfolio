@@ -164,6 +164,19 @@ if (globalWindow && !('IntersectionObserver' in globalWindow)) {
   global.IntersectionObserver = IntersectionObserverMock as any;
 }
 
+// Minimal ResizeObserver mock for virtualization libraries like react-window
+if (globalWindow && !('ResizeObserver' in globalWindow)) {
+  class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  // @ts-ignore
+  globalWindow.ResizeObserver = ResizeObserverMock;
+  // @ts-ignore
+  global.ResizeObserver = ResizeObserverMock as any;
+}
+
 // jsdom does not implement scrollIntoView; provide a no-op stub so components
 // depending on it do not fail during tests.
 if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {

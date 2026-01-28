@@ -1,5 +1,12 @@
 import React from 'react';
 
+/**
+ * @typedef {{ minute: number; count: number }} MinuteBucket
+ */
+
+/**
+ * @param {{ minutes?: MinuteBucket[] }} props
+ */
 const BurstChart = ({ minutes = [] }) => {
   if (!minutes.length) return null;
   const max = Math.max(...minutes.map((m) => m.count));
