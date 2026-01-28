@@ -141,7 +141,7 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
 
 33. **Bundle trims for heavy apps**
     - **Accept:** Verify dynamic import with prefetch hints for games, ensure no heavy libs leak into desktop shell.
-    - **Where:** `apps.config.js`, dynamic imports; already supported, extend coverage.
+    - **Where:** `apps.config.ts`, dynamic imports; already supported, extend coverage.
 
 34. **Idle prefetch of likely apps**
     - **Accept:** On idle, prefetch top 3 recent apps.

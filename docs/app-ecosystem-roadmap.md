@@ -1,6 +1,6 @@
 # App Ecosystem Roadmap
 
-This roadmap consolidates the dynamic app registry and the open task backlog so the desktop shell, simulations, and games progress toward an "OS-ready" state. Update it whenever `apps.config.js` or `docs/tasks.md` changes so stakeholders can track ownership, dependencies, and status.
+This roadmap consolidates the dynamic app registry and the open task backlog so the desktop shell, simulations, and games progress toward an "OS-ready" state. Update it whenever `apps.config.ts` or `docs/tasks.md` changes so stakeholders can track ownership, dependencies, and status.
 
 ## Readiness Criteria for Every App
 
@@ -13,7 +13,7 @@ An app is considered **OS-ready** only when it satisfies these cross-cutting sta
 
 ## Roadmap by Category
 
-Each table groups the entries declared in `apps.config.js` and captures current implementation signals, suggested owners, and notable dependencies. Status values reflect whether `docs/tasks.md` still lists open work.
+Each table groups the entries declared in `apps.config.ts` and captures current implementation signals, suggested owners, and notable dependencies. Status values reflect whether `docs/tasks.md` still lists open work.
 
 ### Utilities & Productivity
 
@@ -30,7 +30,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | file-explorer | Files | Core maintainers | **In progress** – shared navigator hook keeps breadcrumbs and recents aligned | Virtual filesystem layer |
 | project-gallery | Project Gallery | Core maintainers | **In progress** – load from `projects.json`, add filters and CTA buttons | `projects.json` data |
 | alex | About Alex | Core maintainers | **In progress** – resume widget, skill chips, project links | Resume JSON feed |
-| settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.js`, localStorage |
+| settings | Settings | Core maintainers | **In progress** – theme picker, wallpaper selector, reset desktop | `settingsStore.ts`, localStorage |
 | resource_monitor | Resource Monitor | Core maintainers | **In progress** – memory/FPS display and synthetic CPU graph | `performance` APIs |
 | screen-recorder | Screen Recorder | Core maintainers | **Needs polish** – permission prompts, storage strategy | MediaRecorder API |
 | clipboard-manager | Clipboard Manager | Core maintainers | **Ready** – permission UX, fallbacks, and status telemetry covered | Clipboard API |
@@ -92,7 +92,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | nmap-nse | Nmap NSE | Security simulations pod | **In progress** – simulator backlog | Script outputs |
 | openvas | OpenVAS | Security simulations pod | **In progress** – simulator backlog | Scan report fixtures |
 | reconng | Recon-ng | Security simulations pod | **In progress** – simulator backlog | Recon dataset |
-| kismet.jsx | Kismet | Security simulations pod | **Beta** – fixture dataset with channel/device filters behind Lab Mode | Wireless fixtures, lab mode flag |
+| kismet.tsx | Kismet | Security simulations pod | **Beta** – fixture dataset with channel/device filters behind Lab Mode | Wireless fixtures, lab mode flag |
 | security-tools | Security Tools | Security simulations pod | **Needs polish** – ensure catalog UX & lab-mode flag | Tool registry |
 
 ### Games & Interactive Experiences
@@ -146,13 +146,13 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 
 1. **Permission prompts** – Normalize UX for media capture, clipboard access, and simulator lab toggles. Provide pre-flight dialogs and fallbacks for denied permissions.
 2. **Shared settings** – Route wallpaper, theme, analytics, API keys, and lab-mode flags through a centralized settings store that utilities and simulators can read.
-3. **Window defaults** – Audit each entry in `apps.config.js` for default/min size metadata to keep windows within the desktop grid and clear of dock/taskbar collisions.
+3. **Window defaults** – Audit each entry in `apps.config.ts` for default/min size metadata to keep windows within the desktop grid and clear of dock/taskbar collisions.
 
 ## Living Checklist for Adding or Updating Apps
 
 Use this checklist whenever a new app lands or an existing one gains major functionality:
 
-1. **Registry update** – Add or adjust the dynamic app registration in `apps.config.js`, keeping alphabetical grouping and default window metadata tidy.
+1. **Registry update** – Add or adjust the dynamic app registration in `apps.config.ts`, keeping alphabetical grouping and default window metadata tidy.
 2. **Implementation** – Follow `docs/new-app-checklist.md` for icon placement, dynamic import pattern, CSP updates, and Playwright smoke coverage.
 3. **Testing** – Extend Jest and Playwright suites for new behaviors (fixture-driven tests for simulators, loop helpers for games, form validation for utilities).
 4. **Documentation** – Update this roadmap and `docs/tasks.md` with status, owner, and dependency changes. Capture any new env vars in `README.md`.

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import KismetApp from '../../components/apps/kismet.jsx';
+import KismetApp from '../../components/apps/kismet';
 import DeauthWalkthrough from './components/DeauthWalkthrough';
 import { createLogger } from '../../lib/logger';
 

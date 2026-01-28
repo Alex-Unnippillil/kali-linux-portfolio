@@ -3,9 +3,17 @@ export type HapticPattern = number | number[];
 export const supportsVibration = () =>
   typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
-const hapticsEnabled = () =>
-  typeof window === 'undefined' ||
-  window.localStorage.getItem('haptics') !== 'false';
+const hapticsEnabled = () => {
+  if (typeof window === 'undefined') return true;
+  try {
+    const desktopSettings = window.localStorage.getItem('desktop-settings');
+    if (!desktopSettings) return true; // Default to enabled if not found
+    const settings = JSON.parse(desktopSettings);
+    return settings.haptics !== false; // Explicitly check for false, default to true
+  } catch {
+    return true; // Default to enabled if parsing fails
+  }
+};
 
 const supportsGamepadVibration = () => {
   if (typeof navigator === 'undefined' || !('getGamepads' in navigator)) return false;

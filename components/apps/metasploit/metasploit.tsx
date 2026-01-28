@@ -6,44 +6,95 @@ import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
 
-const severities = ['critical', 'high', 'medium', 'low'];
-const severityStyles = {
+type Severity = 'critical' | 'high' | 'medium' | 'low';
+
+type ModuleType = 'auxiliary' | 'exploit' | 'post';
+
+interface ModuleOption {
+  desc: string;
+  default?: unknown;
+}
+
+interface ModuleEntry {
+  name: string;
+  description: string;
+  severity: Severity;
+  type: ModuleType;
+  platform?: string;
+  cve?: string[];
+  tags?: string[];
+  transcript?: string;
+  disclosure_date?: string;
+  teaches?: string;
+  doc?: string;
+  options?: Record<string, ModuleOption>;
+}
+
+interface LootItem {
+  host: string;
+  data?: string;
+  path?: string;
+  type?: string;
+}
+
+interface NoteItem {
+  host: string;
+  note: string;
+}
+
+interface SessionItem {
+  id: string;
+}
+
+interface MetasploitAppProps {
+  demoMode?: boolean;
+  onLoadingChange?: (loading: boolean) => void;
+}
+
+const severities: Severity[] = ['critical', 'high', 'medium', 'low'];
+const severityStyles: Record<Severity, string> = {
   critical: 'bg-red-700 text-white',
   high: 'bg-orange-600 text-black',
   medium: 'bg-yellow-300 text-black',
   low: 'bg-green-300 text-black',
 };
 
-const moduleTypes = ['auxiliary', 'exploit', 'post'];
+const moduleTypes: ModuleType[] = ['auxiliary', 'exploit', 'post'];
 
 const timelineSteps = 5;
 
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
+const moduleData = modules as ModuleEntry[];
+
 const MetasploitApp = ({
   demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
   onLoadingChange = () => {},
-} = {}) => {
+}: MetasploitAppProps = {}) => {
   const [command, setCommand] = useState('');
-  const [output, setOutput] = usePersistentState('metasploit-history', banner);
+  const [output, setOutput] = usePersistentState<string>('metasploit-history', banner);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
-  const [searchField, setSearchField] = useState('name');
-  const [selectedSeverity, setSelectedSeverity] = useState(null);
+  const [searchField, setSearchField] = useState<'name' | 'type' | 'platform' | 'cve' | 'tags'>(
+    'name',
+  );
+  const [selectedSeverity, setSelectedSeverity] = useState<Severity | null>(null);
   const [selectedTag, setSelectedTag] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState('');
   const [cveFilter, setCveFilter] = useState('');
-  const [animationStyle, setAnimationStyle] = useState({ opacity: 1 });
+  const [animationStyle, setAnimationStyle] = useState<React.CSSProperties>({
+    opacity: 1,
+  });
   const [reduceMotion, setReduceMotion] = useState(false);
 
-  const [selectedModule, setSelectedModule] = useState(null);
-  const [loot, setLoot] = useState([]);
-  const [notes, setNotes] = useState([]);
+  const [selectedModule, setSelectedModule] = useState<ModuleEntry | null>(null);
+  const [loot, setLoot] = useState<LootItem[]>([]);
+  const [notes, setNotes] = useState<NoteItem[]>([]);
   const [showLoot, setShowLoot] = useState(false);
 
-  const [sessions, setSessions] = useState([]);
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
 
-  const [timeline, setTimeline] = useState([]);
+  const [timeline, setTimeline] = useState<string[]>([]);
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -51,17 +102,24 @@ const MetasploitApp = ({
     onLoadingChange(loading);
   }, [loading, onLoadingChange]);
 
-  const workerRef = useRef();
-  const moduleRaf = useRef();
-  const progressRaf = useRef();
+  const workerRef = useRef<Worker | null>(null);
+  const moduleRaf = useRef<number | null>(null);
+  const progressRaf = useRef<number | null>(null);
 
   const allTags = useMemo(
-    () => Array.from(new Set(modules.flatMap((m) => m.tags || []))).sort(),
-    []
+    () => Array.from(new Set(moduleData.flatMap((mod) => mod.tags || []))).sort(),
+    [],
   );
   const allPlatforms = useMemo(
-    () => Array.from(new Set(modules.map((m) => m.platform).filter(Boolean))).sort(),
-    []
+    () =>
+      Array.from(
+        new Set(
+          moduleData
+            .map((mod) => mod.platform)
+            .filter((platform): platform is string => Boolean(platform)),
+        ),
+      ).sort(),
+    [],
   );
 
   // Modules are loaded from a local JSON index so the app works offline.
@@ -79,12 +137,14 @@ const MetasploitApp = ({
     (async () => {
       try {
         const res = await fetch('/fixtures/metasploit_loot.json');
-        const data = await res.json();
+        const data = (await res.json()) as { loot?: LootItem[]; notes?: NoteItem[] };
         if (active) {
           setLoot(data.loot || []);
           setNotes(data.notes || []);
         }
-      } catch (e) {}
+      } catch {
+        /* ignore */
+      }
     })();
     return () => {
       active = false;
@@ -93,55 +153,60 @@ const MetasploitApp = ({
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    if (!q) return [];
-    return modules.filter((m) => {
-      if (selectedTag && !m.tags.includes(selectedTag)) return false;
-      if (selectedPlatform && m.platform !== selectedPlatform) return false;
+    if (!q) return [] as ModuleEntry[];
+    return moduleData.filter((mod) => {
+      if (selectedTag && !(mod.tags || []).includes(selectedTag)) return false;
+      if (selectedPlatform && mod.platform !== selectedPlatform) return false;
       if (
         cveFilter &&
-        !(m.cve || []).some((c) => c.toLowerCase().includes(cveFilter.toLowerCase()))
+        !(mod.cve || []).some((cve) => cve.toLowerCase().includes(cveFilter.toLowerCase()))
       )
         return false;
       if (searchField === 'cve') {
-        return (m.cve || []).some((c) => c.toLowerCase().includes(q));
+        return (mod.cve || []).some((cve) => cve.toLowerCase().includes(q));
       }
       if (searchField === 'tags') {
-        return (m.tags || []).some((t) => t.toLowerCase().includes(q));
+        return (mod.tags || []).some((tag) => tag.toLowerCase().includes(q));
       }
-      const field = (m[searchField] || '').toString().toLowerCase();
+      const field = (mod[searchField] || '').toString().toLowerCase();
       return field.includes(q);
     });
   }, [query, searchField, selectedTag, selectedPlatform, cveFilter]);
 
   const modulesByType = useMemo(() => {
-    const filteredMods = modules.filter(
-      (m) =>
-        (!selectedSeverity || m.severity === selectedSeverity) &&
-        (!selectedTag || m.tags.includes(selectedTag)) &&
-        (!selectedPlatform || m.platform === selectedPlatform) &&
+    const filteredMods = moduleData.filter(
+      (mod) =>
+        (!selectedSeverity || mod.severity === selectedSeverity) &&
+        (!selectedTag || (mod.tags || []).includes(selectedTag)) &&
+        (!selectedPlatform || mod.platform === selectedPlatform) &&
         (!cveFilter ||
-          (m.cve || []).some((c) =>
-            c.toLowerCase().includes(cveFilter.toLowerCase())
-          ))
+          (mod.cve || []).some((cve) =>
+            cve.toLowerCase().includes(cveFilter.toLowerCase()),
+          )),
     );
-    return moduleTypes.reduce((acc, type) => {
-      acc[type] = filteredMods.filter((m) => m.type === type);
-      return acc;
-    }, {});
+    return moduleTypes.reduce<Record<ModuleType, ModuleEntry[]>>(
+      (acc, type) => {
+        acc[type] = filteredMods.filter((mod) => mod.type === type);
+        return acc;
+      },
+      { auxiliary: [], exploit: [], post: [] },
+    );
   }, [selectedSeverity, selectedTag, selectedPlatform, cveFilter]);
 
   useEffect(() => {
     if (reduceMotion) return;
     setAnimationStyle({ opacity: 0 });
-    let start;
-    const step = (ts) => {
-      if (!start) start = ts;
-      const pct = Math.min((ts - start) / 300, 1);
+    let start: number | null = null;
+    const step = (timestamp: number) => {
+      if (start === null) start = timestamp;
+      const pct = Math.min((timestamp - start) / 300, 1);
       setAnimationStyle({ opacity: pct });
       if (pct < 1) moduleRaf.current = requestAnimationFrame(step);
     };
     moduleRaf.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(moduleRaf.current);
+    return () => {
+      if (moduleRaf.current !== null) cancelAnimationFrame(moduleRaf.current);
+    };
   }, [selectedSeverity, reduceMotion]);
 
   const runCommand = async () => {
@@ -166,7 +231,7 @@ const MetasploitApp = ({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ command: cmd }),
         });
-        const data = await res.json();
+        const data = (await res.json()) as { output?: string };
         setOutput((prev) => {
           const next = `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`;
           recordSimulation({
@@ -178,8 +243,9 @@ const MetasploitApp = ({
           return next;
         });
       }
-    } catch (e) {
-      setOutput((prev) => `${prev}\nError: ${e.message}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      setOutput((prev) => `${prev}\nError: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -188,8 +254,8 @@ const MetasploitApp = ({
   const runDemo = async () => {
     setLoading(true);
     try {
-      const exploit = modules[0];
-      const post = modules.find((m) => m.type === 'post');
+      const exploit = moduleData[0];
+      const post = moduleData.find((mod) => mod.type === 'post');
       if (!exploit || !post) return;
       recordSimulation({
         tool: 'metasploit',
@@ -199,24 +265,24 @@ const MetasploitApp = ({
       });
       setOutput(
         (prev) =>
-          `${prev}\nmsf6 > use ${exploit.name}\n${exploit.transcript || ''}`
+          `${prev}\nmsf6 > use ${exploit.name}\n${exploit.transcript || ''}`,
       );
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       setOutput(
         (prev) =>
-          `${prev}\nmsf6 exploit(${exploit.name}) > sessions -i 1\n[*] Session 1 opened`
+          `${prev}\nmsf6 exploit(${exploit.name}) > sessions -i 1\n[*] Session 1 opened`,
       );
-      await new Promise((r) => setTimeout(r, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       setOutput(
         (prev) =>
-          `${prev}\nmsf6 exploit(${exploit.name}) > run ${post.name}\n${post.transcript || ''}`
+          `${prev}\nmsf6 exploit(${exploit.name}) > run ${post.name}\n${post.transcript || ''}`,
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const showModule = (mod) => {
+  const showModule = (mod: ModuleEntry) => {
     setSelectedModule(mod);
     setOutput((prev) => `${prev}\nmsf6 > use ${mod.name}\n${mod.transcript || ''}`);
     recordSimulation({
@@ -237,18 +303,18 @@ const MetasploitApp = ({
       'Checking target...',
       'Sending payload...',
       'Gaining access...',
-      'Session established.'
+      'Session established.',
     ];
-    const lootItem = { host: '10.0.0.3', data: 'ssh-creds.txt' };
+    const lootItem: LootItem = { host: '10.0.0.3', data: 'ssh-creds.txt' };
     if (typeof Worker === 'function') {
       const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
-      worker.onmessage = (e) => {
-        if (e.data.step) {
-          setTimeline((t) => [...t, e.data.step]);
-        } else if (e.data.loot) {
-          setLoot((l) => [...l, e.data.loot]);
+      worker.onmessage = (event: MessageEvent<{ step?: string; loot?: LootItem; done?: boolean }>) => {
+        if (event.data.step) {
+          setTimeline((entries) => [...entries, event.data.step as string]);
+        } else if (event.data.loot) {
+          setLoot((entries) => [...entries, event.data.loot as LootItem]);
           setShowLoot(true);
-        } else if (e.data.done) {
+        } else if (event.data.done) {
           setReplaying(false);
           worker.terminate();
         }
@@ -260,9 +326,9 @@ const MetasploitApp = ({
       const sendStep = () => {
         if (i < steps.length) {
           const step = steps[i];
-          setTimeline((t) => [...t, step]);
+          setTimeline((entries) => [...entries, step]);
           if (i === 2) {
-            setLoot((l) => [...l, lootItem]);
+            setLoot((entries) => [...entries, lootItem]);
             setShowLoot(true);
           }
           i += 1;
@@ -277,28 +343,30 @@ const MetasploitApp = ({
 
   useEffect(() => {
     if (!replaying || reduceMotion) return;
-    let start;
+    let start: number | null = null;
     const total = timelineSteps * 1000;
-    const step = (ts) => {
-      if (!start) start = ts;
-      const pct = Math.min(((ts - start) / total) * 100, 100);
+    const step = (timestamp: number) => {
+      if (start === null) start = timestamp;
+      const pct = Math.min(((timestamp - start) / total) * 100, 100);
       setProgress(pct);
       if (pct < 100) progressRaf.current = requestAnimationFrame(step);
     };
     progressRaf.current = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(progressRaf.current);
+    return () => {
+      if (progressRaf.current !== null) cancelAnimationFrame(progressRaf.current);
+    };
   }, [replaying, reduceMotion]);
 
   useEffect(() => {
     const regex = /Session\s+(\d+)\s+opened/g;
     setSessions((prev) => {
-      const existing = new Set(prev.map((s) => s.id));
-      const added = [];
-      let m;
-      while ((m = regex.exec(output))) {
-        if (!existing.has(m[1])) {
-          existing.add(m[1]);
-          added.push({ id: m[1] });
+      const existing = new Set(prev.map((session) => session.id));
+      const added: SessionItem[] = [];
+      let match: RegExpExecArray | null = null;
+      while ((match = regex.exec(output))) {
+        if (!existing.has(match[1])) {
+          existing.add(match[1]);
+          added.push({ id: match[1] });
         }
       }
       return added.length ? [...prev, ...added] : prev;
@@ -315,17 +383,14 @@ const MetasploitApp = ({
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
           value={command}
-          onChange={(e) => setCommand(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') runCommand();
+          onChange={(event) => setCommand(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') runCommand();
           }}
           placeholder="msfconsole command"
           spellCheck={false}
         />
-        <button
-          onClick={runCommand}
-          className="ml-2 px-2 py-1 bg-ub-orange rounded"
-        >
+        <button onClick={runCommand} className="ml-2 px-2 py-1 bg-ub-orange rounded">
           Run
         </button>
         <button
@@ -343,13 +408,13 @@ const MetasploitApp = ({
           <h3 className="text-sm font-bold">Sessions</h3>
           {sessions.length ? (
             <ul className="space-y-1.5">
-              {sessions.map((s) => (
-                <li key={s.id} className="flex items-center justify-between">
-                  <span>#{s.id}</span>
+              {sessions.map((session) => (
+                <li key={session.id} className="flex items-center justify-between">
+                  <span>#{session.id}</span>
                   <button
                     type="button"
                     onClick={() =>
-                      setOutput((prev) => `${prev}\nmsf6 > sessions -i ${s.id}`)
+                      setOutput((prev) => `${prev}\nmsf6 > sessions -i ${session.id}`)
                     }
                     className="px-1 text-black rounded"
                     style={{ background: 'var(--color-primary)' }}
@@ -368,14 +433,18 @@ const MetasploitApp = ({
             <input
               className="flex-grow bg-ub-grey text-white p-1 rounded"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
               placeholder="Search modules"
               spellCheck={false}
             />
             <select
               className="ml-2 bg-ub-grey text-white p-1 rounded"
               value={searchField}
-              onChange={(e) => setSearchField(e.target.value)}
+              onChange={(event) =>
+                setSearchField(
+                  event.target.value as 'name' | 'type' | 'platform' | 'cve' | 'tags',
+                )
+              }
             >
               <option value="name">Name</option>
               <option value="type">Type</option>
@@ -386,68 +455,72 @@ const MetasploitApp = ({
           </div>
           {query && (
             <ul className="mt-2 max-h-40 overflow-auto text-xs">
-              {filtered.map((m) => (
-                <li key={m.name} className="mb-1">
-                  <span className="font-mono">{m.name}</span> - {m.description}
-                  {m.platform && <span className="ml-1">[{m.platform}]</span>}
-                  {(m.cve || []).map((c) => (
-                    <span key={c} className="ml-1">{c}</span>
+              {filtered.map((mod) => (
+                <li key={mod.name} className="mb-1">
+                  <span className="font-mono">{mod.name}</span> - {mod.description}
+                  {mod.platform && <span className="ml-1">[{mod.platform}]</span>}
+                  {(mod.cve || []).map((cve) => (
+                    <span key={cve} className="ml-1">
+                      {cve}
+                    </span>
                   ))}
                 </li>
               ))}
             </ul>
           )}
           <div className="mt-4">
-          <div className="mb-2">
-            <select
-              className="bg-ub-grey text-white p-1 rounded"
-              value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
-            >
-              <option value="">All Tags</option>
-              {allTags.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-2">
-            <select
-              className="bg-ub-grey text-white p-1 rounded"
-              value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
-            >
-              <option value="">All Platforms</option>
-              {allPlatforms.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-2">
-            <input
-              className="bg-ub-grey text-white p-1 rounded w-full"
-              value={cveFilter}
-              onChange={(e) => setCveFilter(e.target.value)}
-              placeholder="Filter by CVE"
-              spellCheck={false}
-            />
-          </div>
-          <div className="flex flex-wrap mb-2">
-              {severities.map((s) => (
+            <div className="mb-2">
+              <select
+                className="bg-ub-grey text-white p-1 rounded"
+                value={selectedTag}
+                onChange={(event) => setSelectedTag(event.target.value)}
+              >
+                <option value="">All Tags</option>
+                {allTags.map((tag) => (
+                  <option key={tag} value={tag}>
+                    {tag}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-2">
+              <select
+                className="bg-ub-grey text-white p-1 rounded"
+                value={selectedPlatform}
+                onChange={(event) => setSelectedPlatform(event.target.value)}
+              >
+                <option value="">All Platforms</option>
+                {allPlatforms.map((platform) => (
+                  <option key={platform} value={platform}>
+                    {platform}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-2">
+              <input
+                className="bg-ub-grey text-white p-1 rounded w-full"
+                value={cveFilter}
+                onChange={(event) => setCveFilter(event.target.value)}
+                placeholder="Filter by CVE"
+                spellCheck={false}
+              />
+            </div>
+            <div className="flex flex-wrap mb-2">
+              {severities.map((severity) => (
                 <button
-                  key={s}
-                  onClick={() => setSelectedSeverity(s)}
-                  aria-pressed={selectedSeverity === s}
-                  className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${severityStyles[s]} ${
-                    selectedSeverity === s
+                  key={severity}
+                  onClick={() => setSelectedSeverity(severity)}
+                  aria-pressed={selectedSeverity === severity}
+                  className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${
+                    severityStyles[severity]
+                  } ${
+                    selectedSeverity === severity
                       ? 'ring-2 ring-white motion-safe:transition-transform motion-safe:duration-300 motion-safe:scale-110 motion-reduce:transition-none motion-reduce:scale-100'
                       : ''
                   }`}
                 >
-                  {s}
+                  {severity}
                 </button>
               ))}
             </div>
@@ -458,11 +531,11 @@ const MetasploitApp = ({
                   style={animationStyle}
                   className="grid grid-cols-2 gap-2 max-h-32 overflow-auto text-xs"
                 >
-                  {(modulesByType[type] || []).map((m) => (
+                  {(modulesByType[type] || []).map((mod) => (
                     <button
-                      key={m.name}
+                      key={mod.name}
                       type="button"
-                      onClick={() => showModule(m)}
+                      onClick={() => showModule(mod)}
                       className="p-2 text-left bg-ub-grey rounded flex"
                     >
                       <svg
@@ -476,13 +549,13 @@ const MetasploitApp = ({
                       <div>
                         <div className="flex items-center mb-1">
                           <span
-                            className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}
+                            className={`px-1 rounded mr-1 ${severityStyles[mod.severity]}`}
                           >
-                            {m.severity}
+                            {mod.severity}
                           </span>
-                          <span className="font-mono">{m.name}</span>
+                          <span className="font-mono">{mod.name}</span>
                         </div>
-                        <p>{m.description}</p>
+                        <p>{mod.description}</p>
                       </div>
                     </button>
                   ))}
@@ -491,10 +564,7 @@ const MetasploitApp = ({
             ))}
           </div>
           <div className="mt-4">
-            <button
-              onClick={startReplay}
-              className="px-2 py-1 bg-ub-orange rounded text-black"
-            >
+            <button onClick={startReplay} className="px-2 py-1 bg-ub-orange rounded text-black">
               Replay Mock Exploit
             </button>
             {timeline.length > 0 && (
@@ -505,8 +575,8 @@ const MetasploitApp = ({
                   aria-live="polite"
                   aria-relevant="additions"
                 >
-                  {timeline.map((t, i) => (
-                    <li key={i}>{t}</li>
+                  {timeline.map((step, idx) => (
+                    <li key={`${step}-${idx}`}>{step}</li>
                   ))}
                 </ul>
                 <div
@@ -523,7 +593,7 @@ const MetasploitApp = ({
           </div>
           <div className="mt-4">
             <button
-              onClick={() => setShowLoot((s) => !s)}
+              onClick={() => setShowLoot((state) => !state)}
               className="px-2 py-1 bg-blue-600 rounded text-white"
             >
               Toggle Loot/Notes
@@ -533,9 +603,9 @@ const MetasploitApp = ({
                 <div>
                   <h4 className="font-bold mb-1">Loot</h4>
                   <ul className="max-h-24 overflow-auto">
-                    {loot.map((l, i) => (
-                      <li key={i}>
-                        {l.host}: {l.data || l.path || l.type}
+                    {loot.map((item, idx) => (
+                      <li key={`${item.host}-${idx}`}>
+                        {item.host}: {item.data || item.path || item.type}
                       </li>
                     ))}
                   </ul>
@@ -543,9 +613,9 @@ const MetasploitApp = ({
                 <div>
                   <h4 className="font-bold mb-1">Notes</h4>
                   <ul className="max-h-24 overflow-auto">
-                    {notes.map((n, i) => (
-                      <li key={i}>
-                        {n.host}: {n.note}
+                    {notes.map((note, idx) => (
+                      <li key={`${note.host}-${idx}`}>
+                        {note.host}: {note.note}
                       </li>
                     ))}
                   </ul>
@@ -574,11 +644,11 @@ const MetasploitApp = ({
                 <div className="mt-2">
                   <h4 className="font-bold mb-1">Options</h4>
                   <ul className="max-h-24 overflow-auto">
-                    {Object.entries(selectedModule.options).map(([name, opt]) => (
+                    {Object.entries(selectedModule.options).map(([name, option]) => (
                       <li key={name}>
-                        <span className="font-mono">{name}</span>: {opt.desc}
-                        {opt.default !== undefined && (
-                          <span> (default: {String(opt.default)})</span>
+                        <span className="font-mono">{name}</span>: {option.desc}
+                        {option.default !== undefined && (
+                          <span> (default: {String(option.default)})</span>
                         )}
                       </li>
                     ))}

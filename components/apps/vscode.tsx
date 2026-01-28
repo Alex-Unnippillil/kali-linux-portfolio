@@ -1,21 +1,31 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import apps from '../../apps.config';
+import apps, { type AppConfig } from '../../apps.config';
 
 // Load the actual VSCode app lazily so no editor dependencies are required
 const VsCode = dynamic(() => import('../../apps/vscode'), { ssr: false });
 
+interface AppListItem {
+  type: 'app' | 'file';
+  id: string;
+  title: string;
+}
+
+interface VsCodeWrapperProps {
+  openApp?: (appId: AppConfig['id']) => void;
+}
+
 // Simple fuzzy match: returns true if query characters appear in order
-function fuzzyMatch(text, query) {
+function fuzzyMatch(text: string, query: string): boolean {
   const t = text.toLowerCase();
   const q = query.toLowerCase();
   let ti = 0;
   let qi = 0;
   while (ti < t.length && qi < q.length) {
-    if (t[ti] === q[qi]) qi++;
-    ti++;
+    if (t[ti] === q[qi]) qi += 1;
+    ti += 1;
   }
   return qi === q.length;
 }
@@ -23,25 +33,25 @@ function fuzzyMatch(text, query) {
 // Static files that can be opened directly in a new tab
 const files = ['README.md', 'CHANGELOG.md', 'package.json'];
 
-export default function VsCodeWrapper({ openApp }) {
+export default function VsCodeWrapper({ openApp }: VsCodeWrapperProps) {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
 
-  const items = useMemo(() => {
-    const list = [
-      ...apps.map((a) => ({ type: 'app', id: a.id, title: a.title })),
-      ...files.map((f) => ({ type: 'file', id: f, title: f })),
+  const items = useMemo<AppListItem[]>(() => {
+    const list: AppListItem[] = [
+      ...apps.map((app) => ({ type: 'app', id: app.id, title: app.title })),
+      ...files.map((file) => ({ type: 'file', id: file, title: file })),
     ];
     if (!query) return list;
     return list.filter((item) => fuzzyMatch(item.title, query));
   }, [query]);
 
   useEffect(() => {
-    const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'p') {
-        e.preventDefault();
-        setVisible((v) => !v);
-      } else if (e.key === 'Escape') {
+    const handler = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        setVisible((value) => !value);
+      } else if (event.key === 'Escape') {
         setVisible(false);
       }
     };
@@ -49,7 +59,7 @@ export default function VsCodeWrapper({ openApp }) {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const selectItem = (item) => {
+  const selectItem = (item: AppListItem) => {
     setVisible(false);
     setQuery('');
     if (item.type === 'app' && openApp) {
@@ -70,7 +80,7 @@ export default function VsCodeWrapper({ openApp }) {
               className="w-full p-2 mb-2 bg-gray-700 rounded outline-none"
               placeholder="Search apps or files"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(event) => setQuery(event.target.value)}
             />
             <ul className="max-h-60 overflow-y-auto">
               {items.map((item) => (
@@ -94,5 +104,6 @@ export default function VsCodeWrapper({ openApp }) {
   );
 }
 
-export const displayVsCode = (openApp) => <VsCodeWrapper openApp={openApp} />;
-
+export const displayVsCode = (openApp?: (appId: AppConfig['id']) => void) => (
+  <VsCodeWrapper openApp={openApp} />
+);

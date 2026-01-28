@@ -1,9 +1,18 @@
+import React from 'react';
 import EmbedFrame from '../EmbedFrame';
 
 export const SPOTIFY_EMBED_URL =
   'https://open.spotify.com/embed/playlist/37i9dQZF1E8NOMDYRneOXj?utm_source=generator';
 
-export function SpotifyEmbed({ className = '', containerClassName = '' }) {
+interface SpotifyEmbedProps {
+  className?: string;
+  containerClassName?: string;
+}
+
+export function SpotifyEmbed({
+  className = '',
+  containerClassName = '',
+}: SpotifyEmbedProps) {
   return (
     <EmbedFrame
       src={SPOTIFY_EMBED_URL}

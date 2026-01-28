@@ -174,7 +174,7 @@ npx playwright test   # E2E, if tooling is available locally
 * `hooks/` — persistent state, asset loader, canvas resize, etc.
 * `__tests__/` — unit tests and smoke tests.
 * `playwright/` — end-to-end test helpers.
-* Root configs: `apps.config.js`, `tailwind.config.js`, `jest.config.js`, `playwright.config.ts`, `vercel.json`, `pa11yci.json`,
+* Root configs: `apps.config.ts`, `tailwind.config.js`, `jest.config.js`, `playwright.config.ts`, `vercel.json`, `pa11yci.json`,
   `tsconfig*.json`.
 
 ---

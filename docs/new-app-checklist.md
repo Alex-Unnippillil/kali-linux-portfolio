@@ -6,7 +6,7 @@ Use this checklist when adding a new app to the portfolio.
 
 - Place a **64x64** SVG or PNG icon in `public/themes/Yaru/apps/`.
 - Name the file after the app id (e.g. `my-app.svg`).
-- Reference the icon in `apps.config.js` with `icon: './themes/Yaru/apps/my-app.svg'`.
+- Reference the icon in `apps.config.ts` with `icon: './themes/Yaru/apps/my-app.svg'`.
 
 ## Dynamic import pattern
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
-import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { resetSettings, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -280,18 +280,6 @@ export function Settings() {
                 <button
                     onClick={async () => {
                         await resetSettings();
-                        setAccent(defaults.accent);
-                        setWallpaper(defaults.wallpaper);
-                        setUseKaliWallpaper(defaults.useKaliWallpaper);
-                        setDensity(defaults.density);
-                        setReducedMotion(defaults.reducedMotion);
-                        setLargeHitAreas(defaults.largeHitAreas);
-                        setFontScale(defaults.fontScale);
-                        setHighContrast(defaults.highContrast);
-                        setPongSpin(defaults.pongSpin);
-                        setAllowNetwork(defaults.allowNetwork);
-                        setHaptics(defaults.haptics);
-                        setTheme('default');
                     }}
                     className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
@@ -307,22 +295,6 @@ export function Settings() {
                     if (!file) return;
                     const text = await file.text();
                     await importSettingsData(text);
-                    try {
-                        const parsed = JSON.parse(text);
-                        if (parsed.accent !== undefined) setAccent(parsed.accent);
-                        if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-                        if (parsed.useKaliWallpaper !== undefined) setUseKaliWallpaper(parsed.useKaliWallpaper);
-                        if (parsed.density !== undefined) setDensity(parsed.density);
-                        if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-                        if (parsed.largeHitAreas !== undefined) setLargeHitAreas(parsed.largeHitAreas);
-                        if (parsed.pongSpin !== undefined) setPongSpin(parsed.pongSpin);
-                        if (parsed.allowNetwork !== undefined) setAllowNetwork(parsed.allowNetwork);
-                        if (parsed.haptics !== undefined) setHaptics(parsed.haptics);
-                        if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
-                        if (parsed.theme !== undefined) { setTheme(parsed.theme); }
-                    } catch (err) {
-                        console.error('Invalid settings', err);
-                    }
                     e.target.value = '';
                 }}
                 className="hidden"
