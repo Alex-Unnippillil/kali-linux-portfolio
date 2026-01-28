@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import * as chrono from 'chrono-node';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
 
@@ -279,19 +278,49 @@ export default function Todoist() {
   }, [form.due, form.recurring]);
 
   const getNextDue = (task) => {
-    const base = task.due ? new Date(task.due) : new Date();
+    const baseDate = task.due ? new Date(task.due) : new Date();
     if (task.rrule) {
       try {
         const rule = RRule.fromString(task.rrule);
-        const next = rule.after(base, true);
+        const next = rule.after(baseDate, true);
         return next ? next.toISOString().split('T')[0] : task.due;
       } catch {
         return task.due;
       }
     }
     if (!task.recurring) return task.due;
-    const next = chrono.parseDate(`next ${task.recurring}`, base);
-    return next ? next.toISOString().split('T')[0] : task.due;
+    const phrase = task.recurring.toLowerCase();
+    let nextDate;
+    if (phrase.includes('week')) {
+      nextDate = new Date(baseDate);
+      nextDate.setDate(baseDate.getDate() + 7);
+    } else if (phrase.includes('month')) {
+      nextDate = new Date(baseDate);
+      nextDate.setMonth(baseDate.getMonth() + 1);
+    } else if (phrase.includes('year')) {
+      nextDate = new Date(baseDate);
+      nextDate.setFullYear(baseDate.getFullYear() + 1);
+    } else {
+      const days = [
+        'sunday',
+        'monday',
+        'tuesday',
+        'wednesday',
+        'thursday',
+        'friday',
+        'saturday',
+      ];
+      const foundDay = days.findIndex((d) => phrase.includes(d));
+      if (foundDay >= 0) {
+        const currentDay = baseDate.getDay();
+        let addDays = (foundDay - currentDay + 7) % 7;
+        if (addDays === 0) addDays = 7;
+        nextDate = new Date(baseDate);
+        nextDate.setDate(baseDate.getDate() + addDays);
+      }
+    }
+    if (!nextDate) return task.due;
+    return nextDate.toISOString().split('T')[0];
   };
 
   const toggleCompleted = (group, id) => {
@@ -343,13 +372,72 @@ export default function Todoist() {
     e.preventDefault();
     if (!quick.trim()) return;
     let due;
-    try {
-      const date = chrono.parseDate(quick);
-      if (date) {
-        due = date.toISOString().split('T')[0];
+    let dateText = '';
+    const inputLower = quick.toLowerCase();
+    if (/\btomorrow\b/.test(inputLower)) {
+      const d = new Date();
+      d.setDate(d.getDate() + 1);
+      due = d.toISOString().split('T')[0];
+      dateText = 'tomorrow';
+    } else if (/\btoday\b/.test(inputLower)) {
+      const d = new Date();
+      due = d.toISOString().split('T')[0];
+      dateText = 'today';
+    } else if (/next\s+(\w+)/.test(inputLower)) {
+      const match = inputLower.match(/next\s+(\w+)/);
+      if (match) {
+        const word = match[1];
+        if (['week', 'month', 'year'].includes(word)) {
+          const d = new Date();
+          if (word === 'week') d.setDate(d.getDate() + 7);
+          if (word === 'month') d.setMonth(d.getMonth() + 1);
+          if (word === 'year') d.setFullYear(d.getFullYear() + 1);
+          due = d.toISOString().split('T')[0];
+        } else {
+          const dayIndex = [
+            'sunday',
+            'monday',
+            'tuesday',
+            'wednesday',
+            'thursday',
+            'friday',
+            'saturday',
+          ].findIndex((day) => day === word);
+          if (dayIndex >= 0) {
+            const todayIndex = new Date().getDay();
+            let add = (dayIndex - todayIndex + 7) % 7;
+            if (add === 0) add = 7;
+            const d = new Date();
+            d.setDate(d.getDate() + add);
+            due = d.toISOString().split('T')[0];
+          }
+        }
+        dateText = match[0];
       }
-    } catch {
-      // ignore
+    } else {
+      const dayMatch = inputLower.match(
+        /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/
+      );
+      if (dayMatch) {
+        const dayIndex = [
+          'sunday',
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+        ].indexOf(dayMatch[1]);
+        if (dayIndex >= 0) {
+          const todayIndex = new Date().getDay();
+          let add = (dayIndex - todayIndex + 7) % 7;
+          if (add === 0) add = 7;
+          const d = new Date();
+          d.setDate(d.getDate() + add);
+          due = d.toISOString().split('T')[0];
+        }
+        dateText = dayMatch[1];
+      }
     }
     const priorityMatch = quick.match(/!([1-3])/);
     const sectionMatch = quick.match(/#(\w+)/);
@@ -357,11 +445,8 @@ export default function Todoist() {
     const priorityMap = { '1': 'high', '2': 'medium', '3': 'low' };
     const priority = priorityMatch ? priorityMap[priorityMatch[1]] : 'medium';
     let title = quick;
-    if (due) {
-      const parsed = chrono.parse(quick)[0];
-      if (parsed) {
-        title = title.replace(parsed.text, '').trim();
-      }
+    if (dateText) {
+      title = title.replace(new RegExp(dateText, 'i'), '').trim();
     }
     if (priorityMatch) {
       title = title.replace(priorityMatch[0], '').trim();
@@ -965,4 +1050,3 @@ export default function Todoist() {
 export const displayTodoist = () => {
   return <Todoist />;
 };
-
