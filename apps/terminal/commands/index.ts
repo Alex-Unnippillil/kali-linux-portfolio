@@ -100,7 +100,7 @@ const open: CommandHandler = (args, ctx) => {
 };
 
 const about: CommandHandler = (_args, ctx) => {
-  ctx.writeLine('This terminal is powered by xterm.js');
+  ctx.writeLine('This terminal uses a lightweight in-browser prompt.');
 };
 
 const date: CommandHandler = (_args, ctx) => {

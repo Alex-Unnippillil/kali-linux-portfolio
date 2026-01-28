@@ -5,8 +5,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { FixedSizeGrid as Grid } from 'react-window';
-import AutoSizer from 'react-virtualized-auto-sizer';
 
 import UbuntuApp from '../base/ubuntu_app';
 import DelayedTooltip from '../ui/DelayedTooltip';
@@ -172,77 +170,6 @@ const buildMatch = (app, meta, tokens, rawQuery) => {
   return { matched: true, score, nodes: title };
 };
 
-const buildItemKey = ({ columnIndex, rowIndex, data }) => {
-  const index = rowIndex * data.columnCount + columnIndex;
-  const item = data.items[index];
-  return item?.id || `empty-${rowIndex}-${columnIndex}`;
-};
-
-const Cell = React.memo(({ columnIndex, rowIndex, style, data }) => {
-  const index = rowIndex * data.columnCount + columnIndex;
-  const app = data.items[index];
-
-  if (!app) return null;
-
-  const meta = data.metadata[app.id] ?? buildAppMetadata(app);
-  const isSelected = data.isGridActive && index === data.focusedIndex;
-  const isHovered = index === data.hoveredIndex;
-
-  return (
-    <div
-      style={style}
-      className="flex items-center justify-center p-2"
-      role="gridcell"
-      aria-colindex={columnIndex + 1}
-      aria-rowindex={rowIndex + 1}
-    >
-      <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
-        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
-          <div
-            ref={ref}
-            onMouseEnter={(event) => {
-              data.setFocusedIndex(index);
-              data.setHoveredIndex(index);
-              onMouseEnter(event);
-            }}
-            onMouseLeave={(event) => {
-              data.setHoveredIndex(null);
-              onMouseLeave(event);
-            }}
-            onFocus={(event) => {
-              data.setFocusedIndex(index);
-              onFocus(event);
-            }}
-            onBlur={onBlur}
-            className="flex items-center justify-center"
-          >
-            <UbuntuApp
-              id={app.id}
-              icon={app.icon}
-              name={app.title}
-              displayName={app.nodes}
-              disabled={Boolean(app.disabled)}
-              openApp={data.handleOpenApp}
-              prefetch={app.screen?.prefetch}
-              launchOnClick
-              isSelected={isSelected}
-              isHovered={isHovered}
-              assistiveHint={
-                app.disabled
-                  ? 'Unavailable. This app is marked as disabled.'
-                  : 'Press Enter to launch. Use arrow keys to navigate.'
-              }
-              accentVariables={data.accentVariables}
-            />
-          </div>
-        )}
-      </DelayedTooltip>
-    </div>
-  );
-});
-
-Cell.displayName = 'AppGridCell';
-
 export default function AppGrid({
   openApp,
   appsList,
@@ -257,9 +184,11 @@ export default function AppGrid({
   const [focusedIndex, setFocusedIndex] = useState(0);
   const [isGridActive, setGridActive] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [containerWidth, setContainerWidth] = useState(0);
 
   const searchInputRef = useRef(null);
   const gridRef = useRef(null);
+  const gridContainerRef = useRef(null);
   const columnCountRef = useRef(4);
   const totalCount = appList.length;
 
@@ -299,16 +228,17 @@ export default function AppGrid({
     return results;
   }, [appList, registryMetadata, tokens, normalizedQuery]);
 
-  const scrollToIndex = useCallback((index) => {
-    const colCount = columnCountRef.current || 1;
-    const rowIndex = Math.floor(index / colCount);
-    const columnIndex = index % colCount;
-    gridRef.current?.scrollToItem?.({
-      rowIndex,
-      columnIndex,
-      align: 'smart',
-    });
-  }, []);
+  const scrollToIndex = useCallback(
+    (index) => {
+      const app = filtered[index];
+      if (!app) return;
+      const el = document.getElementById(`app-${app.id}`);
+      if (el && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    },
+    [filtered],
+  );
 
   const focusRenderedIndex = useCallback(
     (index) => {
@@ -357,6 +287,33 @@ export default function AppGrid({
       searchInputRef.current?.focus?.();
     }
   }, [autoFocusSearch, showSearch]);
+
+  useEffect(() => {
+    const container = gridContainerRef.current;
+    if (!container) return undefined;
+    const update = () => setContainerWidth(container.clientWidth || 0);
+    update();
+    let observer;
+    if (typeof ResizeObserver !== 'undefined') {
+      observer = new ResizeObserver(update);
+      observer.observe(container);
+    } else {
+      window.addEventListener('resize', update);
+    }
+    return () => {
+      if (observer) observer.disconnect();
+      else window.removeEventListener('resize', update);
+    };
+  }, []);
+
+  const layout = useMemo(
+    () => getLayout(containerWidth || 960),
+    [containerWidth],
+  );
+
+  useEffect(() => {
+    columnCountRef.current = layout.columnCount;
+  }, [layout.columnCount]);
 
   const handleGridKeyDown = useCallback(
     (event) => {
@@ -512,50 +469,78 @@ export default function AppGrid({
             }}
             role="grid"
             aria-label="Application launcher"
+            ref={gridRef}
           >
-            <AutoSizer>
-              {({ height, width }) => {
-                const layout = getLayout(width);
-                columnCountRef.current = layout.columnCount;
-
-                const itemData = {
-                  items: filtered,
-                  columnCount: layout.columnCount,
-                  metadata: registryMetadata,
-                  handleOpenApp,
-                  setFocusedIndex,
-                  hoveredIndex,
-                  setHoveredIndex,
-                  focusedIndex,
-                  isGridActive,
-                  accentVariables: accentVariables || {},
-                };
-
-                const adjustedRowCount = Math.max(
-                  1,
-                  Math.ceil(filtered.length / layout.columnCount),
-                );
-
-                return (
-                  <Grid
-                    ref={gridRef}
-                    columnCount={layout.columnCount}
-                    columnWidth={layout.columnWidth}
-                    height={height}
-                    rowCount={adjustedRowCount}
-                    rowHeight={layout.rowHeight}
-                    width={width}
-                    itemData={itemData}
-                    itemKey={buildItemKey}
-                    overscanRowCount={2}
-                    overscanColumnCount={1}
-                    className="scroll-smooth"
-                  >
-                    {Cell}
-                  </Grid>
-                );
-              }}
-            </AutoSizer>
+            <div
+              ref={gridContainerRef}
+              className="h-full overflow-y-auto scroll-smooth"
+            >
+              <div
+                className="grid gap-2 p-2"
+                style={{
+                  gridTemplateColumns: `repeat(${layout.columnCount}, minmax(0, 1fr))`,
+                }}
+              >
+                {filtered.map((app, index) => {
+                  const columnIndex = index % layout.columnCount;
+                  const rowIndex = Math.floor(index / layout.columnCount);
+                  const meta = registryMetadata[app.id] ?? buildAppMetadata(app);
+                  const isSelected = isGridActive && index === focusedIndex;
+                  const isHovered = index === hoveredIndex;
+                  return (
+                    <div
+                      key={app.id}
+                      className="flex items-center justify-center p-2"
+                      role="gridcell"
+                      aria-colindex={columnIndex + 1}
+                      aria-rowindex={rowIndex + 1}
+                    >
+                      <DelayedTooltip content={<AppTooltipContent meta={meta} />}>
+                        {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                          <div
+                            ref={ref}
+                            onMouseEnter={(event) => {
+                              setFocusedIndex(index);
+                              setHoveredIndex(index);
+                              onMouseEnter(event);
+                            }}
+                            onMouseLeave={(event) => {
+                              setHoveredIndex(null);
+                              onMouseLeave(event);
+                            }}
+                            onFocus={(event) => {
+                              setFocusedIndex(index);
+                              onFocus(event);
+                            }}
+                            onBlur={onBlur}
+                            className="flex items-center justify-center"
+                          >
+                            <UbuntuApp
+                              id={app.id}
+                              icon={app.icon}
+                              name={app.title}
+                              displayName={app.nodes}
+                              disabled={Boolean(app.disabled)}
+                              openApp={handleOpenApp}
+                              prefetch={app.screen?.prefetch}
+                              launchOnClick
+                              isSelected={isSelected}
+                              isHovered={isHovered}
+                              assistiveHint={
+                                app.disabled
+                                  ? 'Unavailable. This app is marked as disabled.'
+                                  : 'Press Enter to launch. Use arrow keys to navigate.'
+                              }
+                              accentVariables={accentVariables || {}}
+                            />
+                          </div>
+                        )}
+                      </DelayedTooltip>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </div>

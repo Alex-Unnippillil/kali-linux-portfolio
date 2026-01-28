@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import confetti from 'canvas-confetti';
+import { burstConfetti } from '../../utils/confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { PieceGenerator } from '../../games/tetris/logic';
@@ -579,13 +579,13 @@ const Tetris = () => {
       const isTetris = filled.length === 4 && !tSpinFlag;
       if (!reducedMotion.current) {
         if (isTetris) {
-          confetti({ particleCount: 200, spread: 70, scalar: 0.9 });
+          burstConfetti({ particleCount: 200, spread: 70 });
           setCelebration('TETRIS!');
           setTimeout(() => setCelebration(''), 1200);
         } else if (tSpinFlag) {
-          confetti({ particleCount: 120, spread: 60, scalar: 0.8 });
+          burstConfetti({ particleCount: 120, spread: 60 });
         } else {
-          confetti({ particleCount: 80, spread: 60, scalar: 0.7 });
+          burstConfetti({ particleCount: 80, spread: 60 });
         }
       }
       setBoard(newBoard);

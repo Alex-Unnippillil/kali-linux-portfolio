@@ -1,39 +1,3 @@
-jest.mock(
-  '@xterm/xterm',
-  () => ({
-    Terminal: jest.fn().mockImplementation(() => ({
-      open: jest.fn(),
-      focus: jest.fn(),
-      loadAddon: jest.fn(),
-      write: jest.fn(),
-      writeln: jest.fn(),
-      onData: jest.fn(),
-      onKey: jest.fn(),
-      onPaste: jest.fn(),
-      onScroll: jest.fn(),
-      dispose: jest.fn(),
-      clear: jest.fn(),
-      options: { scrollback: 0 },
-    })),
-  }),
-  { virtual: true }
-);
-jest.mock(
-  '@xterm/addon-fit',
-  () => ({
-    FitAddon: jest.fn().mockImplementation(() => ({ fit: jest.fn() })),
-  }),
-  { virtual: true }
-);
-jest.mock(
-  '@xterm/addon-search',
-  () => ({
-    SearchAddon: jest.fn().mockImplementation(() => ({ findNext: jest.fn() })),
-  }),
-  { virtual: true }
-);
-jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
-
 import React, { createRef, act } from 'react';
 import { render, fireEvent } from '@testing-library/react';
 import Terminal from '../apps/terminal';
@@ -89,7 +53,7 @@ describe('Terminal component', () => {
     await act(async () => {
       await ref.current.runCommand('about');
     });
-    expect(ref.current.getContent()).toContain('powered by xterm.js');
+    expect(ref.current.getContent()).toContain('lightweight in-browser prompt');
     await act(async () => {
       await ref.current.runCommand('date');
     });

@@ -21,7 +21,7 @@ describe('Calc component', () => {
     expect(getByTestId('calc-display').textContent).toBe('Invalid Expression');
   });
 
-  it('performs scientific operations via mathjs', () => {
+  it('performs scientific operations', () => {
     const { getByText, getByLabelText, getByTestId } = render(<Calc />);
 
     fireEvent.click(getByText('Sci'));
@@ -77,4 +77,3 @@ describe('Calc component', () => {
     await waitFor(() => expect(queryByText('1+1 = 2')).toBeNull());
   });
 });
-

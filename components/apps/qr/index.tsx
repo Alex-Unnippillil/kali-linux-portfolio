@@ -2,12 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import jsQR from 'jsqr';
 
 const QRScanner: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
   const trackRef = useRef<MediaStreamTrack | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationRef = useRef<number | null>(null);
   const [result, setResult] = useState('');
   const [error, setError] = useState('');
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
@@ -49,21 +52,36 @@ const QRScanner: React.FC = () => {
           };
           scan();
         } else {
-          const [{ BrowserQRCodeReader }, { NotFoundException }] = await Promise.all([
-            import('@zxing/browser'),
-            import('@zxing/library'),
-          ]);
-          const codeReader = new BrowserQRCodeReader();
-          controlsRef.current = await codeReader.decodeFromVideoDevice(
-            undefined,
-            videoRef.current!,
-            (res, err) => {
-              if (res) setResult(res.getText());
-              if (err && !(err instanceof NotFoundException)) {
-                setError('Failed to read QR code');
-              }
-            },
-          );
+          const scan = () => {
+            if (!active) return;
+            const videoEl = videoRef.current;
+            if (!videoEl || videoEl.readyState < 2) {
+              animationRef.current = requestAnimationFrame(scan);
+              return;
+            }
+            const width = videoEl.videoWidth;
+            const height = videoEl.videoHeight;
+            if (!width || !height) {
+              animationRef.current = requestAnimationFrame(scan);
+              return;
+            }
+            let canvas = canvasRef.current;
+            if (!canvas) {
+              canvas = document.createElement('canvas');
+              canvasRef.current = canvas;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(videoEl, 0, 0, width, height);
+              const imageData = ctx.getImageData(0, 0, width, height);
+              const code = jsQR(imageData.data, width, height);
+              if (code?.data) setResult(code.data);
+            }
+            animationRef.current = requestAnimationFrame(scan);
+          };
+          animationRef.current = requestAnimationFrame(scan);
         }
       } catch (err) {
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
@@ -77,6 +95,9 @@ const QRScanner: React.FC = () => {
     return () => {
       active = false;
       controlsRef.current?.stop?.();
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
       streamRef.current?.getTracks().forEach((t) => t.stop());
       if (video) video.srcObject = null;
       trackRef.current = null;
@@ -234,4 +255,3 @@ const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default QRScanner;
-

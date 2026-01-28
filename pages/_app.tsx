@@ -3,14 +3,11 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
 import '../styles/resume-print.css';
 import '../styles/print.css';
-import '@xterm/xterm/css/xterm.css';
 import { SettingsProvider } from '../hooks/useSettings';
 import ShortcutOverlay from '../components/common/ShortcutOverlay';
 import NotificationCenter from '../components/common/NotificationCenter';
@@ -18,7 +15,6 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
-import type { BeforeSendEvent } from '@vercel/analytics';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -71,18 +67,10 @@ const resolveServiceWorkerPath = (): string => {
 
 interface MyAppProps extends AppProps {}
 
-type AnalyticsEventWithMetadata = BeforeSendEvent & {
-  metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
-};
-
 const kaliSans = Rajdhani({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
 });
-
-const isSpeedInsightsEnabled =
-  process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
-  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
@@ -264,20 +252,8 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
           <NotificationCenter>
             <PipPortalProvider>
               <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
-
-              {isSpeedInsightsEnabled && <SpeedInsights />}
+             <Component {...pageProps} />
+             <ShortcutOverlay />
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>

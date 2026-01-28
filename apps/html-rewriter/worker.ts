@@ -1,4 +1,4 @@
-import { diffLines } from 'diff';
+import { diffLines } from '../../utils/diff';
 
 type DiffPayload = {
   type: 'diff';

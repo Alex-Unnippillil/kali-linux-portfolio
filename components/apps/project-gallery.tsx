@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github-dark.css';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -20,8 +21,6 @@ interface Project {
 interface Props {
   openApp?: (id: string) => void;
 }
-
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
@@ -155,6 +154,10 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     );
   }, [filtered.length, stack, year, type, tags, search]);
 
+  useEffect(() => {
+    hljs.highlightAll();
+  }, [filtered]);
+
   const openInFirefox = (url: string) => {
     try {
       sessionStorage.setItem('firefox:start-url', url);
@@ -286,13 +289,11 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                 loading="lazy"
               />
               <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
+                <pre className="h-full overflow-auto p-2 text-sm bg-black text-white">
+                  <code className={`language-${project.language}`}>
+                    {project.snippet}
+                  </code>
+                </pre>
               </div>
             </div>
             <div className="p-4 space-y-2">

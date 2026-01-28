@@ -1,11 +1,37 @@
 // Shunting-yard evaluator and tokenizer for the calculator
 // Exposes pure functions without DOM dependencies
 
-let math = globalThis.math;
-if (!math) {
-  const mathjs = require('mathjs');
-  math = mathjs.create ? mathjs.create(mathjs.all, {}) : mathjs;
-}
+const Decimal = require('decimal.js');
+
+const toDecimal = (value) => (value instanceof Decimal ? value : new Decimal(value));
+const toNumber = (value) => (value instanceof Decimal ? value.toNumber() : Number(value));
+
+const mathOps = {
+  add: (a, b, precise) => (precise ? toDecimal(a).add(b) : toNumber(a) + toNumber(b)),
+  subtract: (a, b, precise) => (precise ? toDecimal(a).sub(b) : toNumber(a) - toNumber(b)),
+  multiply: (a, b, precise) => (precise ? toDecimal(a).mul(b) : toNumber(a) * toNumber(b)),
+  divide: (a, b, precise) => (precise ? toDecimal(a).div(b) : toNumber(a) / toNumber(b)),
+  pow: (a, b, precise) => (precise ? toDecimal(a).pow(b) : Math.pow(toNumber(a), toNumber(b))),
+};
+
+const functions = {
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  sqrt: Math.sqrt,
+  abs: Math.abs,
+  ceil: Math.ceil,
+  floor: Math.floor,
+  round: Math.round,
+  exp: Math.exp,
+  log: (value) => Math.log10(value),
+  ln: Math.log,
+};
+
+const constants = {
+  pi: Math.PI,
+  e: Math.E,
+};
 
 let preciseMode = false;
 let programmerMode = false;
@@ -15,17 +41,12 @@ let memory = 0;
 
 function setPreciseMode(on) {
   preciseMode = on;
-  if (typeof math !== 'undefined') {
-    math.config(
-      preciseMode ? { number: 'BigNumber', precision: 64 } : { number: 'number' }
-    );
-    if (preciseMode) {
-      memory = math.bignumber(memory);
-      lastResult = math.bignumber(lastResult);
-    } else {
-      memory = math.number(memory);
-      lastResult = math.number(lastResult);
-    }
+  if (preciseMode) {
+    memory = toDecimal(memory);
+    lastResult = toDecimal(lastResult);
+  } else {
+    memory = toNumber(memory);
+    lastResult = toNumber(lastResult);
   }
 }
 
@@ -195,46 +216,48 @@ function evalRPN(rpn, vars = {}) {
   const stack = [];
   for (const token of rpn) {
     if (token.type === 'number') {
-      const num = preciseMode ? math.bignumber(token.value) : Number(token.value);
+      const num = preciseMode ? toDecimal(token.value) : Number(token.value);
       stack.push(num);
     } else if (token.type === 'id') {
       if (token.value.toLowerCase() === 'ans') {
         stack.push(lastResult);
-      } else if (typeof math[token.value] !== 'undefined') {
-        stack.push(math[token.value]);
+      } else if (functions[token.value]) {
+        stack.push(functions[token.value]);
+      } else if (constants[token.value]) {
+        stack.push(constants[token.value]);
       } else if (vars[token.value] !== undefined) {
         const v = vars[token.value];
-        const num = preciseMode ? math.bignumber(v) : Number(v);
+        const num = preciseMode ? toDecimal(v) : Number(v);
         stack.push(num);
       } else {
         stack.push(0);
       }
     } else if (token.type === 'unit') {
       const a = stack.pop();
-      stack.push(math.multiply(a, math.unit(1, token.value)));
+      stack.push(a);
     } else if (token.type === 'func') {
       const a = stack.pop();
-      const fn = math[token.value];
-      stack.push(fn ? fn(a) : a);
+      const fn = functions[token.value];
+      stack.push(fn ? fn(toNumber(a)) : a);
     } else if (token.type === 'operator') {
       const b = stack.pop();
       const a = stack.pop();
       let res;
       switch (token.value) {
         case '+':
-          res = math.add(a, b);
+          res = mathOps.add(a, b, preciseMode);
           break;
         case '-':
-          res = math.subtract(a, b);
+          res = mathOps.subtract(a, b, preciseMode);
           break;
         case '*':
-          res = math.multiply(a, b);
+          res = mathOps.multiply(a, b, preciseMode);
           break;
         case '/':
-          res = math.divide(a, b);
+          res = mathOps.divide(a, b, preciseMode);
           break;
         case '^':
-          res = math.pow(a, b);
+          res = mathOps.pow(a, b, preciseMode);
           break;
       }
       stack.push(res);
@@ -258,13 +281,11 @@ function evaluate(expression, vars = {}) {
     const decimalExpr = sanitizedExpression.replace(/\b[0-9A-F]+\b/gi, (m) =>
       parseInt(m, currentBase)
     );
-    const ctx = { Ans: lastResult };
-    for (const [k, v] of Object.entries(scope)) {
-      ctx[k] = preciseMode ? math.bignumber(v) : Number(v);
-    }
-    const result = math.evaluate(decimalExpr, ctx);
+    const tokens = tokenize(decimalExpr);
+    const rpn = toRPN(tokens);
+    const result = evalRPN(rpn, scope);
     lastResult = result;
-    return formatBase(result);
+    return formatBase(result.toString());
   }
   const tokens = tokenize(sanitizedExpression);
   const rpn = toRPN(tokens);
@@ -278,9 +299,9 @@ function memoryAdd(expr) {
   const num = programmerMode
     ? parseInt(val, currentBase)
     : preciseMode
-      ? math.bignumber(val)
+      ? toDecimal(val)
       : parseFloat(val);
-  memory = preciseMode ? math.add(memory, num) : memory + num;
+  memory = preciseMode ? mathOps.add(memory, num, true) : memory + num;
   return memory;
 }
 
@@ -289,9 +310,9 @@ function memorySubtract(expr) {
   const num = programmerMode
     ? parseInt(val, currentBase)
     : preciseMode
-      ? math.bignumber(val)
+      ? toDecimal(val)
       : parseFloat(val);
-  memory = preciseMode ? math.subtract(memory, num) : memory - num;
+  memory = preciseMode ? mathOps.subtract(memory, num, true) : memory - num;
   return memory;
 }
 

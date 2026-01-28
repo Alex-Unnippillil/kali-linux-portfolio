@@ -9,7 +9,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { diffLines, type Change } from 'diff';
+import { diffLines, type Change } from '../../utils/diff';
 import { z } from 'zod';
 
 import usePersistentState from '../../hooks/usePersistentState';

@@ -1,6 +1,49 @@
-import { create, all } from 'mathjs';
+const roundToPrecision = (value, precision) => {
+  if (typeof precision !== 'number') return value;
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
+};
 
-export const math = create(all);
+const conversionRates = {
+  length: {
+    meter: 1,
+    kilometer: 1000,
+    mile: 1609.344,
+    foot: 0.3048,
+  },
+  mass: {
+    gram: 1,
+    kilogram: 1000,
+    pound: 453.59237,
+    ounce: 28.349523125,
+  },
+  time: {
+    second: 1,
+    minute: 60,
+    hour: 3600,
+    day: 86400,
+  },
+  digital: {
+    byte: 1,
+    kilobyte: 1000,
+    megabyte: 1000000,
+    gigabyte: 1000000000,
+  },
+  area: {
+    'square meter': 1,
+    'square kilometer': 1000000,
+    'square foot': 0.09290304,
+    'square mile': 2589988.110336,
+    acre: 4046.8564224,
+  },
+  volume: {
+    liter: 1,
+    milliliter: 0.001,
+    'cubic meter': 1000,
+    'cubic foot': 28.316846592,
+    gallon: 3.785411784,
+  },
+};
 
 export const unitCatalog = {
   length: {
@@ -121,15 +164,31 @@ export const convertUnit = (category, from, to, amount, precision) => {
       throw new Error(`Unsupported currency conversion from ${from} to ${to}`);
     }
     const result = amount * (toRate / fromRate);
-    return typeof precision === 'number' ? math.round(result, precision) : result;
+    return roundToPrecision(result, precision);
   }
-  const fromUnit = getUnitDefinition(category, from)?.symbol;
-  const toUnit = getUnitDefinition(category, to)?.symbol;
-  if (!fromUnit || !toUnit) {
+  if (category === 'temperature') {
+    let celsius;
+    if (from === 'celsius') celsius = amount;
+    else if (from === 'fahrenheit') celsius = (amount - 32) * (5 / 9);
+    else if (from === 'kelvin') celsius = amount - 273.15;
+    if (typeof celsius !== 'number') {
+      throw new Error(`Unsupported temperature conversion from ${from} to ${to}`);
+    }
+    let result;
+    if (to === 'celsius') result = celsius;
+    else if (to === 'fahrenheit') result = celsius * (9 / 5) + 32;
+    else if (to === 'kelvin') result = celsius + 273.15;
+    else throw new Error(`Unsupported temperature conversion to ${to}`);
+    return roundToPrecision(result, precision);
+  }
+
+  const fromRate = conversionRates[category]?.[from];
+  const toRate = conversionRates[category]?.[to];
+  if (!fromRate || !toRate) {
     throw new Error(`Unsupported conversion from ${from} to ${to} in ${category}`);
   }
-  const result = math.unit(amount, fromUnit).toNumber(toUnit);
-  return typeof precision === 'number' ? math.round(result, precision) : result;
+  const result = amount * (fromRate / toRate);
+  return roundToPrecision(result, precision);
 };
 
 export const listUnits = (category) => Object.keys(unitCatalog[category]?.units || {});

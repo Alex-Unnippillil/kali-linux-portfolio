@@ -11,13 +11,13 @@ export function trackEvent(
   props?: Record<string, string | number | boolean>,
 ) {
   try {
-    // Dynamically require to avoid ESM issues in test environment
-    // eslint-disable-next-line global-require, @typescript-eslint/no-var-requires
-    const { track } = require('@vercel/analytics');
-    track(name, props);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+    const ReactGA = require('react-ga4');
+    if (ReactGA?.event) {
+      ReactGA.event({ category: 'interaction', action: name, ...props });
+    }
   } catch {
     // ignore analytics errors
   }
 }
-
 

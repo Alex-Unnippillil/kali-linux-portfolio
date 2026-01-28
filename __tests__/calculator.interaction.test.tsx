@@ -1,14 +1,10 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { all, create } from 'mathjs';
 import Calculator from '../apps/calculator';
-
-const math = create(all);
 
 describe('Calculator summary status', () => {
   beforeEach(() => {
     window.localStorage.clear();
-    (globalThis as any).math = math;
   });
 
   it('updates the summary region when history changes', async () => {
@@ -27,4 +23,3 @@ describe('Calculator summary status', () => {
     });
   });
 });
-

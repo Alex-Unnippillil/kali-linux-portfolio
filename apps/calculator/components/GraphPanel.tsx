@@ -2,9 +2,15 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { create, all } from 'mathjs';
-
-const math = create(all);
+const mathFunctions: Record<string, (value: number) => number> = {
+  sin: Math.sin,
+  cos: Math.cos,
+  tan: Math.tan,
+  sqrt: Math.sqrt,
+  abs: Math.abs,
+  log: (value: number) => Math.log10(value),
+  ln: Math.log,
+};
 
 type Token = {
   type: 'number' | 'id' | 'func' | 'operator' | 'paren' | 'comma';
@@ -130,11 +136,11 @@ function evalRPN(rpn: Token[], x: number) {
       stack.push(parseFloat(token.value));
     } else if (token.type === 'id') {
       if (token.value.toLowerCase() === 'x') stack.push(x);
-      else if ((math as any)[token.value] !== undefined) stack.push((math as any)[token.value]);
+      else if (mathFunctions[token.value]) stack.push(mathFunctions[token.value]);
       else stack.push(0);
     } else if (token.type === 'func') {
       const a = stack.pop();
-      const fn = (math as any)[token.value];
+      const fn = mathFunctions[token.value];
       stack.push(fn ? fn(a) : a);
     } else if (token.type === 'operator') {
       const b = stack.pop();
@@ -142,19 +148,19 @@ function evalRPN(rpn: Token[], x: number) {
       let res: any;
       switch (token.value) {
         case '+':
-          res = math.add(a, b);
+          res = a + b;
           break;
         case '-':
-          res = math.subtract(a, b);
+          res = a - b;
           break;
         case '*':
-          res = math.multiply(a, b);
+          res = a * b;
           break;
         case '/':
-          res = math.divide(a, b);
+          res = a / b;
           break;
         case '^':
-          res = math.pow(a, b);
+          res = Math.pow(a, b);
           break;
         default:
           res = 0;
@@ -163,7 +169,7 @@ function evalRPN(rpn: Token[], x: number) {
     }
   });
   const result = stack.pop();
-  return typeof result === 'number' ? result : math.number(result);
+  return typeof result === 'number' ? result : Number(result);
 }
 
 function compile(expr: string) {
@@ -581,4 +587,3 @@ export default function GraphPanel({
     </div>
   );
 }
-

@@ -11,6 +11,7 @@ import {
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
 import { useSettings } from '../../hooks/useSettings';
+import { burstConfetti } from '../../utils/confetti';
 import GameShell from '../games/GameShell';
 
 // Basic 2048 game logic with tile merging mechanics.
@@ -279,23 +280,8 @@ const Game2048 = () => {
   const outcomeLoggedRef = useRef(false);
   const triggerConfetti = useCallback((options = {}) => {
     if (typeof window === 'undefined') return;
-    import('canvas-confetti')
-      .then((m) => {
-        try {
-          m.default({
-            particleCount: 120,
-            spread: 70,
-            disableForReducedMotion: true,
-            origin: { y: 0.8 },
-            ...options,
-          });
-        } catch {
-          /* ignore animation errors */
-        }
-      })
-      .catch(() => {
-        /* ignore load errors */
-      });
+    const { particleCount = 120, spread = 70 } = options;
+    burstConfetti({ particleCount, spread });
   }, []);
 
   const highestTile = useMemo(() => Math.max(...board.flat()), [board]);
