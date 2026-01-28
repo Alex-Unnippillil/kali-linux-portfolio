@@ -17,6 +17,7 @@ import NotificationCenter from '../components/common/NotificationCenter';
 import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
+import { initializeAnalytics } from '../utils/analyticsClient';
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
@@ -80,22 +81,35 @@ const kaliSans = Rajdhani({
   weight: ['300', '400', '500', '600', '700'],
 });
 
+const isAnalyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
+
+const isVercelAnalyticsEnabled = isAnalyticsEnabled && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true';
+
 const isSpeedInsightsEnabled =
   process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
-  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
+  process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true';
+
+const runWhenIdle = (callback: () => void): void => {
+  if (typeof window === 'undefined') return;
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(() => callback(), { timeout: 2000 });
+  } else {
+    window.setTimeout(callback, 200);
+  }
+};
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
+      if (!trackingId || !isAnalyticsEnabled) return;
+      await initializeAnalytics(trackingId);
     };
 
-    void initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
+    runWhenIdle(() => {
+      void initAnalytics().catch((err) => {
+        console.error('Analytics initialization failed', err);
+      });
     });
 
     // In dev, a previously-registered service worker (e.g. from a production run on localhost)
@@ -182,8 +196,10 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         }
       };
 
-      void register().catch((err) => {
-        console.error('Service worker setup failed', err);
+      runWhenIdle(() => {
+        void register().catch((err) => {
+          console.error('Service worker setup failed', err);
+        });
       });
     }
 
@@ -266,17 +282,18 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
-
+              {isVercelAnalyticsEnabled && (
+                <Analytics
+                  beforeSend={(event) => {
+                    if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+                    const evt = event as AnalyticsEventWithMetadata;
+                    if (evt.metadata && 'email' in evt.metadata) {
+                      delete evt.metadata.email;
+                    }
+                    return evt;
+                  }}
+                />
+              )}
               {isSpeedInsightsEnabled && <SpeedInsights />}
             </PipPortalProvider>
           </NotificationCenter>

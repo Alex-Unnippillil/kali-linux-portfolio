@@ -1,5 +1,5 @@
-import ReactGA from 'react-ga4';
 import type { NextWebVitalsMetric } from 'next/app';
+import { trackEvent } from './analyticsClient';
 
 type VitalName = Extract<NextWebVitalsMetric['name'], 'LCP' | 'INP'>;
 
@@ -10,11 +10,13 @@ const thresholds: Record<VitalName, number> = {
 
 export const reportWebVitals = ({ id, name, value }: NextWebVitalsMetric): void => {
   if (process.env.NEXT_PUBLIC_VERCEL_ENV !== 'preview') return;
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true') return;
+  if (!process.env.NEXT_PUBLIC_TRACKING_ID) return;
   if (name !== 'LCP' && name !== 'INP') return;
 
   const rounded = Math.round(value);
 
-  ReactGA.event({
+  trackEvent({
     category: 'Web Vitals',
     action: name,
     label: id,
@@ -24,7 +26,7 @@ export const reportWebVitals = ({ id, name, value }: NextWebVitalsMetric): void 
 
   const threshold = thresholds[name as VitalName];
   if (threshold !== undefined && value > threshold) {
-    ReactGA.event({
+    trackEvent({
       category: 'Performance Alert',
       action: `${name} degraded`,
       label: id,
