@@ -1,3 +1,4 @@
+import jsQR from 'jsqr';
 import React, { useCallback, useState } from 'react';
 
 interface Props {
@@ -30,10 +31,24 @@ const Scan: React.FC<Props> = ({ onResult }) => {
           const codes = await detector.detect(img);
           if (codes[0]) onResult(codes[0].rawValue);
         } else {
-          const { BrowserQRCodeReader } = await import('@zxing/browser');
-          const reader = new BrowserQRCodeReader();
-          const res = await reader.decodeFromImageUrl(url);
-          onResult(res.getText());
+          const img = new Image();
+          img.src = url;
+          await img.decode();
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Canvas context unavailable');
+          }
+          ctx.drawImage(img, 0, 0);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, canvas.width, canvas.height);
+          if (code) {
+            onResult(code.data);
+          } else {
+            setError('No QR code found');
+          }
         }
       } catch {
         setError('No QR code found');
