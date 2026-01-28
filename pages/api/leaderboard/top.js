@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js';
-
 export default async function handler(
   req,
   res,
@@ -21,18 +19,26 @@ export default async function handler(
     return;
   }
 
-  const supabase = createClient(url, key);
-  const { data, error } = await supabase
-    .from('leaderboard')
-    .select('username, score, game')
-    .eq('game', game)
-    .order('score', { ascending: false })
-    .limit(limit);
-
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
+  try {
+    const query = encodeURI(`game=eq.${game}`);
+    const resp = await fetch(
+      `${url}/rest/v1/leaderboard?select=username,score,game&${query}&order=score.desc&limit=${limit}`,
+      {
+        headers: { apikey: key, Authorization: `Bearer ${key}` },
+      },
+    );
+    if (!resp.ok) {
+      const errorText = await resp.text();
+      console.error('Supabase REST error:', errorText);
+      res
+        .status(500)
+        .json({ error: errorText || 'Failed to fetch leaderboard' });
+      return;
+    }
+    const data = await resp.json();
+    res.status(200).json(data ?? []);
+  } catch (err) {
+    console.error('Leaderboard fetch failed:', err);
+    res.status(500).json({ error: err.message });
   }
-
-  res.status(200).json(data ?? []);
 }
