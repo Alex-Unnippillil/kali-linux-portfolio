@@ -1,12 +1,9 @@
 // @ts-nocheck
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { create, all } from 'mathjs';
 import Decimal, { add, subtract } from '../../../../utils/decimal';
 import usePersistentState from '../../../../hooks/usePersistentState';
 import { useHistory, HistoryEntry } from '../../../../calc/history';
-
-const math = create(all);
-math.config({ number: 'BigNumber', precision: 20 });
+import { evaluateMathExpression } from '../../../../utils/math-evaluator';
 
 const formatNumber = (n: Decimal) => {
   if (n.isInteger()) return n.toString();
@@ -18,13 +15,10 @@ export const evaluateExpression = (expression: string) => {
   if (/^(['"]).*\1$/.test(trimmed)) return trimmed.slice(1, -1);
   if (/[<>]/.test(trimmed)) return 'Invalid Expression';
   try {
-    const result = math.evaluate(trimmed);
-    if (math.isBigNumber(result) || typeof result === 'number') {
-      const dec = new Decimal(result as any);
-      if (!dec.isFinite()) return 'Invalid Expression';
-      return formatNumber(dec);
-    }
-    return String(result);
+    const result = evaluateMathExpression(trimmed);
+    const dec = new Decimal(result);
+    if (!dec.isFinite()) return 'Invalid Expression';
+    return formatNumber(dec);
   } catch {
     return 'Invalid Expression';
   }
@@ -98,8 +92,8 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
 
   const handleMemoryAdd = useCallback(() => {
     try {
-      const val = math.evaluate(display);
-      if (math.isBigNumber(val) || typeof val === 'number')
+      const val = evaluateMathExpression(display);
+      if (!Number.isNaN(val))
         setMemory((m: string) => add(m, val).toString());
     } catch {
       // ignore invalid expression
@@ -107,8 +101,8 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
   }, [display, setMemory]);
   const handleMemorySubtract = useCallback(() => {
     try {
-      const val = math.evaluate(display);
-      if (math.isBigNumber(val) || typeof val === 'number')
+      const val = evaluateMathExpression(display);
+      if (!Number.isNaN(val))
         setMemory((m: string) => subtract(m, val).toString());
     } catch {
       // ignore invalid expression
@@ -122,7 +116,7 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
     (op: string) => {
       let val: number;
       try {
-        val = math.number(math.evaluate(display));
+        val = evaluateMathExpression(display);
       } catch {
         return;
       }
@@ -130,24 +124,24 @@ const Calc: React.FC<CalcProps> = ({ addFolder, openApp }) => {
       let result;
       switch (op) {
         case '%':
-          result = math.divide(val, 100);
+          result = val / 100;
           break;
         case 'sqrt':
-          result = math.sqrt(val);
+          result = Math.sqrt(val);
           break;
         case 'square':
-          result = math.pow(val, 2);
+          result = Math.pow(val, 2);
           break;
         case 'reciprocal':
-          result = math.divide(1, val);
+          result = 1 / val;
           break;
         case 'sign':
-          result = math.unaryMinus(val);
+          result = -val;
           break;
         default:
           return;
       }
-      setDisplay(formatNumber(new Decimal(math.number(result))));
+      setDisplay(formatNumber(new Decimal(result)));
     },
     [display],
   );
@@ -339,4 +333,3 @@ export default Calc;
 export const displayTerminalCalc = (addFolder: any, openApp: any) => {
   return <Calc addFolder={addFolder} openApp={openApp} />;
 };
-

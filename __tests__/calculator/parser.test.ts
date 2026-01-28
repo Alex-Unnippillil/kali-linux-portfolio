@@ -1,6 +1,4 @@
 const { JSDOM } = require('jsdom');
-const { create, all } = require('mathjs');
-const math = create(all);
 
 describe('calculator parser', () => {
   let calc: any;
@@ -9,7 +7,6 @@ describe('calculator parser', () => {
     const dom = new JSDOM('<!doctype html><html><body><input id="display" /></body></html>');
     global.window = dom.window as any;
     global.document = dom.window.document as any;
-    global.math = math;
     calc = require('../../apps/calculator/main.js');
     calc.setPreciseMode(false);
   });
@@ -33,31 +30,23 @@ describe('calculator parser', () => {
   ];
 
   const functionCases = [
-    'sin(0)',
-    'cos(0)',
-    'tan(0)',
-    'sqrt(16)',
-    'abs(-5)',
-    'ceil(1.2)',
-    'floor(1.8)',
-    'round(2.5)',
-    'exp(1)',
-    'log(10)',
-    'sin(pi/2)',
-    'cos(pi)',
+    ['sin(0)', Math.sin(0)],
+    ['cos(0)', Math.cos(0)],
+    ['tan(0)', Math.tan(0)],
+    ['sqrt(16)', Math.sqrt(16)],
+    ['abs(-5)', Math.abs(-5)],
+    ['ceil(1.2)', Math.ceil(1.2)],
+    ['floor(1.8)', Math.floor(1.8)],
+    ['round(2.5)', Math.round(2.5)],
+    ['exp(1)', Math.exp(1)],
+    ['log(10)', Math.log10(10)],
+    ['sin(pi/2)', Math.sin(Math.PI / 2)],
+    ['cos(pi)', Math.cos(Math.PI)],
   ];
-
-  const unitCases = Array.from({ length: 30 }, (_, i) => {
-    const n = i + 1;
-    return `${n}cm + ${n}cm`;
-  });
-
-  const cases: Array<[string, string]> = [...basicCases, ...functionCases, ...unitCases].map(
-    (expr) => {
-      const expected = math.evaluate(expr.replace(/(\d)([a-zA-Z]+)/g, '$1 $2')).toString();
-      return [expr, expected];
-    }
-  );
+  const cases: Array<[string, string]> = [
+    ...basicCases.map((expr) => [expr, String(eval(expr.replace('^', '**')))]),
+    ...functionCases.map(([expr, expected]) => [expr, String(expected)]),
+  ];
 
   test.each(cases)('%s -> %s', (expr, expected) => {
     expect(calc.evaluate(expr)).toBe(expected);
@@ -68,4 +57,3 @@ describe('calculator parser', () => {
     expect(calc.evaluate('x+y')).toBe('7');
   });
 });
-

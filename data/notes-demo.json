@@ -1,0 +1,14 @@
+[
+  {
+    "id": "demo-1",
+    "title": "Welcome note",
+    "content": "This is a demo note stored locally for static builds.",
+    "updatedAt": "2024-12-01T12:00:00Z"
+  },
+  {
+    "id": "demo-2",
+    "title": "Next steps",
+    "content": "Add your own notes by wiring a storage provider or API.",
+    "updatedAt": "2024-12-05T18:30:00Z"
+  }
+]

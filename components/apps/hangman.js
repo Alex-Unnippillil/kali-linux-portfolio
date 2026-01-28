@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
+import { burstConfetti } from '../../utils/confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import {
@@ -176,7 +176,7 @@ const Hangman = () => {
       if (game.status === 'won') {
         setAnnouncement(`You won! The phrase was ${game.word}.`);
         if (!reduceMotionRef.current) {
-          confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } });
+          burstConfetti({ particleCount: 90, spread: 70 });
         }
       } else {
         setAnnouncement(`You lost. The phrase was ${game.word}.`);

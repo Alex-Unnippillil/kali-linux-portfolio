@@ -3,11 +3,8 @@ export default async function trackServerEvent(
   properties?: Record<string, any>,
   options?: Record<string, any>
 ): Promise<void> {
-  try {
-    const mod = await import('@vercel/analytics/server');
-    await mod.track(event, properties, options);
-  } catch {
-    // ignore analytics errors
-
-  }
+  void event;
+  void properties;
+  void options;
+  return;
 }

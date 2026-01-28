@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { addScore } from '../../../lib/demo-leaderboard';
 
 export default async function handler(
   req,
@@ -21,23 +21,7 @@ export default async function handler(
     return;
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    console.warn('Leaderboard submission disabled: missing Supabase env');
-    res.status(503).json({ error: 'Leaderboard unavailable' });
-    return;
-  }
-
-  const supabase = createClient(url, key);
-  const { error } = await supabase
-    .from('leaderboard')
-    .insert({ game, username: username.slice(0, 50), score });
-
-  if (error) {
-    res.status(500).json({ error: error.message });
-    return;
-  }
+  addScore({ game, username, score });
 
   res.status(200).json({ success: true });
 }

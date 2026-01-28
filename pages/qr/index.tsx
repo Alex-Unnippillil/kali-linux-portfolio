@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { BrowserQRCodeReader, NotFoundException } from '@zxing/library';
+import jsQR from 'jsqr';
 import Tabs from '../../components/Tabs';
 import FormError from '../../components/ui/FormError';
 import { clearScans, loadScans, saveScans } from '../../utils/qrStorage';
@@ -35,7 +35,9 @@ const QRPage: React.FC = () => {
   const [batch, setBatch] = useState<string[]>([]);
   const [error, setError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
-  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const lastScanRef = useRef<string | null>(null);
 
   const generateQr = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,20 +131,39 @@ const QRPage: React.FC = () => {
           videoEl.srcObject = stream;
           await videoEl.play();
         }
-        const codeReader = new BrowserQRCodeReader();
-        codeReaderRef.current = codeReader;
-        if (videoEl) {
-          codeReader.decodeFromVideoDevice(null, videoEl, (result, err) => {
-            if (result) {
-              const text = result.getText();
-              setScanResult(text);
-              setBatch((prev) => [...prev, text]);
+        const scan = () => {
+          if (!videoEl) return;
+          if (videoEl.readyState < 2) {
+            animationRef.current = requestAnimationFrame(scan);
+            return;
+          }
+          const width = videoEl.videoWidth;
+          const height = videoEl.videoHeight;
+          if (!width || !height) {
+            animationRef.current = requestAnimationFrame(scan);
+            return;
+          }
+          let canvas = canvasRef.current;
+          if (!canvas) {
+            canvas = document.createElement('canvas');
+            canvasRef.current = canvas;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(videoEl, 0, 0, width, height);
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const code = jsQR(imageData.data, width, height);
+            if (code?.data && code.data !== lastScanRef.current) {
+              lastScanRef.current = code.data;
+              setScanResult(code.data);
+              setBatch((prev) => [...prev, code.data]);
             }
-            if (err && !(err instanceof NotFoundException)) {
-              setError('Failed to read QR code');
-            }
-          });
-        }
+          }
+          animationRef.current = requestAnimationFrame(scan);
+        };
+        animationRef.current = requestAnimationFrame(scan);
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'NotAllowedError') {
           setError('Camera access was denied');
@@ -155,7 +176,9 @@ const QRPage: React.FC = () => {
     startScanner();
 
     return () => {
-      codeReaderRef.current?.reset();
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
       if (videoEl && videoEl.srcObject) {
         const tracks = (videoEl.srcObject as MediaStream).getTracks();
         tracks.forEach((t) => t.stop());

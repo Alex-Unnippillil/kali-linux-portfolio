@@ -25,7 +25,6 @@ function setupDom() {
   global.document = dom.window.document;
   global.localStorage = dom.window.localStorage;
   global.navigator = dom.window.navigator;
-  global.math = require('mathjs');
 }
 
 describe.skip('calculator', () => {
@@ -64,4 +63,3 @@ describe.skip('calculator', () => {
     expect(calc.convertBase(bin, 2, 16).toUpperCase()).toBe(hex);
   });
 });
-
