@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import confetti from 'canvas-confetti';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { PieceGenerator } from '../../games/tetris/logic';
@@ -17,6 +16,8 @@ const TETROMINOS = {
   T: { shape: [[0, 1, 0], [1, 1, 1]], color: '#a855f7' },
   Z: { shape: [[1, 1, 0], [0, 1, 1]], color: '#ef4444' },
 };
+
+const CONFETTI_COLORS = Object.values(TETROMINOS).map((tetromino) => tetromino.color);
 
 const createBoard = () => Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0));
 
@@ -317,6 +318,56 @@ const Tetris = () => {
     return () => media.removeEventListener('change', update);
   }, []);
 
+  const launchConfetti = useCallback((pieces = 100) => {
+    if (reducedMotion.current) return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const confettiContainer = document.createElement('div');
+    confettiContainer.style.position = 'fixed';
+    confettiContainer.style.top = '0';
+    confettiContainer.style.left = '0';
+    confettiContainer.style.width = '100%';
+    confettiContainer.style.height = '100%';
+    confettiContainer.style.pointerEvents = 'none';
+    confettiContainer.style.overflow = 'hidden';
+    confettiContainer.style.zIndex = '9999';
+    document.body.appendChild(confettiContainer);
+
+    const duration = 2600;
+    const maxDelay = 180;
+    const piecesWithDelay = [];
+    for (let i = 0; i < pieces; i += 1) {
+      const confetto = document.createElement('div');
+      const size = 4 + Math.random() * 5;
+      const delay = Math.random() * maxDelay;
+      confetto.style.position = 'absolute';
+      confetto.style.width = `${size}px`;
+      confetto.style.height = `${size}px`;
+      confetto.style.backgroundColor = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      confetto.style.top = '0px';
+      confetto.style.left = `${Math.random() * 100}%`;
+      confetto.style.opacity = '1';
+      confetto.style.borderRadius = '2px';
+      confetto.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+      confetto.style.transition = `transform ${duration}ms ease-out, opacity ${duration}ms ease-out`;
+      confetto.style.transitionDelay = `${delay}ms`;
+      confettiContainer.appendChild(confetto);
+      piecesWithDelay.push(confetto);
+    }
+
+    requestAnimationFrame(() => {
+      piecesWithDelay.forEach((element) => {
+        const drift = (Math.random() - 0.5) * window.innerWidth * 0.6;
+        const rotation = Math.random() * 720;
+        element.style.transform = `translate3d(${drift}px, ${window.innerHeight + 100}px, 0) rotate(${rotation}deg)`;
+        element.style.opacity = '0';
+      });
+    });
+
+    setTimeout(() => {
+      confettiContainer.remove();
+    }, duration + maxDelay + 200);
+  }, []);
+
   const softDropRef = useRef(false);
   const lockRef = useRef(null);
   const lastRotateRef = useRef(false);
@@ -577,16 +628,14 @@ const Tetris = () => {
     const upcoming = [...restQueue, getPiece()];
     if (filled.length) {
       const isTetris = filled.length === 4 && !tSpinFlag;
-      if (!reducedMotion.current) {
-        if (isTetris) {
-          confetti({ particleCount: 200, spread: 70, scalar: 0.9 });
-          setCelebration('TETRIS!');
-          setTimeout(() => setCelebration(''), 1200);
-        } else if (tSpinFlag) {
-          confetti({ particleCount: 120, spread: 60, scalar: 0.8 });
-        } else {
-          confetti({ particleCount: 80, spread: 60, scalar: 0.7 });
-        }
+      if (isTetris) {
+        launchConfetti(200);
+        setCelebration('TETRIS!');
+        setTimeout(() => setCelebration(''), 1200);
+      } else if (tSpinFlag) {
+        launchConfetti(120);
+      } else {
+        launchConfetti(80);
       }
       setBoard(newBoard);
       clearInfoRef.current = {
@@ -623,7 +672,7 @@ const Tetris = () => {
         setPaused(true);
       }
     }
-  }, [getPiece, highScore, isTSpin, next, playSound, reducedMotion, setHighScore, thud]);
+  }, [getPiece, highScore, isTSpin, launchConfetti, next, playSound, setHighScore, thud]);
 
   const moveDown = useCallback((soft = false) => {
     if (clearAnimation || gameOver || paused || showSettings) return;

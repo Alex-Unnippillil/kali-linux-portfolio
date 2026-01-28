@@ -277,25 +277,56 @@ const Game2048 = () => {
   const { highContrast } = useSettings();
   const { record, registerReplay } = useInputRecorder();
   const outcomeLoggedRef = useRef(false);
-  const triggerConfetti = useCallback((options = {}) => {
-    if (typeof window === 'undefined') return;
-    import('canvas-confetti')
-      .then((m) => {
-        try {
-          m.default({
-            particleCount: 120,
-            spread: 70,
-            disableForReducedMotion: true,
-            origin: { y: 0.8 },
-            ...options,
-          });
-        } catch {
-          /* ignore animation errors */
-        }
-      })
-      .catch(() => {
-        /* ignore load errors */
+  const triggerConfetti = useCallback(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const confettiContainer = document.createElement('div');
+    confettiContainer.style.position = 'fixed';
+    confettiContainer.style.top = '0';
+    confettiContainer.style.left = '0';
+    confettiContainer.style.width = '100%';
+    confettiContainer.style.height = '100%';
+    confettiContainer.style.pointerEvents = 'none';
+    confettiContainer.style.overflow = 'hidden';
+    confettiContainer.style.zIndex = '9999';
+    document.body.appendChild(confettiContainer);
+
+    const colors = ['#FFC107', '#8BC34A', '#03A9F4', '#E91E63'];
+    const count = 100;
+    const duration = 3000;
+    const maxDelay = 220;
+    const pieces = [];
+
+    for (let i = 0; i < count; i += 1) {
+      const confetto = document.createElement('div');
+      const size = 4 + Math.random() * 4;
+      const delay = Math.random() * maxDelay;
+      confetto.style.position = 'absolute';
+      confetto.style.width = `${size}px`;
+      confetto.style.height = `${size}px`;
+      confetto.style.backgroundColor = colors[i % colors.length];
+      confetto.style.top = '0px';
+      confetto.style.left = `${Math.random() * 100}%`;
+      confetto.style.opacity = '1';
+      confetto.style.borderRadius = '2px';
+      confetto.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+      confetto.style.transition = `transform ${duration}ms ease-out, opacity ${duration}ms ease-out`;
+      confetto.style.transitionDelay = `${delay}ms`;
+      confettiContainer.appendChild(confetto);
+      pieces.push({ element: confetto, delay });
+    }
+
+    requestAnimationFrame(() => {
+      pieces.forEach(({ element }) => {
+        const drift = (Math.random() - 0.5) * window.innerWidth * 0.5;
+        const rotation = Math.random() * 720;
+        element.style.transform = `translate3d(${drift}px, ${window.innerHeight + 80}px, 0) rotate(${rotation}deg)`;
+        element.style.opacity = '0';
       });
+    });
+
+    setTimeout(() => {
+      confettiContainer.remove();
+    }, duration + maxDelay + 200);
   }, []);
 
   const highestTile = useMemo(() => Math.max(...board.flat()), [board]);
@@ -520,7 +551,7 @@ const Game2048 = () => {
           setScorePop(true);
           if (newScore > highScore) {
             setHighScore(newScore);
-            triggerConfetti({ particleCount: 160, spread: 75, origin: { y: 0.7 } });
+            triggerConfetti();
           }
         }
         setBoard(cloneBoard(moved));
@@ -545,7 +576,7 @@ const Game2048 = () => {
         if (merged) vibrate(50);
         if (mergedCells.length > 1) {
           setCombo((c) => c + 1);
-          triggerConfetti({ particleCount: 90, spread: 65, origin: { y: 0.75 } });
+          triggerConfetti();
         } else {
           setCombo(0);
         }
