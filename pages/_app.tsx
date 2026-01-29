@@ -3,8 +3,7 @@
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
-import { Analytics } from '@vercel/analytics/next';
-import { SpeedInsights } from '@vercel/speed-insights/next';
+import { useRouter } from 'next/router';
 import '../styles/tailwind.css';
 import '../styles/globals.css';
 import '../styles/index.css';
@@ -18,7 +17,6 @@ import PipPortalProvider from '../components/common/PipPortal';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals';
 import { Rajdhani } from 'next/font/google';
-import type { BeforeSendEvent } from '@vercel/analytics';
 
 type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
   name: 'periodic-background-sync';
@@ -71,26 +69,32 @@ const resolveServiceWorkerPath = (): string => {
 
 interface MyAppProps extends AppProps {}
 
-type AnalyticsEventWithMetadata = BeforeSendEvent & {
-  metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
-};
-
 const kaliSans = Rajdhani({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
 });
 
-const isSpeedInsightsEnabled =
-  process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
-  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
-
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+  const router = useRouter();
+
   useEffect(() => {
+    let unsubscribeRouteChange: (() => void) | undefined;
+
     const initAnalytics = async (): Promise<void> => {
       const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
       if (trackingId) {
         const { default: ReactGA } = await import('react-ga4');
         ReactGA.initialize(trackingId);
+        ReactGA.send({ hitType: 'pageview', page: router.asPath });
+
+        const handleRouteChange = (url: string): void => {
+          ReactGA.send({ hitType: 'pageview', page: url });
+        };
+
+        router.events.on('routeChangeComplete', handleRouteChange);
+        unsubscribeRouteChange = () => {
+          router.events.off('routeChangeComplete', handleRouteChange);
+        };
       }
     };
 
@@ -187,7 +191,12 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       });
     }
 
-  }, []);
+    return () => {
+      if (unsubscribeRouteChange) {
+        unsubscribeRouteChange();
+      }
+    };
+  }, [router]);
 
   useEffect(() => {
     const liveRegion = document.getElementById('live-region');
@@ -266,18 +275,6 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
-
-              {isSpeedInsightsEnabled && <SpeedInsights />}
             </PipPortalProvider>
           </NotificationCenter>
         </SettingsProvider>
