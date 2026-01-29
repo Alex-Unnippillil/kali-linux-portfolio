@@ -6,6 +6,7 @@ import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import usePersistedState from '../../hooks/usePersistedState';
 
 type AppMeta = {
   id: string;
@@ -143,6 +144,10 @@ const WhiskerMenu: React.FC = () => {
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
   const [isDesktop, setIsDesktop] = useState(false);
+  const [oneHandedMode, setOneHandedMode] = usePersistedState(
+    'settings:whiskerOneHanded',
+    false,
+  ) as [boolean, React.Dispatch<React.SetStateAction<boolean>>];
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -159,6 +164,7 @@ const WhiskerMenu: React.FC = () => {
 
   const allApps: AppMeta[] = apps as any;
   const favoriteApps = useMemo(() => allApps.filter(a => a.favourite), [allApps]);
+  const isMobile = !isDesktop;
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
@@ -417,39 +423,13 @@ const WhiskerMenu: React.FC = () => {
       return;
     }
 
+    if (!isMobile) {
+      setMenuStyle({});
+      return;
+    }
+
     const updateMenuPosition = () => {
-      const trigger = buttonRef.current;
-      if (!trigger) {
-        setMenuStyle({});
-        return;
-      }
-
-      if (window.innerWidth >= 640) {
-        setMenuStyle({});
-        return;
-      }
-
-      const rect = trigger.getBoundingClientRect();
-      const desiredWidth = Math.min(window.innerWidth - 24, 680);
-      const rootStyle = getComputedStyle(document.documentElement);
-      const parseInset = (value: string) => {
-        const numeric = parseFloat(value);
-        return Number.isFinite(numeric) ? numeric : 0;
-      };
-      const safeAreaLeft = parseInset(rootStyle.getPropertyValue('--safe-area-left'));
-      const safeAreaRight = parseInset(rootStyle.getPropertyValue('--safe-area-right'));
-
-      const availableWidth = Math.max(window.innerWidth - safeAreaLeft - safeAreaRight, 0);
-      const width = Math.min(desiredWidth, availableWidth);
-      const maxLeft = Math.max(safeAreaLeft, window.innerWidth - safeAreaRight - width);
-      const centeredLeft = rect.left + rect.width / 2 - width / 2;
-      const clampedLeft = Math.min(Math.max(centeredLeft, safeAreaLeft), maxLeft);
-
-      setMenuStyle({
-        width: `${width}px`,
-        left: `${clampedLeft}px`,
-        top: `${rect.bottom + 12}px`,
-      });
+      setMenuStyle({});
     };
 
     updateMenuPosition();
@@ -457,7 +437,7 @@ const WhiskerMenu: React.FC = () => {
     return () => {
       window.removeEventListener('resize', updateMenuPosition);
     };
-  }, [isVisible]);
+  }, [isMobile, isVisible]);
 
   const focusCategoryButton = (index: number) => {
     const btn = categoryButtonRefs.current[index];
@@ -533,10 +513,23 @@ const WhiskerMenu: React.FC = () => {
         <div
           ref={menuRef}
           data-testid="whisker-menu-dropdown"
-          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${
+          className={`fixed inset-x-0 bottom-0 z-[260] flex w-full flex-col overflow-hidden rounded-t-2xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:inset-auto sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:rounded-xl ${
             isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
           }`}
-          style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
+          style={{
+            ...menuStyle,
+            ...(isMobile
+              ? {
+                  maxHeight: oneHandedMode
+                    ? 'calc(100dvh - var(--safe-area-top, 0px) - 120px)'
+                    : 'calc(100dvh - var(--safe-area-top, 0px))',
+                  paddingBottom: 'var(--safe-area-bottom, 0px)',
+                  paddingLeft: 'var(--safe-area-left, 0px)',
+                  paddingRight: 'var(--safe-area-right, 0px)',
+                }
+              : {}),
+            transitionDuration: `${TRANSITION_DURATION}ms`,
+          }}
           tabIndex={-1}
           onBlur={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -544,50 +537,72 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:order-2 sm:max-h-full">
-            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
-              <div className="relative mb-4">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="11" cy="11" r="7" />
-                    <line x1="20" y1="20" x2="16.65" y2="16.65" />
-                  </svg>
-                </span>
-                <input
-                  ref={searchInputRef}
-                  className="h-11 w-full rounded-lg border border-transparent bg-[#101c2d] pl-10 pr-4 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
-                  type="search"
-                  inputMode="search"
-                  enterKeyHint="search"
-                  placeholder="Search applications"
-                  aria-label="Search applications"
-                  autoFocus={isOpen}
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                />
+          <div className="order-2 flex min-h-0 flex-1 flex-col bg-[#0f1a29] sm:order-2 sm:max-h-full">
+            <div className="flex-1 overflow-y-auto">
+              <div className="sticky top-0 z-10 border-b border-[#1d2a3c] bg-[#0f1a29] px-4 py-4 sm:px-5">
+                <div className="relative mb-4">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="20" y1="20" x2="16.65" y2="16.65" />
+                    </svg>
+                  </span>
+                  <input
+                    ref={searchInputRef}
+                    className="h-11 w-full rounded-lg border border-transparent bg-[#101c2d] pl-10 pr-4 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                    type="search"
+                    inputMode="search"
+                    enterKeyHint="search"
+                    placeholder="Search applications"
+                    aria-label="Search applications"
+                    autoFocus={isOpen}
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {favoriteApps.slice(0, 6).map((app) => (
+                    <button
+                      key={app.id}
+                      type="button"
+                      onClick={() => openSelectedApp(app.id)}
+                      className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                      aria-label={`Open ${app.title}`}
+                    >
+                      <Image
+                        src={app.icon}
+                        alt=""
+                        width={24}
+                        height={24}
+                        className="h-6 w-6"
+                        sizes="24px"
+                      />
+                    </button>
+                  ))}
+                </div>
+                {isMobile && (
+                  <div className="mt-4 flex items-center justify-between rounded-lg border border-[#1d2a3c] bg-[#0c1523] px-3 py-2 text-sm text-gray-200">
+                    <span className="font-medium text-gray-100">One-handed mode</span>
+                    <button
+                      type="button"
+                      onClick={() => setOneHandedMode(value => !value)}
+                      className={`relative inline-flex h-7 w-12 items-center rounded-full border border-transparent transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${
+                        oneHandedMode ? 'bg-[#4aa8ff]' : 'bg-[#1c2a3c]'
+                      }`}
+                      role="switch"
+                      aria-checked={oneHandedMode}
+                      aria-label="Toggle one-handed mode"
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
+                          oneHandedMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-3">
-                {favoriteApps.slice(0, 6).map((app) => (
-                  <button
-                    key={app.id}
-                    type="button"
-                    onClick={() => openSelectedApp(app.id)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
-                    aria-label={`Open ${app.title}`}
-                  >
-                    <Image
-                      src={app.icon}
-                      alt=""
-                      width={24}
-                      height={24}
-                      className="h-6 w-6"
-                      sizes="24px"
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">
+              <div className="px-3 py-3 sm:px-3">
               {currentApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
@@ -662,6 +677,7 @@ const WhiskerMenu: React.FC = () => {
                   ))}
                 </ul>
               )}
+              </div>
             </div>
           </div>
           <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:order-1 sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
