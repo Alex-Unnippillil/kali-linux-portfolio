@@ -44,6 +44,7 @@ module.exports = {
           accent: 'var(--color-accent)',
           success: 'var(--color-success)',
           error: 'var(--color-error)',
+          'game-danger': 'var(--game-color-danger)',
           muted: 'var(--color-muted)',
           surface: {
             DEFAULT: 'var(--color-surface)',
@@ -61,7 +62,6 @@ module.exports = {
           'panel-dark': 'var(--kali-panel)',
           'panel-light':
             'color-mix(in srgb, var(--kali-panel) 55%, rgba(255,255,255,0.18))',
-          error: 'var(--game-color-danger)',
           overlay: 'var(--color-overlay-strong)',
           'overlay-soft': 'var(--color-overlay-soft)',
           info: 'var(--color-info)',
