@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ReactNode } from "react";
+import { useEffect, useRef, useState, ReactNode } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import {
@@ -23,21 +23,27 @@ type SectionProps = {
 
 const Section = ({ title, description, children, className }: SectionProps) => (
   <section
-    className={`rounded-2xl border border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/80 shadow-kali-panel backdrop-blur-sm ${
+    className={`relative overflow-hidden rounded-2xl border border-[var(--kali-panel-border)]/70 bg-[var(--kali-panel)]/75 shadow-[0_24px_70px_-50px_rgba(10,18,40,0.9)] backdrop-blur-md ${
       className ?? ""
     }`}
   >
-    <header className="border-b border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/90 px-5 py-4">
-      <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-[var(--color-text)]/70">
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent opacity-70"
+    />
+    <div className="relative">
+      <header className="border-b border-[var(--kali-panel-border)]/80 bg-[var(--kali-panel)]/90 px-5 py-4">
+        <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-[var(--color-text)]/75">
         {title}
-      </h2>
-      {description && (
-        <p className="mt-2 text-xs leading-relaxed text-[var(--color-text)]/70">
-          {description}
-        </p>
-      )}
-    </header>
-    <div className="divide-y divide-[var(--kali-panel-border)]/80">{children}</div>
+        </h2>
+        {description && (
+          <p className="mt-2 text-xs leading-relaxed text-[var(--color-text)]/70">
+            {description}
+          </p>
+        )}
+      </header>
+      <div className="divide-y divide-[var(--kali-panel-border)]/80">{children}</div>
+    </div>
   </section>
 );
 
@@ -58,18 +64,18 @@ const SettingRow = ({ label, labelFor, children, helperText, align = "start" }: 
       : "md:justify-start";
 
   return (
-    <div className="px-5 py-3">
+    <div className="group/row px-5 py-3 transition-colors duration-200 hover:bg-white/5">
       <div className="flex flex-col gap-3 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:items-center md:gap-6">
         <div className="flex flex-col gap-1">
           {labelFor ? (
             <label
               htmlFor={labelFor}
-              className="text-sm font-semibold text-[var(--color-text)]/80"
+              className="text-sm font-semibold text-[var(--color-text)]/85"
             >
               {label}
             </label>
           ) : (
-            <span className="text-sm font-semibold text-[var(--color-text)]/80">{label}</span>
+            <span className="text-sm font-semibold text-[var(--color-text)]/85">{label}</span>
           )}
           {helperText && (
             <p className="text-xs leading-relaxed text-[var(--color-text)]/65">{helperText}</p>
@@ -118,9 +124,11 @@ export default function Settings() {
     { id: "appearance", label: "Appearance" },
     { id: "accessibility", label: "Accessibility" },
     { id: "privacy", label: "Privacy" },
+    { id: "system", label: "System Info" },
   ] as const;
   type TabId = (typeof tabs)[number]["id"];
   const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  const [isTabTransitioning, setIsTabTransitioning] = useState(false);
 
   const wallpapers = [
     "wall-1",
@@ -185,13 +193,37 @@ export default function Settings() {
   };
 
   const [showKeymap, setShowKeymap] = useState(false);
+  const [lastUpdateAt, setLastUpdateAt] = useState<string>("");
+
+  useEffect(() => {
+    if (reducedMotion) {
+      setIsTabTransitioning(false);
+      return;
+    }
+    setIsTabTransitioning(true);
+    const timeout = window.setTimeout(() => setIsTabTransitioning(false), 220);
+    return () => window.clearTimeout(timeout);
+  }, [activeTab, reducedMotion]);
+
+  useEffect(() => {
+    const timestamp = new Date();
+    setLastUpdateAt(timestamp.toLocaleString());
+  }, []);
 
   return (
     <div className="windowMainScreen z-20 flex max-h-full w-full flex-grow select-none flex-col overflow-y-auto bg-[var(--kali-panel)]">
       <div className="flex justify-center border-b border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/90 backdrop-blur-sm">
         <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
       </div>
-      <div className="px-4 pb-10">
+      <div
+        className={`px-4 pb-10 transition-all duration-300 ease-out ${
+          reducedMotion
+            ? "opacity-100"
+            : isTabTransitioning
+            ? "opacity-0 translate-y-2"
+            : "opacity-100 translate-y-0"
+        }`}
+      >
         {activeTab === "appearance" && (
           <div className="mx-auto mt-6 grid w-full max-w-5xl gap-6 lg:grid-cols-2">
             <Section
@@ -499,6 +531,74 @@ export default function Settings() {
                   onChange={setAllowNetwork}
                   ariaLabel="Allow Network Requests"
                 />
+              </SettingRow>
+            </Section>
+          </div>
+        )}
+
+        {activeTab === "system" && (
+          <div className="mx-auto mt-6 grid w-full max-w-4xl gap-6 lg:grid-cols-2">
+            <Section
+              title="System Snapshot"
+              description="Quick diagnostics for the simulated desktop environment."
+              className="lg:col-span-2"
+            >
+              <div className="grid gap-4 px-5 py-5 md:grid-cols-2">
+                {[
+                  { label: "Session State", value: "Active" },
+                  { label: "Window Manager", value: "Kali Shell v2" },
+                  { label: "Theme", value: theme },
+                  { label: "Accent", value: accent },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center justify-between rounded-lg border border-[var(--kali-panel-border)]/70 bg-[var(--kali-panel)]/70 px-4 py-3"
+                  >
+                    <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-text)]/60">
+                      {item.label}
+                    </span>
+                    <span className="text-sm font-semibold text-[var(--color-text)]/85">
+                      {item.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            <Section title="Device" description="Details pulled from your current browser session.">
+              <SettingRow label="Platform">
+                <span className="text-sm text-[var(--color-text)]/80">
+                  {navigator.platform || "Web"}
+                </span>
+              </SettingRow>
+              <SettingRow label="Language">
+                <span className="text-sm text-[var(--color-text)]/80">
+                  {navigator.language || "en-US"}
+                </span>
+              </SettingRow>
+              <SettingRow label="Time Zone">
+                <span className="text-sm text-[var(--color-text)]/80">
+                  {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                </span>
+              </SettingRow>
+              <SettingRow label="Last Settings Update">
+                <span className="text-sm text-[var(--color-text)]/80">{lastUpdateAt}</span>
+              </SettingRow>
+            </Section>
+
+            <Section title="Security Posture" description="Simulated compliance for the desktop shell.">
+              <SettingRow label="Network Guard">
+                <span className="text-sm text-[var(--color-text)]/80">
+                  {allowNetwork ? "External requests allowed" : "External requests blocked"}
+                </span>
+              </SettingRow>
+              <SettingRow label="Storage">
+                <span className="text-sm text-[var(--color-text)]/80">
+                  Local preferences encrypted at rest (simulation).
+                </span>
+              </SettingRow>
+              <SettingRow label="Update Channel">
+                <span className="text-sm text-[var(--color-text)]/80">Stable (auto)</span>
               </SettingRow>
             </Section>
           </div>

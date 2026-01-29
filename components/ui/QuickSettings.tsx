@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useTheme } from '../../hooks/useTheme';
 import { isDarkTheme } from '../../utils/theme';
@@ -18,6 +18,8 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const [online, setOnline] = usePersistentState('qs-online', true);
   const [reduceMotion, setReduceMotion] = usePersistentState('qs-reduce-motion', false);
   const [focusMode, setFocusMode] = usePersistentState('qs-focus-mode', false);
+  const [nightLight, setNightLight] = usePersistentState('qs-night-light', false);
+  const [screenRecording, setScreenRecording] = usePersistentState('qs-screen-recording', false);
   const [brightness, setBrightness] = usePersistentState(
     'qs-brightness',
     75,
@@ -33,15 +35,8 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [shouldRender, setShouldRender] = useState(open);
   const [isVisible, setIsVisible] = useState(open);
+  const [lastPowerAction, setLastPowerAction] = useState<string | null>(null);
   const focusableTabIndex = open ? 0 : -1;
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-sound-muted', !sound);
-  }, [sound]);
-
-  useEffect(() => {
-    document.documentElement.toggleAttribute('data-offline', !online);
-  }, [online]);
 
   useEffect(() => {
     document.documentElement.toggleAttribute('data-sound-muted', !sound);
@@ -54,6 +49,14 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
   useEffect(() => {
     document.documentElement.classList.toggle('reduce-motion', reduceMotion);
   }, [reduceMotion]);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-night-light', nightLight);
+  }, [nightLight]);
+
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-screen-recording', screenRecording);
+  }, [screenRecording]);
 
   useEffect(() => {
     if (open) {
@@ -110,6 +113,20 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       document.documentElement.style.removeProperty('--qs-volume');
     };
   }, [volume]);
+
+  const handleOpenSettings = useCallback(() => {
+    window.dispatchEvent(new CustomEvent('open-app', { detail: 'settings' }));
+  }, []);
+
+  const handleScreenRecordingToggle = useCallback(() => {
+    setScreenRecording((prev) => {
+      const next = !prev;
+      if (next) {
+        window.dispatchEvent(new CustomEvent('open-app', { detail: 'screen-recorder' }));
+      }
+      return next;
+    });
+  }, [setScreenRecording]);
 
   if (!shouldRender) {
     return null;
@@ -186,6 +203,13 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       icon: <VolumeIcon muted={!sound} />,
       tone: sound ? 'info' : 'muted',
     },
+    {
+      id: 'night-light',
+      label: 'Night light',
+      value: nightLight ? 'On' : 'Off',
+      icon: <NightLightIcon />,
+      tone: nightLight ? 'warning' : 'muted',
+    },
   ];
 
   const toggles: Array<{
@@ -232,6 +256,24 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       onToggle: () => setFocusMode(!focusMode),
       accent: 'from-amber-400/30 via-amber-500/10 to-transparent',
       icon: <FocusIcon />,
+    },
+    {
+      id: 'quick-settings-night-light',
+      label: 'Night light',
+      description: 'Reduce blue light for late sessions.',
+      value: nightLight,
+      onToggle: () => setNightLight(!nightLight),
+      accent: 'from-amber-400/30 via-orange-500/10 to-transparent',
+      icon: <NightLightIcon />,
+    },
+    {
+      id: 'quick-settings-screen-recording',
+      label: 'Screen recording',
+      description: 'Launch the recorder workspace.',
+      value: screenRecording,
+      onToggle: handleScreenRecordingToggle,
+      accent: 'from-rose-400/30 via-rose-500/10 to-transparent',
+      icon: <RecordIcon />,
     },
   ];
 
@@ -288,8 +330,18 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
       }`}
     >
       <div className="pb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300">Quick settings</p>
-        <p className="mt-1 text-[11px] leading-snug text-slate-400">
+        <button
+          type="button"
+          onClick={handleOpenSettings}
+          className="flex w-full items-center justify-between gap-2 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-300 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+          aria-label="Open system preferences"
+        >
+          Quick settings
+          <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.26em] text-slate-200">
+            System preferences
+          </span>
+        </button>
+        <p className="mt-2 text-[11px] leading-snug text-slate-400">
           Personalize key desktop controls in one tidy panel.
         </p>
       </div>
@@ -362,6 +414,41 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
             );
           })}
         </div>
+      </section>
+
+      <section aria-label="Power menu" className="mt-3 rounded-lg border border-white/10 bg-white/5 p-3">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-200">Power</span>
+          <span className="text-[10px] uppercase tracking-[0.24em] text-slate-400">Simulated</span>
+        </div>
+        <div className="mt-3 grid gap-2">
+          {[
+            { id: 'lock', label: 'Lock', description: 'Secure the desktop session.' },
+            { id: 'logout', label: 'Logout', description: 'Return to the login screen.' },
+            { id: 'shutdown', label: 'Shutdown', description: 'Power down the session.' },
+          ].map((action) => (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => setLastPowerAction(action.label)}
+              className="flex items-center justify-between rounded-lg border border-white/10 bg-slate-900/80 px-3 py-2 text-left text-[11px] text-slate-200 transition hover:border-white/20 hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              tabIndex={focusableTabIndex}
+            >
+              <span className="flex flex-col">
+                <span className="font-semibold uppercase tracking-[0.2em]">{action.label}</span>
+                <span className="text-[10px] text-slate-400">{action.description}</span>
+              </span>
+              <span className="rounded-full border border-white/10 bg-white/10 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-300">
+                Demo
+              </span>
+            </button>
+          ))}
+        </div>
+        {lastPowerAction && (
+          <p className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[10px] uppercase tracking-[0.22em] text-slate-300">
+            {lastPowerAction} queued — simulation only
+          </p>
+        )}
       </section>
 
       <section aria-label="Device controls" className="mt-3 space-y-3 rounded-lg border border-white/10 bg-white/5 p-3">
@@ -667,6 +754,60 @@ const VolumeIcon = ({ muted }: { muted: boolean }) => (
         strokeLinejoin="round"
       />
     )}
+  </svg>
+);
+
+const NightLightIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <path
+      d="M14.5 3.5a8.5 8.5 0 1 0 6 14.5 7 7 0 0 1-6-14.5Z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M6.5 17.5c1.5-1.2 3.5-1.8 5.5-1.8"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const RecordIcon = () => (
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="text-white"
+  >
+    <rect
+      x="3.5"
+      y="5.5"
+      width="17"
+      height="13"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="1.5"
+    />
+    <circle cx="8" cy="10" r="2" fill="currentColor" />
+    <path
+      d="M14.5 9.5h4v5h-4z"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
   </svg>
 );
 
