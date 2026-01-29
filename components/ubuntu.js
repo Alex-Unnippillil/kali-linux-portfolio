@@ -14,7 +14,6 @@ export default class Ubuntu extends Component {
                 super();
                 this.state = {
                         screen_locked: false,
-                        bg_image_name: 'wall-2',
                         booting_screen: true,
                         shutDownScreen: false
                 };
@@ -135,12 +134,6 @@ export default class Ubuntu extends Component {
         };
 
 	getLocalData = () => {
-		// Get Previously selected Background Image
-                let bg_image_name = safeLocalStorage?.getItem('bg-image');
-		if (bg_image_name !== null && bg_image_name !== undefined) {
-			this.setState({ bg_image_name });
-		}
-
                 let booting_screen = safeLocalStorage?.getItem('booting_screen');
 		if (booting_screen !== null && booting_screen !== undefined) {
 			// user has visited site before
@@ -195,11 +188,6 @@ export default class Ubuntu extends Component {
                 safeLocalStorage?.setItem('screen-locked', false);
 	};
 
-	changeBackgroundImage = (img_name) => {
-		this.setState({ bg_image_name: img_name });
-                safeLocalStorage?.setItem('bg-image', img_name);
-	};
-
 	shutDown = () => {
 		ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
 
@@ -227,7 +215,6 @@ export default class Ubuntu extends Component {
                 <Layout id="monitor-screen">
                                 <LockScreen
                                         isLocked={this.state.screen_locked}
-                                        bgImgName={this.state.bg_image_name}
                                         unLockScreen={this.unLockScreen}
                                 />
 				<BootingScreen
@@ -237,7 +224,7 @@ export default class Ubuntu extends Component {
 					disableMessageSequence={typeof jest !== 'undefined'}
 				/>
                                 <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                <Desktop />
                 </Layout>
         );
 	}
