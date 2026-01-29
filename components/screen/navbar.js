@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
 import QuickSettings from '../ui/QuickSettings';
+import QuickSettingsPanel from '../ui/QuickSettingsPanel';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
@@ -129,28 +130,60 @@ const SystemTrayCluster = ({
         statusCardOpen,
         onStatusToggle,
         onStatusKeyDown,
-}) => (
-        <div className="flex items-center gap-4 text-xs md:text-sm">
-                <PerformanceGraph />
-                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                <div
-                        id="status-bar"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="System status"
-                        aria-expanded={statusCardOpen}
-                        onClick={onStatusToggle}
-                        onKeyDown={onStatusKeyDown}
-                        className={
-                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                        }
-                >
-                        <Status />
-                        <QuickSettings open={statusCardOpen} />
+        quickSettingsOpen,
+        onQuickSettingsToggle,
+        onQuickSettingsKeyDown,
+        onQuickSettingsClose,
+}) => {
+        const quickSettingsRef = React.useRef(null);
+
+        return (
+                <div className="flex items-center gap-4 text-xs md:text-sm">
+                        <PerformanceGraph />
+                        <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                        <div
+                                id="status-bar"
+                                role="button"
+                                tabIndex={0}
+                                aria-label="System status"
+                                aria-expanded={statusCardOpen}
+                                onClick={onStatusToggle}
+                                onKeyDown={onStatusKeyDown}
+                                className={
+                                        'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                }
+                        >
+                                <Status />
+                                <QuickSettings open={statusCardOpen} />
+                        </div>
+                        <div className="relative">
+                                <button
+                                        type="button"
+                                        ref={quickSettingsRef}
+                                        aria-label="Quick settings"
+                                        aria-expanded={quickSettingsOpen}
+                                        onClick={onQuickSettingsToggle}
+                                        onKeyDown={onQuickSettingsKeyDown}
+                                        className="flex items-center gap-2 rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+                                >
+                                        <span
+                                                aria-hidden="true"
+                                                className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-white/10 text-[10px] text-white/70"
+                                        >
+                                                ⚙
+                                        </span>
+                                        Quick
+                                </button>
+                                <QuickSettingsPanel
+                                        open={quickSettingsOpen}
+                                        onClose={onQuickSettingsClose}
+                                        anchorRef={quickSettingsRef}
+                                />
+                        </div>
+                        {children}
                 </div>
-                {children}
-        </div>
-);
+        );
+};
 const areBadgesEqual = (nextBadge, prevBadge) => {
         if (nextBadge === prevBadge) return true;
         if (!nextBadge || !prevBadge) return false;
@@ -217,6 +250,7 @@ export default class Navbar extends PureComponent {
                 super();
                 this.state = {
                         status_card: false,
+                        quick_settings: false,
                         applicationsMenuOpen: false,
                         placesMenuOpen: false,
                         workspaces: [],
@@ -1164,13 +1198,34 @@ export default class Navbar extends PureComponent {
         };
 
         handleStatusToggle = () => {
-                this.setState((state) => ({ status_card: !state.status_card }));
+                this.setState((state) => ({
+                        status_card: !state.status_card,
+                        quick_settings: state.status_card ? state.quick_settings : false,
+                }));
         };
 
         handleStatusKeyDown = (event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         this.handleStatusToggle();
+                }
+        };
+
+        handleQuickSettingsToggle = () => {
+                this.setState((state) => ({
+                        quick_settings: !state.quick_settings,
+                        status_card: state.quick_settings ? state.status_card : false,
+                }));
+        };
+
+        handleQuickSettingsClose = () => {
+                this.setState({ quick_settings: false });
+        };
+
+        handleQuickSettingsKeyDown = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        this.handleQuickSettingsToggle();
                 }
         };
 
@@ -1208,6 +1263,10 @@ export default class Navbar extends PureComponent {
                                         statusCardOpen={this.state.status_card}
                                         onStatusToggle={this.handleStatusToggle}
                                         onStatusKeyDown={this.handleStatusKeyDown}
+                                        quickSettingsOpen={this.state.quick_settings}
+                                        onQuickSettingsToggle={this.handleQuickSettingsToggle}
+                                        onQuickSettingsKeyDown={this.handleQuickSettingsKeyDown}
+                                        onQuickSettingsClose={this.handleQuickSettingsClose}
                                 />
                                 <TaskbarPreviewFlyout
                                         ref={this.previewFlyoutRef}
