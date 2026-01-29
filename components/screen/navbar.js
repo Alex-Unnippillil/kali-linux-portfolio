@@ -1,15 +1,12 @@
 'use client';
 
 import React, { PureComponent } from 'react';
-import Image from 'next/image';
-import Clock from '../util-components/clock';
-import Status from '../util-components/status';
-import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
-import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
+import TaskbarButton from './taskbar/TaskbarButton';
+import SystemTray from './taskbar/SystemTray';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -124,33 +121,6 @@ const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop 
 
 PinnedAppsList.displayName = 'PinnedAppsList';
 
-const SystemTrayCluster = ({
-        children,
-        statusCardOpen,
-        onStatusToggle,
-        onStatusKeyDown,
-}) => (
-        <div className="flex items-center gap-4 text-xs md:text-sm">
-                <PerformanceGraph />
-                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                <div
-                        id="status-bar"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="System status"
-                        aria-expanded={statusCardOpen}
-                        onClick={onStatusToggle}
-                        onKeyDown={onStatusKeyDown}
-                        className={
-                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                        }
-                >
-                        <Status />
-                        <QuickSettings open={statusCardOpen} />
-                </div>
-                {children}
-        </div>
-);
 const areBadgesEqual = (nextBadge, prevBadge) => {
         if (nextBadge === prevBadge) return true;
         if (!nextBadge || !prevBadge) return false;
@@ -944,40 +914,19 @@ export default class Navbar extends PureComponent {
                 const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
 
                 return (
-                        <button
-                                type="button"
-                                aria-label={buttonLabel}
-                                aria-pressed={isActive}
-                                data-context="taskbar"
-                                data-app-id={app.id}
-                                data-active={isActive ? 'true' : 'false'}
+                        <TaskbarButton
+                                app={app}
+                                badgeNode={badgeNode}
+                                buttonLabel={buttonLabel}
+                                isActive={isActive}
+                                isFocused={isFocused}
                                 onClick={() => this.handleAppButtonClick(app)}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
                                 onMouseEnter={(event) => this.handleAppButtonMouseEnter(event, app)}
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
-                        >
-                                <span className="relative inline-flex items-center justify-center">
-                                        <Image
-                                                src={app.icon}
-                                                alt=""
-                                                width={28}
-                                                height={28}
-                                                className="h-6 w-6"
-                                        />
-                                        {badgeNode}
-                                        {isActive && (
-                                                <span
-                                                        aria-hidden="true"
-                                                        data-testid="running-indicator"
-                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
-                                                />
-                                        )}
-                                </span>
-                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
-                        </button>
+                        />
                 );
         };
 
@@ -1204,7 +1153,7 @@ export default class Navbar extends PureComponent {
                                         {pinnedApps}
                                         {runningApps}
                                 </div>
-                                <SystemTrayCluster
+                                <SystemTray
                                         statusCardOpen={this.state.status_card}
                                         onStatusToggle={this.handleStatusToggle}
                                         onStatusKeyDown={this.handleStatusKeyDown}
