@@ -23,6 +23,7 @@ import DefaultMenu from '../context-menus/default';
 import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
+import WindowErrorBoundary from '../core/WindowErrorBoundary';
 import ReactGA from 'react-ga4';
 import { toPng } from 'html-to-image';
 import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
@@ -288,6 +289,7 @@ export class Desktop extends Component {
         this.desktopPadding = { ...this.baseDesktopPadding };
         this.latestViewportWidth = initialViewportWidth;
         this.viewportResizeObserver = null;
+        this.pendingIconSizePreset = null;
 
         const initialOverlayClosed = createOverlayFlagMap(true);
         const initialOverlayMinimized = createOverlayFlagMap(false);
@@ -349,6 +351,7 @@ export class Desktop extends Component {
             closedShelfOpen: false,
             appBadges: {},
             taskbarOrder: this.loadTaskbarOrder(),
+            window_relaunch_keys: {},
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -1480,10 +1483,11 @@ export class Desktop extends Component {
             this.persistIconSizePreset(normalizedPreset, normalizedBucket);
         }
         if (!this._isMounted) {
-            this.state = {
-                ...this.state,
-                iconSizePreset: normalizedPreset,
-                iconSizeBucket: normalizedBucket,
+            this.pendingIconSizePreset = {
+                preset: normalizedPreset,
+                bucketId: normalizedBucket,
+                persist,
+                broadcast,
             };
             return;
         }
@@ -3578,6 +3582,15 @@ export class Desktop extends Component {
 
     componentDidMount() {
         this._isMounted = true;
+        if (this.pendingIconSizePreset) {
+            const pending = this.pendingIconSizePreset;
+            this.pendingIconSizePreset = null;
+            this.setIconSizePreset(pending.preset, {
+                bucketId: pending.bucketId,
+                persist: pending.persist,
+                broadcast: pending.broadcast,
+            });
+        }
         // google analytics
         ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
 
@@ -4764,10 +4777,24 @@ export class Desktop extends Component {
             const size = persistedSizes;
             const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
             const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const relaunchKey = this.state.window_relaunch_keys?.[id] || 0;
+            const renderAppContent = typeof app.screen === 'function' ? app.screen : () => null;
+            const renderScreen = (addFolder, openApp, context) => (
+                <WindowErrorBoundary
+                    key={`window-error-${id}-${relaunchKey}`}
+                    onClose={() => this.closeApp(id)}
+                    onRelaunch={() => {
+                        this.relaunchWindow(id);
+                        this.focus(id);
+                    }}
+                >
+                    {renderAppContent(addFolder, openApp, context)}
+                </WindowErrorBoundary>
+            );
             const props = {
                 title: app.title,
                 id: app.id,
-                screen: app.screen,
+                screen: renderScreen,
                 addFolder: this.addToDesktop,
                 closed: this.closeApp,
                 openApp: this.openApp,
@@ -5227,6 +5254,16 @@ export class Desktop extends Component {
                 setTimeout(reopenWindow, 200);
             }
         }
+    }
+
+    relaunchWindow = (objId) => {
+        if (!objId) return;
+        this.setState((prevState) => ({
+            window_relaunch_keys: {
+                ...prevState.window_relaunch_keys,
+                [objId]: (prevState.window_relaunch_keys?.[objId] || 0) + 1,
+            },
+        }));
     }
 
     closeApp = async (objId) => {

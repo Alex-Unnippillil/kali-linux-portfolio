@@ -2,7 +2,6 @@
 
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import Settings from '../apps/settings';
 import ReactGA from 'react-ga4';
 import {
     clampWindowPositionWithinViewport,
@@ -1784,12 +1783,15 @@ export class Window extends Component {
                                 />
                             )}
                         />
-                        {(this.id === "settings"
-                            ? <Settings />
-                            : <WindowMainScreen screen={this.props.screen} title={this.props.title}
-                                addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
-                                openApp={this.props.openApp}
-                                context={this.props.context} />)}
+                        <WindowMainScreen
+                            screen={this.props.screen}
+                            title={this.props.title}
+                            addFolder={this.props.id === "terminal" ? this.props.addFolder : null}
+                            openApp={this.props.openApp}
+                            context={this.props.context}
+                        >
+                            {this.props.children}
+                        </WindowMainScreen>
                     </div>
                 </Draggable >
             </>
@@ -2126,9 +2128,14 @@ export class WindowMainScreen extends Component {
         }, 3000);
     }
     render() {
+        const content = this.props.children
+            ? this.props.children
+            : (typeof this.props.screen === 'function'
+                ? this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)
+                : null);
         return (
             <div className={"w-full flex-grow z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>
-                {this.props.screen(this.props.addFolder, this.props.openApp, this.props.context)}
+                {content}
             </div>
         )
     }

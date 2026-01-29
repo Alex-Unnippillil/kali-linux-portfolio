@@ -724,6 +724,7 @@ export default function Todoist() {
               onKeyDown={(e) => e.key === 'Enter' && saveEditing()}
               className="mt-1.5 w-full border p-1.5"
               autoFocus
+              aria-label="Edit task title"
             />
           )}
         </div>
@@ -911,9 +912,10 @@ export default function Todoist() {
               ref={quickRef}
               value={quick}
               onChange={(e) => setQuick(e.target.value)}
-            placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
-            className="border p-1 flex-1"
-          />
+              placeholder="Quick add (e.g., 'Pay bills tomorrow !1')"
+              className="border p-1 flex-1"
+              aria-label="Quick add task"
+            />
           <button
             type="submit"
             className="px-2 py-1 bg-blue-600 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -922,36 +924,40 @@ export default function Todoist() {
           </button>
         </form>
         <form onSubmit={handleAdd} className="flex flex-wrap gap-2">
-          <input
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
-            placeholder="Task"
-            className="border p-1"
-            required
-          />
-          <input
-            type="date"
-            name="due"
-            value={form.due}
-            onChange={handleChange}
-            className="border p-1"
-          />
-          <input
-            name="section"
-            value={form.section}
-            onChange={handleChange}
-            placeholder="Section"
-            className="border p-1"
-          />
-          <input
-            name="recurring"
-            value={form.recurring}
-            onChange={handleChange}
-            placeholder="Recurring (e.g., every mon)"
-            className="border p-1"
-          />
+            <input
+              name="title"
+              value={form.title}
+              onChange={handleChange}
+              onKeyDown={(e) => e.key === 'Enter' && handleAdd(e)}
+              placeholder="Task"
+              className="border p-1"
+              required
+              aria-label="Task title"
+            />
+            <input
+              type="date"
+              name="due"
+              value={form.due}
+              onChange={handleChange}
+              className="border p-1"
+              aria-label="Due date"
+            />
+            <input
+              name="section"
+              value={form.section}
+              onChange={handleChange}
+              placeholder="Section"
+              className="border p-1"
+              aria-label="Section"
+            />
+            <input
+              name="recurring"
+              value={form.recurring}
+              onChange={handleChange}
+              placeholder="Recurring (e.g., every mon)"
+              className="border p-1"
+              aria-label="Recurring schedule"
+            />
           {recurringPreview.length > 0 && (
             <div className="text-xs text-gray-500">
               Next: {recurringPreview
@@ -977,12 +983,13 @@ export default function Todoist() {
           </button>
         </form>
         <div className="flex flex-wrap gap-2">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search"
-            className="border p-1 flex-1"
-          />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search"
+              className="border p-1 flex-1"
+              aria-label="Search tasks"
+            />
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -1010,14 +1017,26 @@ export default function Todoist() {
           <button className="px-2 py-1 border rounded" onClick={() => setView('calendar')}>Calendar</button>
           <button className="px-2 py-1 border rounded" onClick={handleExport}>Export</button>
           <button className="px-2 py-1 border rounded" onClick={handleExportCsv}>Export CSV</button>
-          <label className="px-2 py-1 border rounded cursor-pointer">
-            Import
-            <input type="file" accept="application/json" onChange={handleImport} className="sr-only" />
-          </label>
-          <label className="px-2 py-1 border rounded cursor-pointer">
-            Import CSV
-            <input type="file" accept="text/csv" onChange={handleImportCsv} className="sr-only" />
-          </label>
+            <label className="px-2 py-1 border rounded cursor-pointer">
+              Import
+              <input
+                type="file"
+                accept="application/json"
+                onChange={handleImport}
+                className="sr-only"
+                aria-label="Import tasks from JSON"
+              />
+            </label>
+            <label className="px-2 py-1 border rounded cursor-pointer">
+              Import CSV
+              <input
+                type="file"
+                accept="text/csv"
+                onChange={handleImportCsv}
+                className="sr-only"
+                aria-label="Import tasks from CSV"
+              />
+            </label>
         </div>
         <div className="flex flex-1">
           {view === 'all'
