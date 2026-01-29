@@ -8,7 +8,6 @@ import QuickSettings from '../ui/QuickSettings';
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
-import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
 
 const BADGE_TONE_COLORS = Object.freeze({
@@ -36,7 +35,7 @@ const areWorkspacesEqual = (next, prev) => {
         return true;
 };
 
-const TASKBAR_PREVIEW_WIDTH = 280;
+const TASKBAR_PREVIEW_WIDTH = 288;
 
 const normalizePinnedApps = (payload) => {
         if (!payload) return [];
@@ -86,11 +85,16 @@ const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop
         return (
                 <ul
                         ref={ref}
-                        className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        className="flex min-w-0 max-w-full items-center overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 sm:max-w-[40vw]"
                         role="list"
                         aria-label="Open applications"
                         onDragOver={onDragOver}
                         onDrop={onDrop}
+                        style={{
+                                minHeight: 'var(--shell-hit-target)',
+                                padding: '0.25rem var(--shell-taskbar-gap)',
+                                gap: 'var(--shell-taskbar-gap)',
+                        }}
                 >
                         {apps.map((app) => renderItem(app))}
                 </ul>
@@ -105,11 +109,16 @@ const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop 
         return (
                 <ul
                         ref={ref}
-                        className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        className="flex min-w-0 max-w-full items-center overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 sm:max-w-[45vw]"
                         role="list"
                         aria-label="Pinned applications"
                         onDragOver={onDragOver}
                         onDrop={onDrop}
+                        style={{
+                                minHeight: 'var(--shell-hit-target)',
+                                padding: '0.25rem var(--shell-taskbar-gap)',
+                                gap: 'var(--shell-taskbar-gap)',
+                        }}
                 >
                         {hasItems
                                 ? apps.map((app) => renderItem(app))
@@ -130,7 +139,13 @@ const SystemTrayCluster = ({
         onStatusToggle,
         onStatusKeyDown,
 }) => (
-        <div className="flex items-center gap-4 text-xs md:text-sm">
+        <div
+                className="flex items-center"
+                style={{
+                        gap: 'var(--shell-taskbar-gap)',
+                        fontSize: 'var(--shell-taskbar-font-size)',
+                }}
+        >
                 <PerformanceGraph />
                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                 <div
@@ -142,7 +157,7 @@ const SystemTrayCluster = ({
                         onClick={onStatusToggle}
                         onKeyDown={onStatusKeyDown}
                         className={
-                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
+                                'relative rounded-full border border-transparent px-3 py-1 font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
                         }
                 >
                         <Status />
@@ -390,9 +405,10 @@ export default class Navbar extends PureComponent {
         computePreviewPosition = (rect) => {
                 if (!rect) return { top: 0, left: 0 };
                 const offset = 8;
+                const previewWidth = this.getPreviewWidth();
                 const viewportWidth = typeof window !== 'undefined' ? window.innerWidth || 0 : 0;
                 const center = rect.left + rect.width / 2;
-                const halfWidth = TASKBAR_PREVIEW_WIDTH / 2;
+                const halfWidth = previewWidth / 2;
                 let left = center;
                 if (viewportWidth) {
                         const min = halfWidth + 8;
@@ -403,6 +419,13 @@ export default class Navbar extends PureComponent {
                 }
                 const top = rect.bottom + offset;
                 return { top, left };
+        };
+
+        getPreviewWidth = () => {
+                if (typeof window === 'undefined') return TASKBAR_PREVIEW_WIDTH;
+                const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
+                const maxWidth = Math.max(220, viewportWidth - 32);
+                return Math.min(TASKBAR_PREVIEW_WIDTH, maxWidth);
         };
 
         dispatchPreviewRequest = (appId, requestId, bustCache = false) => {
@@ -957,15 +980,25 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center rounded-md text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                style={{
+                                        minHeight: 'var(--shell-hit-target)',
+                                        padding: '0.25rem 0.5rem',
+                                        gap: 'var(--shell-taskbar-gap)',
+                                        fontSize: 'var(--shell-taskbar-font-size)',
+                                }}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
                                                 src={app.icon}
                                                 alt=""
-                                                width={28}
-                                                height={28}
+                                                width={32}
+                                                height={32}
                                                 className="h-6 w-6"
+                                                style={{
+                                                        width: 'var(--shell-taskbar-icon)',
+                                                        height: 'var(--shell-taskbar-icon)',
+                                                }}
                                         />
                                         {badgeNode}
                                         {isActive && (
@@ -1181,18 +1214,25 @@ export default class Navbar extends PureComponent {
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full flex-col bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md sm:flex-row sm:items-center sm:justify-between"
                                 role="navigation"
                                 aria-label="Desktop taskbar"
                                 style={{
-                                        minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                        paddingBottom: '0.25rem',
-                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                        minHeight: `calc(var(--shell-taskbar-height) + var(--safe-area-top, 0px))`,
+                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.35rem)`,
+                                        paddingBottom: '0.35rem',
+                                        paddingLeft: `calc(var(--shell-taskbar-padding-x) + var(--safe-area-left, 0px))`,
+                                        paddingRight: `calc(var(--shell-taskbar-padding-x) + var(--safe-area-right, 0px))`,
+                                        gap: 'var(--shell-taskbar-gap)',
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                <div
+                                        className="flex min-w-0 flex-1 flex-wrap items-center"
+                                        style={{
+                                                gap: 'var(--shell-taskbar-gap)',
+                                                fontSize: 'var(--shell-taskbar-font-size)',
+                                        }}
+                                >
                                         <WhiskerMenu />
                                         {workspaces.length > 0 && (
                                                 <WorkspaceSwitcher

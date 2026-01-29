@@ -28,7 +28,7 @@ import { toPng } from 'html-to-image';
 import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
-import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
+import { DESKTOP_TOP_PADDING, NAVBAR_HEIGHT, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
 import {
@@ -5563,10 +5563,10 @@ export class Desktop extends Component {
         const wallpaperSource = (theme && (theme.wallpaperUrl || theme.fallbackWallpaperUrl)) || '';
         const wallpaperCss = wallpaperSource ? `url("${wallpaperSource}")` : 'none';
         const overlayValue = theme && theme.overlay ? theme.overlay : 'none';
-        const baseNavbarHeight = DESKTOP_TOP_PADDING - (WINDOW_TOP_MARGIN + WINDOW_TOP_INSET);
+        const baseNavbarHeight = `var(--shell-taskbar-height, ${NAVBAR_HEIGHT}px)`;
         const windowTopSpacing = WINDOW_TOP_MARGIN + WINDOW_TOP_INSET;
         const desktopStyle = {
-            paddingTop: `calc(var(--desktop-navbar-height, ${baseNavbarHeight}px) + ${windowTopSpacing}px)`,
+            paddingTop: `calc(var(--desktop-navbar-height, ${baseNavbarHeight}) + ${windowTopSpacing}px)`,
             minHeight: '100dvh',
             '--desktop-accent': accentColor,
             '--desktop-wallpaper': wallpaperCss,

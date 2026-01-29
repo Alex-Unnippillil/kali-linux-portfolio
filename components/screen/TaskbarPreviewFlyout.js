@@ -31,11 +31,12 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                 aria-label={heading}
                                 aria-modal="false"
                                 tabIndex={0}
-                                className="fixed z-[275] max-w-[18rem] outline-none"
+                                className="fixed z-[275] outline-none"
                                 style={{
                                         top: `${top}px`,
                                         left: `${left}px`,
                                         transform: 'translateX(-50%)',
+                                        width: 'min(18rem, calc(100vw - 2rem))',
                                 }}
                                 onMouseEnter={onMouseEnter}
                                 onMouseLeave={onMouseLeave}
@@ -59,11 +60,11 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                                                 <img
                                                                         src={image}
                                                                         alt={imageLabel}
-                                                                        className="max-h-48 w-64 object-contain"
+                                                                        className="max-h-48 w-full object-contain"
                                                                 />
                                                         ) : null}
                                                         {status === 'loading' && !image && (
-                                                                <div className="flex h-32 w-64 items-center justify-center">
+                                                                <div className="flex h-32 w-full items-center justify-center">
                                                                         <span className="text-[0.65rem] uppercase tracking-widest text-white/60">
                                                                                 Loading preview…
                                                                         </span>
@@ -77,7 +78,7 @@ const TaskbarPreviewFlyout = React.forwardRef(
                                                                 </div>
                                                         )}
                                                         {status === 'empty' && (
-                                                                <div className="flex h-32 w-64 items-center justify-center">
+                                                                <div className="flex h-32 w-full items-center justify-center">
                                                                         <span className="text-[0.65rem] uppercase tracking-widest text-white/60">
                                                                                 Preview unavailable
                                                                         </span>
