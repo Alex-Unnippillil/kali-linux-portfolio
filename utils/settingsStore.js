@@ -6,7 +6,7 @@ import { getTheme, setTheme } from './theme';
 const DEFAULT_SETTINGS = {
   accent: '#1793d1',
   wallpaper: 'wall-2',
-  useKaliWallpaper: false,
+  useKaliWallpaper: true,
   density: 'regular',
   reducedMotion: false,
   fontScale: 1,
@@ -59,7 +59,14 @@ export async function getUseKaliWallpaper() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.useKaliWallpaper;
   const stored = storage.getItem('use-kali-wallpaper');
-  return stored === null ? DEFAULT_SETTINGS.useKaliWallpaper : stored === 'true';
+  if (stored === null) {
+    storage.setItem(
+      'use-kali-wallpaper',
+      DEFAULT_SETTINGS.useKaliWallpaper ? 'true' : 'false',
+    );
+    return DEFAULT_SETTINGS.useKaliWallpaper;
+  }
+  return stored === 'true';
 }
 
 export async function setUseKaliWallpaper(value) {
