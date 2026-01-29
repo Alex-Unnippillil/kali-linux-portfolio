@@ -86,7 +86,7 @@ const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop
         return (
                 <ul
                         ref={ref}
-                        className="flex max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        className="flex max-w-[60vw] md:max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
                         role="list"
                         aria-label="Open applications"
                         onDragOver={onDragOver}
@@ -131,7 +131,9 @@ const SystemTrayCluster = ({
         onStatusKeyDown,
 }) => (
         <div className="flex items-center gap-4 text-xs md:text-sm">
-                <PerformanceGraph />
+                <div className="hidden md:block">
+                        <PerformanceGraph />
+                </div>
                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
                 <div
                         id="status-bar"
@@ -1225,7 +1227,7 @@ export default class Navbar extends PureComponent {
                                 />
                         </div>
                 );
-                }
+        }
 
 
 }

@@ -202,7 +202,7 @@ const displayHashcat = createDisplay(HashcatApp);
 
 const displayKismet = createDisplay(KismetApp);
 
-const displayDesktopFolder = createDisplay(DesktopFolderApp);
+export const displayDesktopFolder = createDisplay(DesktopFolderApp);
 const displayX = createDisplay(XApp);
 const displaySpotify = createDisplay(SpotifyApp);
 const displaySettings = createDisplay(SettingsApp);
@@ -876,7 +876,8 @@ const apps = [
     desktop_shortcut: true,
     screen: displayPluginManager,
   },
-  {    id: 'reaver',
+  {
+    id: 'reaver',
     title: 'Reaver',
     icon: '/themes/Yaru/apps/reaver.svg',
     disabled: false,

@@ -403,8 +403,8 @@ export class Window extends Component {
             });
         } else if (window.innerWidth < 640) {
             this.setState({
-                height: Math.max(60, this.state.minHeight),
-                width: Math.max(85, this.state.minWidth),
+                height: Math.max(80, this.state.minHeight),
+                width: Math.max(95, this.state.minWidth),
                 preMaximizeBounds: null,
             }, () => {
                 this.resizeBoundries();

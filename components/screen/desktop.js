@@ -9,7 +9,7 @@ const BackgroundImage =
     process.env.NODE_ENV === 'test'
         ? (backgroundImageModule?.default || backgroundImageModule || (() => null))
         : dynamic(() => import('../util-components/background-image'), { ssr: false });
-import apps, { games } from '../../apps.config';
+import apps, { games, displayDesktopFolder } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
 import UbuntuApp from '../base/ubuntu_app';
@@ -135,9 +135,9 @@ const OVERLAY_WINDOWS = Object.freeze({
         icon: '/themes/Yaru/window/window-restore-symbolic.svg',
     },
     commandPalette: {
-         id: 'overlay-command-palette',
-         title: 'Command Palette',
-         icon: '/themes/Yaru/apps/word-search.svg',
+        id: 'overlay-command-palette',
+        title: 'Command Palette',
+        icon: '/themes/Yaru/apps/word-search.svg',
     },
 });
 
@@ -239,7 +239,8 @@ export class Desktop extends Component {
         this.iconSizePresetStorageKey = 'desktop_icon_size_presets';
         this.iconSizePresetLegacyKey = 'desktop_icon_size_preset';
         this.iconSizePresetBuckets = [
-            { id: 'lt-1024', label: 'screens below 1024px', min: 0, max: 1024 },
+            { id: 'lt-640', label: 'mobile screens (tiny)', min: 0, max: 640 },
+            { id: 'lt-1024', label: 'screens below 1024px', min: 640, max: 1024 },
             { id: 'gte-1024', label: 'screens 1024px and above', min: 1024, max: Infinity },
         ];
         this.iconSizePresets = {
@@ -258,15 +259,23 @@ export class Desktop extends Component {
                 spacing: { row: 132, column: 148 },
                 padding: { top: DESKTOP_TOP_PADDING + 8, right: 28, bottom: 136, left: 28 },
             },
+            tiny: {
+                dimensions: { width: 72, height: 68 },
+                spacing: { row: 88, column: 88 },
+                padding: { top: 32, right: 12, bottom: 96, left: 12 },
+            },
         };
 
         this.taskbarOrderKeyBase = 'taskbar-order';
         this.pinnedStorageKey = PINNED_APPS_STORAGE_KEY;
         this.hasStoredPinnedAppIds = false;
-        const initialPinnedAppIds = this.loadPinnedAppIds();
+        // Initialize with defaults to avoid hydration mismatch
+        const initialPinnedAppIds = this.normalizePinnedAppIds(
+            apps.filter((app) => app.favourite).map((app) => app.id),
+        );
         this.applyPinnedFlags(initialPinnedAppIds);
 
-        this.iconSizePresetMap = this.loadStoredIconPresetMap();
+        this.iconSizePresetMap = {};
 
         // IMPORTANT: Keep constructor state SSR-safe and deterministic.
         // If we read `window.innerWidth` or `localStorage` here, the server markup can diverge from the first client render
@@ -304,8 +313,8 @@ export class Desktop extends Component {
             initialAppClosed.about = true;
         }
 
-        const initialWindowSizes = this.loadWindowSizes();
-        const storedFolderContents = loadStoredFolderContents();
+        const initialWindowSizes = {};
+        const storedFolderContents = {};
 
         this.state = {
             focused_windows: { ...initialOverlayFocused, ...initialAppFocused },
@@ -348,7 +357,8 @@ export class Desktop extends Component {
             minimizedShelfOpen: false,
             closedShelfOpen: false,
             appBadges: {},
-            taskbarOrder: this.loadTaskbarOrder(),
+            taskbarOrder: [],
+            mounted: false,
         };
 
         this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
@@ -793,6 +803,7 @@ export class Desktop extends Component {
 
     getViewportBucketId = (width) => {
         const numeric = Number.isFinite(width) ? width : 0;
+        if (numeric < 640) return 'lt-640';
         return numeric >= 1024 ? 'gte-1024' : 'lt-1024';
     };
 
@@ -827,8 +838,8 @@ export class Desktop extends Component {
     };
 
     getStoredIconSizePreset = (bucketId = this.state?.iconSizeBucket) => {
-        const fallback = 'medium';
         const targetBucket = bucketId || 'gte-1024';
+        const fallback = targetBucket === 'lt-640' ? 'tiny' : (targetBucket === 'lt-1024' ? 'small' : 'medium');
         if (this.iconSizePresetMap && this.iconSizePresetMap[targetBucket]) {
             return this.iconSizePresetMap[targetBucket];
         }
@@ -1480,6 +1491,7 @@ export class Desktop extends Component {
             this.persistIconSizePreset(normalizedPreset, normalizedBucket);
         }
         if (!this._isMounted) {
+            // eslint-disable-next-line react/no-direct-mutation-state
             this.state = {
                 ...this.state,
                 iconSizePreset: normalizedPreset,
@@ -2270,29 +2282,29 @@ export class Desktop extends Component {
         const { closed, minimized, focused } = flags || {};
         let didUpdate = false;
 
-            this.setState((prev) => {
-                const partial = {};
+        this.setState((prev) => {
+            const partial = {};
 
-                if (typeof closed === 'boolean') {
-                    const previousClosed = prev.closed_windows || {};
-                    if (!Object.prototype.hasOwnProperty.call(previousClosed, resolvedId) || previousClosed[resolvedId] !== closed) {
-                        partial.closed_windows = { ...previousClosed, [resolvedId]: closed };
-                    }
+            if (typeof closed === 'boolean') {
+                const previousClosed = prev.closed_windows || {};
+                if (!Object.prototype.hasOwnProperty.call(previousClosed, resolvedId) || previousClosed[resolvedId] !== closed) {
+                    partial.closed_windows = { ...previousClosed, [resolvedId]: closed };
                 }
+            }
 
-                if (typeof minimized === 'boolean') {
-                    const previousMinimized = prev.minimized_windows || {};
-                    if (!Object.prototype.hasOwnProperty.call(previousMinimized, resolvedId) || previousMinimized[resolvedId] !== minimized) {
-                        partial.minimized_windows = { ...previousMinimized, [resolvedId]: minimized };
-                    }
+            if (typeof minimized === 'boolean') {
+                const previousMinimized = prev.minimized_windows || {};
+                if (!Object.prototype.hasOwnProperty.call(previousMinimized, resolvedId) || previousMinimized[resolvedId] !== minimized) {
+                    partial.minimized_windows = { ...previousMinimized, [resolvedId]: minimized };
                 }
+            }
 
-                if (typeof focused === 'boolean') {
-                    const previousFocused = prev.focused_windows || {};
-                    if (!Object.prototype.hasOwnProperty.call(previousFocused, resolvedId) || previousFocused[resolvedId] !== focused) {
-                        partial.focused_windows = { ...previousFocused, [resolvedId]: focused };
-                    }
+            if (typeof focused === 'boolean') {
+                const previousFocused = prev.focused_windows || {};
+                if (!Object.prototype.hasOwnProperty.call(previousFocused, resolvedId) || previousFocused[resolvedId] !== focused) {
+                    partial.focused_windows = { ...previousFocused, [resolvedId]: focused };
                 }
+            }
 
             if (!Object.keys(partial).length) {
                 return null;
@@ -3575,6 +3587,28 @@ export class Desktop extends Component {
         }, callback);
     };
 
+    hydrateFromStorage = () => {
+        const pinnedAppIds = this.loadPinnedAppIds();
+        const iconSizePresetMap = this.loadStoredIconPresetMap();
+        const window_sizes = this.loadWindowSizes();
+        const folder_contents = loadStoredFolderContents();
+        const taskbarOrder = this.loadTaskbarOrder();
+
+        this.iconSizePresetMap = iconSizePresetMap;
+
+        this.setState({
+            pinnedAppIds,
+            window_sizes,
+            folder_contents,
+            taskbarOrder,
+            mounted: true,
+        }, () => {
+            this.applyPinnedFlags(pinnedAppIds);
+            this.syncFavouriteAppsWithPinned(new Set(pinnedAppIds));
+            this.broadcastWorkspaceState();
+        });
+    };
+
 
     componentDidMount() {
         this._isMounted = true;
@@ -3591,6 +3625,7 @@ export class Desktop extends Component {
             this.broadcastIconSizePreset(this.state.iconSizePreset);
         }
 
+        this.hydrateFromStorage();
         this.savedIconPositions = this.loadDesktopIconPositions();
         this.setupViewportObserver();
         this.initializeDefaultFolders(() => {
@@ -5483,7 +5518,7 @@ export class Desktop extends Component {
             favourite: false,
             desktop_shortcut: true,
             isFolder: true,
-            screen: () => null,
+            screen: displayDesktopFolder,
         });
         this.ensureFolderEntry(folderAppId);
         // store in local storage
@@ -5578,8 +5613,8 @@ export class Desktop extends Component {
         const windowSwitcherOverlay = overlayWindows.windowSwitcher || { open: false, minimized: false, maximized: false };
         const minimizedEntries = this.getMinimizedWindowEntries();
         const closedEntries = this.getClosedWindowEntries();
-        const showMinimizedShelf = this.state.minimizedShelfOpen || minimizedEntries.length > 0;
-        const showClosedShelf = this.state.closedShelfOpen || closedEntries.length > 0;
+        const showMinimizedShelf = this.state.mounted && (this.state.minimizedShelfOpen || minimizedEntries.length > 0);
+        const showClosedShelf = this.state.mounted && (this.state.closedShelfOpen || closedEntries.length > 0);
         return (
             <main
                 id="desktop"

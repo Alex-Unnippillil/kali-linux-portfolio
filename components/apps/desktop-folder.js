@@ -43,20 +43,20 @@ const DesktopFolder = ({ context = {}, openApp }) => {
       </header>
       <div className="flex-1 overflow-y-auto p-5">
         {sortedItems.length ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {sortedItems.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => handleOpen(item.id)}
-                className="group flex flex-col items-center gap-3 rounded-md border border-white/10 bg-white/5 p-4 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 hover:border-white/20 hover:bg-white/10"
+                className="group flex flex-col items-center gap-2 rounded-md border border-white/10 bg-white/5 p-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 hover:border-white/20 hover:bg-white/10 sm:gap-3 sm:p-4"
               >
                 <Image
                   src={normalizeIcon(item.icon)}
                   alt={item.title || item.id}
                   width={56}
                   height={56}
-                  className="h-14 w-14 flex-shrink-0 rounded-md bg-black/10 object-contain drop-shadow"
+                  className="h-10 w-10 flex-shrink-0 rounded-md bg-black/10 object-contain drop-shadow sm:h-14 sm:w-14"
                 />
                 <span className="text-sm font-medium leading-tight text-white group-hover:text-sky-100">
                   {item.title || item.id}
