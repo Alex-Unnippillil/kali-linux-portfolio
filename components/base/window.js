@@ -14,6 +14,7 @@ import {
 } from '../../utils/windowLayout';
 import styles from './window.module.css';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
+import WindowTitlebarMenu from '../context-menus/window-titlebar-menu';
 
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
@@ -246,10 +247,13 @@ export class Window extends Component {
             minWidth,
             minHeight,
             resizing: null,
+            titlebarMenuOpen: false,
+            titlebarMenuPosition: { x: 0, y: 0 },
         };
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
+        this._enableTitlebarMenu = process.env.NEXT_PUBLIC_ENABLE_WINDOW_TITLEBAR_MENU === 'true';
         this._menuOpener = null;
         this._closeTimeout = null;
         this._resizeSession = null;
@@ -1521,12 +1525,55 @@ export class Window extends Component {
         });
     }
 
+    openTitlebarMenuAt = (x, y) => {
+        if (!this._enableTitlebarMenu) return;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        this.focusWindow();
+        this.setState({
+            titlebarMenuOpen: true,
+            titlebarMenuPosition: { x, y },
+        });
+    }
+
+    openTitlebarMenu = (event) => {
+        if (!this._enableTitlebarMenu) return;
+        if (event?.preventDefault) event.preventDefault();
+        if (event?.stopPropagation) event.stopPropagation();
+        const x = typeof event?.pageX === 'number' ? event.pageX : event?.clientX;
+        const y = typeof event?.pageY === 'number' ? event.pageY : event?.clientY;
+        this.openTitlebarMenuAt(x ?? 0, y ?? 0);
+    }
+
+    closeTitlebarMenu = () => {
+        if (!this.state.titlebarMenuOpen) return;
+        this.setState({ titlebarMenuOpen: false });
+    }
+
+    resetWindowSize = () => {
+        this.setState({
+            maximized: false,
+            snapped: null,
+            preMaximizeBounds: null,
+        }, () => {
+            this.setDefaultWindowDimenstion();
+        });
+    }
+
     handleTitleBarKeyDown = (e) => {
         const target = e.target;
         if (typeof Element !== 'undefined' && target instanceof Element) {
             if (target.closest('[data-window-controls]')) {
                 return;
             }
+        }
+        if (this._enableTitlebarMenu && (e.key === 'ContextMenu' || (e.shiftKey && e.key === 'F10'))) {
+            e.preventDefault();
+            e.stopPropagation();
+            const rect = e.currentTarget?.getBoundingClientRect?.();
+            const x = rect ? rect.left + rect.width / 2 : 0;
+            const y = rect ? rect.bottom : 0;
+            this.openTitlebarMenuAt(x, y);
+            return;
         }
         if (e.key === ' ' || e.key === 'Space' || e.key === 'Enter') {
             e.preventDefault();
@@ -1679,6 +1726,62 @@ export class Window extends Component {
                     ? `snapped-${this.state.snapped}`
                     : 'active'));
 
+        const canRestore = this.state.maximized || this.state.snapped;
+        const canMaximize = this.props.allowMaximize !== false && !this.state.maximized;
+        const titlebarMenuItems = [
+            {
+                key: 'restore',
+                label: 'Restore',
+                onSelect: () => {
+                    if (this.state.maximized) {
+                        this.restoreWindow();
+                    } else if (this.state.snapped) {
+                        this.unsnapWindow();
+                    }
+                },
+                disabled: !canRestore,
+            },
+            {
+                key: 'minimize',
+                label: 'Minimize',
+                onSelect: this.minimizeWindow,
+            },
+            {
+                key: 'maximize',
+                label: 'Maximize',
+                onSelect: this.maximizeWindow,
+                disabled: !canMaximize,
+            },
+            { type: 'separator' },
+            {
+                key: 'snap-left',
+                label: 'Snap left half',
+                onSelect: () => this.snapWindow('left'),
+            },
+            {
+                key: 'snap-right',
+                label: 'Snap right half',
+                onSelect: () => this.snapWindow('right'),
+            },
+            {
+                key: 'snap-full',
+                label: 'Snap full screen',
+                onSelect: () => this.snapWindow('top'),
+            },
+            { type: 'separator' },
+            {
+                key: 'reset-size',
+                label: 'Reset window size',
+                onSelect: this.resetWindowSize,
+            },
+            { type: 'separator' },
+            {
+                key: 'close',
+                label: 'Close',
+                onSelect: this.closeWindow,
+            },
+        ];
+
         return (
             <>
                 {this.state.snapPreview && (
@@ -1773,6 +1876,7 @@ export class Window extends Component {
                             grabbed={this.state.grabbed}
                             onPointerDown={this.focusWindow}
                             onDoubleClick={this.handleTitleBarDoubleClick}
+                            onContextMenu={this.openTitlebarMenu}
                             controls={(
                                 <WindowEditButtons
                                     minimize={this.minimizeWindow}
@@ -1792,6 +1896,14 @@ export class Window extends Component {
                                 context={this.props.context} />)}
                     </div>
                 </Draggable >
+                {this._enableTitlebarMenu && (
+                    <WindowTitlebarMenu
+                        active={this.state.titlebarMenuOpen}
+                        position={this.state.titlebarMenuPosition}
+                        items={titlebarMenuItems}
+                        onClose={this.closeTitlebarMenu}
+                    />
+                )}
             </>
         )
     }
@@ -1800,7 +1912,7 @@ export class Window extends Component {
 export default Window
 
 // Window's title bar
-export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, controls }) {
+export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown, onDoubleClick, onContextMenu, controls }) {
     return (
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
@@ -1811,6 +1923,7 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
             onBlur={onBlur}
             onPointerDown={onPointerDown}
             onDoubleClick={onDoubleClick}
+            onContextMenu={onContextMenu}
             data-window-titlebar=""
             data-window-drag-handle=""
         >
