@@ -85,6 +85,11 @@ const clear: CommandHandler = (_args, ctx) => {
   ctx.clear();
 };
 
+const exit: CommandHandler = (_args, ctx) => {
+  ctx.writeLine('Closing terminal...');
+  ctx.closeApp?.();
+};
+
 const open: CommandHandler = (args, ctx) => {
   const target = args.trim();
   if (!target) {
@@ -115,6 +120,7 @@ const commandList: CommandDefinition[] = [
   { name: 'ls', description: 'List available demo files.', handler: ls },
   { name: 'cat', description: 'Print a file or pipe stdin.', usage: 'cat <file>', handler: cat },
   { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
+  { name: 'exit', description: 'Close the terminal window.', handler: exit },
   { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
   { name: 'about', description: 'Show information about this terminal.', handler: about },
   { name: 'date', description: 'Print the current date.', handler: date },

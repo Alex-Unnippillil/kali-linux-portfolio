@@ -31,6 +31,8 @@ import { addRecentApp } from '../../utils/recentStorage';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { resetSettings } from '../../utils/settingsStore';
+import { THEME_KEY } from '../../utils/theme';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -3870,6 +3872,9 @@ export class Desktop extends Component {
                         this.minimizeOverlay(appId);
                     }
                     break;
+                case 'close':
+                    this.closeOverlay(appId);
+                    break;
                 case 'focus':
                 case 'open':
                     this.openOverlay(appId, { transitionState: 'entered' });
@@ -3892,6 +3897,9 @@ export class Desktop extends Component {
                 if (!this.state.minimized_windows[appId]) {
                     this.hasMinimised(appId);
                 }
+                break;
+            case 'close':
+                this.closeApp(appId);
                 break;
             case 'focus':
                 this.focus(appId);
@@ -5526,6 +5534,98 @@ export class Desktop extends Component {
         this.setState({ showNameBar: true });
     }
 
+    normalizeFolderName = (name) => {
+        const trimmed = String(name || '').replace(/\s+/g, ' ').trim();
+        return trimmed || 'New Folder';
+    };
+
+    getUniqueFolderName = (name) => {
+        const baseName = this.normalizeFolderName(name);
+        const existing = new Set(
+            apps
+                .filter((app) => app.isFolder && typeof app.title === 'string')
+                .map((app) => app.title.toLowerCase()),
+        );
+        if (!existing.has(baseName.toLowerCase())) {
+            return baseName;
+        }
+        let suffix = 2;
+        let candidate = `${baseName} (${suffix})`;
+        while (existing.has(candidate.toLowerCase())) {
+            suffix += 1;
+            candidate = `${baseName} (${suffix})`;
+        }
+        return candidate;
+    };
+
+    getUniqueFolderId = (name) => {
+        const slug = String(name || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+        const base = slug || 'folder';
+        let candidate = `new-folder-${base}`;
+        let suffix = 2;
+        while (this.validAppIds.has(candidate)) {
+            candidate = `new-folder-${base}-${suffix}`;
+            suffix += 1;
+        }
+        return candidate;
+    };
+
+    pasteFromClipboard = async () => {
+        this.hideAllContextMenu();
+        if (typeof navigator === 'undefined' || !navigator.clipboard?.readText) {
+            this.announce('Clipboard read is unavailable in this browser.');
+            return;
+        }
+        try {
+            const text = await navigator.clipboard.readText();
+            const firstLine = text.split(/\r?\n/).find((line) => line.trim()) || '';
+            const trimmed = firstLine.trim().slice(0, 32);
+            const folderName = this.addToDesktop(trimmed || 'Clipboard Folder');
+            this.announce(`Added "${folderName}" to the desktop.`);
+        } catch (e) {
+            this.announce('Unable to read from the clipboard.');
+        }
+    };
+
+    openDesktopInFiles = () => {
+        this.hideAllContextMenu();
+        this.openApp('files', { initialPath: 'desktop' });
+    };
+
+    clearSession = async () => {
+        const storage = resolveStorage();
+        const keysToClear = [
+            FOLDER_CONTENTS_STORAGE_KEY,
+            WINDOW_SIZE_STORAGE_KEY,
+            this.pinnedStorageKey,
+            this.iconSizePresetStorageKey,
+            this.iconSizePresetLegacyKey,
+            'desktop_icon_positions',
+            'window-trash',
+            'new_folders',
+            'app_shortcuts',
+            'frequentApps',
+            'snap-enabled',
+            'snap-grid',
+            'desktop-session',
+            THEME_KEY,
+        ];
+        if (storage) {
+            keysToClear.forEach((key) => {
+                if (!key) return;
+                storage.removeItem(key);
+            });
+            storage.removeItem(this.getTaskbarOrderStorageKey());
+        }
+        await resetSettings();
+        if (typeof window !== 'undefined') {
+            window.location.reload();
+        }
+    };
+
     openShortcutSelector = () => {
         this.openOverlay(SHORTCUT_OVERLAY_ID);
     }
@@ -5579,12 +5679,11 @@ export class Desktop extends Component {
     }
 
     addToDesktop = (folder_name) => {
-        folder_name = folder_name.trim();
-        let folder_id = folder_name.replace(/\s+/g, '-').toLowerCase();
-        const folderAppId = `new-folder-${folder_id}`;
+        const resolvedName = this.getUniqueFolderName(folder_name);
+        const folderAppId = this.getUniqueFolderId(resolvedName);
         apps.push({
             id: folderAppId,
-            title: folder_name,
+            title: resolvedName,
             icon: '/themes/Yaru/system/folder.png',
             disabled: false,
             favourite: false,
@@ -5596,10 +5695,11 @@ export class Desktop extends Component {
         // store in local storage
         let new_folders = [];
         try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
-        new_folders.push({ id: folderAppId, name: folder_name });
+        new_folders.push({ id: folderAppId, name: resolvedName });
         safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
+        return resolvedName;
     };
 
     showAllApps = () => {
@@ -5721,7 +5821,9 @@ export class Desktop extends Component {
                     iconSizeBucket={this.state.iconSizeBucket}
                     iconSizeBucketLabel={this.getViewportBucketLabel(this.state.iconSizeBucket)}
                     setIconSizePreset={this.setIconSizePreset}
-                    clearSession={() => { this.props.clearSession(); window.location.reload(); }}
+                    pasteFromClipboard={this.pasteFromClipboard}
+                    openDesktopInFiles={this.openDesktopInFiles}
+                    clearSession={this.clearSession}
                 />
                 <DefaultMenu active={this.state.context_menus.default} onClose={this.hideAllContextMenu} />
                 <AppMenu
