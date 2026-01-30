@@ -12,6 +12,8 @@ const QRScanner: React.FC = () => {
   const [facing, setFacing] = useState<'environment' | 'user'>('environment');
   const [torch, setTorch] = useState(false);
   const [preview, setPreview] = useState('');
+  const [qrInput, setQrInput] = useState('');
+  const [generatedPreview, setGeneratedPreview] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -106,6 +108,17 @@ const QRScanner: React.FC = () => {
     }
   }, [result]);
 
+  useEffect(() => {
+    const normalizedInput = qrInput.trim();
+    if (!normalizedInput) {
+      setGeneratedPreview('');
+      return;
+    }
+    QRCode.toDataURL(normalizedInput, { width: 192 })
+      .then(setGeneratedPreview)
+      .catch(() => setGeneratedPreview(''));
+  }, [qrInput]);
+
   const copyResult = () => {
     if (result) navigator.clipboard?.writeText(result).catch(() => {});
   };
@@ -188,6 +201,42 @@ const QRScanner: React.FC = () => {
           </button>
         </div>
       )}
+      <div className="w-full max-w-sm rounded-xl border border-kali-border/70 bg-kali-surface/90 p-4 shadow-kali-panel">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm font-semibold text-kali-text">Generate QR Code</h3>
+            <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_75%,transparent)]">
+              Paste text or a URL to create a QR image.
+            </p>
+          </div>
+        </div>
+        <label className="mt-4 block text-xs font-medium text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]">
+          QR content
+          <input
+            type="text"
+            value={qrInput}
+            onChange={(event) => setQrInput(event.target.value)}
+            placeholder="https://example.com"
+            className="mt-2 w-full rounded-lg border border-kali-border/70 bg-kali-surface/80 px-3 py-2 text-sm text-kali-text shadow-[0_0_0_1px_color-mix(in_srgb,var(--color-primary)_35%,transparent)] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+          />
+        </label>
+        {generatedPreview ? (
+          <div className="mt-4 flex items-center gap-3 rounded-lg border border-kali-primary/50 bg-kali-surface/80 p-3">
+            <img
+              src={generatedPreview}
+              alt="Generated QR code preview"
+              className="h-32 w-32 rounded-lg border border-kali-border/70 bg-kali-surface/80 p-1"
+            />
+            <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]">
+              Scan this code with the camera above or save it for later.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
+            Enter text to preview a generated QR code.
+          </p>
+        )}
+      </div>
     </div>
   );
 };
