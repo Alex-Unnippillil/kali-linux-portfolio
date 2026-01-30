@@ -1,0 +1,2 @@
+open <app-id>
+Launch a desktop app by id, e.g. "open firefox" or "open project-gallery".

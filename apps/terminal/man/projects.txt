@@ -1,0 +1,2 @@
+projects
+List demo portfolio projects with links. Use "open project-gallery" for the full view.

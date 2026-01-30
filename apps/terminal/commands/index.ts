@@ -1,4 +1,5 @@
 import type { CommandContext, CommandDefinition, CommandHandler } from './types';
+import projectsData from '../../../data/projects.json';
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -13,6 +14,12 @@ async function man(args: string, ctx: CommandContext) {
     history: () => fetch(new URL('../man/history.txt', import.meta.url)).then((r) => r.text()),
     jq: () => fetch(new URL('../man/jq.txt', import.meta.url)).then((r) => r.text()),
     man: () => fetch(new URL('../man/man.txt', import.meta.url)).then((r) => r.text()),
+    open: () => fetch(new URL('../man/open.txt', import.meta.url)).then((r) => r.text()),
+    projects: () => fetch(new URL('../man/projects.txt', import.meta.url)).then((r) => r.text()),
+    rm: () => fetch(new URL('../man/rm.txt', import.meta.url)).then((r) => r.text()),
+    ssh: () => fetch(new URL('../man/ssh.txt', import.meta.url)).then((r) => r.text()),
+    sudo: () => fetch(new URL('../man/sudo.txt', import.meta.url)).then((r) => r.text()),
+    whoami: () => fetch(new URL('../man/whoami.txt', import.meta.url)).then((r) => r.text()),
   };
   const loader = loaders[name];
   if (loader) ctx.writeLine(await loader());
@@ -99,6 +106,76 @@ const open: CommandHandler = (args, ctx) => {
   }
 };
 
+const projects: CommandHandler = (_args, ctx) => {
+  const projects = projectsData as Array<{
+    title: string;
+    description: string;
+    demo?: string;
+    repo?: string;
+  }>;
+  ctx.writeLine('Projects catalog (demo data):');
+  projects.forEach((project) => {
+    const links = [project.demo, project.repo].filter(Boolean).join(' • ');
+    const linkLine = links ? ` (${links})` : '';
+    ctx.writeLine(`- ${project.title}: ${project.description}${linkLine}`);
+  });
+  ctx.writeLine('Tip: run "open project-gallery" to explore the full gallery.');
+};
+
+const ssh: CommandHandler = (args, ctx) => {
+  const target = args.trim();
+  if (!target) {
+    ctx.writeLine('usage: ssh <user@host>');
+    return;
+  }
+  ctx.writeLine(`Connecting to ${target}...`);
+  ctx.writeLine('Negotiating keys... ok');
+  ctx.writeLine('Welcome to the demo bastion. All output is simulated.');
+  ctx.writeLine('> uptime');
+  ctx.writeLine('  10:42:11 up 42 days, 03:12, 2 users, load average: 0.04, 0.09, 0.12');
+  ctx.writeLine('> ls /ops');
+  ctx.writeLine('  runbooks  incident-briefs  training');
+  ctx.writeLine('Connection closed (simulation).');
+};
+
+const whoami: CommandHandler = (_args, ctx) => {
+  ctx.writeLine('guest@kali-portfolio');
+};
+
+const sudo: CommandHandler = (args, ctx) => {
+  const command = args.trim();
+  if (!command) {
+    ctx.writeLine('usage: sudo <command>');
+    return;
+  }
+  if (command.includes('rm -rf /') || command.includes('rm --no-preserve-root')) {
+    ctx.writeLine('sudo: refusing to delete /. This is a safe demo terminal.');
+    return;
+  }
+  if (command.startsWith('open ')) {
+    open(command.replace(/^open\s+/, ''), ctx);
+    return;
+  }
+  ctx.writeLine(
+    ctx.safeMode
+      ? `sudo: "${command}" skipped (safe mode is enabled).`
+      : `sudo: simulated privilege escalation for "${command}".`,
+  );
+};
+
+const rm: CommandHandler = (args, ctx) => {
+  const target = args.trim();
+  if (!target) {
+    ctx.writeLine('usage: rm <path>');
+    return;
+  }
+  if (target.includes('-rf /') || target.includes('--no-preserve-root')) {
+    ctx.writeLine('rm: dangerous operation blocked in demo mode.');
+    return;
+  }
+  ctx.writeLine(`rm: cannot remove '${target}': Read-only demo filesystem.`);
+};
+
 const about: CommandHandler = (_args, ctx) => {
   ctx.writeLine('This terminal is powered by xterm.js');
 };
@@ -116,6 +193,17 @@ const commandList: CommandDefinition[] = [
   { name: 'cat', description: 'Print a file or pipe stdin.', usage: 'cat <file>', handler: cat },
   { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
   { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
+  { name: 'projects', description: 'List the portfolio project catalog.', handler: projects },
+  {
+    name: 'ssh',
+    description: 'Start a simulated SSH session.',
+    usage: 'ssh <user@host>',
+    handler: ssh,
+    safeModeBypass: true,
+  },
+  { name: 'whoami', description: 'Print the current demo user.', handler: whoami },
+  { name: 'sudo', description: 'Pretend to run a command as root.', usage: 'sudo <command>', handler: sudo },
+  { name: 'rm', description: 'Remove a file (simulated).', usage: 'rm <path>', handler: rm },
   { name: 'about', description: 'Show information about this terminal.', handler: about },
   { name: 'date', description: 'Print the current date.', handler: date },
   { name: 'grep', description: 'Search through text (simulated).', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
