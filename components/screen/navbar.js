@@ -1183,18 +1183,18 @@ export default class Navbar extends PureComponent {
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-[color:var(--kali-panel)] text-ubt-grey shadow-[0_6px_18px_rgba(2,8,12,0.35)] backdrop-blur-sm transition-colors duration-200 ease-out"
                                 role="navigation"
                                 aria-label="Desktop taskbar"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
-                                        paddingBottom: '0.25rem',
-                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.25rem)`,
+                                        paddingBottom: '0.2rem',
+                                        paddingLeft: `calc(0.6rem + var(--safe-area-left, 0px))`,
+                                        paddingRight: `calc(0.6rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                <div className="flex items-center gap-1.5 text-xs md:text-sm">
                                         <WhiskerMenu />
                                         {workspaces.length > 0 && (
                                                 <WorkspaceSwitcher
