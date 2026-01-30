@@ -8,12 +8,56 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
+    const wallpaperInputRef = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const themeOptions = [
+        { id: 'default', label: 'Kali Dark', description: 'Classic Kali surface and cyan accents.' },
+        { id: 'light', label: 'Light', description: 'Clean, bright desktop with soft blues.' },
+        { id: 'ubuntu', label: 'Ubuntu', description: 'Warm orange accents with deep plum surfaces.' },
+        { id: 'dark', label: 'Midnight', description: 'Extra dark UI with soft blues.' },
+        { id: 'neon', label: 'Neon', description: 'High-contrast neon UI.' },
+        { id: 'matrix', label: 'Matrix', description: 'Green-on-black retro terminal.' },
+    ];
+    const isPresetWallpaper = wallpapers.includes(wallpaper);
+    const isCustomWallpaper = !isPresetWallpaper && Boolean(wallpaper);
+    const resolveWallpaperUrl = (value) => {
+        if (!value) return '';
+        if (value.startsWith('wall-')) {
+            return `/wallpapers/${value}.webp`;
+        }
+        return value;
+    };
 
     const changeBackgroundImage = (e) => {
         const name = e.currentTarget.dataset.path;
         setWallpaper(name);
+        setUseKaliWallpaper(false);
+    };
+
+    const handleCustomWallpaperUpload = (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            console.warn('Unsupported wallpaper file type.');
+            event.target.value = '';
+            return;
+        }
+        const maxSizeMb = 5;
+        if (file.size > maxSizeMb * 1024 * 1024) {
+            console.warn('Wallpaper file is too large.');
+            event.target.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            if (typeof reader.result === 'string') {
+                setWallpaper(reader.result);
+                setUseKaliWallpaper(false);
+            }
+        };
+        reader.readAsDataURL(file);
+        event.target.value = '';
     };
 
     let hexToRgb = (hex) => {
@@ -64,7 +108,7 @@ export function Settings() {
                 ) : (
                     <div
                         className="absolute inset-0 bg-cover bg-center"
-                        style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                        style={{ backgroundImage: `url(${resolveWallpaperUrl(wallpaper)})` }}
                         aria-hidden="true"
                     />
                 )}
@@ -77,11 +121,24 @@ export function Settings() {
                     onChange={(e) => setTheme(e.target.value)}
                     className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
                 >
-                    <option value="default">Default</option>
-                    <option value="dark">Dark</option>
-                    <option value="neon">Neon</option>
-                    <option value="matrix">Matrix</option>
+                    {themeOptions.map((option) => (
+                        <option key={option.id} value={option.id}>{option.label}</option>
+                    ))}
                 </select>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3 px-4">
+                {themeOptions.map((option) => (
+                    <button
+                        key={option.id}
+                        type="button"
+                        onClick={() => setTheme(option.id)}
+                        aria-pressed={theme === option.id}
+                        className={`flex flex-col items-start gap-1 rounded-lg border px-4 py-3 text-left transition-all ${theme === option.id ? 'border-kali-primary/70 bg-kali-surface-raised shadow-[0_0_0_1px_rgba(15,148,210,0.25)]' : 'border-kali-border/50 bg-kali-surface/40 hover:border-kali-focus/50'}`}
+                    >
+                        <span className="text-sm font-semibold text-kali-text">{option.label}</span>
+                        <span className="text-[11px] text-kali-text/60">{option.description}</span>
+                    </button>
+                ))}
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-kali-text/80 flex items-center">
@@ -233,7 +290,7 @@ export function Settings() {
             </div>
             <div className="flex flex-wrap justify-center items-center border-t border-kali-border/60">
                 {
-                    wallpapers.map((name, index) => (
+                    wallpapers.map((name) => (
                         <div
                             key={name}
                             role="button"
@@ -254,6 +311,36 @@ export function Settings() {
                         ></div>
                     ))
                 }
+            </div>
+            <div className="flex flex-col items-center gap-3 border-t border-kali-border/60 py-6">
+                <div
+                    className="relative h-32 w-56 overflow-hidden rounded-lg border border-kali-border/60 bg-kali-surface-muted"
+                    style={isCustomWallpaper && !useKaliWallpaper ? { backgroundImage: `url(${resolveWallpaperUrl(wallpaper)})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+                >
+                    {!isCustomWallpaper || useKaliWallpaper ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-xs text-kali-text/60">
+                            Custom wallpaper preview
+                        </div>
+                    ) : null}
+                </div>
+                <button
+                    type="button"
+                    onClick={() => wallpaperInputRef.current && wallpaperInputRef.current.click()}
+                    className="px-4 py-2 rounded-md bg-kali-primary text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                >
+                    Upload Wallpaper
+                </button>
+                <p className="text-xs text-kali-text/60 text-center max-w-xs">
+                    Upload a local image (max 5MB). Your wallpaper stays on this device.
+                </p>
+                <input
+                    type="file"
+                    accept="image/*"
+                    ref={wallpaperInputRef}
+                    onChange={handleCustomWallpaperUpload}
+                    className="hidden"
+                    aria-label="Upload custom wallpaper"
+                />
             </div>
             <div className="flex justify-center my-4 border-t border-kali-border/60 pt-4 space-x-4">
                 <button

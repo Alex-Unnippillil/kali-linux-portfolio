@@ -11,4 +11,8 @@
   --window-motion-ease-snap-preview: var(--window-motion-ease-snap);
   --window-motion-duration-close: 180ms;
   --window-motion-ease-close: cubic-bezier(0.22, 1, 0.36, 1);
+  --window-motion-duration-open: 260ms;
+  --window-motion-ease-open: cubic-bezier(0.16, 1, 0.3, 1);
+  --window-motion-duration-focus: 240ms;
+  --window-motion-ease-focus: cubic-bezier(0.16, 1, 0.3, 1);
 }

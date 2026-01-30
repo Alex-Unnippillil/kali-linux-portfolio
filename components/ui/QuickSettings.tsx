@@ -4,7 +4,6 @@ import { ReactNode, useEffect, useRef, useState } from 'react';
 import Toast from './Toast';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useTheme } from '../../hooks/useTheme';
-import { isDarkTheme } from '../../utils/theme';
 
 interface Props {
   open: boolean;
@@ -173,8 +172,7 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     },
   };
 
-  const isDarkMode = isDarkTheme(activeTheme);
-  const quickTheme = isDarkMode ? 'dark' : 'light';
+  const isLightTheme = activeTheme === 'light';
 
   const statusBadges: Array<{
     id: string;
@@ -378,11 +376,11 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => updateTheme(isDarkMode ? 'default' : 'dark')}
+              onClick={() => updateTheme(isLightTheme ? 'default' : 'light')}
               className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
               title="Toggle Theme"
             >
-              {isDarkMode ? <MoonIcon /> : <SunIcon />}
+              {isLightTheme ? <MoonIcon /> : <SunIcon />}
             </button>
           </div>
         </div>

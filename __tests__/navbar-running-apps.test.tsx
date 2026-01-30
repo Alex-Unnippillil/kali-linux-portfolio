@@ -1,6 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act, within } from '@testing-library/react';
 import Navbar from '../components/screen/navbar';
+import { NotificationCenter } from '../components/common/NotificationCenter';
 
 jest.mock('../components/util-components/clock', () => {
   const MockClock = () => <div data-testid="clock" />;
@@ -103,6 +104,12 @@ const createDataTransfer = () => {
 
 describe('Navbar running apps tray', () => {
   let dispatchSpy: jest.SpyInstance;
+  const renderNavbar = () =>
+    render(
+      <NotificationCenter>
+        <Navbar />
+      </NotificationCenter>,
+    );
 
   beforeEach(() => {
     dispatchSpy = jest.spyOn(window, 'dispatchEvent');
@@ -113,7 +120,7 @@ describe('Navbar running apps tray', () => {
   });
 
   it('dispatches a taskbar command when clicking an open app', () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
@@ -135,7 +142,7 @@ describe('Navbar running apps tray', () => {
   });
 
   it('shows minimized state on button attributes', () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(
@@ -163,7 +170,7 @@ describe('Navbar running apps tray', () => {
   });
 
   it('reorders running apps through drag and drop', () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(new CustomEvent('workspace-state', { detail: multiAppWorkspaceDetail }));
@@ -216,7 +223,7 @@ describe('Navbar running apps tray', () => {
   });
 
   it('requests and displays a taskbar preview on hover', async () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail }));
@@ -263,7 +270,7 @@ describe('Navbar running apps tray', () => {
     expect(screen.queryByRole('dialog', { name: /app one preview/i })).not.toBeInTheDocument();
   });
   it('renders badge metadata for running apps', () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(
@@ -296,7 +303,7 @@ describe('Navbar running apps tray', () => {
   });
 
   it('updates badge overlays when metadata changes', () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(
@@ -350,7 +357,7 @@ describe('Navbar running apps tray', () => {
   });
 
   it('supports progress ring badges', () => {
-    render(<Navbar />);
+    renderNavbar();
 
     act(() => {
       window.dispatchEvent(

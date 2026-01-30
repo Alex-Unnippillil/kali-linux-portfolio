@@ -120,7 +120,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isOpen: controlledO
     setTimeout(() => {
       buttonRef.current?.focus({ preventScroll: true });
     }, 0);
-  }, []);
+  }, [setIsOpen]);
 
   const togglePanel = useCallback(() => {
     setIsOpen(prev => {
@@ -131,7 +131,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ isOpen: controlledO
       }
       return !prev;
     });
-  }, []);
+  }, [setIsOpen]);
 
   useEffect(() => {
     if (!isOpen) return;

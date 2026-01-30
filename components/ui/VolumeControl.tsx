@@ -116,7 +116,7 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "", isOpen, o
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (open) {
