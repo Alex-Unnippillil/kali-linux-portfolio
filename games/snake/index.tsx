@@ -15,6 +15,10 @@ const Snake = () => {
     "snake:gridSize",
     DEFAULT_GRID_SIZE,
   );
+  const [highScore, setHighScore] = usePersistentState<number>(
+    "snake:highScore",
+    0,
+  );
   const [state, setState] = useState<GameState>(() =>
     createState(wrap, gridSize),
   );
@@ -28,6 +32,12 @@ const Snake = () => {
     setScore(0);
     runningRef.current = true;
   }, [wrap, gridSize]);
+
+  useEffect(() => {
+    if (score > highScore) {
+      setHighScore(score);
+    }
+  }, [score, highScore, setHighScore]);
 
   // game loop
   useEffect(() => {
@@ -134,6 +144,22 @@ const Snake = () => {
   ];
 
   const width = state.gridSize * CELL_SIZE;
+  const canShare = highScore > 0;
+  const shareScore = () => {
+    if (!canShare) return;
+    const url = window.location.href;
+    const text = `I scored ${highScore} in Snake!`;
+    if (navigator.share) {
+      navigator
+        .share({ text, url })
+        .catch(() => navigator.clipboard?.writeText(`${text} ${url}`));
+      return;
+    }
+    const tweetUrl = new URL("https://twitter.com/intent/tweet");
+    tweetUrl.searchParams.set("text", text);
+    tweetUrl.searchParams.set("url", url);
+    window.open(tweetUrl.toString(), "_blank", "noopener,noreferrer");
+  };
 
   return (
     <GameShell game="snake" settings={settings}>
@@ -154,7 +180,24 @@ const Snake = () => {
               </button>
             ))}
           </div>
-          <div>Score: {score}</div>
+          <div className="flex items-center gap-3">
+            <div>
+              Score: {score} <span className="text-xs text-slate-300">Best</span>{" "}
+              {highScore}
+            </div>
+            <button
+              type="button"
+              onClick={shareScore}
+              disabled={!canShare}
+              className={`px-2 py-1 rounded-full text-xs ${
+                canShare
+                  ? "bg-slate-700 text-white hover:bg-slate-600"
+                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
+              }`}
+            >
+              Share score
+            </button>
+          </div>
         </div>
         <canvas ref={canvasRef} width={width} height={width} />
       </div>
