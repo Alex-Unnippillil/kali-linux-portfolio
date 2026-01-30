@@ -232,12 +232,14 @@ const Checkers = () => {
                     : ''
                 } ${isHint || isHintDest ? 'ring-2 ring-kali-accent motion-safe:animate-pulse' : ''} ${
                   isSelected ? 'ring-2 ring-kali-control' : ''
-                } ${isLast ? 'ring-2 ring-kali-error' : ''} ${forcedClass(r, c)}`}
+                } ${isLast ? 'ring-2 ring-kali-game-danger' : ''} ${forcedClass(r, c)}`}
               >
                 {cell && (
                   <div
                     className={`w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center ${
-                      cell.color === 'red' ? 'bg-kali-error text-white' : 'bg-kali-accent text-kali-dark'
+                      cell.color === 'red'
+                        ? 'bg-kali-game-danger text-white'
+                        : 'bg-kali-accent text-kali-dark'
                     } ${cell.king ? 'border-4 border-yellow-300' : ''}`}
                   >
                     {cell.king && <span className="text-yellow-300 text-sm font-bold">K</span>}
@@ -251,7 +253,7 @@ const Checkers = () => {
       <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
         {winner || draw ? (
           <button
-            className="rounded border border-kali-border/60 bg-kali-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-kali-error/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            className="rounded border border-kali-border/60 bg-kali-game-danger px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-kali-game-danger/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             onClick={reset}
           >
             Reset
@@ -292,7 +294,7 @@ const Checkers = () => {
           Export State
         </button>
         <button
-          className="rounded border border-kali-border/60 bg-kali-error/80 px-2 py-1 font-medium text-white transition-colors hover:bg-kali-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+          className="rounded border border-kali-border/60 bg-kali-game-danger/80 px-2 py-1 font-medium text-white transition-colors hover:bg-kali-game-danger focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           onClick={reset}
         >
           Reset
