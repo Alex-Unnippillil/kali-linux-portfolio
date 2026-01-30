@@ -15,6 +15,11 @@ import {
   fetchYouTubePlaylistDirectoryByChannelId,
   parseYouTubeChannelId,
 } from '../../../utils/youtube';
+import {
+  FALLBACK_YOUTUBE_CHANNEL,
+  FALLBACK_YOUTUBE_DIRECTORY,
+  FALLBACK_YOUTUBE_PLAYLIST_ITEMS,
+} from '../../../data/youtubeFallback';
 import styles from './youtube.module.css';
 
 const YOUTUBE_CLIENT_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
@@ -131,9 +136,99 @@ export default function YouTubeApp({ channelId }: Props) {
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [missingApiKeyHint, setMissingApiKeyHint] = useState(false);
+  const [usingFallback, setUsingFallback] = useState(false);
+  const [fallbackNotice, setFallbackNotice] = useState<string | null>(null);
 
   const abortDirectoryRef = useRef<AbortController | null>(null);
   const abortPlaylistRef = useRef<AbortController | null>(null);
+
+  const applyFallbackDirectory = useCallback(
+    (reason: string) => {
+      const fallbackDirectory = FALLBACK_YOUTUBE_DIRECTORY;
+      const map = new Map<string, YouTubePlaylistSummary>(
+        fallbackDirectory.playlists.map((playlist) => [playlist.id, playlist]),
+      );
+      const aggregatedCount = fallbackDirectory.playlists.reduce(
+        (sum, playlist) => sum + (playlist.itemCount ?? 0),
+        0,
+      );
+      const latestPublished = fallbackDirectory.playlists.reduce<Date | null>(
+        (latest, playlist) => {
+          const current = new Date(playlist.publishedAt ?? '');
+          if (Number.isNaN(current.getTime())) return latest;
+          if (!latest) return current;
+          return current > latest ? current : latest;
+        },
+        null,
+      );
+      const fallbackThumbnail = fallbackDirectory.playlists.find((p) => p.thumbnail)?.thumbnail;
+
+      const allVideosSummary: YouTubePlaylistSummary = {
+        id: ALL_PLAYLIST_ID,
+        title: 'All videos',
+        description: 'Combined feed of every playlist video.',
+        thumbnail: fallbackThumbnail ?? '',
+        itemCount: aggregatedCount,
+        publishedAt: latestPublished?.toISOString() ?? '',
+        privacyStatus: 'public',
+      };
+
+      map.set(ALL_PLAYLIST_ID, allVideosSummary);
+      setPlaylistIndex(map);
+
+      const playlistListings: PlaylistListing[] = fallbackDirectory.sections.length
+        ? fallbackDirectory.sections
+        : fallbackDirectory.playlists.length
+        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: fallbackDirectory.playlists }]
+        : [];
+
+      const listings: PlaylistListing[] = playlistListings.map((listing) =>
+        listing.sectionId === 'all'
+          ? {
+              ...listing,
+              playlists: [...listing.playlists, allVideosSummary],
+            }
+          : listing,
+      );
+
+      const fallbackPlaylistItems = Object.entries(FALLBACK_YOUTUBE_PLAYLIST_ITEMS).reduce(
+        (acc, [playlistId, items]) => ({
+          ...acc,
+          [playlistId]: {
+            items,
+            nextPageToken: undefined,
+            loading: false,
+            error: undefined,
+          },
+        }),
+        {} as Record<string, PlaylistItemsState>,
+      );
+
+      const allItems = sortVideosNewestFirst(
+        Object.values(FALLBACK_YOUTUBE_PLAYLIST_ITEMS).flat(),
+      );
+
+      fallbackPlaylistItems[ALL_PLAYLIST_ID] = {
+        items: allItems,
+        nextPageToken: undefined,
+        loading: false,
+        error: undefined,
+      };
+
+      setPlaylistItems(fallbackPlaylistItems);
+      setChannelSummary(FALLBACK_YOUTUBE_CHANNEL);
+      setDirectory(listings);
+      setError(null);
+      setMissingApiKeyHint(false);
+      setUsingFallback(true);
+      setFallbackNotice(reason);
+
+      const defaultPlaylist = ALL_PLAYLIST_ID;
+      const firstPlaylist = listings[0]?.playlists[0]?.id;
+      setSelectedPlaylistId((prev) => prev ?? defaultPlaylist ?? firstPlaylist ?? null);
+    },
+    [],
+  );
 
   const loadDirectory = useCallback(async () => {
     const networkAllowed = allowNetwork || process.env.NODE_ENV === 'test';
@@ -141,6 +236,7 @@ export default function YouTubeApp({ channelId }: Props) {
       setAllowNetwork(true);
       setError('Network requests were disabled. Enabling network to load YouTube playlists…');
       if (!networkAllowed) {
+        applyFallbackDirectory('Network requests are disabled. Showing demo playlists instead.');
         setLoadingDirectory(false);
         return;
       }
@@ -156,6 +252,8 @@ export default function YouTubeApp({ channelId }: Props) {
     setLoadingDirectory(true);
     setError(null);
     setMissingApiKeyHint(false);
+    setFallbackNotice(null);
+    setUsingFallback(false);
     abortDirectoryRef.current?.abort();
     const controller = new AbortController();
     abortDirectoryRef.current = controller;
@@ -252,17 +350,17 @@ export default function YouTubeApp({ channelId }: Props) {
       if (e.message?.toLowerCase().includes('api key')) {
         setMissingApiKeyHint(true);
       }
-      setError(
+      applyFallbackDirectory(
         e.message?.includes('Failed to fetch')
-          ? 'Unable to reach the YouTube API. Check your network connection and API key.'
-          : e.message || 'Failed to load YouTube playlists.',
+          ? 'Unable to reach the YouTube API. Showing demo playlists instead.'
+          : 'YouTube API unavailable. Showing demo playlists instead.',
       );
       return;
     } finally {
       setLoadingDirectory(false);
       abortDirectoryRef.current = null;
     }
-  }, [allowNetwork, hasClientApiKey, resolvedChannelId, setAllowNetwork]);
+  }, [allowNetwork, applyFallbackDirectory, hasClientApiKey, resolvedChannelId, setAllowNetwork]);
 
   useEffect(() => {
     void loadDirectory();
@@ -275,6 +373,23 @@ export default function YouTubeApp({ channelId }: Props) {
   const loadPlaylistItems = useCallback(
     async (playlistId: string, mode: 'replace' | 'append') => {
       if (!playlistId) return;
+
+      if (usingFallback) {
+        const fallback = FALLBACK_YOUTUBE_PLAYLIST_ITEMS[playlistId];
+        if (fallback?.length) {
+          setPlaylistItems((prev) => ({
+            ...prev,
+            [playlistId]: {
+              items: fallback,
+              nextPageToken: undefined,
+              loading: false,
+              error: undefined,
+            },
+          }));
+          setSelectedVideoId((prev) => prev ?? fallback[0]?.videoId ?? null);
+          return;
+        }
+      }
 
       setPlaylistItems((prev) => ({
         ...prev,
@@ -425,7 +540,7 @@ export default function YouTubeApp({ channelId }: Props) {
         abortPlaylistRef.current = null;
       }
     },
-    [hasClientApiKey, playlistIndex, playlistItems],
+    [hasClientApiKey, playlistIndex, playlistItems, usingFallback],
   );
 
   useEffect(() => {
@@ -552,6 +667,12 @@ export default function YouTubeApp({ channelId }: Props) {
             Configure <code className={styles.code}>YOUTUBE_API_KEY</code> on the server or{' '}
             <code className={styles.code}>NEXT_PUBLIC_YOUTUBE_API_KEY</code> for client fallback.
           </p>
+        )}
+
+        {usingFallback && fallbackNotice && (
+          <div className={styles.banner} role="status">
+            <span>{fallbackNotice}</span>
+          </div>
         )}
 
         {!allowNetwork && (
