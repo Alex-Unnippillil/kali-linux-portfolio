@@ -515,25 +515,29 @@ const WhiskerMenu: React.FC = () => {
         type="button"
         onClick={toggleMenu}
         aria-keyshortcuts="Meta Alt+F1"
-        className="flex items-center gap-2 border-b-2 border-transparent py-1 pl-3 pr-3 outline-none transition duration-100 ease-in-out"
+        aria-label="Applications menu"
+        className="group relative flex h-8 items-center justify-center gap-2 rounded-lg px-2.5 outline-none transition-all duration-200 ease-out hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 sm:px-3"
         tabIndex={isOpen ? -1 : 0}
       >
-        <svg
-          aria-hidden="true"
-          viewBox="0 0 100 100"
-          className="h-4 w-4 text-white"
-          fill="currentColor"
-          focusable="false"
-        >
-          <path d={KALI_LOGO_PATH} />
-        </svg>
-        <span className="hidden text-sm font-medium sm:block">Applications</span>
+        <span className="relative flex h-5 w-5 items-center justify-center">
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 100 100"
+            className="h-4 w-4 text-white/90 transition-all duration-200 group-hover:text-white group-hover:drop-shadow-[0_0_6px_rgba(74,168,255,0.4)]"
+            fill="currentColor"
+            focusable="false"
+          >
+            <path d={KALI_LOGO_PATH} />
+          </svg>
+        </span>
+        <span className="hidden text-[13px] font-medium text-white/85 transition-colors duration-200 group-hover:text-white sm:block">Applications</span>
+        <span className="pointer-events-none absolute inset-x-1 -bottom-0.5 h-0.5 scale-x-0 rounded-full bg-gradient-to-r from-cyan-400/0 via-cyan-400/70 to-cyan-400/0 opacity-0 transition-all duration-300 group-hover:scale-x-100 group-hover:opacity-100" aria-hidden="true" />
       </button>
       {isVisible && (
         <div
           ref={menuRef}
           data-testid="whisker-menu-dropdown"
-          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1.5rem,680px)] flex-col overflow-x-hidden overflow-y-auto rounded-xl border border-[#1f2a3a] bg-[#0b121c] text-white shadow-[0_20px_40px_rgba(0,0,0,0.45)] transition-all duration-200 ease-out sm:absolute sm:top-full sm:left-0 sm:mt-1 sm:w-[680px] sm:max-h-[440px] sm:flex-row sm:overflow-hidden ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-2 scale-95'
+          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1rem,640px)] flex-col overflow-x-hidden overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0a1018]/95 text-white shadow-[0_24px_80px_-12px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.03),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl transition-all ease-out sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:w-[620px] sm:max-h-[480px] sm:flex-row sm:overflow-hidden ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-3 scale-[0.97]'
             }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
@@ -543,56 +547,56 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-[#0f1a29] sm:order-2 sm:max-h-full">
-            <div className="border-b border-[#1d2a3c] px-4 py-4 sm:px-5">
-              <div className="relative mb-4">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#4aa8ff]">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-gradient-to-b from-[#0c1420] to-[#0a1018] sm:order-2 sm:max-h-full">
+            <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
+              <div className="group/search relative mb-4">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400/60 transition-colors duration-200 group-focus-within/search:text-cyan-400">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />
                     <line x1="20" y1="20" x2="16.65" y2="16.65" />
                   </svg>
                 </span>
                 <input
                   ref={searchInputRef}
-                  className="h-11 w-full rounded-lg border border-transparent bg-[#101c2d] pl-10 pr-4 text-sm text-gray-100 shadow-inner focus:border-[#53b9ff] focus:outline-none focus:ring-0"
+                  className="h-10 w-full rounded-full border border-white/[0.06] bg-white/[0.03] pl-10 pr-4 text-[13px] text-gray-100 placeholder:text-white/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] transition-all duration-200 focus:border-cyan-400/40 focus:bg-white/[0.05] focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2),0_0_0_3px_rgba(74,168,255,0.1)] focus:outline-none"
                   type="search"
                   inputMode="search"
                   enterKeyHint="search"
-                  placeholder="Search applications"
+                  placeholder="Search applications..."
                   aria-label="Search applications"
                   autoFocus={isOpen}
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
               </div>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2">
                 {favoriteApps.slice(0, 6).map((app) => (
                   <button
                     key={app.id}
                     type="button"
                     onClick={() => openSelectedApp(app.id)}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#122136] text-white transition hover:-translate-y-0.5 hover:bg-[#1b2d46] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29]"
+                    className="group/fav relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-white ring-1 ring-white/[0.06] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:ring-white/[0.1] hover:shadow-[0_8px_20px_-8px_rgba(0,0,0,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
                     aria-label={`Open ${app.title}`}
                   >
                     <Image
                       src={app.icon}
                       alt=""
-                      width={24}
-                      height={24}
-                      className="h-6 w-6"
-                      sizes="24px"
+                      width={22}
+                      height={22}
+                      className="h-[22px] w-[22px] transition-transform duration-200 group-hover/fav:scale-110"
+                      sizes="22px"
                     />
                   </button>
                 ))}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-3">
+            <div className="flex-1 overflow-y-auto px-3 py-2 sm:px-3">
               {currentApps.length === 0 ? (
-                <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-gray-500">
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#121f33] text-[#4aa8ff]">
+                <div className="flex h-full flex-col items-center justify-center gap-3 py-8 text-sm text-white/40">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.04] text-cyan-400/50">
                     <svg
-                      width="24"
-                      height="24"
+                      width="20"
+                      height="20"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -601,23 +605,22 @@ const WhiskerMenu: React.FC = () => {
                       strokeLinejoin="round"
                       aria-hidden="true"
                     >
-                      <circle cx="12" cy="12" r="9" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="20" y1="20" x2="16.65" y2="16.65" />
                     </svg>
                   </span>
-                  <p>No applications match your search.</p>
+                  <p className="text-[13px]">No applications found</p>
                 </div>
               ) : (
-                <ul className="space-y-2" data-testid="whisker-menu-app-list">
+                <ul className="space-y-1" data-testid="whisker-menu-app-list">
                   {currentApps.map((app, idx) => (
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`flex w-full min-h-[44px] items-center justify-between gap-4 rounded-xl px-4 py-3 text-left text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1a29] ${idx === highlight
-                            ? 'bg-[#162438] text-white shadow-[0_0_0_1px_rgba(83,185,255,0.35)]'
-                            : 'text-gray-200 hover:bg-[#142132]'
-                          } ${app.disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+                        className={`group/app flex w-full min-h-[52px] items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${idx === highlight
+                          ? 'bg-gradient-to-r from-cyan-500/[0.12] to-cyan-500/[0.06] text-white shadow-[inset_0_0_0_1px_rgba(74,168,255,0.2)]'
+                          : 'text-white/80 hover:bg-white/[0.04] hover:text-white'
+                          } ${app.disabled ? 'cursor-not-allowed opacity-50' : ''}`}
                         aria-label={app.title}
                         disabled={app.disabled}
                         onClick={() => {
@@ -627,28 +630,28 @@ const WhiskerMenu: React.FC = () => {
                         }}
                         onMouseEnter={() => setHighlight(idx)}
                       >
-                        <div className="flex items-center gap-4">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#121f33]">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.05] ring-1 ring-white/[0.06] transition-all duration-200 group-hover/app:bg-white/[0.08] group-hover/app:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.3)]">
                             <Image
                               src={app.icon}
                               alt=""
-                              width={28}
-                              height={28}
-                              className="h-7 w-7"
-                              sizes="28px"
+                              width={24}
+                              height={24}
+                              className="h-6 w-6 transition-transform duration-200 group-hover/app:scale-110"
+                              sizes="24px"
                             />
                           </div>
-                          <div className="flex flex-col gap-1">
-                            <p className="text-[15px] font-medium">{app.title}</p>
-                            <p className="text-xs uppercase tracking-[0.25em] text-[#4aa8ff]">Application</p>
+                          <div className="flex flex-col gap-0.5">
+                            <p className="text-[13px] font-medium leading-tight">{app.title}</p>
+                            <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-cyan-400/60">Application</p>
                           </div>
                         </div>
                         <svg
-                          className="h-4 w-4 flex-shrink-0 text-[#4aa8ff]"
+                          className="h-3.5 w-3.5 flex-shrink-0 text-white/30 transition-all duration-200 group-hover/app:translate-x-0.5 group-hover/app:text-cyan-400/70"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="currentColor"
-                          strokeWidth="2"
+                          strokeWidth="2.5"
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           aria-hidden="true"
@@ -662,14 +665,13 @@ const WhiskerMenu: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto bg-gradient-to-b from-[#111c2b] via-[#101a27] to-[#0d1622] sm:order-1 sm:max-h-[420px] sm:w-[260px] sm:overflow-visible">
-            <div className="flex items-center gap-2 border-b border-[#1d2a3c] px-4 py-3 text-xs uppercase tracking-[0.2em] text-[#4aa8ff]">
-              <span className="inline-flex h-2 w-2 rounded-full bg-[#4aa8ff]" aria-hidden />
+          <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto border-b border-white/[0.04] bg-[#080d14] sm:order-1 sm:max-h-full sm:w-[200px] sm:border-b-0 sm:border-r">
+            <div className="hidden sm:flex items-center gap-2 border-b border-white/[0.04] px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
               Categories
             </div>
             <div
               ref={categoryListRef}
-              className="-mx-1 flex gap-2 overflow-x-auto px-2 pb-3 pt-3 sm:mx-0 sm:max-h-full sm:flex-1 sm:flex-col sm:gap-1 sm:overflow-y-auto sm:px-2 sm:py-3"
+              className="flex gap-1.5 overflow-x-auto px-2 py-2 sm:max-h-full sm:flex-1 sm:flex-col sm:gap-0.5 sm:overflow-y-auto sm:px-1.5 sm:py-1.5"
               role="listbox"
               aria-label="Application categories"
               aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
@@ -689,9 +691,9 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group inline-flex min-h-[48px] min-w-[48px] flex-shrink-0 items-center gap-3 rounded-full border border-transparent bg-[#142132] px-5 py-2 text-sm text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[#53b9ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f1724] sm:min-h-[44px] sm:min-w-0 sm:w-full sm:rounded-lg sm:px-3 sm:py-3 ${category === cat.id
-                      ? 'bg-[#1d2c43] text-white shadow-[inset_0_0_0_1px_rgba(83,185,255,0.35)]'
-                      : 'text-gray-300 hover:bg-[#152133] hover:text-white'
+                  className={`group/cat relative inline-flex min-h-[40px] min-w-max flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-left transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:min-h-[36px] sm:min-w-0 sm:w-full sm:gap-2.5 sm:rounded-lg sm:px-2.5 sm:py-2 ${category === cat.id
+                    ? 'bg-gradient-to-r from-cyan-500/[0.15] to-cyan-500/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(74,168,255,0.25)]'
+                    : 'text-white/60 hover:bg-white/[0.04] hover:text-white/90'
                     }`}
                   style={{ scrollSnapAlign: 'start' }}
                   role="option"
@@ -701,27 +703,29 @@ const WhiskerMenu: React.FC = () => {
                     setCategoryHighlight(index);
                   }}
                 >
-                  <span className="hidden w-8 font-mono text-[11px] uppercase tracking-[0.2em] text-[#4aa8ff] sm:inline-flex">{String(index + 1).padStart(2, '0')}</span>
-                  <span className="flex items-center gap-2">
+                  <span className={`relative flex h-6 w-6 items-center justify-center transition-all duration-200 ${category === cat.id ? '' : 'group-hover/cat:scale-110'}`}>
                     <Image
                       src={cat.icon}
                       alt=""
-                      width={20}
-                      height={20}
-                      className="h-5 w-5 opacity-80 group-hover:opacity-100"
-                      sizes="20px"
+                      width={18}
+                      height={18}
+                      className={`h-[18px] w-[18px] transition-all duration-200 ${category === cat.id ? 'opacity-100 drop-shadow-[0_0_4px_rgba(74,168,255,0.4)]' : 'opacity-60 group-hover/cat:opacity-90'}`}
+                      sizes="18px"
                     />
-                    <span>{cat.label}</span>
                   </span>
+                  <span className="truncate font-medium">{cat.label}</span>
+                  {category === cat.id && (
+                    <span className="absolute right-0 top-1/2 hidden h-4 w-0.5 -translate-y-1/2 rounded-full bg-cyan-400 sm:block" aria-hidden="true" />
+                  )}
                 </button>
               ))}
             </div>
-            <div className="border-t border-[#1d2a3c] px-4 py-3 text-sm text-gray-400">
+            <div className="hidden sm:flex border-t border-white/[0.04] px-3 py-2.5">
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#142132] text-sm font-semibold uppercase text-[#53b9ff]">k</span>
-                <div>
-                  <p className="text-sm font-semibold text-white">kali</p>
-                  <p className="text-xs uppercase tracking-[0.3em] text-gray-500">User Session</p>
+                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 text-[11px] font-bold uppercase text-cyan-400">k</span>
+                <div className="flex flex-col">
+                  <p className="text-[12px] font-medium text-white/90">kali</p>
+                  <p className="text-[9px] font-medium uppercase tracking-[0.15em] text-white/30">Session</p>
                 </div>
               </div>
             </div>

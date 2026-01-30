@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 /**
  * Persist state in localStorage.
  * Safely falls back to the provided initial value if stored data is missing or corrupt.
+ * Handles hydration to avoid mismatch between server and client.
  * @param key localStorage key
  * @param initial initial value or function returning the initial value
  * @param validator optional function to validate parsed stored value
@@ -17,23 +18,29 @@ export default function usePersistentState<T>(
   const getInitial = () =>
     typeof initial === 'function' ? (initial as () => T)() : initial;
 
-  const [state, setState] = useState<T>(() => {
-    if (typeof window === 'undefined') return getInitial();
+  // Initialize with default value to ensure server/client match
+  const [state, setState] = useState<T>(getInitial);
+  const isHydrated = useRef(false);
+
+  useEffect(() => {
+    // Load from storage on mount
     try {
       const stored = window.localStorage.getItem(key);
       if (stored !== null) {
         const parsed = JSON.parse(stored);
         if (!validator || validator(parsed)) {
-          return parsed as T;
+          setState(parsed);
         }
       }
     } catch {
-      // ignore parsing errors and fall back
+      // ignore parsing errors
     }
-    return getInitial();
-  });
+    isHydrated.current = true;
+  }, [key]);
 
   useEffect(() => {
+    // Only write to storage after we've attempted to load from it
+    if (!isHydrated.current) return;
     try {
       window.localStorage.setItem(key, JSON.stringify(state));
     } catch {

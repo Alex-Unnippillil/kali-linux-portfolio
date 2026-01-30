@@ -56,11 +56,14 @@ const buildCalendar = (viewDate) => {
     const firstOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1)
     const startOffset = firstOfMonth.getDay()
     const firstVisibleDate = addDays(firstOfMonth, -startOffset)
-    const weeks = []
-    for (let weekIndex = 0; weekIndex < 6; weekIndex++) {
+    const lastOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0)
+
+    let currentWeekStartDate = firstVisibleDate
+
+    while (true) {
         const days = []
         for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
-            const date = addDays(firstVisibleDate, weekIndex * 7 + dayIndex)
+            const date = addDays(currentWeekStartDate, dayIndex)
             days.push({
                 date,
                 inCurrentMonth: date.getMonth() === viewDate.getMonth()
@@ -70,6 +73,11 @@ const buildCalendar = (viewDate) => {
             weekNumber: getIsoWeekNumber(days[3].date),
             days
         })
+
+        currentWeekStartDate = addDays(currentWeekStartDate, 7)
+        if (currentWeekStartDate > lastOfMonth || weeks.length >= 6) {
+            break
+        }
     }
     return weeks
 }
@@ -404,9 +412,9 @@ const Clock = ({
 
     const popoverStyle = isOpen
         ? {
-              ...popoverStyles,
-              visibility: typeof popoverStyles.top === 'number' ? 'visible' : 'hidden'
-          }
+            ...popoverStyles,
+            visibility: typeof popoverStyles.top === 'number' ? 'visible' : 'hidden'
+        }
         : popoverStyles
 
     const popoverNode = (
@@ -481,15 +489,13 @@ const Clock = ({
                                             type="button"
                                             onClick={handleDayClick}
                                             onKeyDown={(event) => handleDayKeyDown(event, date)}
-                                            className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                                                inCurrentMonth ? 'text-white' : 'text-white/35'
-                                            } ${
-                                                isToday
+                                            className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${inCurrentMonth ? 'text-white' : 'text-white/35'
+                                                } ${isToday
                                                     ? 'bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 text-slate-950 shadow-lg ring-1 ring-white/60'
                                                     : isFocused
                                                         ? 'bg-white/20 text-white shadow-inner'
                                                         : 'hover:bg-white/10'
-                                            }`}
+                                                }`}
                                             tabIndex={isFocused ? 0 : -1}
                                             ref={isFocused ? activeCellRef : null}
                                         >

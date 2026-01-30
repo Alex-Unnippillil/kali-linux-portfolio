@@ -4,12 +4,13 @@ import React, { PureComponent } from 'react';
 import Image from 'next/image';
 import Clock from '../util-components/clock';
 import Status from '../util-components/status';
-import QuickSettings from '../ui/QuickSettings';
+
 import WhiskerMenu from '../menu/WhiskerMenu';
 import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
+import ControlCenter from '../ui/ControlCenter';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -86,7 +87,7 @@ const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop
         return (
                 <ul
                         ref={ref}
-                        className="flex max-w-[60vw] md:max-w-[40vw] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        className="flex max-w-[60vw] md:max-w-[45vw] items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm"
                         role="list"
                         aria-label="Open applications"
                         onDragOver={onDragOver}
@@ -105,7 +106,7 @@ const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop 
         return (
                 <ul
                         ref={ref}
-                        className="flex min-h-[2.5rem] items-center gap-2 overflow-x-auto rounded-md border border-white/10 bg-[#1b2231]/90 px-2 py-1"
+                        className="flex min-h-[2.25rem] items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm"
                         role="list"
                         aria-label="Pinned applications"
                         onDragOver={onDragOver}
@@ -130,25 +131,17 @@ const SystemTrayCluster = ({
         onStatusToggle,
         onStatusKeyDown,
 }) => (
-        <div className="flex items-center gap-4 text-xs md:text-sm">
+        <div className="flex items-center gap-3 text-xs md:text-sm">
                 <div className="hidden md:block">
                         <PerformanceGraph />
                 </div>
                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                <ControlCenter />
                 <div
                         id="status-bar"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="System status"
-                        aria-expanded={statusCardOpen}
-                        onClick={onStatusToggle}
-                        onKeyDown={onStatusKeyDown}
-                        className={
-                                'relative rounded-full border border-transparent px-3 py-1 text-xs font-medium text-white/80 transition duration-150 ease-in-out hover:border-white/20 hover:bg-white/10 focus:border-ubb-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300'
-                        }
+                        className="flex items-center gap-2 rounded px-2 py-1"
                 >
                         <Status />
-                        <QuickSettings open={statusCardOpen} />
                 </div>
                 {children}
         </div>
@@ -823,10 +816,14 @@ export default class Navbar extends PureComponent {
 
         renderPinnedApps = () => {
                 const { pinnedApps = [] } = this.state;
+                // Filter pinned apps for mobile view (only show specific apps)
+                const MOBILE_PINNED_IDS = ['youtube', 'vscode', 'about', 'settings'];
+                const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                const visibleApps = isMobile ? pinnedApps.filter((app) => MOBILE_PINNED_IDS.includes(app.id)) : pinnedApps;
 
                 return (
                         <PinnedAppsList
-                                apps={pinnedApps}
+                                apps={visibleApps}
                                 renderItem={this.renderPinnedAppItem}
                                 onDragOver={this.handlePinnedDragOver}
                                 onDrop={this.handlePinnedContainerDrop}
@@ -959,26 +956,26 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`${isFocused ? 'bg-white/20' : 'bg-transparent'} relative flex items-center gap-2 rounded-md px-2 py-1 text-xs text-white/80 transition-colors hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--kali-blue)]`}
+                                className={`group/btn relative flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${isFocused ? 'bg-white/[0.12]' : 'bg-transparent hover:bg-white/[0.06]'} text-white/80 hover:text-white`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
                                                 src={app.icon}
                                                 alt=""
-                                                width={28}
-                                                height={28}
-                                                className="h-6 w-6"
+                                                width={24}
+                                                height={24}
+                                                className="h-5 w-5 transition-transform duration-150 group-hover/btn:scale-105"
                                         />
                                         {badgeNode}
                                         {isActive && (
                                                 <span
                                                         aria-hidden="true"
                                                         data-testid="running-indicator"
-                                                        className="absolute -bottom-1 left-1/2 h-1 w-2 -translate-x-1/2 rounded-full bg-current"
+                                                        className="absolute -bottom-0.5 left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-cyan-400"
                                                 />
                                         )}
                                 </span>
-                                <span className="hidden whitespace-nowrap text-white md:inline">{app.title}</span>
+                                <span className="hidden whitespace-nowrap text-[11px] font-medium text-white/80 group-hover/btn:text-white lg:inline">{app.title}</span>
                         </button>
                 );
         };
@@ -1183,18 +1180,18 @@ export default class Navbar extends PureComponent {
                 return (
                         <div
                                 ref={this.navbarRef}
-                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between bg-slate-950/80 text-ubt-grey shadow-lg backdrop-blur-md"
+                                className="main-navbar-vp fixed inset-x-0 top-0 z-[260] flex w-full items-center justify-between border-b border-white/[0.04] bg-slate-950/75 text-ubt-grey shadow-[0_1px_3px_rgba(0,0,0,0.3)] backdrop-blur-xl"
                                 role="navigation"
                                 aria-label="Desktop taskbar"
                                 style={{
                                         minHeight: `calc(${NAVBAR_HEIGHT}px + var(--safe-area-top, 0px))`,
-                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.375rem)`,
+                                        paddingTop: `calc(var(--safe-area-top, 0px) + 0.25rem)`,
                                         paddingBottom: '0.25rem',
-                                        paddingLeft: `calc(0.75rem + var(--safe-area-left, 0px))`,
-                                        paddingRight: `calc(0.75rem + var(--safe-area-right, 0px))`,
+                                        paddingLeft: `calc(0.5rem + var(--safe-area-left, 0px))`,
+                                        paddingRight: `calc(0.5rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex items-center gap-2 text-xs md:text-sm">
+                                <div className="flex items-center gap-1.5 text-xs md:text-sm">
                                         <WhiskerMenu />
                                         {workspaces.length > 0 && (
                                                 <WorkspaceSwitcher

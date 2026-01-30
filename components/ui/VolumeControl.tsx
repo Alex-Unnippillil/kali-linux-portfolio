@@ -30,16 +30,21 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     () => 0.7,
     isValidVolume,
   );
+  const [muted, setMuted] = usePersistentState<boolean>(
+    "system-volume-muted",
+    false,
+    (value): value is boolean => typeof value === "boolean",
+  );
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLInputElement>(null);
 
   const level: VolumeLevel = useMemo(() => {
-    if (volume <= 0.001) return "muted";
+    if (muted || volume <= 0.001) return "muted";
     if (volume <= 0.33) return "low";
     if (volume <= 0.66) return "medium";
     return "high";
-  }, [volume]);
+  }, [volume, muted]);
 
   const setClampedVolume = useCallback(
     (value: number | ((current: number) => number)) => {
@@ -68,6 +73,10 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     event.stopPropagation();
     const next = Number(event.target.value) / 100;
     setClampedVolume(next);
+  };
+
+  const handleMuteToggle = () => {
+    setMuted((prev) => !prev);
   };
 
   useEffect(() => {
@@ -100,6 +109,8 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     }
   }, [open]);
 
+  const displayVolume = muted ? 0 : volume;
+
   return (
     <div
       ref={rootRef}
@@ -108,11 +119,11 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     >
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
-        aria-label={`Volume ${formatPercent(volume)}`}
+        className="flex h-full w-full items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+        aria-label={`Volume ${muted ? "muted" : formatPercent(volume)}`}
         aria-haspopup="true"
         aria-expanded={open}
-        title={`Volume ${formatPercent(volume)}`}
+        title={`Volume ${muted ? "muted" : formatPercent(volume)}`}
         onClick={handleToggle}
         onPointerDown={(event) => event.stopPropagation()}
       >
@@ -128,29 +139,61 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[9rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-2 text-xs text-white shadow-lg"
+          className="absolute top-full mt-2 right-0 z-[300] w-44 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
           onWheel={handleWheel}
         >
-          <div className="mb-2 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span>Volume</span>
-            <span className="font-semibold text-white">{formatPercent(volume)}</span>
+          {/* Header with value */}
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Volume</span>
+            <span className="text-sm font-medium tabular-nums">{muted ? "Muted" : formatPercent(volume)}</span>
           </div>
-          <input
-            ref={sliderRef}
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={Math.round(volume * 100)}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(volume * 100)}
-            aria-label="Volume level"
-            className="h-1 w-full cursor-pointer accent-ubt-blue"
-            onChange={handleRangeChange}
-          />
+
+          {/* Slider */}
+          <div className="relative mb-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+            <div
+              className={`absolute inset-y-0 left-0 rounded-full transition-all duration-100 ${muted ? 'bg-slate-600' : 'bg-cyan-400'}`}
+              style={{ width: `${displayVolume * 100}%` }}
+            />
+            <input
+              ref={sliderRef}
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={Math.round(displayVolume * 100)}
+              onChange={handleRangeChange}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.round(displayVolume * 100)}
+              aria-label="Volume level"
+              disabled={muted}
+            />
+          </div>
+
+          {/* Mute Toggle */}
+          <button
+            type="button"
+            onClick={handleMuteToggle}
+            className={`flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-medium transition-all ${muted
+              ? 'bg-cyan-500/20 text-cyan-300'
+              : 'bg-white/[0.06] text-slate-300 hover:bg-white/[0.1]'
+              }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {muted ? (
+                <path d="M11 5L6 9H2v6h4l5 4V5zM23 9l-6 6M17 9l6 6" />
+              ) : (
+                <>
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+                </>
+              )}
+            </svg>
+            {muted ? 'Unmute' : 'Mute'}
+          </button>
         </div>
       )}
     </div>

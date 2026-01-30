@@ -119,18 +119,18 @@ export const SettingsContext = createContext<SettingsContextValue>({
   haptics: defaults.haptics,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
-  setAccent: () => {},
-  setWallpaper: () => {},
-  setUseKaliWallpaper: () => {},
-  setDensity: () => {},
-  setReducedMotion: () => {},
-  setFontScale: () => {},
-  setHighContrast: () => {},
-  setLargeHitAreas: () => {},
-  setPongSpin: () => {},
-  setAllowNetwork: () => {},
-  setHaptics: () => {},
-  setTheme: () => {},
+  setAccent: () => { },
+  setWallpaper: () => { },
+  setUseKaliWallpaper: () => { },
+  setDensity: () => { },
+  setReducedMotion: () => { },
+  setFontScale: () => { },
+  setHighContrast: () => { },
+  setLargeHitAreas: () => { },
+  setPongSpin: () => { },
+  setAllowNetwork: () => { },
+  setHaptics: () => { },
+  setTheme: () => { },
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
@@ -145,7 +145,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [theme, setTheme] = useState<string>(() => loadTheme());
+  const [theme, setTheme] = useState<string>('default');
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
 

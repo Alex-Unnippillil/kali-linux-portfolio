@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from 'react';
+import Toast from './Toast';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useTheme } from '../../hooks/useTheme';
 import { isDarkTheme } from '../../utils/theme';
@@ -37,7 +38,10 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
 
   // Mock Battery State
   const [batteryLevel, setBatteryLevel] = useState(100);
+  // Mock Battery State
+  const [batteryLevel, setBatteryLevel] = useState(100);
   const [isCharging, setIsCharging] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Simple battery mock or API if available
@@ -225,7 +229,11 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         label: 'Airplane Mode',
         description: 'Disable all wireless connections.',
         value: airplaneMode,
-        onToggle: () => setAirplaneMode(!airplaneMode),
+        onToggle: () => {
+          const newState = !airplaneMode;
+          setAirplaneMode(newState);
+          setToastMessage(newState ? 'Airplane Mode Enabled' : 'Airplane Mode Disabled');
+        },
         accent: 'from-orange-400/30 via-orange-500/10 to-transparent',
         icon: <AirplaneIcon />,
       },
@@ -236,7 +244,9 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         value: online && !airplaneMode,
         onToggle: () => {
           if (airplaneMode) setAirplaneMode(false);
-          setOnline(!online);
+          const newState = !online;
+          setOnline(newState);
+          setToastMessage(newState ? 'Wi-Fi Enabled' : 'Wi-Fi Disabled');
         },
         accent: 'from-emerald-400/30 via-emerald-500/10 to-transparent',
         icon: <NetworkIcon />,
@@ -248,7 +258,9 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         value: bluetooth && !airplaneMode,
         onToggle: () => {
           if (airplaneMode) setAirplaneMode(false);
-          setBluetooth(!bluetooth);
+          const newState = !bluetooth;
+          setBluetooth(newState);
+          setToastMessage(newState ? 'Bluetooth Enabled' : 'Bluetooth Disabled');
         },
         accent: 'from-blue-400/30 via-blue-500/10 to-transparent',
         icon: <BluetoothIcon />,
@@ -258,7 +270,12 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         label: 'Do Not Disturb',
         description: 'Silence notifications.',
         value: focusMode,
-        onToggle: () => setFocusMode(!focusMode),
+        value: focusMode,
+        onToggle: () => {
+          const newState = !focusMode;
+          setFocusMode(newState);
+          setToastMessage(newState ? 'Do Not Disturb Enabled' : 'Do Not Disturb Disabled');
+        },
         accent: 'from-purple-400/30 via-purple-500/10 to-transparent',
         icon: <FocusIcon />,
       },
@@ -267,7 +284,12 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         label: 'Night Light',
         description: 'Warmer colors for eye care.',
         value: nightLight,
-        onToggle: () => setNightLight(!nightLight),
+        value: nightLight,
+        onToggle: () => {
+          const newState = !nightLight;
+          setNightLight(newState);
+          setToastMessage(newState ? 'Night Light Enabled' : 'Night Light Disabled');
+        },
         accent: 'from-amber-400/30 via-amber-500/10 to-transparent',
         icon: <NightLightIcon />,
       },
@@ -322,191 +344,201 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
     ];
 
   return (
-    <div
-      id={id}
-      ref={panelRef}
-      role="menu"
-      aria-label="Quick settings"
-      aria-hidden={!open}
-      className={`group/qs absolute top-9 right-3 w-[90vw] sm:w-[20rem] origin-top-right rounded-2xl border border-white/10 bg-slate-950/90 p-4 text-xs text-slate-100 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-all duration-300 focus:outline-none max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain z-50 ${isVisible
-        ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
-        : 'pointer-events-none -translate-y-4 scale-95 opacity-0'
-        }`}
-    >
-      <div className="pb-4 flex items-center justify-between">
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent('taskbar-command', { detail: { appId: 'settings', action: 'open' } }));
-          }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+    <>
+      {toastMessage && (
+        <Toast
+          key={Date.now()}
+          message={toastMessage}
+          onClose={() => setToastMessage(null)}
+          duration={2000}
+        />
+      )}
+      <div
+        id={id}
+        ref={panelRef}
+        role="menu"
+        aria-label="Quick settings"
+        aria-hidden={!open}
+        className={`group/qs absolute top-9 right-3 w-[90vw] sm:w-[20rem] origin-top-right rounded-2xl border border-white/10 bg-slate-950/90 p-4 text-xs text-slate-100 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.6)] backdrop-blur-xl transition-all duration-300 focus:outline-none max-h-[calc(100vh-5rem)] overflow-y-auto overscroll-contain z-50 ${isVisible
+          ? 'pointer-events-auto translate-y-0 scale-100 opacity-100'
+          : 'pointer-events-none -translate-y-4 scale-95 opacity-0'
+          }`}
+      >
+        <div className="pb-4 flex items-center justify-between">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => {
               window.dispatchEvent(new CustomEvent('taskbar-command', { detail: { appId: 'settings', action: 'open' } }));
-            }
-          }}
-          className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
-        >
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400/80">Control Center</p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => updateTheme(isDarkMode ? 'default' : 'dark')}
-            className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
-            title="Toggle Theme"
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                window.dispatchEvent(new CustomEvent('taskbar-command', { detail: { appId: 'settings', action: 'open' } }));
+              }
+            }}
+            className="cursor-pointer opacity-80 hover:opacity-100 transition-opacity"
           >
-            {isDarkMode ? <MoonIcon /> : <SunIcon />}
-          </button>
-        </div>
-      </div>
-
-      <section aria-label="System snapshot" className="grid grid-cols-2 gap-3 mb-4">
-        {statusBadges.map(({ id, label, value, icon, tone }) => {
-          const toneStyle = statusToneStyles[tone];
-          return (
-            <div
-              key={id}
-              className={`flex flex-col gap-2 rounded-xl border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/10 ${toneStyle.ring}`}
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-400/80">Control Center</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => updateTheme(isDarkMode ? 'default' : 'dark')}
+              className="p-1.5 rounded-full hover:bg-white/10 transition-colors"
+              title="Toggle Theme"
             >
-              <div className="flex items-start justify-between">
-                <span
-                  className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneStyle.icon}`}
-                  aria-hidden
-                >
-                  <span className="scale-90">{icon}</span>
-                </span>
-                <span className={`h-1.5 w-1.5 rounded-full ${tone === 'muted' ? 'bg-slate-500' : tone === 'danger' ? 'bg-red-500' : tone === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
-              </div>
-              <div>
-                <span className="block text-[10px] uppercase tracking-wider text-slate-400">{label}</span>
-                <span className={`block font-semibold ${toneStyle.value}`}>{value}</span>
-              </div>
-            </div>
-          );
-        })}
-      </section>
+              {isDarkMode ? <MoonIcon /> : <SunIcon />}
+            </button>
+          </div>
+        </div>
 
-      <section aria-label="Device controls" className="space-y-3 mb-4">
-        {sliderControls.map(
-          ({
-            id,
-            label,
-            description,
-            value,
-            onChange,
-            icon,
-            accent,
-            unit = '',
-            ariaValueText,
-            disabled,
-          }) => {
-            const labelId = `${id}-label`;
+        <section aria-label="System snapshot" className="grid grid-cols-2 gap-3 mb-4">
+          {statusBadges.map(({ id, label, value, icon, tone }) => {
+            const toneStyle = statusToneStyles[tone];
             return (
               <div
                 key={id}
-                className={`group flex flex-col gap-2 rounded-xl bg-white/5 p-3 transition duration-150 hover:bg-white/10 ${disabled ? 'opacity-50' : ''
-                  }`}
-                aria-disabled={disabled}
+                className={`flex flex-col gap-2 rounded-xl border border-white/5 bg-white/5 p-3 transition-colors hover:bg-white/10 ${toneStyle.ring}`}
               >
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2 text-slate-300">
-                    {icon}
-                    <span id={labelId} className="font-medium">{label}</span>
-                  </div>
-                  <span className="font-mono text-slate-400">{value}{unit}</span>
+                <div className="flex items-start justify-between">
+                  <span
+                    className={`flex h-7 w-7 items-center justify-center rounded-lg ${toneStyle.icon}`}
+                    aria-hidden
+                  >
+                    <span className="scale-90">{icon}</span>
+                  </span>
+                  <span className={`h-1.5 w-1.5 rounded-full ${tone === 'muted' ? 'bg-slate-500' : tone === 'danger' ? 'bg-red-500' : tone === 'warning' ? 'bg-amber-500' : 'bg-emerald-500'}`} />
                 </div>
-
-                <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                  <div
-                    className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${disabled
-                      ? 'from-slate-500 to-slate-600'
-                      : accent
-                      }`}
-                    style={{ width: `${value}%` }}
-                  />
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={value}
-                    onChange={(event) => onChange(Number(event.target.value))}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    tabIndex={focusableTabIndex}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={value}
-                    aria-valuetext={ariaValueText}
-                    aria-labelledby={labelId}
-                    disabled={disabled}
-                  />
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wider text-slate-400">{label}</span>
+                  <span className={`block font-semibold ${toneStyle.value}`}>{value}</span>
                 </div>
               </div>
             );
-          },
-        )}
-      </section>
+          })}
+        </section>
 
-      <div className="space-y-2" role="group" aria-label="Quick Toggles">
-        {toggles.map(({ id, label, description, value, onToggle, icon, accent }) => {
-          const labelId = `${id}-label`;
-          return (
-            <button
-              key={id}
-              onClick={onToggle}
-              aria-label={label}
-              className={`flex w-full items-center justify-between gap-3 rounded-xl border border-transparent p-3 text-left transition-all duration-200 hover:scale-[1.02] ${value
-                ? 'bg-slate-800 border-slate-700/50 shadow-lg'
-                : 'bg-white/5 hover:bg-white/10 hover:border-white/5'
-                }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${value ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-700/50 text-slate-400'
-                  }`}>
-                  {icon}
-                </span>
-                <div className="flex flex-col">
-                  <span className={`font-semibold transition-colors ${value ? 'text-white' : 'text-slate-300'}`}>
-                    {label}
-                  </span>
-                  <span className="text-[10px] text-slate-500">{description}</span>
+        <section aria-label="Device controls" className="space-y-3 mb-4">
+          {sliderControls.map(
+            ({
+              id,
+              label,
+              description,
+              value,
+              onChange,
+              icon,
+              accent,
+              unit = '',
+              ariaValueText,
+              disabled,
+            }) => {
+              const labelId = `${id}-label`;
+              return (
+                <div
+                  key={id}
+                  className={`group flex flex-col gap-2 rounded-xl bg-white/5 p-3 transition duration-150 hover:bg-white/10 ${disabled ? 'opacity-50' : ''
+                    }`}
+                  aria-disabled={disabled}
+                >
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2 text-slate-300">
+                      {icon}
+                      <span id={labelId} className="font-medium">{label}</span>
+                    </div>
+                    <span className="font-mono text-slate-400">{value}{unit}</span>
+                  </div>
+
+                  <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${disabled
+                        ? 'from-slate-500 to-slate-600'
+                        : accent
+                        }`}
+                      style={{ width: `${value}%` }}
+                    />
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={value}
+                      onChange={(event) => onChange(Number(event.target.value))}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      tabIndex={focusableTabIndex}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={value}
+                      aria-valuetext={ariaValueText}
+                      aria-labelledby={labelId}
+                      disabled={disabled}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className={`h-3 w-3 rounded-full border border-white/10 ${value ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]' : 'bg-slate-700'}`} />
-            </button>
-          );
-        })}
-      </div>
+              );
+            },
+          )}
+        </section>
 
-      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-white/5 pt-4">
-        <button
-          onClick={() => window.location.reload()}
-          className="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/50 text-slate-300">
-            <LockIcon />
-          </span>
-          <span className="text-[10px] font-medium text-slate-400">Lock</span>
-        </button>
-        <button
-          onClick={() => window.location.reload()}
-          className="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/50 text-slate-300">
-            <LogOutIcon />
-          </span>
-          <span className="text-[10px] font-medium text-slate-400">Log Out</span>
-        </button>
-        <button
-          onClick={() => window.close()}
-          className="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-3 transition-colors hover:bg-red-500/20 group/power"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/50 text-slate-300 group-hover/power:bg-red-500 group-hover/power:text-white transition-colors">
-            <PowerIcon />
-          </span>
-          <span className="text-[10px] font-medium text-slate-400 group-hover/power:text-red-300 transition-colors">Power Off</span>
-        </button>
+        <div className="space-y-2" role="group" aria-label="Quick Toggles">
+          {toggles.map(({ id, label, description, value, onToggle, icon, accent }) => {
+            const labelId = `${id}-label`;
+            return (
+              <button
+                key={id}
+                onClick={onToggle}
+                aria-label={label}
+                className={`flex w-full items-center justify-between gap-3 rounded-xl border border-transparent p-3 text-left transition-all duration-200 hover:scale-[1.02] ${value
+                  ? 'bg-slate-800 border-slate-700/50 shadow-lg'
+                  : 'bg-white/5 hover:bg-white/10 hover:border-white/5'
+                  }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${value ? 'bg-cyan-500/20 text-cyan-300' : 'bg-slate-700/50 text-slate-400'
+                    }`}>
+                    {icon}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className={`font-semibold transition-colors ${value ? 'text-white' : 'text-slate-300'}`}>
+                      {label}
+                    </span>
+                    <span className="text-[10px] text-slate-500">{description}</span>
+                  </div>
+                </div>
+                <div className={`h-3 w-3 rounded-full border border-white/10 ${value ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]' : 'bg-slate-700'}`} />
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3 border-t border-white/5 pt-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/50 text-slate-300">
+              <LockIcon />
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">Lock</span>
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-3 transition-colors hover:bg-white/10"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/50 text-slate-300">
+              <LogOutIcon />
+            </span>
+            <span className="text-[10px] font-medium text-slate-400">Log Out</span>
+          </button>
+          <button
+            onClick={() => window.close()}
+            className="flex flex-col items-center gap-2 rounded-xl bg-white/5 p-3 transition-colors hover:bg-red-500/20 group/power"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-700/50 text-slate-300 group-hover/power:bg-red-500 group-hover/power:text-white transition-colors">
+              <PowerIcon />
+            </span>
+            <span className="text-[10px] font-medium text-slate-400 group-hover/power:text-red-300 transition-colors">Power Off</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

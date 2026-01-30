@@ -1,6 +1,6 @@
 "use client";
 
-import type { ChangeEvent, FC, MouseEvent } from "react";
+import type { FC, MouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import usePersistentState from "../../hooks/usePersistentState";
@@ -10,20 +10,8 @@ export const clampLevel = (value: number) => Math.min(1, Math.max(0, value));
 const isValidLevel = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
 
-const isValidMode = (value: unknown): value is PowerMode =>
-  value === "performance" || value === "balanced" || value === "power-saver";
-
-type PowerMode = "performance" | "balanced" | "power-saver";
-
-const POWER_MODE_LABEL: Record<PowerMode, string> = {
-  performance: "Performance",
-  balanced: "Balanced",
-  "power-saver": "Power saver",
-};
-
-const getBatteryFillColor = (level: number, charging: boolean, saver: boolean) => {
+const getBatteryFillColor = (level: number, charging: boolean) => {
   if (charging) return "#34d399"; // emerald
-  if (saver) return "#22d3ee"; // cyan accent when saver enabled
   if (level <= 0.15) return "#f87171"; // red-400
   if (level <= 0.4) return "#facc15"; // amber-400
   return "#a3e635"; // lime-400
@@ -31,14 +19,13 @@ const getBatteryFillColor = (level: number, charging: boolean, saver: boolean) =
 
 const BATTERY_BODY_WIDTH = 12;
 
-const BatteryGlyph: FC<{ level: number; charging: boolean; saver: boolean }> = ({
+const BatteryGlyph: FC<{ level: number; charging: boolean }> = ({
   level,
   charging,
-  saver,
 }) => {
   const normalized = clampLevel(level);
   const fillWidth = Math.max(0, BATTERY_BODY_WIDTH * normalized);
-  const fillColor = getBatteryFillColor(normalized, charging, saver);
+  const fillColor = getBatteryFillColor(normalized, charging);
 
   return (
     <svg
@@ -90,7 +77,7 @@ export const estimateBatteryTime = (level: number, charging: boolean) => {
   const minutes = Math.max(0, Math.round((charging ? 120 : 180) * remaining));
 
   if (minutes === 0) {
-    return charging ? "Fully charged" : "Battery depleted";
+    return charging ? "Fully charged" : "Depleted";
   }
 
   const hours = Math.floor(minutes / 60);
@@ -98,8 +85,7 @@ export const estimateBatteryTime = (level: number, charging: boolean) => {
   const parts: string[] = [];
   if (hours > 0) parts.push(`${hours}h`);
   if (mins > 0 || hours === 0) parts.push(`${mins}m`);
-  const suffix = charging ? "until full" : "remaining";
-  return `${parts.join(" ")} ${suffix}`;
+  return parts.join(" ");
 };
 
 interface BatteryIndicatorProps {
@@ -119,18 +105,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
     true,
     (value): value is boolean => typeof value === "boolean",
   );
-  const [powerMode, setPowerMode] = usePersistentState<PowerMode>(
-    "status-power-mode",
-    "balanced",
-    isValidMode,
-  );
-  const [batterySaver, setBatterySaver] = usePersistentState<boolean>(
-    "status-battery-saver",
-    false,
-    (value): value is boolean => typeof value === "boolean",
-  );
   const rootRef = useRef<HTMLDivElement>(null);
-  const sliderRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -156,30 +131,19 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
     };
   }, [open]);
 
-  useEffect(() => {
-    if (open) {
-      sliderRef.current?.focus({ preventScroll: true });
-    }
-  }, [open]);
-
   const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
     setOpen((prev) => !prev);
   };
 
   const formattedLevel = useMemo(() => `${Math.round(clampLevel(level) * 100)}%`, [level]);
-
-  const tooltipParts = [formattedLevel, charging ? "Charging" : "On battery"];
-  if (batterySaver) {
-    tooltipParts.push("Saver on");
-  }
-  const tooltip = tooltipParts.join(" • ");
+  const tooltip = `${formattedLevel} • ${charging ? "Charging" : "On battery"}`;
 
   return (
     <div ref={rootRef} className={`relative flex items-center ${className}`.trim()}>
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+        className="flex h-full w-full items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
         aria-label={tooltip}
         aria-haspopup="true"
         aria-expanded={open}
@@ -188,76 +152,60 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
         onPointerDown={(event) => event.stopPropagation()}
       >
         <span className="relative inline-flex">
-          <BatteryGlyph level={level} charging={charging} saver={batterySaver} />
+          <BatteryGlyph level={level} charging={charging} />
         </span>
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
+          className="absolute top-full mt-2 right-0 z-[300] w-44 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           role="menu"
           aria-label="Battery menu"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Battery</div>
-          <div className="mb-3 rounded bg-black bg-opacity-20 p-3 text-[11px] text-gray-200">
-            <div className="flex items-center justify-between text-white">
-              <span className="text-base font-semibold">{formattedLevel}</span>
-              <span className="uppercase">{charging ? "Charging" : "On battery"}</span>
+          {/* Header */}
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Battery</span>
+            <div className="flex items-center gap-1.5">
+              {charging && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                </svg>
+              )}
+              <span className="text-sm font-medium tabular-nums">{formattedLevel}</span>
             </div>
-            <p className="mt-1 text-gray-300">{estimateBatteryTime(level, charging)}</p>
           </div>
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Adjust level</div>
-          <input
-            ref={sliderRef}
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={Math.round(level * 100)}
-            className="mb-3 h-1 w-full cursor-pointer accent-ubt-blue"
-            aria-label="Simulated battery level"
-            onChange={(event: ChangeEvent<HTMLInputElement>) =>
-              setLevel(clampLevel(Number(event.target.value) / 100))
-            }
-          />
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Charging</span>
-            <input
-              type="checkbox"
-              checked={charging}
-              onChange={() => setCharging((prev) => !prev)}
-              aria-label={charging ? "Stop charging" : "Start charging"}
+
+          {/* Battery Bar */}
+          <div className="relative mb-3 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full transition-all duration-200"
+              style={{
+                width: `${level * 100}%`,
+                backgroundColor: getBatteryFillColor(level, charging)
+              }}
             />
-          </label>
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Battery saver</span>
-            <input
-              type="checkbox"
-              checked={batterySaver}
-              onChange={() => setBatterySaver((prev) => !prev)}
-              aria-label="Toggle battery saver"
-            />
-          </label>
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-200">Power mode</div>
-          <div className="space-y-1" role="group" aria-label="Power mode">
-            {(Object.keys(POWER_MODE_LABEL) as PowerMode[]).map((mode) => (
-              <label
-                key={mode}
-                className="flex items-center justify-between rounded px-2 py-2 text-sm transition hover:bg-white hover:bg-opacity-10"
-              >
-                <span className="font-medium text-white">{POWER_MODE_LABEL[mode]}</span>
-                <input
-                  type="radio"
-                  name="power-mode"
-                  value={mode}
-                  checked={powerMode === mode}
-                  onChange={() => setPowerMode(mode)}
-                  aria-label={`Switch to ${POWER_MODE_LABEL[mode]} mode`}
-                />
-              </label>
-            ))}
           </div>
+
+          {/* Status */}
+          <div className="mb-3 text-center text-[10px] text-slate-400">
+            {charging ? `⚡ ${estimateBatteryTime(level, charging)} until full` : `${estimateBatteryTime(level, charging)} remaining`}
+          </div>
+
+          {/* Charging Toggle */}
+          <button
+            type="button"
+            onClick={() => setCharging((prev) => !prev)}
+            className={`flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-medium transition-all ${charging
+              ? 'bg-emerald-500/20 text-emerald-300'
+              : 'bg-white/[0.06] text-slate-300 hover:bg-white/[0.1]'
+              }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+            </svg>
+            {charging ? 'Charging' : 'Not Charging'}
+          </button>
         </div>
       )}
     </div>

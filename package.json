@@ -21,7 +21,7 @@
     "smoke": "node scripts/smoke-all-apps.mjs",
     "module-report": "node scripts/generate-module-report.mjs",
     "analyze": "ANALYZE=true yarn build",
-    "preinstall": "corepack enable && corepack prepare yarn@4.9.2 --activate",
+    "preinstall": "corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
     "dedupe:fix": "yarn dedupe"
   },

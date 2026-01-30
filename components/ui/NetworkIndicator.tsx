@@ -559,7 +559,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     <div ref={rootRef} className={classNames("relative flex items-center", className)}>
       <button
         type="button"
-        className="flex h-6 w-6 items-center justify-center rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ubt-blue"
+        className="flex h-full w-full items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
         aria-label={summary.tooltip}
         aria-haspopup="true"
         aria-expanded={open}
@@ -576,114 +576,41 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       </button>
       {open && (
         <div
-          className="absolute bottom-full right-0 z-50 mb-2 min-w-[14rem] rounded-md border border-black border-opacity-30 bg-ub-cool-grey px-3 py-3 text-xs text-white shadow-lg"
+          className="absolute top-full mt-2 right-0 z-[300] w-48 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl"
           role="menu"
           aria-label="Network menu"
           onClick={(event) => event.stopPropagation()}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <div className="mb-3 text-[11px] uppercase tracking-wide text-gray-200">Network</div>
-          <div className="mb-3 rounded bg-black bg-opacity-20 p-3">
-            <div className="flex items-center justify-between text-[11px] text-gray-200">
-              <span className="uppercase">Status</span>
-              <span className="font-semibold text-white">{summary.label}</span>
-            </div>
-            <p className="mt-1 text-[11px] text-gray-300">{summary.description}</p>
-            {summary.meta && <p className="mt-1 text-[11px] text-gray-400">{summary.meta}</p>}
+          {/* Header */}
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Network</span>
+            <span className={`text-xs font-medium ${summary.state === 'connected' ? 'text-emerald-400' : summary.state === 'offline' ? 'text-red-400' : 'text-slate-400'}`}>
+              {summary.label}
+            </span>
           </div>
-          {summary.notice && (
-            <div className="mb-3 rounded border border-red-500/50 bg-red-900/30 p-2 text-[11px] text-red-200">
-              {summary.notice}
+
+          {/* Current Connection */}
+          <div className="mb-3 flex items-center gap-2 rounded-lg bg-white/[0.06] p-2">
+            <StatusGlyph summary={summary} network={connectedNetwork} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-white truncate">{connectedNetwork.name}</p>
+              <p className="text-[10px] text-slate-500 truncate">{summary.meta || summary.description}</p>
             </div>
-          )}
-          <label className="mb-3 flex items-center justify-between text-[11px] uppercase tracking-wide text-gray-200">
-            <span className="text-white normal-case">Wi-Fi</span>
-            <input
-              type="checkbox"
-              checked={wifiEnabled}
-              onChange={handleWifiToggle}
-              aria-label={wifiEnabled ? "Disable Wi-Fi" : "Enable Wi-Fi"}
-            />
-          </label>
-          <div className="mb-2 text-[11px] uppercase tracking-wide text-gray-200">Available networks</div>
-          <ul className="space-y-2" role="group" aria-label="Available networks">
-            {NETWORKS.map((network) => {
-              const connected = connectedId === network.id;
-              const disabled = network.type === "wifi" && !wifiEnabled;
-              return (
-                <li key={network.id}>
-                  <div className="flex items-start gap-2">
-                    <button
-                      type="button"
-                      className={classNames(
-                        "flex-1 rounded px-2 py-2 text-left transition",
-                        connected ? "bg-ub-blue bg-opacity-60" : "hover:bg-white hover:bg-opacity-10",
-                        disabled && "cursor-not-allowed opacity-60",
-                      )}
-                      onClick={() => !disabled && handleConnect(network)}
-                      disabled={disabled}
-                      aria-pressed={connected}
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-white">{network.name}</span>
-                        {network.type === "wifi" && network.strength && (
-                          <span className="text-[11px] text-gray-200">{SIGNAL_LABEL[network.strength]}</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-gray-300">
-                        {connected
-                          ? network.details
-                          : network.type === "wifi"
-                          ? `${hasSecureLabel(network)}${
-                              network.strength ? ` • ${SIGNAL_LABEL[network.strength]}` : ""
-                            }`
-                          : network.details}
-                      </div>
-                    </button>
-                    {network.type === "wifi" && (
-                      <button
-                        type="button"
-                        className="h-full min-h-[2.75rem] rounded border border-white/20 px-2 text-[11px] uppercase tracking-wide text-gray-200 transition hover:border-white/40 hover:text-white"
-                        onClick={() => handleShare(network)}
-                        aria-label={`Share ${network.name}`}
-                      >
-                        Share
-                      </button>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+          </div>
+
+          {/* Wi-Fi Toggle */}
           <button
             type="button"
-            className="mt-3 w-full rounded border border-white/10 bg-black/20 px-2 py-1 text-[11px] uppercase tracking-wide text-gray-300 transition hover:border-white/40 hover:text-white"
-            onClick={() => setShowLogs((prev) => !prev)}
-            aria-expanded={showLogs}
+            onClick={handleWifiToggle}
+            className={`flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-medium transition-all ${wifiEnabled
+              ? 'bg-emerald-500/20 text-emerald-300'
+              : 'bg-white/[0.06] text-slate-300 hover:bg-white/[0.1]'
+              }`}
           >
-            {showLogs ? "Hide share activity" : "Show share activity"}
+            <WifiGlyph strength="excellent" muted={!wifiEnabled} />
+            {wifiEnabled ? 'Wi-Fi On' : 'Wi-Fi Off'}
           </button>
-          {showLogs && (
-            <div className="mt-2 max-h-32 overflow-y-auto rounded border border-white/10 bg-black/30 p-2 text-[11px] text-gray-200">
-              {shareLogs.length === 0 ? (
-                <p>No share activity recorded yet.</p>
-              ) : (
-                <ul className="space-y-1">
-                  {shareLogs
-                    .slice()
-                    .reverse()
-                    .map((entry, index) => (
-                      <li key={`${entry.timestamp}-${index}`} className="leading-snug">
-                        <span className="text-gray-400">{new Date(entry.timestamp).toLocaleString()}</span>
-                        <span className="ml-1 text-white">[{entry.networkId}]</span> {entry.action}
-                        {entry.provider && <span className="ml-1 text-gray-300">via {entry.provider}</span>}
-                        {entry.details && <span className="ml-1 text-gray-300">— {entry.details}</span>}
-                      </li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          )}
         </div>
       )}
       {shareTarget && (
