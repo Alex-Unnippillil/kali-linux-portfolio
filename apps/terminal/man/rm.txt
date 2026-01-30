@@ -1,0 +1,2 @@
+rm <path>
+Simulated removal. The demo filesystem is read-only, and unsafe flags are blocked.

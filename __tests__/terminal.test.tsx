@@ -101,6 +101,24 @@ describe('Terminal component', () => {
     jest.useRealTimers();
   });
 
+  it('prints projects and runs simulated ssh/sudo commands', async () => {
+    const ref = createRef<any>();
+    render(<Terminal ref={ref} openApp={openApp} />);
+    await act(async () => {});
+    await act(async () => {
+      await ref.current.runCommand('projects');
+    });
+    expect(ref.current.getContent()).toContain('Projects catalog');
+    await act(async () => {
+      await ref.current.runCommand('ssh demo@kali');
+    });
+    expect(ref.current.getContent()).toContain('Connection closed (simulation).');
+    await act(async () => {
+      await ref.current.runCommand('sudo rm -rf /');
+    });
+    expect(ref.current.getContent()).toContain('refusing to delete /');
+  });
+
   it('supports tab management shortcuts', async () => {
     const { container } = render(<TerminalTabs openApp={openApp} />);
     await act(async () => {});

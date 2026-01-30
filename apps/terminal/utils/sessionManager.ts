@@ -66,12 +66,13 @@ export function createSessionManager({
       : trimmed;
     const [cmdName, ...cmdArgs] = expanded.split(/\s+/);
     const registry = getRegistry();
-    const handler = registry[cmdName]?.handler;
+    const definition = registry[cmdName];
+    const handler = definition?.handler;
     context.history.push(trimmed);
     onHistoryUpdate?.(context.history);
     const riskyCommands = ['nmap', 'curl', 'wget', 'ssh', 'nc', 'netcat', 'telnet', 'ping'];
     const looksNetworkBound = /https?:\/\//i.test(expanded) || riskyCommands.includes(cmdName);
-    if (context.safeMode && looksNetworkBound) {
+    if (context.safeMode && looksNetworkBound && !definition?.safeModeBypass) {
       writeLine('Safe mode: this command is simulated and cannot reach the network.');
       writeLine(`[simulated] ${expanded}`);
       return;

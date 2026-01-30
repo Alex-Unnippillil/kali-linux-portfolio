@@ -18,4 +18,5 @@ export interface CommandDefinition {
   description: string;
   usage?: string;
   handler: CommandHandler;
+  safeModeBypass?: boolean;
 }
