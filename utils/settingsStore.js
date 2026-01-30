@@ -15,6 +15,7 @@ const DEFAULT_SETTINGS = {
   pongSpin: true,
   allowNetwork: false,
   haptics: true,
+  volume: 100,
 };
 
 let hasLoggedStorageWarning = false;
@@ -182,6 +183,19 @@ export async function setAllowNetwork(value) {
   storage.setItem('allow-network', value ? 'true' : 'false');
 }
 
+export async function getVolume() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.volume;
+  const stored = storage.getItem('volume');
+  return stored ? parseFloat(stored) : DEFAULT_SETTINGS.volume;
+}
+
+export async function setVolume(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('volume', String(value));
+}
+
 export async function resetSettings() {
   const storage = getLocalStorage();
   if (!storage) return;
@@ -198,6 +212,7 @@ export async function resetSettings() {
   storage.removeItem('allow-network');
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
+  storage.removeItem('volume');
 }
 
 export async function exportSettings() {
@@ -213,6 +228,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    volume,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -225,6 +241,7 @@ export async function exportSettings() {
     getPongSpin(),
     getAllowNetwork(),
     getHaptics(),
+    getVolume(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -238,6 +255,7 @@ export async function exportSettings() {
     pongSpin,
     allowNetwork,
     haptics,
+    volume,
     useKaliWallpaper,
     theme,
   });
@@ -264,6 +282,7 @@ export async function importSettings(json) {
     pongSpin,
     allowNetwork,
     haptics,
+    volume,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -277,6 +296,7 @@ export async function importSettings(json) {
   if (pongSpin !== undefined) await setPongSpin(pongSpin);
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
+  if (volume !== undefined) await setVolume(volume);
   if (theme !== undefined) setTheme(theme);
 }
 

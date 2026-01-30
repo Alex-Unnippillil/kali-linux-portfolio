@@ -17,6 +17,8 @@ const clamp = (value: number) => Math.min(1, Math.max(0, value));
 
 interface VolumeControlProps {
   className?: string;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
 const isValidVolume = (value: unknown): value is number =>
@@ -24,7 +26,7 @@ const isValidVolume = (value: unknown): value is number =>
 
 const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
 
-const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
+const VolumeControl: React.FC<VolumeControlProps> = ({ className = "", isOpen, onToggle }) => {
   const [volume, setVolume] = usePersistentState<number>(
     "system-volume",
     () => 0.7,
@@ -35,7 +37,20 @@ const VolumeControl: React.FC<VolumeControlProps> = ({ className = "" }) => {
     false,
     (value): value is boolean => typeof value === "boolean",
   );
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = typeof isOpen === 'boolean';
+  const open = isControlled ? isOpen : internalOpen;
+
+  const setOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    if (isControlled) {
+      const newValue = typeof value === 'function' ? value(open) : value;
+      if (newValue !== open && onToggle) {
+        onToggle();
+      }
+    } else {
+      setInternalOpen(value);
+    }
+  }, [isControlled, open, onToggle]);
   const rootRef = useRef<HTMLDivElement>(null);
   const sliderRef = useRef<HTMLInputElement>(null);
 

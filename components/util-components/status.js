@@ -6,7 +6,7 @@ import VolumeControl from '../ui/VolumeControl';
 import NetworkIndicator from '../ui/NetworkIndicator';
 import BatteryIndicator from '../ui/BatteryIndicator';
 
-export default function Status({ className = "" }) {
+export default function Status({ className = "", activeDropdown, onDropdownToggle }) {
   const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
 
@@ -56,9 +56,19 @@ export default function Status({ className = "" }) {
         className={controlClasses}
         allowNetwork={allowNetwork}
         online={online}
+        isOpen={activeDropdown === 'network'}
+        onToggle={() => onDropdownToggle && onDropdownToggle('network')}
       />
-      <VolumeControl className={controlClasses} />
-      <BatteryIndicator className={controlClasses} />
+      <VolumeControl
+        className={controlClasses}
+        isOpen={activeDropdown === 'volume'}
+        onToggle={() => onDropdownToggle && onDropdownToggle('volume')}
+      />
+      <BatteryIndicator
+        className={controlClasses}
+        isOpen={activeDropdown === 'battery'}
+        onToggle={() => onDropdownToggle && onDropdownToggle('battery')}
+      />
     </div>
   );
 }

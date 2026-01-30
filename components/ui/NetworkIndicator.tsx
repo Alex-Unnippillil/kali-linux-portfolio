@@ -379,9 +379,11 @@ interface NetworkIndicatorProps {
   className?: string;
   allowNetwork: boolean;
   online: boolean;
+  isOpen?: boolean;
+  onToggle?: () => void;
 }
 
-const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online }) => {
+const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetwork, online, isOpen, onToggle }) => {
 
   const [wifiEnabled, setWifiEnabled] = usePersistentState<boolean>(
     "status-wifi-enabled",
@@ -393,7 +395,20 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
     () => NETWORKS[0].id,
     isValidNetworkId,
   );
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = typeof isOpen === 'boolean';
+  const open = isControlled ? isOpen : internalOpen;
+
+  const setOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    if (isControlled) {
+      const newValue = typeof value === 'function' ? value(open) : value;
+      if (newValue !== open && onToggle) {
+        onToggle();
+      }
+    } else {
+      setInternalOpen(value);
+    }
+  }, [isControlled, open, onToggle]);
   const rootRef = useRef<HTMLDivElement>(null);
   const [shareTarget, setShareTarget] = useState<Network | null>(null);
   const [shareStatus, setShareStatus] = useState<ShareStatus>({ state: "idle" });

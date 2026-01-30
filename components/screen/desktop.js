@@ -1385,14 +1385,68 @@ export class Desktop extends Component {
         });
     };
 
+    getWorkspaceWindows = (workspaceId) => {
+        const snapshot = this.workspaceSnapshots[workspaceId];
+        const stateSource = (workspaceId === this.state.activeWorkspace) ? this.state : (snapshot || this.createEmptyWorkspaceState());
+
+        const closed = stateSource.closed_windows || {};
+        const minimized = stateSource.minimized_windows || {};
+        const focused = stateSource.focused_windows || {};
+        const positions = stateSource.window_positions || {};
+        const sizes = stateSource.window_sizes || {};
+
+        const openWindowIds = Object.keys(closed).filter(id => closed[id] === false);
+
+        const stack = this.workspaceStacks[workspaceId] || [];
+        const ordered = stack.filter(id => openWindowIds.includes(id));
+
+        openWindowIds.forEach(id => {
+            if (!ordered.includes(id)) ordered.push(id);
+        });
+
+        return ordered.map(id => {
+            const app = this.getAppById(id);
+            if (!app) return null;
+
+            const pos = positions[id] || {};
+            const size = sizes[id] || {};
+
+            // Fallback logic if stored size is incomplete
+            const width = (size.width && size.width > 0)
+                ? size.width
+                : (app.defaultWidth || 800);
+
+            const height = (size.height && size.height > 0)
+                ? size.height
+                : (app.defaultHeight || 600);
+
+            // Fix relative icon paths (e.g. ./themes/...)
+            const icon = app.icon ? app.icon.replace(/^\.\//, '/') : '';
+
+            return {
+                id,
+                title: app.title || app.name || id,
+                icon,
+                isMinimized: Boolean(minimized[id]),
+                isFocused: Boolean(focused[id]),
+                x: pos.x || 0,
+                y: pos.y || 0,
+                w: width,
+                h: height
+            };
+        }).filter(Boolean);
+    };
+
     getWorkspaceSummaries = () => {
         return this.state.workspaces.map((workspace) => {
             const snapshot = this.workspaceSnapshots[workspace.id] || this.createEmptyWorkspaceState();
             const openWindows = Object.values(snapshot.closed_windows || {}).filter((value) => value === false).length;
+            const windows = this.getWorkspaceWindows(workspace.id);
             return {
                 id: workspace.id,
                 label: workspace.label,
                 openWindows,
+                windows,
             };
         });
     };

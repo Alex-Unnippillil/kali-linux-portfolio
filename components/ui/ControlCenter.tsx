@@ -6,17 +6,33 @@ import jsQR from 'jsqr';
 import { useSettings } from '../../hooks/useSettings';
 import { useTheme } from '../../hooks/useTheme';
 import { isDarkTheme } from '../../utils/theme';
-import usePersistentState from '../../hooks/usePersistentState';
 
 interface ControlCenterProps {
     className?: string;
+    isOpen?: boolean;
+    onToggle?: () => void;
 }
 
-const ControlCenter = ({ className = "" }: ControlCenterProps) => {
-    const [open, setOpen] = useState(false);
+const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps) => {
+    const [internalOpen, setInternalOpen] = useState(false);
+
+    // Determine if we are in controlled mode
+    const isControlled = typeof isOpen === 'boolean';
+    const open = isControlled ? isOpen : internalOpen;
+
+    const setOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+        if (isControlled) {
+            const newValue = typeof value === 'function' ? value(open) : value;
+            if (newValue !== open && onToggle) {
+                onToggle();
+            }
+        } else {
+            setInternalOpen(value);
+        }
+    }, [isControlled, open, onToggle]);
     const rootRef = useRef<HTMLDivElement>(null);
     const { theme, setTheme } = useTheme();
-    const { fontScale, setFontScale } = useSettings();
+    const { fontScale, setFontScale, volume, setVolume } = useSettings();
     const isDarkMode = isDarkTheme(theme);
     const [mounted, setMounted] = useState(false);
 
@@ -24,11 +40,7 @@ const ControlCenter = ({ className = "" }: ControlCenterProps) => {
         setMounted(true);
     }, []);
 
-    // Privacy Toggles State
-    const [micAllowed, setMicAllowed] = usePersistentState('cc-mic-allowed', true);
-    const [camAllowed, setCamAllowed] = usePersistentState('cc-cam-allowed', true);
-    const [btAllowed, setBtAllowed] = usePersistentState('cc-bt-allowed', true);
-    const [dndEnabled, setDndEnabled] = usePersistentState('cc-dnd-enabled', false);
+
 
     // Toast State
     const [toast, setToast] = useState<{ message: string, type: 'success' | 'error' | 'info' } | null>(null);
@@ -262,19 +274,10 @@ const ControlCenter = ({ className = "" }: ControlCenterProps) => {
                         <ActionButton icon={<ShareIcon />} label="Share" onClick={handleShare} />
                     </div>
 
-                    {/* Quick Toggles */}
-                    <div className="mb-4 space-y-2">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 px-1">Access & Privacy</div>
-                        <div className="grid grid-cols-4 gap-2">
-                            <ToggleTile icon={<MicIcon />} label="Mic" checked={micAllowed} onChange={() => setMicAllowed(!micAllowed)} />
-                            <ToggleTile icon={<CameraIcon />} label="Cam" checked={camAllowed} onChange={() => setCamAllowed(!camAllowed)} />
-                            <ToggleTile icon={<BluetoothIcon />} label="Blue" checked={btAllowed} onChange={() => setBtAllowed(!btAllowed)} />
-                            <ToggleTile icon={<DNDIcon />} label="DND" checked={dndEnabled} onChange={() => setDndEnabled(!dndEnabled)} />
-                        </div>
-                    </div>
+
 
                     {/* Sliders */}
-                    <div className="mb-2 p-3 rounded-xl bg-white/5 border border-white/5">
+                    <div className="mb-3 p-3 rounded-xl bg-white/5 border border-white/5">
                         <div className="flex justify-between text-xs mb-2 font-medium">
                             <span className="text-slate-300">Text Size</span>
                             <span className="text-cyan-300">{Math.round(fontScale * 100)}%</span>
@@ -297,6 +300,34 @@ const ControlCenter = ({ className = "" }: ControlCenterProps) => {
                             <span>A</span>
                         </div>
                     </div>
+
+                    <div className="mb-2 p-3 rounded-xl bg-white/5 border border-white/5 flex gap-3 items-center">
+                        <button
+                            className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                            onClick={() => setVolume(volume === 0 ? 100 : 0)}
+                        >
+                            {volume === 0 ? <VolumeXIcon /> : <Volume2Icon />}
+                        </button>
+                        <div className="flex-1">
+                            <div className="flex justify-between text-xs mb-2 font-medium">
+                                <span className="text-slate-300">Volume</span>
+                                <span className="text-cyan-300">{Math.round(volume)}%</span>
+                            </div>
+                            <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-800/80 ring-1 ring-white/10">
+                                <div className="absolute inset-y-0 left-0 bg-cyan-500 rounded-full transition-all duration-100" style={{ width: `${volume}%` }} />
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    step="1"
+                                    value={volume}
+                                    onChange={(e) => setVolume(parseFloat(e.target.value))}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                    aria-label="Volume"
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
@@ -316,33 +347,16 @@ const ActionButton = ({ icon, label, onClick, active }: { icon: ReactNode, label
     </button>
 );
 
-const ToggleTile = ({ icon, label, checked, onChange }: { icon: ReactNode, label: string, checked: boolean, onChange: () => void }) => (
-    <button
-        onClick={onChange}
-        className={`group flex flex-col items-center justify-between p-2 rounded-xl border transition-all duration-200 h-[3.5rem] ${checked
-            ? 'bg-emerald-500/10 border-emerald-500/20 hover:bg-emerald-500/15'
-            : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/5'
-            }`}
-    >
-        <div className={`transition-colors duration-200 ${checked ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-400'}`}>
-            <span className="scale-75 origin-top-left block">{icon}</span>
-        </div>
-        <div className="w-full flex justify-between items-center mt-1">
-            <span className={`text-[9px] font-bold transition-colors uppercase ${checked ? 'text-emerald-100' : 'text-slate-400 group-hover:text-slate-300'}`}>{label}</span>
-            <div className={`w-1 h-1 rounded-full transition-all duration-300 ${checked ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-700'}`} />
-        </div>
-    </button>
-);
+
 
 // Icons
-const QRIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /><path d="M3 14h7v7H3z" /><path d="M10 10h4v4h-4z" /></svg>;
-const CastIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20M2 12.05A9 9 0 0 1 9.95 20M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /><line x1="2" y1="20" x2="2.01" y2="20" /></svg>;
-const RecordIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" opacity="0.5" /><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" /></svg>;
-const ShareIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
-const MicIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" y1="19" x2="12" y2="23" /><line x1="8" y1="23" x2="16" y2="23" /></svg>;
-const CameraIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>;
-const BluetoothIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6.5 6.5 17.5 17.5 12 23 12 1 17.5 6.5 6.5 17.5" /></svg>;
-const DNDIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" /></svg>;
+const QRIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" /><path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" /><rect x="7" y="7" width="10" height="10" rx="2" /><path d="M12 12h.01" /></svg>;
+const CastIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 16.1A5 5 0 0 1 5.9 20" /><path d="M2 12.05A9 9 0 0 1 9.95 20" /><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6" /><line x1="2" y1="20" x2="2.01" y2="20" /></svg>;
+const RecordIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" /></svg>;
+const ShareIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></svg>;
+const Volume2Icon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M15.54 8.46a5 5 0 0 1 0 7.07" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14" /></svg>;
+const VolumeXIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="23" y1="9" x2="17" y2="15" /><line x1="17" y1="9" x2="23" y2="15" /></svg>;
+
 const SunIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>;
 const MoonIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>;
 const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;

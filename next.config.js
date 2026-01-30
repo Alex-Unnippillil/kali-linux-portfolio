@@ -24,7 +24,7 @@ const ContentSecurityPolicy = [
   // Restrict fonts to same origin
   "font-src 'self'",
   // External scripts required for embedded timelines
-  "script-src 'self' 'unsafe-inline' https://vercel.live https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
+  "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://vercel.live https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://www.youtube.com https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com",
   // Allow outbound connections for embeds and the in-browser Chrome app
   "connect-src 'self' https://example.com https://developer.mozilla.org https://en.wikipedia.org https://www.google.com https://www.googleapis.com https://youtube.googleapis.com https://*.googleapis.com https://platform.twitter.com https://embed.x.com https://syndication.twitter.com https://cdn.syndication.twimg.com https://*.twitter.com https://*.x.com https://*.google.com https://stackblitz.com",
   // Allow iframes from specific providers so embedded apps can load allowed content
@@ -117,10 +117,10 @@ const startUrlRuntimeCaching = {
         cacheWillUpdate: async ({ response }) =>
           response && response.type === 'opaqueredirect'
             ? new Response(response.body, {
-                status: 200,
-                statusText: 'OK',
-                headers: response.headers,
-              })
+              status: 200,
+              statusText: 'OK',
+              headers: response.headers,
+            })
             : response,
       },
     ],
@@ -133,13 +133,13 @@ const runtimeCaching = [
     ...entry,
     ...(entry.options
       ? {
-          options: {
-            ...entry.options,
-            ...(entry.options.cacheName
-              ? { cacheName: buildAwareCacheName(entry.options.cacheName) }
-              : {}),
-          },
-        }
+        options: {
+          ...entry.options,
+          ...(entry.options.cacheName
+            ? { cacheName: buildAwareCacheName(entry.options.cacheName) }
+            : {}),
+        },
+      }
       : {}),
   })),
 ];
@@ -239,32 +239,32 @@ module.exports = withBundleAnalyzer(
     ...(isStaticExport || !isProd
       ? {}
       : {
-          async headers() {
-            return [
-              {
-                source: '/(.*)',
-                headers: securityHeaders,
-              },
-              {
-                source: '/fonts/(.*)',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=31536000, immutable',
-                  },
-                ],
-              },
-              {
-                source: '/images/(.*)',
-                headers: [
-                  {
-                    key: 'Cache-Control',
-                    value: 'public, max-age=86400',
-                  },
-                ],
-              },
-            ];
-          },
-        }),
+        async headers() {
+          return [
+            {
+              source: '/(.*)',
+              headers: securityHeaders,
+            },
+            {
+              source: '/fonts/(.*)',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=31536000, immutable',
+                },
+              ],
+            },
+            {
+              source: '/images/(.*)',
+              headers: [
+                {
+                  key: 'Cache-Control',
+                  value: 'public, max-age=86400',
+                },
+              ],
+            },
+          ];
+        },
+      }),
   })
 );

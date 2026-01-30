@@ -57,6 +57,7 @@ const buildCalendar = (viewDate) => {
     const startOffset = firstOfMonth.getDay()
     const firstVisibleDate = addDays(firstOfMonth, -startOffset)
     const lastOfMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0)
+    const weeks = []
 
     let currentWeekStartDate = firstVisibleDate
 
@@ -132,10 +133,26 @@ const Clock = ({
     onlyTime = false,
     showCalendar = false,
     hour12 = true,
-    variant = 'default'
+    variant = 'default',
+    isOpen: controlledOpen,
+    onToggle
 }) => {
     const [currentTime, setCurrentTime] = useState(null)
-    const [isOpen, setIsOpen] = useState(false)
+    const [internalOpen, setInternalOpen] = useState(false)
+
+    const isControlled = typeof controlledOpen === 'boolean'
+    const isOpen = isControlled ? controlledOpen : internalOpen
+
+    const setIsOpen = useCallback((value) => {
+        if (isControlled) {
+            const next = typeof value === 'function' ? value(isOpen) : value
+            if (next !== isOpen && onToggle) {
+                onToggle()
+            }
+        } else {
+            setInternalOpen(value)
+        }
+    }, [isControlled, isOpen, onToggle])
     const [viewDate, setViewDate] = useState(() => new Date())
     const [focusedDate, setFocusedDate] = useState(() => new Date())
     const prefersReducedMotion = usePrefersReducedMotion()
@@ -424,7 +441,7 @@ const Clock = ({
             role="dialog"
             aria-modal="false"
             aria-label="Calendar"
-            className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200"
+            className="fixed z-50 w-[24rem] max-w-[95vw] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200"
             style={popoverStyle}
         >
             <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">

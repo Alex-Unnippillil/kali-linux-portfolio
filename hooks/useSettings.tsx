@@ -30,8 +30,12 @@ import {
   setAllowNetwork as saveAllowNetwork,
   getHaptics as loadHaptics,
   setHaptics as saveHaptics,
+  getVolume as loadVolume,
+  setVolume as saveVolume,
   defaults,
 } from '../utils/settingsStore';
+import { Howler } from 'howler';
+import { setMasterVolume } from '../utils/audio';
 import {
   DesktopTheme,
   DESKTOP_THEME_PRESETS,
@@ -80,6 +84,7 @@ interface SettingsContextValue {
   pongSpin: boolean;
   allowNetwork: boolean;
   haptics: boolean;
+  volume: number;
   theme: string;
   desktopTheme: DesktopTheme;
   setAccent: (accent: string) => void;
@@ -93,6 +98,7 @@ interface SettingsContextValue {
   setPongSpin: (value: boolean) => void;
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
+  setVolume: (value: number) => void;
   setTheme: (value: string) => void;
 }
 
@@ -117,6 +123,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
+  volume: defaults.volume,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => { },
@@ -130,6 +137,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setPongSpin: () => { },
   setAllowNetwork: () => { },
   setHaptics: () => { },
+  setVolume: () => { },
   setTheme: () => { },
 });
 
@@ -145,6 +153,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
+  const [volume, setVolume] = useState<number>(defaults.volume);
   const [theme, setTheme] = useState<string>('default');
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
@@ -162,6 +171,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
+      setVolume(await loadVolume());
       setTheme(loadTheme());
     })();
   }, []);
@@ -299,6 +309,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveHaptics(haptics);
   }, [haptics]);
 
+  useEffect(() => {
+    const vol = volume / 100;
+    if (typeof Howler !== 'undefined') {
+      Howler.volume(vol);
+    }
+    setMasterVolume(vol);
+    saveVolume(volume);
+  }, [volume]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
   const desktopTheme = useMemo(
     () =>
@@ -358,6 +377,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         pongSpin,
         allowNetwork,
         haptics,
+        volume,
         theme,
         desktopTheme,
         setAccent,
@@ -371,6 +391,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setPongSpin,
         setAllowNetwork,
         setHaptics,
+        setVolume,
         setTheme,
       }}
     >

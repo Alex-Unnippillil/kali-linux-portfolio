@@ -136,13 +136,31 @@ const KALI_LOGO_PATH =
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
 
-const WhiskerMenu: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+interface WhiskerMenuProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onToggle }) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = typeof controlledOpen === 'boolean';
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+
+  const setIsOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    if (isControlled) {
+      const next = typeof value === 'function' ? value(isOpen) : value;
+      if (next !== isOpen && onToggle) {
+        onToggle();
+      }
+    } else {
+      setInternalOpen(value);
+    }
+  }, [isControlled, isOpen, onToggle]);
   const [isVisible, setIsVisible] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [category, setCategory] = useState<CategoryDefinition['id']>('all');
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
 
   const [query, setQuery] = useState('');
   const [recentIds, setRecentIds] = useState<string[]>([]);
@@ -277,12 +295,14 @@ const WhiskerMenu: React.FC = () => {
   }, [category, categoryConfigs]);
 
   const currentApps = useMemo(() => {
-    let list = currentCategory?.apps ?? [];
+    const list = currentCategory?.apps ? [...currentCategory.apps] : [];
     if (query) {
       const q = query.toLowerCase();
-      list = list.filter(a => a.title.toLowerCase().includes(q));
+      return list
+        .filter(a => a.title.toLowerCase().includes(q))
+        .sort((a, b) => a.title.localeCompare(b.title));
     }
-    return list;
+    return list.sort((a, b) => a.title.localeCompare(b.title));
   }, [currentCategory, query]);
 
   useEffect(() => {
@@ -342,11 +362,11 @@ const WhiskerMenu: React.FC = () => {
       return;
     }
     requestAnimationFrame(() => setIsOpen(true));
-  }, []);
+  }, [setIsOpen]);
 
   const hideMenu = useCallback(() => {
     setIsOpen(false);
-  }, []);
+  }, [setIsOpen]);
 
   const toggleMenu = useCallback(() => {
     if (isOpen || isVisible) {
@@ -393,7 +413,7 @@ const WhiskerMenu: React.FC = () => {
   }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
+    const handleClick = (e: MouseEvent | TouchEvent) => {
       if (!isVisible) return;
       const targetNode = e.target instanceof Node ? e.target : null;
       if (!targetNode) return;
@@ -402,7 +422,11 @@ const WhiskerMenu: React.FC = () => {
       }
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener('touchstart', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('touchstart', handleClick);
+    };
   }, [hideMenu, isVisible]);
 
   useEffect(() => () => {
@@ -486,17 +510,11 @@ const WhiskerMenu: React.FC = () => {
   };
 
   const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const isHorizontal = !isDesktop;
-    if (isHorizontal && event.key === 'ArrowRight') {
+    // Always vertical navigation now that we use a sidebar on both mobile and desktop
+    if (event.key === 'ArrowDown') {
       event.preventDefault();
       handleCategoryNavigation(1);
-    } else if (isHorizontal && event.key === 'ArrowLeft') {
-      event.preventDefault();
-      handleCategoryNavigation(-1);
-    } else if (!isHorizontal && event.key === 'ArrowDown') {
-      event.preventDefault();
-      handleCategoryNavigation(1);
-    } else if (!isHorizontal && event.key === 'ArrowUp') {
+    } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       handleCategoryNavigation(-1);
     } else if (event.key === 'Enter') {
@@ -523,21 +541,21 @@ const WhiskerMenu: React.FC = () => {
           <svg
             aria-hidden="true"
             viewBox="0 0 100 100"
-            className="h-4 w-4 text-white/90 transition-all duration-200 group-hover:text-white group-hover:drop-shadow-[0_0_6px_rgba(74,168,255,0.4)]"
+            className="h-4.5 w-4.5 text-white/90 transition-all duration-200 group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]"
             fill="currentColor"
             focusable="false"
           >
             <path d={KALI_LOGO_PATH} />
           </svg>
         </span>
-        <span className="hidden text-[13px] font-medium text-white/85 transition-colors duration-200 group-hover:text-white sm:block">Applications</span>
+        <span className="hidden text-[13px] font-semibold tracking-wide text-white/90 transition-colors duration-200 group-hover:text-white sm:block">Applications</span>
         <span className="pointer-events-none absolute inset-x-1 -bottom-0.5 h-0.5 scale-x-0 rounded-full bg-gradient-to-r from-cyan-400/0 via-cyan-400/70 to-cyan-400/0 opacity-0 transition-all duration-300 group-hover:scale-x-100 group-hover:opacity-100" aria-hidden="true" />
       </button>
       {isVisible && (
         <div
           ref={menuRef}
           data-testid="whisker-menu-dropdown"
-          className={`fixed z-[260] flex max-h-[80vh] w-[min(100vw-1rem,640px)] flex-col overflow-x-hidden overflow-y-auto rounded-2xl border border-white/[0.08] bg-[#0a1018]/95 text-white shadow-[0_24px_80px_-12px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.03),inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-xl transition-all ease-out sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:w-[620px] sm:max-h-[480px] sm:flex-row sm:overflow-hidden ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-3 scale-[0.97]'
+          className={`fixed z-[260] flex h-[500px] max-h-[85vh] w-[min(94vw,720px)] flex-row overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a1018]/90 text-white shadow-[0_32px_96px_-12px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl transition-all ease-out sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:max-h-[520px] ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-4 scale-[0.96]'
             }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
@@ -547,18 +565,18 @@ const WhiskerMenu: React.FC = () => {
             }
           }}
         >
-          <div className="order-2 flex max-h-[44vh] flex-1 flex-col bg-gradient-to-b from-[#0c1420] to-[#0a1018] sm:order-2 sm:max-h-full">
+          <div className="order-2 flex flex-1 flex-col bg-transparent">
             <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
               <div className="group/search relative mb-4">
-                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-cyan-400/60 transition-colors duration-200 group-focus-within/search:text-cyan-400">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 transition-colors duration-200 group-focus-within/search:text-cyan-400">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />
                     <line x1="20" y1="20" x2="16.65" y2="16.65" />
                   </svg>
                 </span>
                 <input
                   ref={searchInputRef}
-                  className="h-10 w-full rounded-full border border-white/[0.06] bg-white/[0.03] pl-10 pr-4 text-[13px] text-gray-100 placeholder:text-white/30 shadow-[inset_0_1px_2px_rgba(0,0,0,0.2)] transition-all duration-200 focus:border-cyan-400/40 focus:bg-white/[0.05] focus:shadow-[inset_0_1px_2px_rgba(0,0,0,0.2),0_0_0_3px_rgba(74,168,255,0.1)] focus:outline-none"
+                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] pl-11 pr-4 text-[14px] text-gray-100 placeholder:text-white/30 shadow-none transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] focus:border-cyan-400/50 focus:bg-white/[0.06] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.1)] focus:outline-none"
                   type="search"
                   inputMode="search"
                   enterKeyHint="search"
@@ -617,8 +635,8 @@ const WhiskerMenu: React.FC = () => {
                     <li key={app.id}>
                       <button
                         type="button"
-                        className={`group/app flex w-full min-h-[52px] items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${idx === highlight
-                          ? 'bg-gradient-to-r from-cyan-500/[0.12] to-cyan-500/[0.06] text-white shadow-[inset_0_0_0_1px_rgba(74,168,255,0.2)]'
+                        className={`group/app flex w-full min-h-[56px] items-center justify-between gap-3 rounded-xl px-3 py-2.5 text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${idx === highlight
+                          ? 'bg-gradient-to-r from-cyan-500/[0.15] to-cyan-500/[0.05] text-white shadow-[inset_0_0_0_1px_rgba(165,243,252,0.15)]'
                           : 'text-white/80 hover:bg-white/[0.04] hover:text-white'
                           } ${app.disabled ? 'cursor-not-allowed opacity-50' : ''}`}
                         aria-label={app.title}
@@ -631,14 +649,14 @@ const WhiskerMenu: React.FC = () => {
                         onMouseEnter={() => setHighlight(idx)}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/[0.05] ring-1 ring-white/[0.06] transition-all duration-200 group-hover/app:bg-white/[0.08] group-hover/app:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.3)]">
+                          <div className="flex h-[42px] w-[42px] items-center justify-center rounded-xl bg-white/[0.05] ring-1 ring-white/[0.06] transition-all duration-200 group-hover/app:bg-white/[0.08] group-hover/app:shadow-[0_4px_12px_-4px_rgba(0,0,0,0.3)]">
                             <Image
                               src={app.icon}
                               alt=""
-                              width={24}
-                              height={24}
-                              className="h-6 w-6 transition-transform duration-200 group-hover/app:scale-110"
-                              sizes="24px"
+                              width={26}
+                              height={26}
+                              className="h-[26px] w-[26px] transition-transform duration-200 group-hover/app:scale-110"
+                              sizes="26px"
                             />
                           </div>
                           <div className="flex flex-col gap-0.5">
@@ -665,24 +683,18 @@ const WhiskerMenu: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="order-1 flex w-full max-h-[36vh] flex-col overflow-y-auto border-b border-white/[0.04] bg-[#080d14] sm:order-1 sm:max-h-full sm:w-[200px] sm:border-b-0 sm:border-r">
-            <div className="hidden sm:flex items-center gap-2 border-b border-white/[0.04] px-3 py-2.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/40">
+          <div className="order-1 flex w-[68px] flex-col border-r border-white/[0.06] bg-[#05080c]/50 sm:w-[220px]">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-4 text-[11px] font-bold uppercase tracking-[0.15em] text-white/30">
               Categories
             </div>
             <div
               ref={categoryListRef}
-              className="flex gap-1.5 overflow-x-auto px-2 py-2 sm:max-h-full sm:flex-1 sm:flex-col sm:gap-0.5 sm:overflow-y-auto sm:px-1.5 sm:py-1.5"
+              className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-2 sm:px-3"
               role="listbox"
               aria-label="Application categories"
-              aria-orientation={isDesktop ? 'vertical' : 'horizontal'}
+              aria-orientation="vertical"
               tabIndex={0}
               onKeyDown={handleCategoryKeyDown}
-              style={{
-                WebkitOverflowScrolling: 'touch',
-                scrollSnapType: isDesktop
-                  ? undefined
-                  : ('x proximity' as React.CSSProperties['scrollSnapType']),
-              }}
             >
               {categoryConfigs.map((cat, index) => (
                 <button
@@ -691,11 +703,10 @@ const WhiskerMenu: React.FC = () => {
                     categoryButtonRefs.current[index] = el;
                   }}
                   type="button"
-                  className={`group/cat relative inline-flex min-h-[40px] min-w-max flex-shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-[12px] text-left transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 sm:min-h-[36px] sm:min-w-0 sm:w-full sm:gap-2.5 sm:rounded-lg sm:px-2.5 sm:py-2 ${category === cat.id
-                    ? 'bg-gradient-to-r from-cyan-500/[0.15] to-cyan-500/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(74,168,255,0.25)]'
+                  className={`group/cat relative flex min-h-[44px] w-full items-center gap-3 rounded-lg px-2 py-2 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${category === cat.id
+                    ? 'bg-gradient-to-r from-cyan-500/[0.15] to-cyan-500/[0.05] text-white shadow-[inset_0_0_0_1px_rgba(34,211,238,0.2)]'
                     : 'text-white/60 hover:bg-white/[0.04] hover:text-white/90'
-                    }`}
-                  style={{ scrollSnapAlign: 'start' }}
+                    } justify-center sm:justify-start`}
                   role="option"
                   aria-selected={category === cat.id}
                   onClick={() => {
@@ -707,25 +718,31 @@ const WhiskerMenu: React.FC = () => {
                     <Image
                       src={cat.icon}
                       alt=""
-                      width={18}
-                      height={18}
-                      className={`h-[18px] w-[18px] transition-all duration-200 ${category === cat.id ? 'opacity-100 drop-shadow-[0_0_4px_rgba(74,168,255,0.4)]' : 'opacity-60 group-hover/cat:opacity-90'}`}
-                      sizes="18px"
+                      width={20}
+                      height={20}
+                      className={`h-5 w-5 transition-all duration-200 ${category === cat.id ? 'opacity-100 drop-shadow-[0_0_6px_rgba(34,211,238,0.5)]' : 'opacity-70 group-hover/cat:opacity-100'}`}
+                      sizes="20px"
                     />
                   </span>
-                  <span className="truncate font-medium">{cat.label}</span>
+                  <span className={`truncate text-[13px] font-medium hidden sm:block ${category === cat.id ? 'text-white' : 'text-white/80'}`}>{cat.label}</span>
                   {category === cat.id && (
-                    <span className="absolute right-0 top-1/2 hidden h-4 w-0.5 -translate-y-1/2 rounded-full bg-cyan-400 sm:block" aria-hidden="true" />
+                    <span className="absolute inset-y-2 right-0 hidden w-0.5 rounded-l-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] sm:block" aria-hidden="true" />
+                  )}
+                  {category === cat.id && (
+                    <span className="absolute inset-x-2 bottom-0 block h-0.5 rounded-t-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)] sm:hidden" aria-hidden="true" />
                   )}
                 </button>
               ))}
             </div>
-            <div className="hidden sm:flex border-t border-white/[0.04] px-3 py-2.5">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 text-[11px] font-bold uppercase text-cyan-400">k</span>
-                <div className="flex flex-col">
-                  <p className="text-[12px] font-medium text-white/90">kali</p>
-                  <p className="text-[9px] font-medium uppercase tracking-[0.15em] text-white/30">Session</p>
+            <div className="mt-auto border-t border-white/[0.06] px-2 py-3 sm:px-4">
+              <div className="flex items-center justify-center gap-3 sm:justify-start">
+                <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500/20 to-cyan-600/10 text-[12px] font-bold uppercase text-cyan-400 ring-1 ring-white/10">
+                  k
+                  <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-[#080d14] bg-green-500" />
+                </span>
+                <div className="hidden flex-col sm:flex">
+                  <p className="text-[13px] font-medium text-white/90">kali</p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.1em] text-white/40">Session</p>
                 </div>
               </div>
             </div>

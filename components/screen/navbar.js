@@ -131,19 +131,34 @@ const SystemTrayCluster = ({
         statusCardOpen,
         onStatusToggle,
         onStatusKeyDown,
+        activeDropdown,
+        onDropdownToggle,
 }) => (
         <div className="flex items-center gap-3 text-xs md:text-sm">
                 <div className="hidden md:block">
                         <PerformanceGraph />
                 </div>
-                <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
-                <NotificationBell />
-                <ControlCenter />
+                <Clock
+                        onlyTime={true}
+                        showCalendar={true}
+                        hour12={false}
+                        variant="minimal"
+                        isOpen={activeDropdown === 'clock'}
+                        onToggle={() => onDropdownToggle('clock')}
+                />
+                <NotificationBell
+                        isOpen={activeDropdown === 'notification'}
+                        onToggle={() => onDropdownToggle('notification')}
+                />
+                <ControlCenter
+                        isOpen={activeDropdown === 'control-center'}
+                        onToggle={() => onDropdownToggle('control-center')}
+                />
                 <div
                         id="status-bar"
                         className="flex items-center gap-2 rounded px-2 py-1"
                 >
-                        <Status />
+                        <Status activeDropdown={activeDropdown} onDropdownToggle={onDropdownToggle} />
                 </div>
                 {children}
         </div>
@@ -221,6 +236,7 @@ export default class Navbar extends PureComponent {
                         runningApps: [],
                         preview: null,
                         pinnedApps: [],
+                        activeDropdown: null,
                 };
                 this.taskbarListRef = React.createRef();
                 this.draggingAppId = null;
@@ -1175,6 +1191,12 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        handleDropdownToggle = (id) => {
+                this.setState((prevState) => ({
+                        activeDropdown: prevState.activeDropdown === id ? null : id
+                }));
+        };
+
         render() {
                 const { workspaces, activeWorkspace, preview } = this.state;
                 const pinnedApps = this.renderPinnedApps();
@@ -1194,7 +1216,10 @@ export default class Navbar extends PureComponent {
                                 }}
                         >
                                 <div className="flex items-center gap-1.5 text-xs md:text-sm">
-                                        <WhiskerMenu />
+                                        <WhiskerMenu
+                                                isOpen={this.state.activeDropdown === 'start-menu'}
+                                                onToggle={() => this.handleDropdownToggle('start-menu')}
+                                        />
                                         {workspaces.length > 0 && (
                                                 <WorkspaceSwitcher
                                                         workspaces={workspaces}
@@ -1209,6 +1234,8 @@ export default class Navbar extends PureComponent {
                                         statusCardOpen={this.state.status_card}
                                         onStatusToggle={this.handleStatusToggle}
                                         onStatusKeyDown={this.handleStatusKeyDown}
+                                        activeDropdown={this.state.activeDropdown}
+                                        onDropdownToggle={this.handleDropdownToggle}
                                 />
                                 <TaskbarPreviewFlyout
                                         ref={this.previewFlyoutRef}

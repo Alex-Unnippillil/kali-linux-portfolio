@@ -6,6 +6,11 @@
 const TONE_FREQUENCIES = [329.63, 261.63, 220, 164.81];
 
 let ctx: AudioContext | null = null;
+let masterVolume = 1.0;
+
+export function setMasterVolume(val: number) {
+  masterVolume = Math.max(0, Math.min(1, val));
+}
 
 export function getAudioContext(): AudioContext {
   if (typeof window === "undefined") {
@@ -37,9 +42,16 @@ export function playColorTone(
   oscillator.frequency.value = TONE_FREQUENCIES[idx];
   oscillator.connect(gain);
   gain.connect(context.destination);
-  gain.gain.setValueAtTime(0.0001, startTime);
-  gain.gain.exponentialRampToValueAtTime(0.5, startTime + 0.01);
-  gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  const peak = Math.max(0.0001, 0.5 * masterVolume);
+
+  if (masterVolume < 0.01) {
+    // Muted
+    gain.gain.value = 0;
+  } else {
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(peak, startTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+  }
   oscillator.start(startTime);
   oscillator.stop(startTime + duration + 0.05);
 }

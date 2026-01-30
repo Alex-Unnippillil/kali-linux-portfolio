@@ -31,28 +31,28 @@ const PRIORITY_METADATA: Record<
   critical: {
     label: 'Critical',
     badgeClass: 'bg-red-500 text-white',
-    accentClass: 'border-red-500 bg-red-500/10',
+    accentClass: 'border-red-500 bg-red-950/40',
     defaultCollapsed: false,
     description: 'Immediate action required alerts.',
   },
   high: {
     label: 'High',
     badgeClass: 'bg-orange-500 text-white',
-    accentClass: 'border-orange-400 bg-orange-500/10',
+    accentClass: 'border-orange-400 bg-orange-950/40',
     defaultCollapsed: false,
     description: 'Important follow-up from active tools.',
   },
   normal: {
     label: 'Normal',
     badgeClass: 'bg-sky-500 text-white',
-    accentClass: 'border-sky-400 bg-sky-500/5',
+    accentClass: 'border-sky-400 bg-sky-950/40',
     defaultCollapsed: false,
     description: 'Routine updates and summaries.',
   },
   low: {
     label: 'Low',
     badgeClass: 'bg-slate-600 text-white',
-    accentClass: 'border-slate-600 bg-slate-500/10',
+    accentClass: 'border-slate-600 bg-slate-800/50',
     defaultCollapsed: true,
     description: 'Verbose background chatter collapses by default.',
   },
@@ -72,7 +72,12 @@ interface NotificationGroup {
   notifications: FormattedNotification[];
 }
 
-const NotificationBell: React.FC = () => {
+interface NotificationBellProps {
+  isOpen?: boolean;
+  onToggle?: () => void;
+}
+
+const NotificationBell: React.FC<NotificationBellProps> = ({ isOpen: controlledOpen, onToggle }) => {
   const {
     notifications,
     unreadCount,
@@ -80,7 +85,21 @@ const NotificationBell: React.FC = () => {
     markAllRead,
   } = useNotifications();
 
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isControlled = controlledOpen !== undefined;
+  const isOpen = isControlled ? controlledOpen : internalOpen;
+
+  const setIsOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    if (isControlled) {
+      const next = typeof value === 'function' ? value(isOpen) : value;
+      if (next !== isOpen && onToggle) {
+        onToggle();
+      }
+    } else {
+      setInternalOpen(value);
+    }
+  }, [isControlled, isOpen, onToggle]);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const headingId = useId();
@@ -269,9 +288,9 @@ const NotificationBell: React.FC = () => {
           aria-modal="false"
           aria-labelledby={headingId}
           tabIndex={-1}
-          className="absolute right-0 z-50 mt-2 w-72 max-h-96 overflow-hidden rounded-md border border-white/10 bg-ub-grey/95 text-ubt-grey shadow-xl backdrop-blur"
+          className="absolute right-0 z-50 mt-2 w-80 max-h-96 overflow-hidden rounded-lg border border-slate-700 bg-slate-900 text-gray-300 shadow-2xl"
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+          <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3 bg-slate-900/50">
             <h2 id={headingId} className="text-sm font-semibold text-white">
               Notifications
             </h2>
@@ -279,14 +298,14 @@ const NotificationBell: React.FC = () => {
               type="button"
               onClick={handleDismissAll}
               disabled={notifications.length === 0}
-              className="text-xs font-medium text-ubb-orange transition disabled:cursor-not-allowed disabled:text-ubt-grey disabled:text-opacity-50"
+              className="text-xs font-medium text-ubb-orange transition hover:text-orange-400 disabled:cursor-not-allowed disabled:text-gray-600"
             >
               Dismiss all
             </button>
           </div>
           <div className="max-h-80 overflow-y-auto">
             {notifications.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-ubt-grey text-opacity-80">
+              <p className="px-4 py-6 text-center text-sm text-gray-400">
                 You&apos;re all caught up.
               </p>
             ) : (
@@ -296,13 +315,13 @@ const NotificationBell: React.FC = () => {
                     collapsedGroups[group.priority] ?? group.metadata.defaultCollapsed;
                   const contentId = `${panelId}-${group.priority}-group`;
                   return (
-                    <section key={group.priority} className="border-b border-white/10 last:border-b-0">
+                    <section key={group.priority} className="border-b border-slate-700 last:border-b-0">
                       <button
                         type="button"
                         onClick={() => toggleGroup(group.priority)}
                         aria-expanded={!collapsed}
                         aria-controls={contentId}
-                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
+                        className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-ubb-orange"
                       >
                         <span className="flex items-center gap-2">
                           {group.metadata.label}
@@ -330,7 +349,7 @@ const NotificationBell: React.FC = () => {
                         hidden={collapsed}
                         className="bg-transparent"
                       >
-                        <ul role="list" className="divide-y divide-white/10">
+                        <ul role="list" className="divide-y divide-slate-700">
                           {group.notifications.map(notification => (
                             <li
                               key={notification.id}
@@ -350,11 +369,11 @@ const NotificationBell: React.FC = () => {
                                 </span>
                               </div>
                               {notification.body && (
-                                <p className="mt-1 whitespace-pre-line text-xs text-ubt-grey text-opacity-80">
+                                <p className="mt-1 whitespace-pre-line text-xs text-gray-400">
                                   {notification.body}
                                 </p>
                               )}
-                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-ubt-grey text-opacity-70">
+                              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[0.65rem] uppercase tracking-wide text-gray-500">
                                 <span>{notification.appId}</span>
                                 <time dateTime={notification.formattedTime}>{notification.readableTime}</time>
                               </div>
