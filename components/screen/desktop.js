@@ -445,6 +445,11 @@ export class Desktop extends Component {
             this.commandPaletteUsesMeta = /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
         }
 
+        this.longPressTimer = null;
+        this.longPressState = null;
+        this.longPressReleaseTimeout = null;
+        this.mobileViewportActive = false;
+
     }
 
     createEmptyWorkspaceState = () => ({
@@ -1135,6 +1140,13 @@ export class Desktop extends Component {
         const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
         this.handleViewportBucketChange(viewportWidth);
+        const isCompact = this.isCompactViewport(viewportWidth);
+        if (this.mobileViewportActive !== isCompact) {
+            this.mobileViewportActive = isCompact;
+            if (isCompact) {
+                this.autoMaximizeFocusedWindow();
+            }
+        }
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
         const storedPositions = this.state.window_positions || {};
@@ -1357,6 +1369,204 @@ export class Desktop extends Component {
 
     handleShellTouchCancel = () => {
         this.gestureState.overview = null;
+    };
+
+    resolveContextTarget = (target) => {
+        if (!target || typeof target.closest !== 'function') {
+            return { context: null, appId: null, contextNode: null };
+        }
+        const contextNode = target.closest('[data-context]');
+        return {
+            context: contextNode ? contextNode.dataset.context : null,
+            appId: contextNode ? contextNode.dataset.appId : null,
+            contextNode: contextNode || null,
+        };
+    };
+
+    openContextMenuFromTarget = (target, event) => {
+        const { context, appId } = this.resolveContextTarget(target);
+        this.openContextMenuFromContext(context, appId, event);
+    };
+
+    openContextMenuFromContext = (context, appId, event) => {
+        this.hideAllContextMenu();
+        const fakeEvent = event || {};
+        switch (context) {
+            case "desktop-area":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Desktop Context Menu`,
+                });
+                this.showContextMenu(fakeEvent, "desktop");
+                break;
+            case "app":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened App Context Menu`,
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
+                break;
+            case "taskbar":
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Taskbar Context Menu`,
+                });
+                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
+                break;
+            default:
+                ReactGA.event({
+                    category: `Context Menu`,
+                    action: `Opened Default Context Menu`,
+                });
+                this.showContextMenu(fakeEvent, "default");
+        }
+    };
+
+    clearLongPressTimer = () => {
+        if (this.longPressTimer) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
+    };
+
+    clearLongPressReleaseTimeout = () => {
+        if (this.longPressReleaseTimeout) {
+            clearTimeout(this.longPressReleaseTimeout);
+            this.longPressReleaseTimeout = null;
+        }
+    };
+
+    clearLongPressState = (pointerId) => {
+        if (!this.longPressState) return;
+        if (pointerId && this.longPressState.pointerId !== pointerId) return;
+        this.clearLongPressTimer();
+        this.clearLongPressReleaseTimeout();
+        this.longPressState = null;
+    };
+
+    isLongPressTriggered = (event) => {
+        if (!this.longPressState || !this.longPressState.triggered) return false;
+        if (typeof event?.pointerId === 'number' && this.longPressState.pointerId !== event.pointerId) {
+            return false;
+        }
+        return true;
+    };
+
+    handleTouchContextStart = (event) => {
+        if (event.pointerType !== 'touch' || event.isPrimary === false) return;
+        if (typeof event.button === 'number' && event.button !== 0) return;
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        if (target.closest('input, textarea, select, [contenteditable="true"]')) return;
+
+        this.clearLongPressTimer();
+        this.longPressState = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startY: event.clientY,
+            target,
+            triggered: false,
+        };
+
+        const pageX = typeof event.pageX === 'number' ? event.pageX : event.clientX;
+        const pageY = typeof event.pageY === 'number' ? event.pageY : event.clientY;
+        this.longPressTimer = setTimeout(() => {
+            if (!this.longPressState || this.longPressState.pointerId !== event.pointerId) return;
+            this.longPressState.triggered = true;
+            this.longPressState.blockClicksUntil = Date.now() + 800;
+            this.preventNextIconClick = true;
+            this.cancelIconDrag(true);
+            this.clearDesktopSelection();
+            this.openContextMenuFromTarget(target, { pageX, pageY });
+            this.clearLongPressReleaseTimeout();
+            this.longPressReleaseTimeout = setTimeout(() => {
+                this.clearLongPressState(event.pointerId);
+            }, 900);
+        }, 550);
+    };
+
+    handleTouchContextMove = (event) => {
+        const state = this.longPressState;
+        if (!state || event.pointerId !== state.pointerId) return;
+        const deltaX = event.clientX - state.startX;
+        const deltaY = event.clientY - state.startY;
+        if (Math.abs(deltaX) > 12 || Math.abs(deltaY) > 12) {
+            this.clearLongPressState(event.pointerId);
+        }
+    };
+
+    handleTouchContextEnd = (event) => {
+        if (this.isLongPressTriggered(event)) {
+            return;
+        }
+        this.clearLongPressState(event.pointerId);
+    };
+
+    handleTouchContextCancel = (event) => {
+        this.clearLongPressState(event.pointerId);
+    };
+
+    handleLongPressClickCapture = (event) => {
+        const state = this.longPressState;
+        if (!state || !state.triggered) return;
+        const blockUntil = state.blockClicksUntil;
+        if (blockUntil && Date.now() > blockUntil) {
+            this.clearLongPressState(state.pointerId);
+            return;
+        }
+        const target = event.target instanceof Element ? event.target : null;
+        if (state.target && target && state.target.contains(target)) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.clearLongPressState(state.pointerId);
+        }
+    };
+
+    clearDesktopSelection = () => {
+        const selectionState = this.desktopSelectionState;
+        if (selectionState) {
+            selectionState.container?.releasePointerCapture?.(selectionState.pointerId);
+            this.desktopSelectionState = null;
+        }
+        this.setState((prevState) => (prevState.marqueeSelection ? { marqueeSelection: null } : null));
+    };
+
+    isCompactViewport = (widthOverride) => {
+        const width = Number.isFinite(widthOverride)
+            ? widthOverride
+            : (typeof window !== 'undefined' ? window.innerWidth : 0);
+        if (!width) return false;
+        if (width < 640) return true;
+        return this.currentPointerIsCoarse && width < 768;
+    };
+
+    shouldAutoMaximizeWindows = () => {
+        if (typeof window === 'undefined') return false;
+        return this.isCompactViewport(window.innerWidth);
+    };
+
+    autoMaximizeFocusedWindow = () => {
+        if (!this.shouldAutoMaximizeWindows()) return;
+        const focused = this.getFocusedWindowId();
+        if (focused) {
+            this.autoMaximizeWindow(focused);
+        }
+    };
+
+    autoMaximizeWindow = (id) => {
+        if (!id || !this.shouldAutoMaximizeWindows()) return;
+        const app = this.getAppById(id);
+        if (app && app.allowMaximize === false) return;
+        if (this.isOverlayId(id)) return;
+        const node = typeof document !== 'undefined' ? document.getElementById(id) : null;
+        if (node && node.getAttribute('data-window-state') === 'maximized') {
+            return;
+        }
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(() => this.dispatchWindowCommand(id, 'ArrowUp'));
+        } else {
+            this.dispatchWindowCommand(id, 'ArrowUp');
+        }
     };
 
     dispatchWindowCommand = (windowId, key) => {
@@ -3465,12 +3675,19 @@ export class Desktop extends Component {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         event.stopPropagation();
         const dragState = this.iconDragState;
+        const longPressTriggered = this.isLongPressTriggered(event);
         const moved = dragState.moved;
         const selectionChanged = Boolean(dragState.selectionChangedOnPointerDown);
         const hadMultiIntent = Boolean(dragState.multiSelectIntent);
         this.iconDragState = null;
         dragState.container?.releasePointerCapture?.(event.pointerId);
         this.detachIconKeyboardListeners();
+        if (longPressTriggered) {
+            event.preventDefault();
+            this.clearLongPressState(event.pointerId);
+            this.setState({ draggingIconId: null });
+            return;
+        }
         if (moved) {
             event.preventDefault();
             this.preventNextIconClick = true;
@@ -3487,7 +3704,8 @@ export class Desktop extends Component {
 
         event.preventDefault();
         const isTouch = event.pointerType === 'touch';
-        const shouldActivate = isTouch || (!selectionChanged && !hadMultiIntent && !(event.ctrlKey || event.metaKey || event.shiftKey));
+        const shouldActivate = (isTouch && !longPressTriggered)
+            || (!selectionChanged && !hadMultiIntent && !(event.ctrlKey || event.metaKey || event.shiftKey));
         this.setState({ draggingIconId: null }, () => {
             if (shouldActivate) {
                 this.openApp(dragState.id);
@@ -3817,6 +4035,7 @@ export class Desktop extends Component {
             this.allAppsEnterRaf = null;
         }
         this.deactivateAllAppsFocusTrap();
+        this.clearLongPressState();
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -4052,12 +4271,22 @@ export class Desktop extends Component {
         document.addEventListener('click', this.hideAllContextMenu);
         // allow keyboard activation of context menus
         document.addEventListener('keydown', this.handleContextKey);
+        document.addEventListener('click', this.handleLongPressClickCapture, true);
+        document.addEventListener('pointerdown', this.handleTouchContextStart, { passive: true });
+        document.addEventListener('pointermove', this.handleTouchContextMove, { passive: true });
+        document.addEventListener('pointerup', this.handleTouchContextEnd, { passive: true });
+        document.addEventListener('pointercancel', this.handleTouchContextCancel, { passive: true });
     }
 
     removeContextListeners = () => {
         document.removeEventListener("contextmenu", this.checkContextMenu);
         document.removeEventListener("click", this.hideAllContextMenu);
         document.removeEventListener('keydown', this.handleContextKey);
+        document.removeEventListener('click', this.handleLongPressClickCapture, true);
+        document.removeEventListener('pointerdown', this.handleTouchContextStart);
+        document.removeEventListener('pointermove', this.handleTouchContextMove);
+        document.removeEventListener('pointerup', this.handleTouchContextEnd);
+        document.removeEventListener('pointercancel', this.handleTouchContextCancel);
     }
 
     handleGlobalShortcut = (e) => {
@@ -4498,67 +4727,16 @@ export class Desktop extends Component {
 
     checkContextMenu = (e) => {
         e.preventDefault();
-        this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
-        const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
-        switch (context) {
-            case "desktop-area":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Desktop Context Menu`
-                });
-                this.showContextMenu(e, "desktop");
-                break;
-            case "app":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened App Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Taskbar Context Menu`
-                });
-                this.setState({ context_app: appId }, () => this.showContextMenu(e, "taskbar"));
-                break;
-            default:
-                ReactGA.event({
-                    category: `Context Menu`,
-                    action: `Opened Default Context Menu`
-                });
-                this.showContextMenu(e, "default");
-        }
+        this.openContextMenuFromTarget(e.target, e);
     }
 
     handleContextKey = (e) => {
         if (!(e.shiftKey && e.key === 'F10')) return;
         e.preventDefault();
-        this.hideAllContextMenu();
-        const target = e.target.closest('[data-context]');
-        const context = target ? target.dataset.context : null;
-        const appId = target ? target.dataset.appId : null;
-        const rect = target ? target.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
+        const resolved = this.resolveContextTarget(e.target);
+        const rect = resolved.contextNode ? resolved.contextNode.getBoundingClientRect() : { left: 0, top: 0, height: 0 };
         const fakeEvent = { pageX: rect.left, pageY: rect.top + rect.height };
-        switch (context) {
-            case "desktop-area":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Desktop Context Menu` });
-                this.showContextMenu(fakeEvent, "desktop");
-                break;
-            case "app":
-                ReactGA.event({ category: `Context Menu`, action: `Opened App Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "app"));
-                break;
-            case "taskbar":
-                ReactGA.event({ category: `Context Menu`, action: `Opened Taskbar Context Menu` });
-                this.setState({ context_app: appId }, () => this.showContextMenu(fakeEvent, "taskbar"));
-                break;
-            default:
-                ReactGA.event({ category: `Context Menu`, action: `Opened Default Context Menu` });
-                this.showContextMenu(fakeEvent, "default");
-        }
+        this.openContextMenuFromContext(resolved.context, resolved.appId, fakeEvent);
     }
 
     showContextMenu = (e, menuName /* context menu name */) => {
@@ -4796,6 +4974,11 @@ export class Desktop extends Component {
                         isBeingDragged={isDragging}
                         onKeyDown={(event) => this.handleIconKeyDown(event, app)}
                         onBlur={(event) => this.handleIconBlur(event, app.id)}
+                        onPointerUp={(event) => {
+                            if (this.isLongPressTriggered(event)) {
+                                event.preventDefault();
+                            }
+                        }}
                         assistiveHint={assistiveHint}
                         isSelected={isSelected}
                         isHovered={isHovered}
@@ -5275,6 +5458,7 @@ export class Desktop extends Component {
                     this.focus(objId);
                     this.saveSession();
                 }
+                this.autoMaximizeWindow(objId);
             };
             if (context) {
                 this.setState({ window_context: contextState }, reopen);
@@ -5324,6 +5508,7 @@ export class Desktop extends Component {
                     this.setState(nextState, () => {
                         this.focus(objId);
                         this.saveSession();
+                        this.autoMaximizeWindow(objId);
                     });
                 });
             };
@@ -5687,6 +5872,7 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.mounted && (this.state.minimizedShelfOpen || minimizedEntries.length > 0);
         const showClosedShelf = this.state.mounted && (this.state.closedShelfOpen || closedEntries.length > 0);
+        const showMobileLauncherButton = this.state.mounted && this.state.iconSizeBucket === 'lt-640';
         return (
             <main
                 id="desktop"
@@ -5796,6 +5982,21 @@ export class Desktop extends Component {
                 ) : null}
 
                 {this.renderOverlayWindows()}
+
+                {showMobileLauncherButton ? (
+                    <button
+                        type="button"
+                        onClick={this.showAllApps}
+                        aria-label="Open app launcher"
+                        className="fixed z-[620] flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg shadow-sky-500/30 ring-1 ring-white/20 transition hover:bg-sky-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-200/70 sm:hidden"
+                        style={{
+                            bottom: 'calc(1.25rem + var(--safe-area-bottom, 0px))',
+                            right: 'calc(1rem + var(--safe-area-right, 0px))',
+                        }}
+                    >
+                        <span className="text-2xl leading-none" aria-hidden="true">+</span>
+                    </button>
+                ) : null}
 
                 <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                     {this.state.liveRegionMessage}

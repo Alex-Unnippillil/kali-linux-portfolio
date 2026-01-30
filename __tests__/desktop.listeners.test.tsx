@@ -172,7 +172,7 @@ describe('Desktop event listeners', () => {
       />
     );
 
-    const instance = desktopRef.current!;
+    const instance = desktopRef.current as any;
     const gestureRoot = instance.desktopRef.current!;
     const gestureRemoveSpy = jest.spyOn(gestureRoot, 'removeEventListener');
     const pointerListener = instance.pointerMediaListener;
@@ -199,6 +199,11 @@ describe('Desktop event listeners', () => {
         ['contextmenu', instance.checkContextMenu],
         ['click', instance.hideAllContextMenu],
         ['keydown', instance.handleContextKey],
+        ['click', instance.handleLongPressClickCapture, true],
+        ['pointerdown', instance.handleTouchContextStart],
+        ['pointermove', instance.handleTouchContextMove],
+        ['pointerup', instance.handleTouchContextEnd],
+        ['pointercancel', instance.handleTouchContextCancel],
       ])
     );
     expect(gestureRemoveSpy.mock.calls).toEqual(
@@ -215,6 +220,52 @@ describe('Desktop event listeners', () => {
     );
     expect(mediaQueryMock.removeEventListener).toHaveBeenCalledWith('change', pointerListener);
     expect(openSettingsRemoveSpy).toHaveBeenCalledWith('click', instance.openSettingsClickHandler);
+  });
+
+  it('cancels long press detection when touch moves', () => {
+    jest.useFakeTimers();
+    const desktopRef = React.createRef<Desktop>();
+    render(
+      <Desktop
+        ref={desktopRef}
+        clearSession={() => {}}
+        changeBackgroundImage={() => {}}
+        bg_image_name="aurora"
+        snapEnabled
+      />
+    );
+
+    const instance = desktopRef.current!;
+    const target = document.createElement('div');
+    document.body.appendChild(target);
+
+    act(() => {
+      instance.handleTouchContextStart({
+        pointerType: 'touch',
+        isPrimary: true,
+        button: 0,
+        pointerId: 1,
+        target,
+        clientX: 0,
+        clientY: 0,
+        pageX: 0,
+        pageY: 0,
+      } as any);
+    });
+
+    expect(instance.longPressState).not.toBeNull();
+
+    act(() => {
+      instance.handleTouchContextMove({
+        pointerId: 1,
+        clientX: 24,
+        clientY: 0,
+      } as any);
+      jest.runOnlyPendingTimers();
+    });
+
+    expect(instance.longPressState).toBeNull();
+    jest.useRealTimers();
   });
 });
 

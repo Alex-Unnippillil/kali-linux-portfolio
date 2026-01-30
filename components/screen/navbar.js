@@ -1215,7 +1215,7 @@ export default class Navbar extends PureComponent {
                                         paddingRight: `calc(0.5rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex items-center gap-1.5 text-xs md:text-sm">
+                                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-hidden pr-2 text-xs md:text-sm sm:pr-0">
                                         <WhiskerMenu
                                                 isOpen={this.state.activeDropdown === 'start-menu'}
                                                 onToggle={() => this.handleDropdownToggle('start-menu')}

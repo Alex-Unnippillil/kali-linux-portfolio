@@ -885,6 +885,44 @@ describe('Window keyboard dragging', () => {
   });
 });
 
+describe('Window touch gestures', () => {
+  it('resizes via pinch gestures', () => {
+    const { container } = render(
+      <Window
+        id="touch-window"
+        title="Touch"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        defaultWidth={50}
+        defaultHeight={50}
+      />
+    );
+
+    const windowNode = container.querySelector('#touch-window') as HTMLElement;
+
+    act(() => {
+      fireEvent.touchStart(windowNode, {
+        touches: [
+          { clientX: 0, clientY: 0 },
+          { clientX: 100, clientY: 0 },
+        ],
+      });
+      fireEvent.touchMove(windowNode, {
+        touches: [
+          { clientX: 0, clientY: 0 },
+          { clientX: 150, clientY: 0 },
+        ],
+      });
+    });
+
+    expect(windowNode.style.width).toBe('75%');
+    expect(windowNode.style.height).toBe('75%');
+  });
+});
+
 describe('Edge resistance', () => {
   it('clamps drag movement near boundaries', () => {
     const ref = React.createRef<any>();
