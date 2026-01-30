@@ -259,6 +259,7 @@ export class Window extends Component {
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
         this._isUnmounted = false;
+        this.pinchState = null;
     }
 
     notifySizeChange = () => {
@@ -716,6 +717,54 @@ export class Window extends Component {
 
     changeCursorToDefault = () => {
         this.setState({ cursorType: "cursor-default", grabbed: false })
+    }
+
+    getPinchDistance = (touches) => {
+        if (!touches || touches.length < 2) return null;
+        const [first, second] = touches;
+        if (!first || !second) return null;
+        const deltaX = second.clientX - first.clientX;
+        const deltaY = second.clientY - first.clientY;
+        return Math.hypot(deltaX, deltaY);
+    }
+
+    handleWindowTouchStart = (event) => {
+        if (!event.touches || event.touches.length !== 2) return;
+        if (this.state.maximized || this.state.snapped) return;
+        const distance = this.getPinchDistance(event.touches);
+        if (!distance) return;
+        this.pinchState = {
+            distance,
+            width: this.state.width,
+            height: this.state.height,
+        };
+    }
+
+    handleWindowTouchMove = (event) => {
+        if (!this.pinchState || !event.touches || event.touches.length !== 2) return;
+        const distance = this.getPinchDistance(event.touches);
+        if (!distance) return;
+        event.preventDefault();
+        const scale = distance / this.pinchState.distance;
+        const nextWidth = clamp(this.pinchState.width * scale, this.state.minWidth, 100);
+        const nextHeight = clamp(this.pinchState.height * scale, this.state.minHeight, 100);
+        this.setState({
+            width: nextWidth,
+            height: nextHeight,
+            preMaximizeBounds: null,
+        }, () => {
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
+    }
+
+    handleWindowTouchEnd = (event) => {
+        if (event.touches && event.touches.length >= 2) return;
+        this.pinchState = null;
+    }
+
+    handleWindowTouchCancel = () => {
+        this.pinchState = null;
     }
 
     getSnapGrid = () => {
@@ -1756,6 +1805,10 @@ export class Window extends Component {
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
+                        onTouchStart={this.handleWindowTouchStart}
+                        onTouchMove={this.handleWindowTouchMove}
+                        onTouchEnd={this.handleWindowTouchEnd}
+                        onTouchCancel={this.handleWindowTouchCancel}
                     >
                         {this.props.resizable !== false && !this.state.maximized && (
                             <>
