@@ -59,6 +59,7 @@ const SubnetCalculatorApp = createDynamicApp(() => import('./components/apps/sub
 const GhidraApp = createDynamicApp(() => import('./components/apps/ghidra'), 'Ghidra');
 
 const StickyNotesApp = createDynamicApp(() => import('./components/apps/sticky_notes'), 'Sticky Notes');
+const NotepadApp = createDynamicApp(() => import('./components/apps/notepad'), 'Notepad');
 const TrashApp = createDynamicApp(() => import('./components/apps/trash'), 'Trash');
 const SerialTerminalApp = createDynamicApp(() => import('./components/apps/serial-terminal'), 'Serial Terminal');
 
@@ -161,6 +162,7 @@ const displayQuote = createDisplay(QuoteApp);
 const displayProjectGallery = createDisplay(ProjectGalleryApp);
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
+const displayNotepad = createDisplay(NotepadApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
@@ -253,6 +255,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFiglet,
+  },
+  {
+    id: 'notepad',
+    title: 'Notepad',
+    icon: '/themes/Yaru/apps/gedit.png',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayNotepad,
   },
   {
     id: 'quote',
