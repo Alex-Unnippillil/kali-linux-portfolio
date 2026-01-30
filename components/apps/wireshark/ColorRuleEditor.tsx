@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
+import { colorDefinitions } from './colorDefs';
 
 interface Rule {
   expression: string;
@@ -79,6 +79,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
             value={rule.expression}
             onChange={(e) => handleRuleChange(i, 'expression', e.target.value)}
             placeholder="Filter expression"
+            aria-label="Filter expression"
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
           />
           <select
@@ -140,4 +141,3 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
 };
 
 export default ColorRuleEditor;
-

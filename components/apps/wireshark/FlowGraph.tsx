@@ -24,6 +24,7 @@ interface Packet {
   src: string;
   dest: string;
   data?: Uint8Array;
+  len?: number;
 }
 
 interface FlowGraphProps {
@@ -47,7 +48,7 @@ const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
           data: { id: key, source: p.src, target: p.dest, count: 0 }
         };
       edges[key].data.count += 1;
-      bytes += p.data?.length || 0;
+      bytes += p.data?.length || p.len || 0;
     });
     const elements = [
       ...Object.values(nodes),
@@ -111,4 +112,3 @@ const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
 };
 
 export default FlowGraph;
-

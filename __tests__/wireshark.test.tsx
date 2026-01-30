@@ -2,10 +2,17 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import WiresharkApp from '../components/apps/wireshark';
+import { parsePcap } from '../utils/pcap';
+
+jest.mock('../utils/pcap', () => ({
+  parsePcap: jest.fn(),
+  default: jest.fn(),
+}));
 
 describe('WiresharkApp', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    (parsePcap as jest.Mock).mockReset();
   });
 
   it('persists filter expressions via localStorage', async () => {
@@ -19,12 +26,10 @@ describe('WiresharkApp', () => {
     const filterInput = screen.getByPlaceholderText(/quick search/i);
     await user.type(filterInput, 'bar');
 
-    // Only packets matching the filter should remain
     expect(screen.getByText('bar')).toBeInTheDocument();
     expect(screen.queryByText('foo')).not.toBeInTheDocument();
     expect(window.localStorage.getItem('wireshark-filter')).toBe('bar');
 
-    // Unmount and remount to ensure the filter persists
     unmount();
     render(<WiresharkApp initialPackets={packets} />);
     expect(screen.getByPlaceholderText(/quick search/i)).toHaveValue('bar');
@@ -54,8 +59,8 @@ describe('WiresharkApp', () => {
     await user.type(exprInputs[1], 'ip.addr == 8.8.8.8');
     await user.selectOptions(colorSelects[1], 'Blue');
 
-    const tcpRow = screen.getByText('tcp packet').closest('tr');
-    const udpRow = screen.getByText('udp packet').closest('tr');
+    const tcpRow = screen.getByText('tcp packet').closest('[data-row]');
+    const udpRow = screen.getByText('udp packet').closest('[data-row]');
     expect(tcpRow).toHaveClass('text-red-500');
     expect(udpRow).toHaveClass('text-blue-500');
   });
@@ -86,7 +91,6 @@ describe('WiresharkApp', () => {
         plaintext: 'secret',
       },
     ];
-    const user = userEvent.setup();
     render(<WiresharkApp initialPackets={packets} />);
 
     expect(screen.queryByText(/plaintext/i)).not.toBeInTheDocument();
@@ -134,7 +138,7 @@ describe('WiresharkApp', () => {
     fireEvent.change(input, { target: { files: [file] } });
 
     await waitFor(() =>
-      expect(screen.getByText('tcp packet').closest('tr')).toHaveClass('text-red-500')
+      expect(screen.getByText('tcp packet').closest('[data-row]')).toHaveClass('text-red-500')
     );
 
     const exportBtn = screen.getByRole('button', { name: /export json/i });
@@ -143,5 +147,73 @@ describe('WiresharkApp', () => {
       JSON.stringify([{ expression: 'tcp', color: 'Red' }], null, 2)
     );
   });
-});
 
+  it('steps through playback in simulation mode', async () => {
+    const packets = [
+      { timestamp: '1', src: '1.1.1.1', dest: '2.2.2.2', protocol: 6, info: 'tcp packet' },
+    ];
+    const user = userEvent.setup();
+    render(<WiresharkApp initialPackets={packets} />);
+
+    await user.click(screen.getByRole('button', { name: /stop/i }));
+    expect(screen.queryByText('tcp packet')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /step/i }));
+    expect(screen.getByText('tcp packet')).toBeInTheDocument();
+  });
+
+  it('loads capture files via the parser', async () => {
+    (parsePcap as jest.Mock).mockReturnValue([
+      {
+        timestamp: '1.000000',
+        timestampMs: 1000,
+        src: '1.1.1.1',
+        dest: '2.2.2.2',
+        protocol: 6,
+        info: 'tcp packet',
+        len: 64,
+        data: new Uint8Array(),
+        layers: {},
+      },
+    ]);
+
+    render(<WiresharkApp />);
+
+    const file = new File([new Uint8Array([1, 2, 3])], 'capture.pcap', {
+      type: 'application/octet-stream',
+    });
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: () => Promise.resolve(new ArrayBuffer(3)),
+    });
+    const upload = screen.getByLabelText(/upload capture file/i);
+    fireEvent.change(upload, { target: { files: [file] } });
+
+    await waitFor(() => expect(parsePcap).toHaveBeenCalled());
+    expect(screen.getByText('tcp packet')).toBeInTheDocument();
+  });
+
+  it('persists playback and filter preferences', async () => {
+    const packets = [
+      { timestamp: '1', src: '1.1.1.1', dest: '2.2.2.2', protocol: 6, info: 'tcp packet' },
+      { timestamp: '2', src: '3.3.3.3', dest: '4.4.4.4', protocol: 17, info: 'udp packet' },
+    ];
+    const user = userEvent.setup();
+    const { unmount } = render(<WiresharkApp initialPackets={packets} />);
+
+    const bpfInput = screen.getByLabelText(/bpf filter/i);
+    await user.type(bpfInput, 'tcp');
+    await user.click(screen.getByRole('button', { name: /udp/i }));
+    await user.click(screen.getByRole('button', { name: /flows/i }));
+    await user.selectOptions(screen.getByLabelText(/speed/i), '2');
+    await user.click(screen.getByLabelText(/loop playback/i));
+
+    unmount();
+    render(<WiresharkApp initialPackets={packets} />);
+
+    expect(screen.getByLabelText(/bpf filter/i)).toHaveValue('tcp');
+    expect(screen.getByRole('button', { name: /udp/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /flows/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText(/speed/i)).toHaveValue('2');
+    expect(screen.getByLabelText(/loop playback/i)).toBeChecked();
+  });
+});

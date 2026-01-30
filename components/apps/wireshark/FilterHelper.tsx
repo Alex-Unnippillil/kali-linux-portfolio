@@ -19,7 +19,6 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
 
   const allPresets = [...customPresets, ...presets];
 
-
   const suggestions = Array.from(
     new Set([
       ...recent,
@@ -115,7 +114,9 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
       </button>
       <datalist id="display-filter-suggestions">
         {suggestions.map((f) => (
-          <option key={f} value={f} />
+          <option key={f} value={f} label={f}>
+            {f}
+          </option>
         ))}
       </datalist>
     </>
@@ -123,4 +124,3 @@ const FilterHelper: React.FC<FilterHelperProps> = ({ value, onChange }) => {
 };
 
 export default FilterHelper;
-
