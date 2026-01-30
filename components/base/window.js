@@ -376,50 +376,53 @@ export class Window extends Component {
     }
 
     setDefaultWindowDimenstion = () => {
-        if (typeof this.props.defaultHeight === 'number' && typeof this.props.defaultWidth === 'number') {
-            const width = Math.max(this.props.defaultWidth, this.state.minWidth);
-            const height = Math.max(this.props.defaultHeight, this.state.minHeight);
-            this.setState(
-                { height, width, preMaximizeBounds: null },
-                () => {
-                    this.resizeBoundries();
-                    this.notifySizeChange();
+        const { width: viewportWidth, height: viewportHeight } = getViewportMetrics();
+        const isMobile = viewportWidth < 640;
+        const isPortrait = viewportHeight > viewportWidth;
+
+        // Resolve responsive dimensions
+        const resolveResponsive = (responsiveProp, defaultProp, fallbackMobile, fallbackDesktop) => {
+            if (responsiveProp && typeof responsiveProp === 'object') {
+                if (isMobile && typeof responsiveProp.mobile === 'number') {
+                    return responsiveProp.mobile;
                 }
-            );
-            return;
+                if (!isMobile && typeof responsiveProp.desktop === 'number') {
+                    return responsiveProp.desktop;
+                }
+            }
+            if (typeof defaultProp === 'number') {
+                return defaultProp;
+            }
+            return isMobile ? fallbackMobile : fallbackDesktop;
+        };
+
+        const resolvedWidth = resolveResponsive(
+            this.props.responsiveWidth,
+            this.props.defaultWidth,
+            isPortrait ? 90 : 95,  // mobile fallback
+            60                      // desktop fallback
+        );
+        const resolvedHeight = resolveResponsive(
+            this.props.responsiveHeight,
+            this.props.defaultHeight,
+            isPortrait ? 85 : 80,  // mobile fallback
+            85                      // desktop fallback
+        );
+
+        const width = Math.max(resolvedWidth, this.state.minWidth);
+        const height = Math.max(resolvedHeight, this.state.minHeight);
+
+        if (isMobile || isPortrait) {
+            this.startX = window.innerWidth * 0.05;
         }
 
-        const { width: viewportWidth, height: viewportHeight, left: viewportLeft } = getViewportMetrics();
-        const isPortrait = viewportHeight > viewportWidth;
-        if (isPortrait) {
-            this.startX = window.innerWidth * 0.05;
-            this.setState({
-                height: Math.max(85, this.state.minHeight),
-                width: Math.max(90, this.state.minWidth),
-                preMaximizeBounds: null,
-            }, () => {
+        this.setState(
+            { height, width, preMaximizeBounds: null },
+            () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
-            });
-        } else if (window.innerWidth < 640) {
-            this.setState({
-                height: Math.max(80, this.state.minHeight),
-                width: Math.max(95, this.state.minWidth),
-                preMaximizeBounds: null,
-            }, () => {
-                this.resizeBoundries();
-                this.notifySizeChange();
-            });
-        } else {
-            this.setState({
-                height: Math.max(85, this.state.minHeight),
-                width: Math.max(60, this.state.minWidth),
-                preMaximizeBounds: null,
-            }, () => {
-                this.resizeBoundries();
-                this.notifySizeChange();
-            });
-        }
+            }
+        );
     }
 
     resizeBoundries = () => {

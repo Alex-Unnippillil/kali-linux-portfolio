@@ -11,6 +11,7 @@ import {
   NotificationPriority,
   classifyNotification,
 } from '../../utils/notifications/ruleEngine';
+import usePersistentState from '../../hooks/usePersistentState';
 
 export type {
   ClassificationResult,
@@ -159,20 +160,22 @@ export const NotificationCenter: React.FC<{ children?: React.ReactNode }> = ({ c
         if (priorityDiff !== 0) return priorityDiff;
         return b.timestamp - a.timestamp;
       }),
-  [notificationsByApp]);
+    [notificationsByApp]);
 
   const unreadCount = useMemo(
     () => notifications.reduce((sum, notification) => sum + (notification.read ? 0 : 1), 0),
     [notifications],
   );
 
+  const [dndEnabled] = usePersistentState('cc-dnd-enabled', false);
+
   useEffect(() => {
     const nav: any = navigator;
     if (nav && nav.setAppBadge) {
-      if (unreadCount > 0) nav.setAppBadge(unreadCount).catch(() => {});
-      else nav.clearAppBadge?.().catch(() => {});
+      if (unreadCount > 0 && !dndEnabled) nav.setAppBadge(unreadCount).catch(() => { });
+      else nav.clearAppBadge?.().catch(() => { });
     }
-  }, [unreadCount]);
+  }, [unreadCount, dndEnabled]);
 
   return (
     <NotificationsContext.Provider

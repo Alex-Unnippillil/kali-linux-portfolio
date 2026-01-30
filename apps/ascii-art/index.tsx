@@ -45,9 +45,8 @@ type ControlPanelProps = {
 
 const ControlPanel = ({ title, children, className }: ControlPanelProps) => (
   <section
-    className={`rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-3 font-mono shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${
-      className ?? ''
-    }`}
+    className={`rounded border border-[color:var(--kali-border)] bg-[var(--kali-panel)] p-3 font-mono shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] ${className ?? ''
+      }`}
   >
     <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-kali-text opacity-70">
       {title}
@@ -161,7 +160,7 @@ const AsciiArtApp = () => {
   const [tab, setTab] = useState<'text' | 'image'>('text');
   const [text, setText] = useState('');
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const [font, setFont] = useState<figlet.Fonts>('Standard');
+  const [font, setFont] = useState<string>('Standard');
   const [output, setOutput] = useState('');
   const [fgColor, setFgColor] = useState('#00ff00');
   const [bgColor, setBgColor] = useState('#000000');
@@ -173,18 +172,18 @@ const AsciiArtApp = () => {
   const [brightness, setBrightness] = useState(0); // -1 to 1
   const [contrast, setContrast] = useState(1); // 0 to 2
 
-    useEffect(() => {
-      figlet.parseFont('Standard', Standard);
-      figlet.parseFont('Slant', Slant);
-      figlet.parseFont('Big', Big);
-    }, []);
+  useEffect(() => {
+    figlet.parseFont('Standard', Standard);
+    figlet.parseFont('Slant', Slant);
+    figlet.parseFont('Big', Big);
+  }, []);
 
-    // load from query string on first render
-    useEffect(() => {
+  // load from query string on first render
+  useEffect(() => {
     if (!router.isReady) return;
     const { t, f, b, c } = router.query;
     if (typeof t === 'string') setText(t);
-      if (typeof f === 'string' && fontList.includes(f)) setFont(f as figlet.Fonts);
+    if (typeof f === 'string' && fontList.includes(f)) setFont(f);
     if (typeof b === 'string') {
       const br = parseFloat(b);
       if (!Number.isNaN(br) && br >= -1 && br <= 1) setBrightness(br);
@@ -193,7 +192,7 @@ const AsciiArtApp = () => {
       const ct = parseFloat(c);
       if (!Number.isNaN(ct) && ct >= 0 && ct <= 2) setContrast(ct);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
   // update query string permalink
@@ -220,7 +219,7 @@ const AsciiArtApp = () => {
   // render text ascii
   useEffect(() => {
     try {
-      setOutput(figlet.textSync(text || '', { font }));
+      setOutput(figlet.textSync(text || '', { font: font as any }));
     } catch {
       setOutput('');
     }
@@ -330,11 +329,10 @@ const AsciiArtApp = () => {
         <button
           type="button"
           aria-pressed={tab === 'text'}
-          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-            tab === 'text'
-              ? 'border-[color:var(--color-primary)] bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
-              : 'border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] hover:bg-[var(--kali-panel-highlight)]'
-          }`}
+          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${tab === 'text'
+            ? 'border-[color:var(--color-primary)] bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
+            : 'border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] hover:bg-[var(--kali-panel-highlight)]'
+            }`}
           onClick={() => setTab('text')}
         >
           Text
@@ -342,11 +340,10 @@ const AsciiArtApp = () => {
         <button
           type="button"
           aria-pressed={tab === 'image'}
-          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-            tab === 'image'
-              ? 'border-[color:var(--color-primary)] bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
-              : 'border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] hover:bg-[var(--kali-panel-highlight)]'
-          }`}
+          className={`rounded border px-3 py-1.5 text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${tab === 'image'
+            ? 'border-[color:var(--color-primary)] bg-kali-primary text-kali-inverse shadow-[0_0_0_1px_rgba(15,148,210,0.35)]'
+            : 'border-[color:var(--kali-border)] bg-[var(--kali-panel)] text-[color:var(--color-text)] hover:bg-[var(--kali-panel-highlight)]'
+            }`}
           onClick={() => setTab('image')}
         >
           Image
@@ -371,7 +368,7 @@ const AsciiArtApp = () => {
                 <select
                   aria-label="Font selection"
                   value={font}
-                  onChange={(e) => setFont(e.target.value as figlet.Fonts)}
+                  onChange={(e) => setFont(e.target.value)}
                   className="rounded border border-[color:var(--kali-border)] bg-[color:var(--color-text)] px-2 py-1 font-mono text-[color:var(--color-inverse)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
                 >
                   {fontList.map((f) => (

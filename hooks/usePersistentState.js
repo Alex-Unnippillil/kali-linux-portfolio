@@ -6,29 +6,36 @@ import { useState, useEffect } from 'react';
 export default function usePersistentState(key, initial, validator) {
   const getInitial = () => (typeof initial === "function" ? initial() : initial);
 
-  const [state, setState] = useState(() => {
-    if (typeof window === "undefined") return getInitial();
+  // Initialize with default value to prevent hydration mismatch
+  const [state, setState] = useState(getInitial);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    // Load from storage on mount
     try {
       const stored = window.localStorage.getItem(key);
       if (stored !== null) {
         const parsed = JSON.parse(stored);
         if (!validator || validator(parsed)) {
-          return parsed;
+          setState(parsed);
         }
       }
     } catch {
-      // ignore parsing errors and fall back
+      // ignore parsing errors
     }
-    return getInitial();
-  });
+    setIsLoaded(true);
+  }, [key]); // Intentionally omit validator to prevent reload loops if validator is unstable
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // ignore write errors
+    // Only write if loaded to prevent overwriting with default
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(state));
+      } catch {
+        // ignore write errors
+      }
     }
-  }, [key, state]);
+  }, [key, state, isLoaded]);
 
   const reset = () => setState(getInitial());
   const clear = () => {

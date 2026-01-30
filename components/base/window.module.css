@@ -2,7 +2,7 @@
   position: relative;
   border: 1px solid var(--color-window-border);
   border-radius: var(--radius-6);
-  --window-resize-hit-size: 18px;
+  --window-resize-hit-size: 7px;
   box-shadow:
     0 1px 1px rgba(15, 23, 42, 0.32),
     0 8px 24px rgba(15, 23, 42, 0.28),
@@ -113,11 +113,9 @@
   justify-content: center;
   border-radius: 8px;
   border: 1px solid rgba(64, 145, 255, 0.8);
-  background: linear-gradient(
-    135deg,
-    rgba(64, 145, 255, 0.28) 0%,
-    rgba(64, 145, 255, 0.16) 100%
-  );
+  background: linear-gradient(135deg,
+      rgba(64, 145, 255, 0.28) 0%,
+      rgba(64, 145, 255, 0.16) 100%);
   box-shadow:
     0 0 0 1px rgba(125, 185, 255, 0.45),
     0 24px 48px rgba(15, 23, 42, 0.35);
@@ -169,11 +167,9 @@
 
 .windowTitleBalancer {
   flex: 0 0 auto;
-  width: clamp(
-    0px,
-    calc((100% - var(--window-controls-width, 96px)) / 2),
-    var(--window-controls-width, 96px)
-  );
+  width: clamp(0px,
+      calc((100% - var(--window-controls-width, 96px)) / 2),
+      var(--window-controls-width, 96px));
   min-width: 0;
   height: 100%;
   pointer-events: none;
@@ -273,6 +269,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .windowControlButton,
   .windowControlButton:hover,
   .windowControlButtonPressed {
@@ -310,11 +307,9 @@
   }
 
   .windowTitleBalancer {
-    width: clamp(
-      0px,
-      calc((100% - var(--window-controls-width, 88px)) / 2),
-      var(--window-controls-width, 88px)
-    );
+    width: clamp(0px,
+        calc((100% - var(--window-controls-width, 88px)) / 2),
+        var(--window-controls-width, 88px));
   }
 
   .windowControls {

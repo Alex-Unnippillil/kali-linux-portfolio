@@ -157,7 +157,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "" }) => {
       </button>
       {open && (
         <div
-          className="absolute top-full mt-2 right-0 z-[300] w-44 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+          className="absolute top-full mt-2 right-0 z-[300] w-44 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
           role="menu"
           aria-label="Battery menu"
           onClick={(event) => event.stopPropagation()}

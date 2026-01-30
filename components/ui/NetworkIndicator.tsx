@@ -576,7 +576,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       </button>
       {open && (
         <div
-          className="absolute top-full mt-2 right-0 z-[300] w-48 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+          className="absolute top-full mt-2 right-0 z-[300] w-48 origin-top-right rounded-xl border border-white/10 bg-slate-950/95 p-3 text-xs text-white shadow-[0_16px_32px_-8px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
           role="menu"
           aria-label="Network menu"
           onClick={(event) => event.stopPropagation()}
@@ -615,7 +615,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       )}
       {shareTarget && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 animate-in fade-in duration-200"
           role="presentation"
           onClick={closeShare}
         >
@@ -623,7 +623,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
             role="dialog"
             aria-modal="true"
             aria-label={`Share ${shareTarget.name}`}
-            className="w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-sm text-white shadow-xl"
+            className="w-full max-w-md rounded-lg border border-white/20 bg-ub-cool-grey p-5 text-sm text-white shadow-xl animate-in zoom-in-95 duration-200"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">

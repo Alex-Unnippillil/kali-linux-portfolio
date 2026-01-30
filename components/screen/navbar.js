@@ -11,6 +11,7 @@ import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
 import ControlCenter from '../ui/ControlCenter';
+import NotificationBell from '../ui/NotificationBell';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -136,6 +137,7 @@ const SystemTrayCluster = ({
                         <PerformanceGraph />
                 </div>
                 <Clock onlyTime={true} showCalendar={true} hour12={false} variant="minimal" />
+                <NotificationBell />
                 <ControlCenter />
                 <div
                         id="status-bar"

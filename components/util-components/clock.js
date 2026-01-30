@@ -424,7 +424,7 @@ const Clock = ({
             role="dialog"
             aria-modal="false"
             aria-label="Calendar"
-            className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl"
+            className="fixed z-50 w-[20rem] origin-top-right overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-b from-slate-900/95 via-slate-950/90 to-slate-950/95 p-4 text-sm text-white shadow-2xl ring-1 ring-cyan-300/20 backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-200"
             style={popoverStyle}
         >
             <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">

@@ -361,13 +361,29 @@ export class Desktop extends Component {
             mounted: false,
         };
 
-        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, () => ({
-            focused_windows: {},
-            closed_windows: {},
-            minimized_windows: {},
-            window_positions: {},
-            window_sizes: { ...initialWindowSizes },
-        }));
+        const cleanAppClosed = {};
+        apps.forEach((app) => {
+            cleanAppClosed[app.id] = true;
+        });
+
+        this.workspaceSnapshots = Array.from({ length: this.workspaceCount }, (_, index) => {
+            if (index === 0) {
+                return {
+                    focused_windows: {},
+                    closed_windows: {},
+                    minimized_windows: {},
+                    window_positions: {},
+                    window_sizes: { ...initialWindowSizes },
+                };
+            }
+            return {
+                focused_windows: { ...initialOverlayFocused, ...initialAppFocused },
+                closed_windows: { ...initialOverlayClosed, ...cleanAppClosed },
+                minimized_windows: { ...initialOverlayMinimized, ...initialAppMinimized },
+                window_positions: {},
+                window_sizes: { ...initialWindowSizes },
+            };
+        });
 
         this.desktopRef = React.createRef();
         this.folderNameInputRef = React.createRef();
@@ -4814,6 +4830,8 @@ export class Desktop extends Component {
                 allowMaximize: app.allowMaximize,
                 defaultWidth,
                 defaultHeight,
+                responsiveWidth: app.responsiveWidth,
+                responsiveHeight: app.responsiveHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
                 onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),

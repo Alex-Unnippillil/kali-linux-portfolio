@@ -298,6 +298,8 @@ export const utilities = utilityList;
 export const gameDefaults = {
   defaultWidth: 50,
   defaultHeight: 60,
+  responsiveWidth: { mobile: 90, desktop: 50 },
+  responsiveHeight: { mobile: 80, desktop: 60 },
 };
 
 // Games list used for the "Games" folder on the desktop
@@ -628,6 +630,8 @@ const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   screen: displayDesktopFolder,
   defaultWidth: 64,
   defaultHeight: 70,
+  responsiveWidth: { mobile: 90, desktop: 64 },
+  responsiveHeight: { mobile: 80, desktop: 70 },
 }));
 
 const apps = [
@@ -640,6 +644,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayFirefox,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'calculator',
@@ -651,8 +657,8 @@ const apps = [
     screen: displayCalculator,
     resizable: false,
     allowMaximize: false,
-    defaultWidth: 28,
-    defaultHeight: 50,
+    responsiveWidth: { mobile: 85, desktop: 28 },
+    responsiveHeight: { mobile: 65, desktop: 50 },
   },
   {
     id: 'terminal',
@@ -663,8 +669,8 @@ const apps = [
     desktop_shortcut: true,
     screen: displayTerminal,
     resizable: true,
-    defaultWidth: 68,
-    defaultHeight: 72,
+    responsiveWidth: { mobile: 95, desktop: 68 },
+    responsiveHeight: { mobile: 85, desktop: 72 },
   },
   {
     // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -675,8 +681,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayVsCode,
-    defaultWidth: 85,
-    defaultHeight: 85,
+    responsiveWidth: { mobile: 95, desktop: 85 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'x',
@@ -686,6 +692,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayX,
+    responsiveWidth: { mobile: 95, desktop: 60 },
+    responsiveHeight: { mobile: 85, desktop: 80 },
   },
   {
     id: 'spotify',
@@ -695,6 +703,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySpotify,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'youtube',
@@ -704,6 +714,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayYouTube,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 85, desktop: 80 },
   },
   {
     id: 'beef',
@@ -713,6 +725,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBeef,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'about',
@@ -722,6 +736,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayAboutAlex,
+    responsiveWidth: { mobile: 95, desktop: 55 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'settings',
@@ -731,6 +747,8 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySettings,
+    responsiveWidth: { mobile: 95, desktop: 60 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'files',
@@ -740,6 +758,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFileExplorer,
+    responsiveWidth: { mobile: 95, desktop: 65 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'resource-monitor',
@@ -749,6 +769,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayResourceMonitor,
+    responsiveWidth: { mobile: 95, desktop: 60 },
+    responsiveHeight: { mobile: 85, desktop: 75 },
   },
   {
     id: 'screen-recorder',
@@ -758,6 +780,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayScreenRecorder,
+    responsiveWidth: { mobile: 90, desktop: 50 },
+    responsiveHeight: { mobile: 75, desktop: 55 },
   },
   {
     id: 'ettercap',
@@ -767,6 +791,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayEttercap,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'ble-sensor',
@@ -776,6 +802,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBleSensor,
+    responsiveWidth: { mobile: 95, desktop: 55 },
+    responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
     id: 'metasploit',
@@ -785,6 +813,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMetasploit,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'wireshark',
@@ -794,6 +824,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayWireshark,
+    responsiveWidth: { mobile: 95, desktop: 80 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'todoist',
@@ -803,6 +835,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTodoist,
+    responsiveWidth: { mobile: 95, desktop: 50 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'sticky_notes',
@@ -812,6 +846,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayStickyNotes,
+    responsiveWidth: { mobile: 85, desktop: 40 },
+    responsiveHeight: { mobile: 70, desktop: 60 },
   },
   {
     id: 'trash',
@@ -821,6 +857,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTrash,
+    responsiveWidth: { mobile: 90, desktop: 50 },
+    responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
     id: 'gedit',
@@ -830,6 +868,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayGedit,
+    responsiveWidth: { mobile: 95, desktop: 55 },
+    responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
     id: 'converter',
@@ -839,6 +879,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayConverter,
+    responsiveWidth: { mobile: 85, desktop: 35 },
+    responsiveHeight: { mobile: 70, desktop: 55 },
   },
   {
     id: 'kismet',
@@ -848,6 +890,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayKismet,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'nikto',
@@ -857,6 +901,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNikto,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'autopsy',
@@ -866,6 +912,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayAutopsy,
+    responsiveWidth: { mobile: 95, desktop: 80 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'plugin-manager',
@@ -875,6 +923,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayPluginManager,
+    responsiveWidth: { mobile: 95, desktop: 55 },
+    responsiveHeight: { mobile: 85, desktop: 75 },
   },
   {
     id: 'reaver',
@@ -884,6 +934,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayReaver,
+    responsiveWidth: { mobile: 95, desktop: 65 },
+    responsiveHeight: { mobile: 85, desktop: 75 },
   },
   {
     id: 'nessus',
@@ -893,6 +945,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayNessus,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'ghidra',
@@ -902,6 +956,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayGhidra,
+    responsiveWidth: { mobile: 95, desktop: 85 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'mimikatz',
@@ -911,6 +967,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMimikatz,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'mimikatz/offline',
@@ -920,6 +978,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMimikatzOffline,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'ssh',
@@ -929,6 +989,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySSH,
+    responsiveWidth: { mobile: 95, desktop: 55 },
+    responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
     id: 'http',
@@ -938,6 +1000,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHTTP,
+    responsiveWidth: { mobile: 95, desktop: 60 },
+    responsiveHeight: { mobile: 85, desktop: 75 },
   },
   {
     id: 'html-rewriter',
@@ -947,6 +1011,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHtmlRewrite,
+    responsiveWidth: { mobile: 95, desktop: 65 },
+    responsiveHeight: { mobile: 85, desktop: 75 },
   },
   {
     id: 'contact',
@@ -956,6 +1022,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayContact,
+    responsiveWidth: { mobile: 95, desktop: 50 },
+    responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
     id: 'hydra',
@@ -965,6 +1033,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHydra,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'nmap-nse',
@@ -974,6 +1044,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayNmapNSE,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'weather',
@@ -983,6 +1055,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayWeather,
+    responsiveWidth: { mobile: 90, desktop: 45 },
+    responsiveHeight: { mobile: 80, desktop: 65 },
   },
   {
     id: 'weather-widget',
@@ -992,6 +1066,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayWeatherWidget,
+    responsiveWidth: { mobile: 85, desktop: 35 },
+    responsiveHeight: { mobile: 70, desktop: 50 },
   },
   {
     id: 'serial-terminal',
@@ -1001,6 +1077,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySerialTerminal,
+    responsiveWidth: { mobile: 95, desktop: 65 },
+    responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
     id: 'radare2',
@@ -1010,6 +1088,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayRadare2,
+    responsiveWidth: { mobile: 95, desktop: 80 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'volatility',
@@ -1019,6 +1099,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayVolatility,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'hashcat',
@@ -1028,6 +1110,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHashcat,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'msf-post',
@@ -1037,6 +1121,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMsfPost,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'evidence-vault',
@@ -1046,6 +1132,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayEvidenceVault,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'dsniff',
@@ -1055,6 +1143,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayDsniff,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'john',
@@ -1064,6 +1154,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayJohn,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'openvas',
@@ -1073,6 +1165,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayOpenVAS,
+    responsiveWidth: { mobile: 95, desktop: 75 },
+    responsiveHeight: { mobile: 90, desktop: 85 },
   },
   {
     id: 'recon-ng',
@@ -1082,6 +1176,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayReconNG,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   {
     id: 'security-tools',
@@ -1091,6 +1187,8 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySecurityTools,
+    responsiveWidth: { mobile: 95, desktop: 70 },
+    responsiveHeight: { mobile: 90, desktop: 80 },
   },
   // Utilities are grouped separately
   ...utilities,

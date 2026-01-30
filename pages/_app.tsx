@@ -69,7 +69,7 @@ const resolveServiceWorkerPath = (): string => {
   );
 };
 
-interface MyAppProps extends AppProps {}
+interface MyAppProps extends AppProps { }
 
 type AnalyticsEventWithMetadata = BeforeSendEvent & {
   metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
@@ -133,10 +133,8 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
             console.warn('Dev cache cleanup failed', err);
           }
 
-          // If this page was controlled by an old SW, we need one reload to fully drop control.
-          if (navigator.serviceWorker.controller) {
-            window.location.reload();
-          }
+          // Service worker has been unregistered, no need to reload
+          // The controller will naturally be released on next navigation
         };
 
         void cleanup();

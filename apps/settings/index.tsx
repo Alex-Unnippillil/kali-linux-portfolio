@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ReactNode } from "react";
+import { useState, useRef, ReactNode, useEffect } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import SystemInfo from "./components/SystemInfo";
@@ -11,139 +11,155 @@ import {
   importSettings as importSettingsData,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
-import Tabs from "../../components/Tabs";
 import ToggleSwitch from "../../components/ToggleSwitch";
 import KaliWallpaper from "../../components/util-components/kali-wallpaper";
+import usePersistentState from "../../hooks/usePersistentState";
 
-type SectionProps = {
-  title: string;
+// Icons --------------------------------------------------------
+
+const Icons = {
+  appearance: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+    </svg>
+  ),
+  accessibility: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v8" />
+      <path d="M8 12h8" />
+    </svg>
+  ),
+  privacy: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </svg>
+  ),
+  system: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4" />
+      <path d="M12 8h.01" />
+    </svg>
+  ),
+  menu: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  ),
+  close: (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+  )
+};
+
+// Components ---------------------------------------------------
+
+type CardProps = {
+  title?: string;
   description?: string;
   children: ReactNode;
   className?: string;
 };
 
-const Section = ({ title, description, children, className }: SectionProps) => (
-  <section
-    className={`rounded-2xl border border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/80 shadow-kali-panel backdrop-blur-sm ${className ?? ""
-      }`}
-  >
-    <header className="border-b border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/90 px-5 py-4">
-      <h2 className="text-[0.7rem] font-semibold uppercase tracking-[0.3em] text-[var(--color-text)]/70">
-        {title}
-      </h2>
-      {description && (
-        <p className="mt-2 text-xs leading-relaxed text-[var(--color-text)]/70">
-          {description}
-        </p>
-      )}
-    </header>
-    <div className="divide-y divide-[var(--kali-panel-border)]/80">{children}</div>
-  </section>
+const Card = ({ title, description, children, className }: CardProps) => (
+  <div className={`group relative overflow-hidden rounded-2xl border border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/40 backdrop-blur-md transition-all hover:bg-[var(--kali-panel)]/60 hover:shadow-lg ${className ?? ""}`}>
+    {title && (
+      <div className="px-6 py-5 border-b border-[var(--kali-panel-border)]/50">
+        <h3 className="text-base font-medium text-[var(--color-text)]">{title}</h3>
+        {description && <p className="mt-1 text-sm text-[var(--color-text)]/60">{description}</p>}
+      </div>
+    )}
+    <div className="p-6">{children}</div>
+  </div>
 );
 
 type SettingRowProps = {
   label: string;
-  labelFor?: string;
   children: ReactNode;
-  helperText?: string;
-  align?: "start" | "end" | "between";
+  description?: string;
+  className?: string;
 };
 
-const SettingRow = ({ label, labelFor, children, helperText, align = "start" }: SettingRowProps) => {
-  const alignmentClass =
-    align === "between"
-      ? "md:justify-between"
-      : align === "end"
-        ? "md:justify-end"
-        : "md:justify-start";
+const SettingRow = ({ label, children, description, className = "" }: SettingRowProps) => (
+  <div className={`flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-2 ${className}`}>
+    <div className="flex-1 pr-4">
+      <div className="text-sm font-medium text-[var(--color-text)]">{label}</div>
+      {description && <div className="mt-0.5 text-xs text-[var(--color-text)]/50">{description}</div>}
+    </div>
+    <div className="flex-shrink-0">{children}</div>
+  </div>
+);
 
-  return (
-    <div className="px-5 py-3">
-      <div className="flex flex-col gap-3 md:grid md:grid-cols-[220px_minmax(0,1fr)] md:items-center md:gap-6">
-        <div className="flex flex-col gap-1">
-          {labelFor ? (
-            <label
-              htmlFor={labelFor}
-              className="text-sm font-semibold text-[var(--color-text)]/80"
-            >
-              {label}
-            </label>
-          ) : (
-            <span className="text-sm font-semibold text-[var(--color-text)]/80">{label}</span>
-          )}
-          {helperText && (
-            <p className="text-xs leading-relaxed text-[var(--color-text)]/65">{helperText}</p>
-          )}
-        </div>
-        <div
-          className={`flex flex-wrap items-center gap-3 ${alignmentClass}`}
-        >
-          {children}
-        </div>
+const ThemeCard = ({ active, theme, onClick }: { active: boolean, theme: string, onClick: () => void }) => (
+  <button
+    onClick={onClick}
+    className={`flex flex-col items-center gap-3 p-4 rounded-xl border transition-all duration-200 ${active
+      ? "border-[var(--kali-control)] bg-[var(--kali-control)]/10 ring-1 ring-[var(--kali-control)]"
+      : "border-[var(--kali-panel-border)] hover:border-[var(--kali-control)]/50 hover:bg-[var(--kali-panel-border)]/20"
+      }`}
+  >
+    <div className={`h-20 w-full rounded-lg shadow-sm ${theme === 'dark' ? 'bg-neutral-900 border border-neutral-800' :
+      theme === 'neon' ? 'bg-black border border-fuchsia-500/50 shadow-[0_0_15px_rgba(217,70,239,0.2)]' :
+        theme === 'matrix' ? 'bg-black border border-green-500/50' :
+          'bg-neutral-100 border border-neutral-200'
+      }`}>
+      {/* Mini UI Representation */}
+      <div className="p-2 space-y-1.5 opacity-60">
+        <div className={`h-2 w-1/3 rounded-full ${theme === 'default' ? 'bg-neutral-300' : 'bg-white/20'}`} />
+        <div className={`h-1.5 w-full rounded-full ${theme === 'default' ? 'bg-neutral-200' : 'bg-white/10'}`} />
+        <div className={`h-1.5 w-2/3 rounded-full ${theme === 'default' ? 'bg-neutral-200' : 'bg-white/10'}`} />
       </div>
     </div>
-  );
-};
+    <span className="text-xs font-medium capitalize text-[var(--color-text)]">{theme}</span>
+  </button>
+);
+
+// Main Component -----------------------------------------------
 
 export default function Settings() {
   const {
-    accent,
-    setAccent,
-    wallpaper,
-    setWallpaper,
-    useKaliWallpaper,
-    setUseKaliWallpaper,
-    density,
-    setDensity,
-    reducedMotion,
-    setReducedMotion,
-    fontScale,
-    setFontScale,
-    highContrast,
-    setHighContrast,
-    largeHitAreas,
-    setLargeHitAreas,
-    pongSpin,
-    setPongSpin,
-    allowNetwork,
-    setAllowNetwork,
-    haptics,
-    setHaptics,
-    theme,
-    setTheme,
+    accent, setAccent,
+    wallpaper, setWallpaper,
+    useKaliWallpaper, setUseKaliWallpaper,
+    // density, setDensity, // Unused in new UI but kept in store
+    reducedMotion, setReducedMotion,
+    fontScale, setFontScale,
+    highContrast, setHighContrast,
+    largeHitAreas, setLargeHitAreas,
+    // pongSpin, setPongSpin, // Specific game setting, maybe hide
+    allowNetwork, setAllowNetwork,
+    haptics, setHaptics,
+    theme, setTheme,
   } = useSettings();
+
+  const [dndEnabled, setDndEnabled] = usePersistentState('cc-dnd-enabled', false);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeTab, setActiveTab] = useState<"appearance" | "accessibility" | "privacy" | "system">("appearance");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showKeymap, setShowKeymap] = useState(false);
 
-  const tabs = [
-    { id: "appearance", label: "Appearance", icon: "paint-brush" },
-    { id: "accessibility", label: "Accessibility", icon: "universal-access" },
-    { id: "privacy", label: "Privacy", icon: "shield" },
-    { id: "system", label: "System Info", icon: "circle-info" },
-  ] as const;
-  type TabId = (typeof tabs)[number]["id"];
-  const [activeTab, setActiveTab] = useState<TabId>("appearance");
+  // Simulated Volume/Brightness state for "Quick Actions"
+  const [volume, setVolume] = useState(75);
+  const [brightness, setBrightness] = useState(100);
 
-  const wallpapers = [
-    "wall-1",
-    "wall-2",
-    "wall-3",
-    "wall-4",
-    "wall-5",
-    "wall-6",
-    "wall-7",
-    "wall-8",
-  ];
-
-  const changeBackground = (name: string) => setWallpaper(name);
+  const wallpapers = ["wall-1", "wall-2", "wall-3", "wall-4", "wall-5", "wall-6", "wall-7", "wall-8"];
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
+  const changeBackground = (name: string) => setWallpaper(name);
 
+  // Import/Export Handlers
   const handleExport = async () => {
     const data = await exportSettingsData();
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "settings.json";
+    a.download = "settings-backup.json";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -153,65 +169,64 @@ export default function Settings() {
     await importSettingsData(text);
     try {
       const parsed = JSON.parse(text);
+      if (parsed.theme) setTheme(parsed.theme);
       if (parsed.accent !== undefined) setAccent(parsed.accent);
       if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.density !== undefined) setDensity(parsed.density);
-      if (parsed.reducedMotion !== undefined)
-        setReducedMotion(parsed.reducedMotion);
+      if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
       if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined)
-        setHighContrast(parsed.highContrast);
-      if (parsed.theme !== undefined) setTheme(parsed.theme);
-    } catch (err) {
-      console.error("Invalid settings", err);
-    }
+      if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+    } catch (e) { console.error("Import failed", e); }
   };
 
   const handleReset = async () => {
-    if (
-      !window.confirm(
-        "Reset desktop to default settings? This will clear all saved data."
-      )
-    )
-      return;
+    if (!window.confirm("Reset all settings to default?")) return;
     await resetSettings();
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
-    setDensity(defaults.density as any);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
     setTheme("default");
   };
 
-  const [showKeymap, setShowKeymap] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Icon mapping helper (using simple unicode/css or you can import icons if available. 
-  // For now using simple text/ascii or existing pattern. detailed polish next step)
-  const getIcon = (iconName: string) => {
-    // Placeholder for actual icons, potentially using Lucide or FontAwesome later if available
-    return null;
-  }
+  const tabs = [
+    { id: "appearance", label: "Appearance", icon: Icons.appearance },
+    { id: "accessibility", label: "Accessibility", icon: Icons.accessibility },
+    { id: "privacy", label: "Privacy", icon: Icons.privacy },
+    { id: "system", label: "System", icon: Icons.system },
+  ] as const;
 
   return (
-    <div className="windowMainScreen z-20 flex h-full w-full select-none overflow-hidden bg-[var(--kali-panel)] text-[var(--color-text)] font-sans">
-      {/* Mobile Overlay */}
+    <div className="flex h-full w-full bg-[var(--kali-bg-solid)] text-[var(--color-text)] font-sans overflow-hidden selection:bg-[var(--kali-control)] selection:text-white">
+      {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/50 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden animate-in fade-in duration-200"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 flex-col border-r border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/95 backdrop-blur-xl transition-transform duration-300 md:relative md:translate-x-0 ${mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}>
-        <div className="p-6">
-          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text)]">Settings</h1>
-          <p className="text-xs text-[var(--color-text)]/60 mt-1">Kali Linux Portfolio</p>
+      {/* Sidebar Navigation */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-72 flex-col bg-[var(--kali-panel)]/95 backdrop-blur-xl border-r border-[var(--kali-panel-border)]
+        transform transition-transform duration-300 ease-out md:relative md:translate-x-0
+        ${mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}
+      `}>
+        <div className="flex items-center justify-between p-6">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Settings</h1>
+            <p className="text-xs text-white/50 mt-1">Kali Portfolio</p>
+          </div>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="rounded-full p-2 hover:bg-white/10 md:hidden"
+          >
+            {Icons.close}
+          </button>
         </div>
-        <nav className="flex-1 space-y-1 px-3">
+
+        <nav className="flex-1 px-4 space-y-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -219,377 +234,285 @@ export default function Settings() {
                 setActiveTab(tab.id);
                 setMobileMenuOpen(false);
               }}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 ${activeTab === tab.id
-                ? "bg-[var(--kali-control)] text-[var(--kali-bg)] shadow-md"
-                : "text-[var(--color-text)]/80 hover:bg-[var(--kali-panel-border)]/50 hover:text-[var(--color-text)]"
-                }`}
+              className={`
+                group flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200
+                ${activeTab === tab.id
+                  ? "bg-[var(--kali-control)] text-white shadow-lg shadow-[var(--kali-control)]/20"
+                  : "text-white/70 hover:bg-white/5 hover:text-white"
+                }
+              `}
             >
-              <span className="capitalize">{tab.label}</span>
+              <div className={`${activeTab === tab.id ? "opacity-100" : "opacity-70 group-hover:opacity-100"}`}>
+                {tab.icon}
+              </div>
+              {tab.label}
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t border-[var(--kali-panel-border)]">
-          <div className="text-[10px] text-center opacity-40">
-            v2024.1.0-release
+
+        <div className="p-6">
+          <div className="rounded-xl bg-gradient-to-br from-[var(--kali-control)]/20 to-transparent p-4 border border-[var(--kali-control)]/20">
+            <p className="text-xs font-medium text-[var(--kali-control)]">Tips</p>
+            <p className="mt-1 text-xs text-white/70">Press <kbd className="font-mono bg-white/10 rounded px-1">Alt</kbd> + <kbd className="font-mono bg-white/10 rounded px-1">F4</kbd> to close windows quickly.</p>
           </div>
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto scroll-smooth p-8 bg-[var(--kali-bg)]/30">
-        <div className="mx-auto max-w-4xl space-y-8 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <header className="mb-6 flex items-center gap-4">
-            <button
-              onClick={() => setMobileMenuOpen(true)}
-              className="rounded-md p-2 text-[var(--color-text)] hover:bg-[var(--kali-panel-border)] md:hidden"
-              aria-label="Toggle navigation menu"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-            </button>
-            <div>
-              <h2 className="text-2xl font-semibold text-[var(--color-text)]">
-                {tabs.find(t => t.id === activeTab)?.label}
-              </h2>
-              <p className="text-sm text-[var(--color-text)]/60">
-                Manage your {activeTab} preferences
-              </p>
-            </div>
-          </header>
+      {/* Main Content */}
+      <main className="flex-1 h-full overflow-hidden flex flex-col relative bg-[var(--kali-bg)]/30">
 
-          {activeTab === "appearance" && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <Section
-                title="Preview"
-                description="Check how your desktop updates as you tweak the appearance controls."
-              >
-                <div className="px-5 py-6">
-                  <div className="relative mx-auto h-48 w-full max-w-lg overflow-hidden rounded-xl border border-[var(--kali-panel-border)]/80 shadow-2xl transition-all hover:scale-[1.01]">
-                    {useKaliWallpaper ? (
-                      <KaliWallpaper />
-                    ) : (
-                      <div
-                        className="absolute inset-0 bg-cover bg-center transition-all duration-500"
-                        style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
-                        aria-hidden="true"
-                      />
+        {/* Header (Mobile Only) */}
+        <div className="md:hidden flex items-center p-4 border-b border-white/10 bg-[var(--kali-panel)]/50 backdrop-blur-md">
+          <button onClick={() => setMobileMenuOpen(true)} className="p-2 -ml-2 rounded-lg hover:bg-white/10">
+            {Icons.menu}
+          </button>
+          <span className="ml-3 font-semibold text-lg">{tabs.find(t => t.id === activeTab)?.label}</span>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
+          <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+            {activeTab === "appearance" && (
+              <>
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Theme Selector */}
+                  <Card title="Theme" className="lg:col-span-2">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {['default', 'dark', 'neon', 'matrix'].map((t) => (
+                        <ThemeCard
+                          key={t}
+                          theme={t}
+                          active={theme === t}
+                          onClick={() => setTheme(t)}
+                        />
+                      ))}
+                    </div>
+                  </Card>
+
+                  {/* Quick Actions (Simulated) */}
+                  <Card title="Quick Adjustments">
+                    <div className="space-y-6">
+                      <SettingRow label="Brightness" description="Adjust display brightness">
+                        <input
+                          type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
+                          className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                        />
+                      </SettingRow>
+                      <SettingRow label="System Volume" description="Main output volume">
+                        <input
+                          type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
+                          className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                        />
+                      </SettingRow>
+                    </div>
+                  </Card>
+
+                  {/* Accent Color */}
+                  <Card title="Accent Color">
+                    <div className="flex flex-wrap gap-4 justify-center py-2">
+                      {ACCENT_OPTIONS.map((c) => (
+                        <button
+                          key={c}
+                          onClick={() => setAccent(c)}
+                          className={`
+                            h-10 w-10 rounded-full border-2 transition-all duration-300 transform hover:scale-110
+                            ${accent === c
+                              ? "border-white shadow-[0_0_0_4px_rgba(255,255,255,0.1)] scale-110"
+                              : "border-transparent opacity-80 hover:opacity-100"
+                            }
+                          `}
+                          style={{ backgroundColor: c }}
+                          aria-label={`Set accent color to ${c}`}
+                        />
+                      ))}
+                    </div>
+                  </Card>
+                </section>
+
+                {/* Wallpaper */}
+                <Card title="Wallpaper & Background">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                      <div>
+                        <span className="font-medium text-sm">Kali Gradient Overlay</span>
+                        <p className="text-xs text-white/50 mt-0.5">Use the signature Kali Linux gradient background</p>
+                      </div>
+                      <ToggleSwitch checked={useKaliWallpaper} onChange={setUseKaliWallpaper} ariaLabel="Toggle Gradient" />
+                    </div>
+
+                    {!useKaliWallpaper && (
+                      <div className="space-y-4">
+                        <div className="h-48 w-full rounded-xl overflow-hidden border border-white/10 shadow-2xl relative">
+                          <div
+                            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+                            style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
+                          />
+                          <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-lg border border-white/10 flex items-center gap-3">
+                            <span className="text-xs font-mono opacity-70">Current: {wallpaper}</span>
+                            <input
+                              type="range" min="0" max={wallpapers.length - 1} step="1" value={wallpaperIndex}
+                              onChange={(e) => changeBackground(wallpapers[parseInt(e.target.value, 10)])}
+                              className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
+                          {wallpapers.map((name) => (
+                            <button
+                              key={name}
+                              onClick={() => changeBackground(name)}
+                              className={`
+                                relative aspect-video rounded-lg overflow-hidden border-2 transition-all
+                                ${name === wallpaper ? "border-[var(--kali-control)] opacity-100 ring-2 ring-[var(--kali-control)]/30" : "border-transparent opacity-60 hover:opacity-100"}
+                              `}
+                            >
+                              <img src={`/wallpapers/${name}.webp`} className="h-full w-full object-cover" alt={name} />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     )}
+                    <div className="pt-4 border-t border-white/5">
+                      <p className="mb-3 text-sm font-medium">Slideshow</p>
+                      <BackgroundSlideshow />
+                    </div>
                   </div>
-                </div>
-              </Section>
+                </Card>
+              </>
+            )}
 
-              <Section
-                title="Theme & Colors"
-                description="Choose colors and density that match your workflow."
-              >
-                <SettingRow label="Theme">
-                  <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="rounded-lg border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-3 py-2 text-sm text-[var(--color-text)] focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/50"
-                  >
-                    <option value="default">Default</option>
-                    <option value="dark">Dark</option>
-                    <option value="neon">Neon</option>
-                    <option value="matrix">Matrix</option>
-                  </select>
-                </SettingRow>
-
-                <SettingRow label="Accent Color">
-                  <div
-                    aria-label="Accent color picker"
-                    role="radiogroup"
-                    className="flex flex-wrap gap-3"
-                  >
-                    {ACCENT_OPTIONS.map((c) => (
-                      <button
-                        key={c}
-                        aria-label={`select-accent-${c}`}
-                        role="radio"
-                        aria-checked={accent === c}
-                        onClick={() => setAccent(c)}
-                        className={`h-8 w-8 rounded-full border-2 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 ${accent === c
-                          ? "border-kali-control shadow-[0_0_0_3px_rgba(var(--kali-control-rgb),0.35)] scale-110"
-                          : "border-transparent hover:scale-110 hover:shadow-lg"
-                          }`}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
+            {activeTab === "accessibility" && (
+              <div className="space-y-6">
+                <Card title="Display & Legibility">
+                  <div className="space-y-6">
+                    <SettingRow label="Interface Zoom" description="Adjust the scale of UI elements">
+                      <div className="flex items-center gap-3 w-48">
+                        <span className="text-xs opacity-50">A</span>
+                        <input
+                          type="range" min="0.75" max="1.5" step="0.05"
+                          value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                          className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                        />
+                        <span className="text-lg opacity-80 font-bold">A</span>
+                      </div>
+                    </SettingRow>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-sm font-medium">Reduced Motion</span>
+                        <ToggleSwitch checked={reducedMotion} onChange={setReducedMotion} ariaLabel="Reduced Motion" />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-sm font-medium">High Contrast</span>
+                        <ToggleSwitch checked={highContrast} onChange={setHighContrast} ariaLabel="High Contrast" />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <span className="text-sm font-medium">Large Hit Areas</span>
+                        <ToggleSwitch checked={largeHitAreas} onChange={setLargeHitAreas} ariaLabel="Large Hit Areas" />
+                      </div>
+                    </div>
                   </div>
-                </SettingRow>
+                </Card>
 
-                <SettingRow
-                  label="Interface Density"
-                  helperText="Compact mode tightens window padding for smaller displays or multitasking."
-                >
-                  <div className="flex rounded-lg bg-[var(--kali-panel-border)]/30 p-1">
-                    {['regular', 'compact'].map((opt) => (
-                      <button
-                        key={opt}
-                        onClick={() => setDensity(opt as any)}
-                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${density === opt
-                          ? "bg-[var(--kali-control)] text-[var(--kali-bg)] shadow-sm"
-                          : "text-[var(--color-text)]/70 hover:text-[var(--color-text)]"
-                          }`}
-                      >
-                        {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                      </button>
-                    ))}
+                <Card title="Input & Feedback">
+                  <SettingRow label="Haptic Feedback" description="Vibration on supported devices">
+                    <ToggleSwitch checked={haptics} onChange={setHaptics} ariaLabel="Haptics" />
+                  </SettingRow>
+                  <div className="h-px bg-white/5 my-2" />
+                  <SettingRow label="Keymap Helper" description="Show keyboard shortcuts overlay">
+                    <button
+                      onClick={() => setShowKeymap(true)}
+                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors border border-white/5"
+                    >
+                      Show Shortcuts
+                    </button>
+                  </SettingRow>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === "privacy" && (
+              <div className="space-y-6">
+                <Card title="Data & Synchronization">
+                  <div className="p-4 rounded-xl bg-gradient-to-r from-[var(--kali-control)]/10 to-transparent border border-[var(--kali-control)]/20 mb-6 flex items-start gap-4">
+                    <div className="p-2 bg-[var(--kali-control)]/20 rounded-full text-[var(--kali-control)]">
+                      {Icons.privacy}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Local Storage Only</h4>
+                      <p className="text-xs opacity-70 mt-1 max-w-md">Your settings are saved directly to your browser's local storage. No data is sent to external servers unless you explicitly enable network requests.</p>
+                    </div>
                   </div>
-                </SettingRow>
-              </Section>
 
-              <Section
-                title="Wallpaper"
-                description="Pick a static wallpaper or let the Kali gradient take over."
-              >
-                <SettingRow
-                  label="Kali Gradient"
-                  helperText="Your previous wallpaper is saved when the gradient is active."
-                >
-                  <label className="inline-flex cursor-pointer items-center gap-3 text-sm text-[var(--color-text)]/80">
-                    <input
-                      type="checkbox"
-                      checked={useKaliWallpaper}
-                      onChange={(e) => setUseKaliWallpaper(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-600 bg-transparent text-[var(--kali-control)] focus:ring-[var(--kali-control)]/50"
-                      aria-label="Enable gradient wallpaper"
-                    />
-                    Enable gradient wallpaper
-                  </label>
-                </SettingRow>
+                  <SettingRow label="Allow Network Requests" description="Permit specific apps to fetch external data">
+                    <ToggleSwitch checked={allowNetwork} onChange={setAllowNetwork} ariaLabel="Network" />
+                  </SettingRow>
+                </Card>
 
-                <SettingRow label="Wallpaper" labelFor="wallpaper-slider">
-                  <input
-                    id="wallpaper-slider"
-                    type="range"
-                    min="0"
-                    max={wallpapers.length - 1}
-                    step="1"
-                    value={wallpaperIndex}
-                    onChange={(e) =>
-                      changeBackground(wallpapers[parseInt(e.target.value, 10)])
-                    }
-                    className="kali-slider flex-1 cursor-pointer"
-                    aria-label="Wallpaper"
-                  />
-                </SettingRow>
-
-                <SettingRow
-                  label="Background Slideshow"
-                  helperText="Launch a relaxing wallpaper loop directly from the desktop."
-                >
-                  <BackgroundSlideshow />
-                </SettingRow>
-              </Section>
-
-              <Section title="Gallery">
-                <div className="grid grid-cols-2 gap-4 px-5 py-4 md:grid-cols-4">
-                  {wallpapers.map((name) => (
-                    <div
-                      key={name}
-                      role="button"
-                      aria-label={`Select ${name.replace("wall-", "wallpaper ")}`}
-                      aria-pressed={name === wallpaper}
-                      tabIndex={0}
-                      onClick={() => changeBackground(name)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          changeBackground(name);
-                        }
-                      }}
-                      className={`group relative flex h-24 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 transition-all duration-200 focus-visible:scale-[1.02] focus-visible:border-kali-control ${name === wallpaper
-                        ? "border-kali-control ring-2 ring-kali-control/30 scale-[1.02]"
-                        : "border-transparent opacity-70 hover:opacity-100 hover:scale-[1.02]"
-                        }`}
-                      style={{
-                        backgroundImage: `url(/wallpapers/${name}.webp)`,
-                        backgroundSize: "cover",
-                        backgroundRepeat: "no-repeat",
-                        backgroundPosition: "center center",
-                      }}
-                    />
-                  ))}
-                </div>
-              </Section>
-
-              <Section title="Desktop Actions">
-                <SettingRow
-                  label="Reset Preferences"
-                  helperText="Restore the default wallpaper, theme, and layout preferences."
-                  align="end"
-                >
-                  <button
-                    onClick={handleReset}
-                    className="inline-flex items-center justify-center rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 shadow-sm transition-all hover:bg-red-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500/50"
-                  >
-                    Reset Desktop
-                  </button>
-                </SettingRow>
-              </Section>
-            </div>
-          )}
-
-          {activeTab === "accessibility" && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <Section
-                title="Display"
-                description="Tune how icons and motion behave across the desktop."
-              >
-                <SettingRow label="Icon Size" labelFor="font-scale">
-                  <div className="flex items-center gap-4 flex-1">
-                    <span className="text-xs text-[var(--color-text)]/50">Small</span>
-                    <input
-                      id="font-scale"
-                      type="range"
-                      min="0.75"
-                      max="1.5"
-                      step="0.05"
-                      value={fontScale}
-                      onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                      className="kali-slider flex-1 cursor-pointer"
-                      aria-label="Icon size"
-                    />
-                    <span className="text-xs text-[var(--color-text)]/50">Large</span>
-                  </div>
-                </SettingRow>
-
-                <SettingRow label="Reduced Motion" helperText="Minimizes animations for sensitive users.">
-                  <ToggleSwitch
-                    checked={reducedMotion}
-                    onChange={setReducedMotion}
-                    ariaLabel="Reduced Motion"
-                  />
-                </SettingRow>
-
-                <SettingRow label="High Contrast" helperText="Boosts contrast for legibility across windows.">
-                  <ToggleSwitch
-                    checked={highContrast}
-                    onChange={setHighContrast}
-                    ariaLabel="High Contrast"
-                  />
-                </SettingRow>
-
-                <SettingRow
-                  label="Large Hit Areas"
-                  helperText="Expands clickable regions for easier navigation."
-                >
-                  <ToggleSwitch
-                    checked={largeHitAreas}
-                    onChange={setLargeHitAreas}
-                    ariaLabel="Large Hit Areas"
-                  />
-                </SettingRow>
-              </Section>
-
-              <Section
-                title="Interaction"
-                description="Fine-tune feedback when interacting with windows and apps."
-              >
-                <SettingRow
-                  label="Haptics"
-                  helperText="Toggle click feedback for supported devices."
-                >
-                  <ToggleSwitch
-                    checked={haptics}
-                    onChange={setHaptics}
-                    ariaLabel="Haptics"
-                  />
-                </SettingRow>
-
-                <SettingRow
-                  label="Pong Spin"
-                  helperText="Enable spin physics in the Pong simulation for advanced rallies."
-                >
-                  <ToggleSwitch
-                    checked={pongSpin}
-                    onChange={setPongSpin}
-                    ariaLabel="Pong Spin"
-                  />
-                </SettingRow>
-              </Section>
-
-              <Section
-                title="Keyboard Shortcuts"
-                description="Customize or review the desktop keymap."
-              >
-                <SettingRow
-                  label="Keymap Overlay"
-                  helperText="Quickly open the overlay to remap or review shortcuts."
-                  align="end"
-                >
-                  <button
-                    onClick={() => setShowKeymap(true)}
-                    className="rounded-lg bg-[var(--kali-control)] px-4 py-2 text-sm font-semibold text-[var(--kali-bg)] shadow-md transition-transform hover:scale-105 active:scale-95"
-                  >
-                    Edit Shortcuts
-                  </button>
-                </SettingRow>
-              </Section>
-            </div>
-          )}
-
-          {activeTab === "privacy" && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
-              <Section title="Data Management">
-                <SettingRow
-                  label="Backup Settings"
-                  helperText="Export a backup of your settings or import one you saved earlier."
-                  align="end"
-                >
-                  <div className="flex flex-col gap-3 md:flex-row">
+                <Card title="Backup & Restore">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     <button
                       onClick={handleExport}
-                      className="flex items-center justify-center gap-2 rounded-lg border border-[var(--kali-panel-border)] bg-[var(--kali-panel)] px-4 py-2 text-sm font-semibold text-[var(--color-text)] transition-colors hover:bg-[var(--kali-panel-border)]"
+                      className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                     >
-                      Export
+                      Export Settings JSON
                     </button>
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center justify-center gap-2 rounded-lg bg-[var(--kali-control)] px-4 py-2 text-sm font-semibold text-[var(--kali-bg)] shadow-sm hover:opacity-90"
+                      className="flex-1 py-3 px-4 rounded-xl bg-[var(--kali-control)]/80 hover:bg-[var(--kali-control)] text-white transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-[var(--kali-control)]/20"
                     >
-                      Import
+                      Import Settings JSON
                     </button>
                   </div>
-                </SettingRow>
-              </Section>
-
-              <Section
-                title="Connectivity"
-                description="Control which external resources the desktop may contact."
-              >
-                <SettingRow
-                  label="External Requests"
-                  helperText="Block outbound network calls while keeping local functionality intact."
-                >
-                  <ToggleSwitch
-                    checked={allowNetwork}
-                    onChange={setAllowNetwork}
-                    ariaLabel="Allow Network Requests"
+                  <input
+                    type="file"
+                    accept="application/json"
+                    ref={fileInputRef}
+                    onChange={(e) => {
+                      const file = e.target.files && e.target.files[0];
+                      if (file) handleImport(file);
+                      e.target.value = "";
+                    }}
+                    className="hidden"
                   />
-                </SettingRow>
-              </Section>
-            </div>
-          )}
+                </Card>
 
-          {activeTab === "system" && (
-            <SystemInfo />
-          )}
+                <div className="flex justify-end pt-4">
+                  <button
+                    onClick={handleReset}
+                    className="text-red-400 text-xs hover:text-red-300 underline underline-offset-4 decoration-red-400/30 hover:decoration-red-400 transition-all"
+                  >
+                    Reset all settings to default
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === "system" && (
+              <div className="space-y-6">
+                <Card title="Notifications & Focus">
+                  <SettingRow label="Do Not Disturb" description="Silence all notifications and badges">
+                    <ToggleSwitch checked={dndEnabled} onChange={setDndEnabled} ariaLabel="Do Not Disturb" />
+                  </SettingRow>
+                </Card>
+                <SystemInfo />
+                <Card title="Simulated Hardware">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {["CPU: 12% Util", "RAM: 4.2GB / 16GB", "Network: 1Gbps", "Storage: 45% Free"].map((stat, i) => (
+                      <div key={i} className="p-3 rounded-lg bg-black/20 border border-white/5 text-center">
+                        <div className="text-xs text-white/40 mb-1">{stat.split(":")[0]}</div>
+                        <div className="text-sm font-mono text-[var(--kali-control)]">{stat.split(":")[1]}</div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            )}
+
+          </div>
         </div>
       </main>
 
-      <input
-        type="file"
-        accept="application/json"
-        ref={fileInputRef}
-        aria-label="Import settings file"
-        onChange={(e) => {
-          const file = e.target.files && e.target.files[0];
-          if (file) handleImport(file);
-          e.target.value = "";
-        }}
-        className="hidden"
-      />
       <KeymapOverlay open={showKeymap} onClose={() => setShowKeymap(false)} />
     </div>
   );

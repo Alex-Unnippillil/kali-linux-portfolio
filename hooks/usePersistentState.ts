@@ -20,7 +20,7 @@ export default function usePersistentState<T>(
 
   // Initialize with default value to ensure server/client match
   const [state, setState] = useState<T>(getInitial);
-  const isHydrated = useRef(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     // Load from storage on mount
@@ -35,18 +35,19 @@ export default function usePersistentState<T>(
     } catch {
       // ignore parsing errors
     }
-    isHydrated.current = true;
+    setIsLoaded(true);
   }, [key]);
 
   useEffect(() => {
-    // Only write to storage after we've attempted to load from it
-    if (!isHydrated.current) return;
-    try {
-      window.localStorage.setItem(key, JSON.stringify(state));
-    } catch {
-      // ignore write errors
+    // Only write to storage after we've successfully loaded from it
+    if (isLoaded) {
+      try {
+        window.localStorage.setItem(key, JSON.stringify(state));
+      } catch {
+        // ignore write errors
+      }
     }
-  }, [key, state]);
+  }, [key, state, isLoaded]);
 
   const reset = () => setState(getInitial());
   const clear = () => {

@@ -38,8 +38,6 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
 
   // Mock Battery State
   const [batteryLevel, setBatteryLevel] = useState(100);
-  // Mock Battery State
-  const [batteryLevel, setBatteryLevel] = useState(100);
   const [isCharging, setIsCharging] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -270,7 +268,6 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         label: 'Do Not Disturb',
         description: 'Silence notifications.',
         value: focusMode,
-        value: focusMode,
         onToggle: () => {
           const newState = !focusMode;
           setFocusMode(newState);
@@ -283,7 +280,6 @@ const QuickSettings = ({ open, id = 'quick-settings-panel' }: Props) => {
         id: 'qs-night-light',
         label: 'Night Light',
         description: 'Warmer colors for eye care.',
-        value: nightLight,
         value: nightLight,
         onToggle: () => {
           const newState = !nightLight;
