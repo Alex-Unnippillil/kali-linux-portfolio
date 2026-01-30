@@ -46,6 +46,7 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>(initialFilters?.tags ?? []);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const [spotlightIndex, setSpotlightIndex] = useState(0);
 
   const readFilters = async () => {
     try {
@@ -144,6 +145,26 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
       ),
     [projects, stack, year, type, tags, search]
   );
+
+  const spotlightProjects = useMemo(
+    () => projects.slice(0, 5),
+    [projects]
+  );
+  const spotlight = spotlightProjects[spotlightIndex] ?? spotlightProjects[0];
+
+  const stats = useMemo(
+    () => ({
+      total: projects.length,
+      latestYear: projects.length ? Math.max(...projects.map((p) => p.year)) : 0,
+      stacks: new Set(projects.flatMap((p) => p.stack)).size,
+      tags: new Set(projects.flatMap((p) => p.tags)).size,
+    }),
+    [projects]
+  );
+
+  useEffect(() => {
+    setSpotlightIndex(0);
+  }, [spotlightProjects.length]);
 
   useEffect(() => {
     writeFilters({ search, stack, year, type, tags });
@@ -244,6 +265,92 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           </label>
         ))}
       </div>
+      {spotlight && (
+        <div className="mb-6 grid gap-4 md:grid-cols-[2fr_1fr]">
+          <section className="rounded-lg border border-white/10 bg-gray-900/60 p-4">
+            <div className="flex flex-col gap-4 md:flex-row">
+              <img
+                src={spotlight.thumbnail}
+                alt={spotlight.title}
+                className="h-40 w-full rounded-md object-cover md:w-56"
+              />
+              <div className="flex-1 space-y-2">
+                <p className="text-xs uppercase tracking-wide text-ubt-blue">Project spotlight</p>
+                <h2 className="text-lg font-semibold">{spotlight.title}</h2>
+                <p className="text-sm text-gray-200">{spotlight.description}</p>
+                <div className="flex flex-wrap gap-2 text-xs text-gray-300">
+                  <span>{spotlight.year}</span>
+                  <span>•</span>
+                  <span className="capitalize">{spotlight.type}</span>
+                  <span>•</span>
+                  <span>{spotlight.stack.join(', ')}</span>
+                </div>
+                <div className="flex flex-wrap gap-3 pt-2 text-sm">
+                  <a
+                    href={spotlight.repo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:underline"
+                  >
+                    View repo
+                  </a>
+                  {spotlight.demo && (
+                    <a
+                      href={spotlight.demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Live demo
+                    </a>
+                  )}
+                </div>
+                <div className="flex gap-2 pt-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSpotlightIndex(
+                        (spotlightIndex - 1 + spotlightProjects.length) % spotlightProjects.length
+                      )
+                    }
+                    className="rounded bg-gray-700 px-2 py-1"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpotlightIndex((spotlightIndex + 1) % spotlightProjects.length)}
+                    className="rounded bg-gray-700 px-2 py-1"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section className="rounded-lg border border-white/10 bg-gray-900/60 p-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-white/70">Gallery stats</h3>
+            <dl className="mt-3 space-y-3 text-sm">
+              <div className="flex items-center justify-between">
+                <dt>Total projects</dt>
+                <dd className="font-semibold text-white">{stats.total}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt>Stacks covered</dt>
+                <dd className="font-semibold text-white">{stats.stacks}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt>Highlights</dt>
+                <dd className="font-semibold text-white">{stats.tags}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt>Latest year</dt>
+                <dd className="font-semibold text-white">{stats.latestYear}</dd>
+              </div>
+            </dl>
+          </section>
+        </div>
+      )}
       {selected.length === 2 && (
         <div className="mb-4 overflow-auto">
           <table className="w-full text-sm text-left" role="table">

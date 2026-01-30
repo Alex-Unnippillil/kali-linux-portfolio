@@ -187,15 +187,80 @@ function About() {
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
+            <TerminalQA />
             <Timeline />
         </>
     )
 }
 
+function TerminalQA() {
+    const prompts = [
+        {
+            command: 'whoami',
+            response:
+                'Alex Unnippillil — cybersecurity specialist focused on network defense, automation, and hands-on learning.',
+        },
+        {
+            command: 'focus --now',
+            response:
+                'Currently sharpening threat analysis workflows, tooling automation, and cloud security fundamentals.',
+        },
+        {
+            command: 'toolbox --core',
+            response:
+                'Wireshark, Splunk, Nmap, Burp Suite, and a mix of Python + JS utilities for quick prototyping.',
+        },
+        {
+            command: 'collab --style',
+            response:
+                'People-first, curious, and persistent. I love pairing with teams to translate security needs into action.',
+        },
+        {
+            command: 'contact --email',
+            response: 'alex.unnippillil@hotmail.com',
+        },
+        {
+            command: 'help',
+            response: 'Try: whoami · focus --now · toolbox --core · collab --style · contact --email',
+        },
+    ];
+
+    const [activePrompt, setActivePrompt] = React.useState(prompts[0]);
+
+    return (
+        <section className="mt-6 w-5/6 md:w-3/4 rounded border border-gray-700 bg-ub-cool-grey/60 p-4 text-sm">
+            <div className="text-xs uppercase tracking-widest text-gray-400">Terminal Q&amp;A</div>
+            <div className="mt-3 font-mono text-xs text-green-300">
+                alex@portfolio:~$ <span className="text-white">{activePrompt.command}</span>
+            </div>
+            <div className="mt-2 rounded bg-black/40 p-3 font-mono text-sm text-gray-100">
+                {activePrompt.response}
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+                {prompts.map((prompt) => (
+                    <button
+                        key={prompt.command}
+                        onClick={() => setActivePrompt(prompt)}
+                        className={`rounded px-2 py-1 text-xs font-mono ${
+                            activePrompt.command === prompt.command
+                                ? 'bg-ubt-blue text-white'
+                                : 'bg-ub-gedit-light text-gray-100'
+                        }`}
+                    >
+                        {prompt.command}
+                    </button>
+                ))}
+            </div>
+        </section>
+    );
+}
+
 function Timeline() {
     const events = [
-        
-  
+        ...data.milestones.map((milestone) => ({
+            date: milestone.year,
+            description: milestone.description,
+        })),
     ];
 
     const [liveMessage, setLiveMessage] = React.useState('');

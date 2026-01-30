@@ -40,6 +40,7 @@ export const DEFAULT_DESKTOP_FOLDERS = [
       'figlet',
       'quote',
       'project-gallery',
+      'resume',
       'input-lab',
       'subnet-calculator',
     ],

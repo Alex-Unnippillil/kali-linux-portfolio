@@ -48,6 +48,7 @@ const CandyCrushApp = createDynamicApp(() => import('./components/apps/candy-cru
 const FileExplorerApp = createDynamicApp(() => import('./components/apps/file-explorer'), 'Files');
 const Radare2App = createDynamicApp(() => import('./components/apps/radare2'), 'Radare2');
 const AboutAlexApp = createDynamicApp(() => import('./components/apps/alex'), 'About Alex');
+const ResumeApp = createDynamicApp(() => import('./components/apps/resume'), 'Resume');
 
 const QrApp = createDynamicApp(() => import('./components/apps/qr'), 'QR Tool');
 const AsciiArtApp = createDynamicApp(() => import('./components/apps/ascii_art'), 'ASCII Art');
@@ -154,6 +155,7 @@ const displayCandyCrush = createDisplay(CandyCrushApp);
 const displayFileExplorer = createDisplay(FileExplorerApp);
 const displayRadare2 = createDisplay(Radare2App);
 const displayAboutAlex = createDisplay(AboutAlexApp);
+const displayResume = createDisplay(ResumeApp);
 
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
@@ -271,6 +273,15 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayProjectGallery,
+  },
+  {
+    id: 'resume',
+    title: 'Resume',
+    icon: '/themes/Yaru/status/download.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayResume,
   },
   {
     id: 'input-lab',
