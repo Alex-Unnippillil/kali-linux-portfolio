@@ -72,6 +72,10 @@ export const processContactForm = async (
 
 const DRAFT_FILE = 'contact-draft.json';
 const EMAIL = 'alex.unnippillil@hotmail.com';
+const CONTACT_INFO = `Name: Alex Unnippillil
+Email: ${EMAIL}
+GitHub: https://github.com/Alex-Unnippillil
+Website: https://unnippillil.com`;
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
@@ -312,6 +316,22 @@ const ContactApp: React.FC = () => {
           </button>
         </p>
       )}
+      <div className="mb-6 max-w-md">
+        <label
+          htmlFor="contact-info"
+          className="mb-2 block text-sm font-semibold text-gray-200"
+        >
+          Contact Info
+        </label>
+        <textarea
+          id="contact-info"
+          readOnly
+          rows={4}
+          value={CONTACT_INFO}
+          className="w-full resize-none rounded border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-200 shadow-inner"
+          aria-label="Contact Info"
+        />
+      </div>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
         <div className="relative">
           <input
@@ -414,4 +434,3 @@ const ContactApp: React.FC = () => {
 };
 
 export default ContactApp;
-
