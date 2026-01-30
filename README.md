@@ -154,6 +154,8 @@ playwright/           # Playwright helpers for end-to-end testing
 
 The Spotify app lets users map moods to playlists, persist preferences in OPFS, and recall the last session automatically.
 
+The X / Twitter app supports both live embeds and a Saved view that reads from local storage so timelines still render when the public API or embed script is unavailable.
+
 #### Converter units
 
 The Converter app shares a single catalog of units defined in [`components/apps/converter/units.js`](./components/apps/converter/units.js). Supported categories include:
