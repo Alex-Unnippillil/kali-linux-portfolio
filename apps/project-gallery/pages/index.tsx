@@ -348,6 +348,7 @@ export default function ProjectGalleryPage() {
   const [demoOnly, setDemoOnly] = usePersistentState<boolean>('pg-demo', false);
   const [compareSelection, setCompareSelection] = useState<Project[]>([]);
   const [activeSwipe, setActiveSwipe] = useState<number | null>(null);
+  const [spotlightIndex, setSpotlightIndex] = useState(0);
 
   useEffect(() => {
     setLoading(true);
@@ -428,6 +429,26 @@ export default function ProjectGalleryPage() {
       ),
     [projects, tech, year, type, tags, search, demoOnly]
   );
+
+  const spotlightProjects = useMemo(
+    () => projects.slice(0, 5),
+    [projects]
+  );
+  const spotlight = spotlightProjects[spotlightIndex] ?? spotlightProjects[0];
+
+  const stats = useMemo(
+    () => ({
+      total: projects.length,
+      visible: filtered.length,
+      latestYear: projects.length ? Math.max(...projects.map((p) => p.year)) : 0,
+      stacks: new Set(projects.flatMap((p) => p.stack)).size,
+    }),
+    [filtered.length, projects]
+  );
+
+  useEffect(() => {
+    setSpotlightIndex(0);
+  }, [spotlightProjects.length]);
 
   const filterSummary = useMemo<SummaryItem[]>(
     () => [
@@ -540,6 +561,82 @@ export default function ProjectGalleryPage() {
             )}
           </div>
         </div>
+        {spotlight && (
+          <section className="grid gap-4 rounded-2xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-4 shadow-kali-panel sm:p-5 lg:grid-cols-[2fr_1fr]">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <img
+                src={spotlight.thumbnail}
+                alt={spotlight.title}
+                className="h-44 w-full rounded-xl object-cover sm:w-52"
+              />
+              <div className="flex-1 space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-kali-control">Project spotlight</p>
+                <h2 className="text-lg font-semibold text-white sm:text-xl">{spotlight.title}</h2>
+                <p className="text-sm text-white/70">{spotlight.description}</p>
+                <div className="flex flex-wrap gap-2 text-xs text-white/60">
+                  <span>{spotlight.year}</span>
+                  <span>•</span>
+                  <span className="capitalize">{spotlight.type}</span>
+                  <span>•</span>
+                  <span>{spotlight.stack.join(', ')}</span>
+                </div>
+                <div className="flex flex-wrap gap-3 pt-2 text-sm">
+                  {spotlight.repo && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpen(spotlight)}
+                      className="rounded-md bg-[var(--kali-control)] px-3 py-1.5 text-sm font-semibold text-slate-900 shadow-[0_10px_30px_rgba(15,148,210,0.25)] transition hover:bg-[color-mix(in_srgb,var(--kali-control)_85%,#000000)]"
+                    >
+                      Open link
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSpotlightIndex(
+                        (spotlightIndex - 1 + spotlightProjects.length) % spotlightProjects.length
+                      )
+                    }
+                    className="rounded-md border border-[color:var(--kali-panel-border)] px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-[var(--kali-panel-highlight)]"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSpotlightIndex((spotlightIndex + 1) % spotlightProjects.length)}
+                    className="rounded-md border border-[color:var(--kali-panel-border)] px-3 py-1.5 text-xs font-semibold text-white/80 transition hover:bg-[var(--kali-panel-highlight)]"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="flex flex-col justify-between rounded-xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel-highlight)] p-4 text-sm text-white/70">
+              <p className="text-xs uppercase tracking-[0.2em] text-white/60">Gallery stats</p>
+              <div className="mt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span>Projects listed</span>
+                  <span className="font-semibold text-white">{stats.total}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Visible now</span>
+                  <span className="font-semibold text-white">{stats.visible}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Stacks covered</span>
+                  <span className="font-semibold text-white">{stats.stacks}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Latest year</span>
+                  <span className="font-semibold text-white">{stats.latestYear || '—'}</span>
+                </div>
+              </div>
+              <p className="mt-4 text-xs text-white/50">
+                Tip: use the chips below to refine by stack, tags, or project type.
+              </p>
+            </div>
+          </section>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="text"
