@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import useFileSystemNavigator from '../../hooks/useFileSystemNavigator';
 import { ensureHandlePermission } from '../../services/fileExplorer/permissions';
+import {
+  findNodeByPathIds,
+  findNodeByPathNames,
+  listDirectory,
+  loadFauxFileSystem,
+  moveEntry,
+  saveFauxFileSystem,
+  searchFiles,
+  updateFileContent,
+} from '../../services/fileExplorer/fauxFileSystem';
 import Breadcrumbs from '../ui/Breadcrumbs';
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
@@ -71,8 +81,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [fauxTree, setFauxTree] = useState(null);
+  const [fauxPathIds, setFauxPathIds] = useState(['root']);
+  const [fauxDirectories, setFauxDirectories] = useState([]);
+  const [fauxFiles, setFauxFiles] = useState([]);
+  const [fauxBreadcrumbs, setFauxBreadcrumbs] = useState([]);
+  const [dragState, setDragState] = useState(null);
   const workerRef = useRef(null);
-  const fallbackInputRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
   const {
@@ -98,6 +113,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
+  const isFauxMode = !supported;
 
   const hasUnsavedChanges = useMemo(
     () => currentFile && content !== savedContent,
@@ -131,6 +147,32 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     openPath(requested);
   }, [context, initialPath, pathProp, opfsSupported, root, openPath]);
 
+  const syncFauxDirectory = useCallback((tree, pathIds = ['root']) => {
+    if (!tree) return;
+    const nodes = findNodeByPathIds(tree, pathIds);
+    const current = nodes[nodes.length - 1];
+    if (!current) return;
+    const { directories, files: fauxFilesList } = listDirectory(current);
+    setFauxDirectories(directories);
+    setFauxFiles(fauxFilesList);
+    setFauxBreadcrumbs(
+      nodes.map((node) => ({ name: node.name, id: node.id })),
+    );
+  }, []);
+
+  useEffect(() => {
+    if (supported) return;
+    const tree = loadFauxFileSystem();
+    const requested =
+      (context?.initialPath ?? context?.path ?? initialPath ?? pathProp) || '';
+    const pathIds = requested
+      ? findNodeByPathNames(tree, requested.split('/'))
+      : ['root'];
+    setFauxTree(tree);
+    setFauxPathIds(pathIds);
+    syncFauxDirectory(tree, pathIds);
+  }, [supported, context, initialPath, pathProp, syncFauxDirectory]);
+
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
   };
@@ -142,16 +184,6 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
-  };
-
-  const openFallback = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const text = await file.text();
-    setCurrentFile({ name: file.name });
-    setContent(text);
-    setSavedContent(text);
-    setPreviewData(buildPreview(file.name, file, text));
   };
 
   const openFolder = async () => {
@@ -216,10 +248,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     return { text, file };
   };
 
-  const buildPreview = (fileName, file, text) => {
+  const buildPreview = (fileName, file, text, options = {}) => {
     const lower = fileName.toLowerCase();
+    const directUrl = typeof options.url === 'string' ? options.url : null;
     if (lower.match(/\.(png|jpg|jpeg|gif|webp|svg)$/)) {
+      if (directUrl) {
+        return { type: 'image', url: directUrl };
+      }
       return { type: 'image', url: URL.createObjectURL(file) };
+    }
+    if (lower.endsWith('.pdf')) {
+      if (directUrl) {
+        return { type: 'pdf', url: directUrl };
+      }
+      return null;
     }
     if (lower.endsWith('.json')) {
       try {
@@ -232,6 +274,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (lower.endsWith('.md') || lower.endsWith('.markdown')) {
       const html = DOMPurify.sanitize(marked.parse(text));
       return { type: 'markdown', html };
+    }
+    if (directUrl) {
+      return { type: 'link', url: directUrl };
     }
     return { type: 'text', text };
   };
@@ -278,6 +323,29 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     }
   };
 
+  const openFauxFile = async (file) => {
+    const proceed = await ensureSaved();
+    if (!proceed) return;
+    setCurrentFile({ ...file, virtual: true });
+    setPreviewData(null);
+    setContent('');
+    setSavedContent('');
+    const text = file?.content ?? '';
+    setContent(text);
+    setSavedContent(text);
+    setPreviewData(buildPreview(file.name, null, text, { url: file.url }));
+  };
+
+  const openFauxDir = (dir) => {
+    void (async () => {
+      const proceed = await ensureSaved();
+      if (!proceed || !fauxTree) return;
+      const nextPath = [...fauxPathIds, dir.id];
+      setFauxPathIds(nextPath);
+      syncFauxDirectory(fauxTree, nextPath);
+    })();
+  };
+
   const openDir = (dir) => {
     void (async () => {
       const proceed = await ensureSaved();
@@ -295,12 +363,28 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const goBack = () => {
     void (async () => {
       const proceed = await ensureSaved();
-      if (proceed) goBackNav();
+      if (!proceed) return;
+      if (supported) {
+        goBackNav();
+        return;
+      }
+      if (!fauxTree || fauxPathIds.length <= 1) return;
+      const nextPath = fauxPathIds.slice(0, -1);
+      setFauxPathIds(nextPath);
+      syncFauxDirectory(fauxTree, nextPath);
     })();
   };
 
   const saveFile = async () => {
     if (!currentFile) return;
+    if (currentFile.virtual) {
+      if (!fauxTree) return;
+      const nextTree = updateFileContent(fauxTree, fauxPathIds, currentFile.id, content);
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      setSavedContent(content);
+      return;
+    }
     try {
       const writable = await currentFile.handle.createWritable();
       await writable.write(content);
@@ -319,10 +403,23 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const onChange = (e) => {
     const text = e.target.value;
     setContent(text);
-    if (opfsSupported && currentFile) saveBuffer(currentFile.name, text);
+    if (opfsSupported && currentFile && !currentFile.virtual) saveBuffer(currentFile.name, text);
   };
 
   const runSearch = () => {
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      const matches = searchFiles(fauxTree, query);
+      setResults(
+        matches.map((match) => ({
+          kind: 'faux',
+          path: match.path,
+          name: match.file.name,
+          id: match.file.id,
+        })),
+      );
+      return;
+    }
     if (!dirHandle || !hasWorker) return;
     setResults([]);
     if (workerRef.current) workerRef.current.terminate();
@@ -345,69 +442,70 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
 
   useEffect(() => () => {
     if (previewData?.type === 'image' && previewData.url) {
-      URL.revokeObjectURL(previewData.url);
+      if (previewData.url.startsWith('blob:')) {
+        URL.revokeObjectURL(previewData.url);
+      }
     }
   }, [previewData]);
 
-  if (!supported) {
-    return (
-      <div className="p-4 flex flex-col h-full">
-        <input
-          ref={fallbackInputRef}
-          type="file"
-          onChange={openFallback}
-          className="hidden"
-          aria-label="Upload file"
-        />
-        {!currentFile && (
-          <button
-            onClick={() => fallbackInputRef.current?.click()}
-            className="px-2 py-1 bg-black bg-opacity-50 rounded self-start"
-          >
-            Open File
-          </button>
-        )}
-        {currentFile && (
-          <>
-              <textarea
-                className="flex-1 mt-2 p-2 bg-ub-cool-grey outline-none"
-                value={content}
-                onChange={onChange}
-                aria-label="File content"
-              />
-            <button
-              onClick={async () => {
-                const handle = await saveFileDialog({ suggestedName: currentFile.name });
-                const writable = await handle.createWritable();
-                await writable.write(content);
-                await writable.close();
-              }}
-              className="mt-2 px-2 py-1 bg-black bg-opacity-50 rounded self-start"
-            >
-              Save
-            </button>
-          </>
-        )}
-      </div>
-    );
-  }
+  const activeDirs = isFauxMode ? fauxDirectories : dirs;
+  const activeFiles = isFauxMode ? fauxFiles : files;
+  const activeBreadcrumbs = isFauxMode ? fauxBreadcrumbs : path;
+
+  const handleFauxDrop = (targetDirId) => {
+    if (!fauxTree || !dragState) return;
+    if (!targetDirId || targetDirId === dragState.id) return;
+    const targetPath = [...fauxPathIds, targetDirId];
+    const nextTree = moveEntry(fauxTree, dragState.sourcePath, dragState.id, targetPath);
+    setFauxTree(nextTree);
+    saveFauxFileSystem(nextTree);
+    syncFauxDirectory(nextTree, fauxPathIds);
+    setDragState(null);
+  };
+
+  const openExternal = (url) => {
+    if (typeof window === 'undefined') return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
-        <button onClick={openFolder} className="px-2 py-1 bg-black bg-opacity-50 rounded">
-          Open Folder
+        <button
+          onClick={supported ? openFolder : () => {
+            if (!fauxTree) return;
+            setFauxPathIds(['root']);
+            syncFauxDirectory(fauxTree, ['root']);
+          }}
+          className="px-2 py-1 bg-black bg-opacity-50 rounded"
+        >
+          {supported ? 'Open Folder' : 'Go Home'}
         </button>
-        {path.length > 1 && (
+        {activeBreadcrumbs.length > 1 && (
           <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
             Back
           </button>
         )}
-        <Breadcrumbs path={path} onNavigate={navigateToBreadcrumb} />
+        <Breadcrumbs
+          path={activeBreadcrumbs}
+          onNavigate={(index) => {
+            if (isFauxMode) {
+              if (!fauxTree) return;
+              const nextPath = fauxPathIds.slice(0, index + 1);
+              setFauxPathIds(nextPath);
+              syncFauxDirectory(fauxTree, nextPath);
+            } else {
+              navigateToBreadcrumb(index);
+            }
+          }}
+        />
         {locationError && (
           <div className="text-xs text-red-300" role="status">
             {locationError}
           </div>
+        )}
+        {isFauxMode && (
+          <div className="text-xs text-sky-200">Demo file system</div>
         )}
         {currentFile && (
           <div className="flex items-center space-x-2 ml-auto">
@@ -418,14 +516,18 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             )}
             <button
               onClick={saveFile}
-              disabled={!hasUnsavedChanges}
+              disabled={!hasUnsavedChanges || (currentFile.virtual && currentFile.url)}
               className={`px-2 py-1 rounded ${
-                hasUnsavedChanges
+                hasUnsavedChanges && !(currentFile.virtual && currentFile.url)
                   ? 'bg-green-700 hover:bg-green-600'
                   : 'bg-black bg-opacity-40 cursor-not-allowed'
               }`}
             >
-              {hasUnsavedChanges ? 'Save changes' : 'Saved'}
+              {currentFile.virtual && currentFile.url
+                ? 'Read-only'
+                : hasUnsavedChanges
+                  ? 'Save changes'
+                  : 'Saved'}
             </button>
           </div>
         )}
@@ -433,31 +535,50 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
-          {recent.map((r, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openRecent(r)}
-            >
-              {r.name}
-            </div>
-          ))}
+          {isFauxMode
+            ? (
+              <div className="px-2 text-xs text-slate-300">
+                Recents are available in real file mode.
+              </div>
+            )
+            : recent.map((r, i) => (
+                <div
+                  key={i}
+                  className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
+                  onClick={() => openRecent(r)}
+                >
+                  {r.name}
+                </div>
+              ))}
           <div className="p-2 font-bold">Directories</div>
-          {dirs.map((d, i) => (
+          {activeDirs.map((d, i) => (
             <div
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openDir(d)}
+              onClick={() => (isFauxMode ? openFauxDir(d) : openDir(d))}
+              onDragOver={(event) => {
+                if (!isFauxMode) return;
+                event.preventDefault();
+              }}
+              onDrop={() => handleFauxDrop(d.id)}
             >
               {d.name}
             </div>
           ))}
           <div className="p-2 font-bold">Files</div>
-          {files.map((f, i) => (
+          {activeFiles.map((f, i) => (
             <div
               key={i}
               className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => openFile(f)}
+              onClick={() => (isFauxMode ? openFauxFile(f) : openFile(f))}
+              draggable={isFauxMode}
+              onDragStart={() => {
+                if (!isFauxMode) return;
+                setDragState({ id: f.id, sourcePath: fauxPathIds });
+              }}
+              onDragEnd={() => {
+                if (isFauxMode) setDragState(null);
+              }}
             >
               {f.name}
             </div>
@@ -475,6 +596,17 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
                   {previewData.type === 'image' && (
                     <img src={previewData.url} alt={`${currentFile.name} preview`} className="max-h-60 mx-auto" />
                   )}
+                  {previewData.type === 'pdf' && (
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span>PDF preview available</span>
+                      <button
+                        onClick={() => openExternal(previewData.url)}
+                        className="px-2 py-1 bg-black bg-opacity-50 rounded"
+                      >
+                        Open PDF
+                      </button>
+                    </div>
+                  )}
                   {previewData.type === 'json' && (
                     <pre className="whitespace-pre-wrap text-xs bg-black bg-opacity-30 p-2 rounded">{previewData.text}</pre>
                   )}
@@ -484,6 +616,17 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
                       dangerouslySetInnerHTML={{ __html: previewData.html }}
                     />
                   )}
+                  {previewData.type === 'link' && (
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span>Open this file in a new tab.</span>
+                      <button
+                        onClick={() => openExternal(previewData.url)}
+                        className="px-2 py-1 bg-black bg-opacity-50 rounded"
+                      >
+                        Open
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
               <textarea
@@ -491,6 +634,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
                 value={content}
                 onChange={onChange}
                 aria-label="File content"
+                readOnly={currentFile.virtual && currentFile.url}
               />
             </div>
           )}
@@ -508,7 +652,15 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             <div className="max-h-40 overflow-auto mt-2">
               {results.map((r, i) => (
                 <div key={i}>
-                  <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                  {r.kind === 'faux' ? (
+                    <>
+                      <span className="font-bold">{r.path}</span> {r.name}
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-bold">{r.file}:{r.line}</span> {r.text}
+                    </>
+                  )}
                 </div>
               ))}
             </div>
