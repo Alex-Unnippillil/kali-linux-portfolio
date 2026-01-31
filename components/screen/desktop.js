@@ -5785,13 +5785,13 @@ export class Desktop extends Component {
 
                 {showClosedShelf ? (
                     <ClosedWindowShelf
-                        label="Closed windows"
+                        label="Application List"
                         entries={closedEntries}
                         open={this.state.closedShelfOpen}
                         onToggle={this.toggleClosedShelf}
                         onActivate={this.handleClosedWindowActivate}
                         onRemove={this.dismissClosedWindowEntry}
-                        emptyLabel="No recently closed windows"
+                        emptyLabel="No recently closed apps"
                     />
                 ) : null}
 

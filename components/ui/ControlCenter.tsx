@@ -191,15 +191,15 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
         <div ref={rootRef} className={`relative flex items-center ${className}`.trim()}>
             <button
                 type="button"
-                className="group flex items-center justify-center h-8 w-8 rounded-full bg-white/[0.06] hover:bg-white/[0.12] active:bg-white/[0.18] transition-all duration-150 backdrop-blur-sm border border-white/[0.06] hover:border-white/[0.12] active:scale-95"
+                className="flex h-full w-full items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
                 onClick={handleToggle}
                 aria-label="Control Center"
                 aria-expanded={open}
                 title="Control Center"
                 onPointerDown={(e) => e.stopPropagation()}
             >
-                <div className="relative h-6 w-6 overflow-hidden rounded-md shadow-sm transition-transform group-hover:scale-105">
-                    <Image src="/images/logos/fevicon.svg" alt="Kali" fill className="object-contain" />
+                <div className="status-symbol h-4 w-4 relative flex items-center justify-center transition-transform group-hover:scale-105 text-white/90">
+                    <SettingsIcon />
                 </div>
             </button>
 
@@ -360,5 +360,6 @@ const VolumeXIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentCo
 const SunIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>;
 const MoonIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></svg>;
 const CloseIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
+const SettingsIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" /></svg>;
 
 export default ControlCenter;

@@ -187,67 +187,7 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
 
   }, []);
 
-  useEffect(() => {
-    const liveRegion = document.getElementById('live-region');
-    if (!liveRegion) return undefined;
 
-    const update = (message: string): void => {
-      liveRegion.textContent = '';
-      setTimeout(() => {
-        liveRegion.textContent = message;
-      }, 100);
-    };
-
-    const handleCopy = (): void => update('Copied to clipboard');
-    const handleCut = (): void => update('Cut to clipboard');
-    const handlePaste = (): void => update('Pasted from clipboard');
-
-    window.addEventListener('copy', handleCopy);
-    window.addEventListener('cut', handleCut);
-    window.addEventListener('paste', handlePaste);
-
-    const { clipboard } = navigator;
-    const originalWrite = clipboard?.writeText?.bind(clipboard);
-    const originalRead = clipboard?.readText?.bind(clipboard);
-    if (clipboard && originalWrite) {
-      clipboard.writeText = async (text: string): Promise<void> => {
-        update('Copied to clipboard');
-        await originalWrite(text);
-      };
-    }
-    if (clipboard && originalRead) {
-      clipboard.readText = async (): Promise<string> => {
-        const text = await originalRead();
-        update('Pasted from clipboard');
-        return text;
-      };
-    }
-
-    const OriginalNotification = window.Notification;
-    if (OriginalNotification) {
-      const WrappedNotification = class extends OriginalNotification {
-        constructor(title: string, options?: NotificationOptions) {
-          super(title, options);
-          update(`${title}${options?.body ? ` ${options.body}` : ''}`);
-        }
-      };
-
-      window.Notification = WrappedNotification;
-    }
-
-    return () => {
-      window.removeEventListener('copy', handleCopy);
-      window.removeEventListener('cut', handleCut);
-      window.removeEventListener('paste', handlePaste);
-      if (clipboard) {
-        if (originalWrite) clipboard.writeText = originalWrite;
-        if (originalRead) clipboard.readText = originalRead;
-      }
-      if (OriginalNotification) {
-        window.Notification = OriginalNotification;
-      }
-    };
-  }, []);
 
   return (
     <ErrorBoundary>

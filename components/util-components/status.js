@@ -5,6 +5,7 @@ import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
 import NetworkIndicator from '../ui/NetworkIndicator';
 import BatteryIndicator from '../ui/BatteryIndicator';
+import ControlCenter from '../ui/ControlCenter';
 
 export default function Status({ className = "", activeDropdown, onDropdownToggle }) {
   const { allowNetwork } = useSettings();
@@ -52,6 +53,11 @@ export default function Status({ className = "", activeDropdown, onDropdownToggl
 
   return (
     <div className={containerClasses} role="status" aria-live="polite">
+      <ControlCenter
+        className={controlClasses}
+        isOpen={activeDropdown === 'control-center'}
+        onToggle={() => onDropdownToggle && onDropdownToggle('control-center')}
+      />
       <NetworkIndicator
         className={controlClasses}
         allowNetwork={allowNetwork}

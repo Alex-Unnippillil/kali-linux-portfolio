@@ -11,7 +11,6 @@ import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
 import ControlCenter from '../ui/ControlCenter';
-import NotificationBell from '../ui/NotificationBell';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -88,7 +87,7 @@ const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop
         return (
                 <ul
                         ref={ref}
-                        className="flex max-w-[60vw] md:max-w-[45vw] items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm"
+                        className="flex shrink min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm scrollbar-hide"
                         role="list"
                         aria-label="Open applications"
                         onDragOver={onDragOver}
@@ -107,7 +106,7 @@ const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop 
         return (
                 <ul
                         ref={ref}
-                        className="flex min-h-[2.25rem] items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm"
+                        className="flex shrink min-w-0 min-h-[2.25rem] max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm scrollbar-hide"
                         role="list"
                         aria-label="Pinned applications"
                         onDragOver={onDragOver}
@@ -134,7 +133,7 @@ const SystemTrayCluster = ({
         activeDropdown,
         onDropdownToggle,
 }) => (
-        <div className="flex items-center gap-3 text-xs md:text-sm">
+        <div className="flex items-center gap-1 md:gap-3 text-xs md:text-sm">
                 <div className="hidden md:block">
                         <PerformanceGraph />
                 </div>
@@ -145,14 +144,6 @@ const SystemTrayCluster = ({
                         variant="minimal"
                         isOpen={activeDropdown === 'clock'}
                         onToggle={() => onDropdownToggle('clock')}
-                />
-                <NotificationBell
-                        isOpen={activeDropdown === 'notification'}
-                        onToggle={() => onDropdownToggle('notification')}
-                />
-                <ControlCenter
-                        isOpen={activeDropdown === 'control-center'}
-                        onToggle={() => onDropdownToggle('control-center')}
                 />
                 <div
                         id="status-bar"
@@ -659,7 +650,8 @@ export default class Navbar extends PureComponent {
                 const currentAppId = this.state.preview?.appId;
                 const taskbarButton = this.getTaskbarButtonElement(currentAppId);
                 const isTaskbarTarget = typeof related?.getAttribute === 'function' && related.getAttribute('data-context') === 'taskbar';
-                if (related && (this.previewFlyoutRef.current?.contains(related) || taskbarButton?.contains(related) || isTaskbarTarget)) {
+                // Check if related is a Node before calling contains
+                if (related && related instanceof Node && (this.previewFlyoutRef.current?.contains(related) || taskbarButton?.contains(related) || isTaskbarTarget)) {
                         return;
                 }
                 this.schedulePreviewHide();
@@ -671,7 +663,7 @@ export default class Navbar extends PureComponent {
 
         handlePreviewBlur = (event) => {
                 const related = event?.relatedTarget;
-                if (related) {
+                if (related && related instanceof Node) {
                         if (this.previewFlyoutRef.current?.contains(related)) {
                                 return;
                         }
@@ -716,7 +708,8 @@ export default class Navbar extends PureComponent {
         handleAppButtonMouseLeave = (event) => {
                 const related = event?.relatedTarget;
                 const isTaskbarTarget = typeof related?.getAttribute === 'function' && related.getAttribute('data-context') === 'taskbar';
-                if (related && (this.previewFlyoutRef.current?.contains(related) || isTaskbarTarget)) {
+                const isRelatedNode = related instanceof Node;
+                if (related && ((isRelatedNode && this.previewFlyoutRef.current?.contains(related)) || isTaskbarTarget)) {
                         return;
                 }
                 this.schedulePreviewHide();
@@ -729,7 +722,7 @@ export default class Navbar extends PureComponent {
 
         handleAppButtonBlur = (event) => {
                 const related = event?.relatedTarget;
-                if (related && this.previewFlyoutRef.current?.contains(related)) {
+                if (related && related instanceof Node && this.previewFlyoutRef.current?.contains(related)) {
                         return;
                 }
                 this.schedulePreviewHide();
@@ -1215,28 +1208,36 @@ export default class Navbar extends PureComponent {
                                         paddingRight: `calc(0.5rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex items-center gap-1.5 text-xs md:text-sm">
-                                        <WhiskerMenu
-                                                isOpen={this.state.activeDropdown === 'start-menu'}
-                                                onToggle={() => this.handleDropdownToggle('start-menu')}
-                                        />
-                                        {workspaces.length > 0 && (
-                                                <WorkspaceSwitcher
-                                                        workspaces={workspaces}
-                                                        activeWorkspace={activeWorkspace}
-                                                        onSelect={this.handleWorkspaceSelect}
+                                <div className="flex flex-1 min-w-0 items-center justify-start gap-1.5 overflow-hidden">
+                                        <div className="flex-none flex items-center gap-1.5 text-xs md:text-sm">
+                                                <WhiskerMenu
+                                                        isOpen={this.state.activeDropdown === 'start-menu'}
+                                                        onToggle={() => this.handleDropdownToggle('start-menu')}
                                                 />
-                                        )}
-                                        {pinnedApps}
-                                        {runningApps}
+                                                {workspaces.length > 0 && (
+                                                        <div className="hidden md:block">
+                                                                <WorkspaceSwitcher
+                                                                        workspaces={workspaces}
+                                                                        activeWorkspace={activeWorkspace}
+                                                                        onSelect={this.handleWorkspaceSelect}
+                                                                />
+                                                        </div>
+                                                )}
+                                        </div>
+                                        <div className="flex flex-1 min-w-0 items-center gap-1.5 overflow-hidden">
+                                                {pinnedApps}
+                                                {runningApps}
+                                        </div>
                                 </div>
-                                <SystemTrayCluster
-                                        statusCardOpen={this.state.status_card}
-                                        onStatusToggle={this.handleStatusToggle}
-                                        onStatusKeyDown={this.handleStatusKeyDown}
-                                        activeDropdown={this.state.activeDropdown}
-                                        onDropdownToggle={this.handleDropdownToggle}
-                                />
+                                <div className="flex-none pl-2">
+                                        <SystemTrayCluster
+                                                statusCardOpen={this.state.status_card}
+                                                onStatusToggle={this.handleStatusToggle}
+                                                onStatusKeyDown={this.handleStatusKeyDown}
+                                                activeDropdown={this.state.activeDropdown}
+                                                onDropdownToggle={this.handleDropdownToggle}
+                                        />
+                                </div>
                                 <TaskbarPreviewFlyout
                                         ref={this.previewFlyoutRef}
                                         visible={Boolean(preview)}
