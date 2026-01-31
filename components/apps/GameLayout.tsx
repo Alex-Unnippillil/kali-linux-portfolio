@@ -125,6 +125,16 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     }
   }, [fallbackCopy, highScore, gameId]);
 
+  const tweetScore = useCallback(() => {
+    if (highScore === undefined) return;
+    const url = window.location.href;
+    const text = `I scored ${highScore} in ${gameId}!`;
+    const tweetUrl = new URL('https://twitter.com/intent/tweet');
+    tweetUrl.searchParams.set('text', text);
+    tweetUrl.searchParams.set('url', url);
+    window.open(tweetUrl.toString(), '_blank', 'noopener,noreferrer');
+  }, [highScore, gameId]);
+
   const record = useCallback(
     (input: any) => {
       if (replaying) return;
@@ -358,6 +368,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
           >
             Share Score
+          </button>
+        )}
+        {highScore !== undefined && (
+          <button
+            type="button"
+            onClick={tweetScore}
+            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          >
+            Tweet Score
           </button>
         )}
         <button
