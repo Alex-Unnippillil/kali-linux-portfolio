@@ -305,6 +305,13 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
     return list.sort((a, b) => a.title.localeCompare(b.title));
   }, [currentCategory, query]);
 
+  const totalAppsCount = currentCategory?.apps?.length ?? 0;
+  const filteredAppsCount = currentApps.length;
+  const showFilteredCount = Boolean(query);
+  const countLabel = showFilteredCount
+    ? `${filteredAppsCount} of ${totalAppsCount}`
+    : `${totalAppsCount}`;
+
   useEffect(() => {
     const storedCategory = safeLocalStorage?.getItem(CATEGORY_STORAGE_KEY);
     if (storedCategory && isCategoryId(storedCategory)) {
@@ -566,8 +573,8 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
           }}
         >
           <div className="order-2 flex flex-1 flex-col bg-transparent">
-            <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
-              <div className="group/search relative mb-4">
+            <div className="sticky top-0 z-10 border-b border-white/[0.06] bg-[#0a1018]/90 px-4 py-4 backdrop-blur-2xl sm:px-5">
+              <div className="group/search relative mb-3">
                 <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 transition-colors duration-200 group-focus-within/search:text-cyan-400">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <circle cx="11" cy="11" r="7" />
@@ -576,7 +583,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
                 </span>
                 <input
                   ref={searchInputRef}
-                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] pl-11 pr-4 text-[14px] text-gray-100 placeholder:text-white/30 shadow-none transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] focus:border-cyan-400/50 focus:bg-white/[0.06] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.1)] focus:outline-none"
+                  className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.03] pl-11 pr-12 text-[14px] text-gray-100 placeholder:text-white/30 shadow-none transition-all duration-200 hover:border-white/[0.12] hover:bg-white/[0.05] focus:border-cyan-400/50 focus:bg-white/[0.06] focus:shadow-[0_0_0_4px_rgba(34,211,238,0.1)] focus:outline-none"
                   type="search"
                   inputMode="search"
                   enterKeyHint="search"
@@ -586,6 +593,32 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
                   value={query}
                   onChange={e => setQuery(e.target.value)}
                 />
+                {query ? (
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/40 transition-all duration-200 hover:text-cyan-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
+                    aria-label="Clear search"
+                    onClick={() => {
+                      setQuery('');
+                      searchInputRef.current?.focus();
+                    }}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[12px] text-white/50">
+                <div className="flex items-center gap-2">
+                  <span className="rounded-full bg-white/[0.05] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-cyan-300/80">
+                    {currentCategory.label}
+                  </span>
+                  <span>
+                    {countLabel} {showFilteredCount ? 'matches' : 'apps'}
+                  </span>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-2.5 py-1 text-[11px] uppercase tracking-[0.18em] text-white/40">
+                  Esc to close
+                </span>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {favoriteApps.slice(0, 6).map((app) => (
