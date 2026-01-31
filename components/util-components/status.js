@@ -1,14 +1,11 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useSettings } from '../../hooks/useSettings';
 import VolumeControl from '../ui/VolumeControl';
-import NetworkIndicator from '../ui/NetworkIndicator';
 import BatteryIndicator from '../ui/BatteryIndicator';
 import ControlCenter from '../ui/ControlCenter';
 
 export default function Status({ className = "", activeDropdown, onDropdownToggle }) {
-  const { allowNetwork } = useSettings();
   const [online, setOnline] = useState(true);
 
   useEffect(() => {
@@ -58,13 +55,7 @@ export default function Status({ className = "", activeDropdown, onDropdownToggl
         isOpen={activeDropdown === 'control-center'}
         onToggle={() => onDropdownToggle && onDropdownToggle('control-center')}
       />
-      <NetworkIndicator
-        className={controlClasses}
-        allowNetwork={allowNetwork}
-        online={online}
-        isOpen={activeDropdown === 'network'}
-        onToggle={() => onDropdownToggle && onDropdownToggle('network')}
-      />
+
       <VolumeControl
         className={controlClasses}
         isOpen={activeDropdown === 'volume'}

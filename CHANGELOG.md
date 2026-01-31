@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated Control Center with universal volume bar and improved icons.
 - Modernized Settings app UI.
 - Implemented "close on blur" for Whisker menu.
+- Repositioned system time to the right of status indicators in the navbar.
+
+### Added
+- Implemented real-time network detection (Wi-Fi, Ethernet, Mobile) in the Network menu.
 
 ## [2.1.0] - 2025-09-03
 ### Added

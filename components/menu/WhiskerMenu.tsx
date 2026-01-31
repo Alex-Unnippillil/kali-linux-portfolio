@@ -555,7 +555,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
         <div
           ref={menuRef}
           data-testid="whisker-menu-dropdown"
-          className={`fixed z-[260] flex h-[500px] max-h-[85vh] w-[min(94vw,720px)] flex-row overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a1018]/90 text-white shadow-[0_32px_96px_-12px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl transition-all ease-out sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:max-h-[520px] ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-4 scale-[0.96]'
+          className={`fixed z-[260] flex h-[500px] max-h-[85vh] w-[min(94vw,720px)] flex-row overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a1018] text-white shadow-[0_32px_96px_-12px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl transition-all ease-out sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:max-h-[520px] ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-4 scale-[0.96]'
             }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
@@ -683,7 +683,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
               )}
             </div>
           </div>
-          <div className="order-1 flex w-[68px] flex-col border-r border-white/[0.06] bg-[#05080c]/50 sm:w-[220px]">
+          <div className="order-1 flex w-[68px] flex-col border-r border-white/[0.06] bg-[#05080c] sm:w-[220px]">
             <div className="hidden sm:flex items-center gap-2 px-4 py-4 text-[11px] font-bold uppercase tracking-[0.15em] text-white/30">
               Categories
             </div>

@@ -137,6 +137,12 @@ const SystemTrayCluster = ({
                 <div className="hidden md:block">
                         <PerformanceGraph />
                 </div>
+                <div
+                        id="status-bar"
+                        className="flex items-center gap-2 rounded px-2 py-1"
+                >
+                        <Status activeDropdown={activeDropdown} onDropdownToggle={onDropdownToggle} />
+                </div>
                 <Clock
                         onlyTime={true}
                         showCalendar={true}
@@ -145,12 +151,6 @@ const SystemTrayCluster = ({
                         isOpen={activeDropdown === 'clock'}
                         onToggle={() => onDropdownToggle('clock')}
                 />
-                <div
-                        id="status-bar"
-                        className="flex items-center gap-2 rounded px-2 py-1"
-                >
-                        <Status activeDropdown={activeDropdown} onDropdownToggle={onDropdownToggle} />
-                </div>
                 {children}
         </div>
 );
@@ -1208,26 +1208,24 @@ export default class Navbar extends PureComponent {
                                         paddingRight: `calc(0.5rem + var(--safe-area-right, 0px))`,
                                 }}
                         >
-                                <div className="flex flex-1 min-w-0 items-center justify-start gap-1.5 overflow-hidden">
-                                        <div className="flex-none flex items-center gap-1.5 text-xs md:text-sm">
-                                                <WhiskerMenu
-                                                        isOpen={this.state.activeDropdown === 'start-menu'}
-                                                        onToggle={() => this.handleDropdownToggle('start-menu')}
-                                                />
-                                                {workspaces.length > 0 && (
-                                                        <div className="hidden md:block">
-                                                                <WorkspaceSwitcher
-                                                                        workspaces={workspaces}
-                                                                        activeWorkspace={activeWorkspace}
-                                                                        onSelect={this.handleWorkspaceSelect}
-                                                                />
-                                                        </div>
-                                                )}
-                                        </div>
-                                        <div className="flex flex-1 min-w-0 items-center gap-1.5 overflow-hidden">
-                                                {pinnedApps}
-                                                {runningApps}
-                                        </div>
+                                <div className="flex-none flex items-center gap-1.5 text-xs md:text-sm">
+                                        <WhiskerMenu
+                                                isOpen={this.state.activeDropdown === 'start-menu'}
+                                                onToggle={() => this.handleDropdownToggle('start-menu')}
+                                        />
+                                        {workspaces.length > 0 && (
+                                                <div className="hidden md:block">
+                                                        <WorkspaceSwitcher
+                                                                workspaces={workspaces}
+                                                                activeWorkspace={activeWorkspace}
+                                                                onSelect={this.handleWorkspaceSelect}
+                                                        />
+                                                </div>
+                                        )}
+                                </div>
+                                <div className="flex flex-1 min-w-0 items-center gap-1.5 overflow-hidden">
+                                        {pinnedApps}
+                                        {runningApps}
                                 </div>
                                 <div className="flex-none pl-2">
                                         <SystemTrayCluster
