@@ -114,6 +114,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     },
     runWorker: async () => {},
     clear: () => {},
+    closeApp: () => {},
     openApp,
     listCommands: () => Object.values(registryRef.current),
   });
@@ -214,6 +215,13 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     if (!term || !term.buffer) return;
     const { viewportY, baseY } = term.buffer.active;
     setOverflow({ top: viewportY > 0, bottom: viewportY < baseY });
+  }, []);
+
+  const closeTerminal = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('taskbar-command', { detail: { appId: 'terminal', action: 'close' } }),
+    );
   }, []);
 
   useEffect(() => {
@@ -400,6 +408,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.writeLine = writeLine;
   contextRef.current.runWorker = runWorker;
   contextRef.current.clear = clearTerminal;
+  contextRef.current.closeApp = closeTerminal;
   contextRef.current.openApp = openApp;
   contextRef.current.listCommands = () => Object.values(registryRef.current);
   contextRef.current.files = filesRef.current;

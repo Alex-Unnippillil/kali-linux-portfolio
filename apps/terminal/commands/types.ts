@@ -7,6 +7,7 @@ export interface CommandContext {
   setAlias: (name: string, value: string) => void;
   runWorker: (command: string) => Promise<void>;
   clear: () => void;
+  closeApp?: () => void;
   openApp?: (id: string) => void;
   listCommands: () => CommandDefinition[];
 }

@@ -4,6 +4,7 @@ import logger from '../../utils/logger'
 function DesktopMenu(props) {
 
     const [isFullScreen, setIsFullScreen] = useState(false)
+    const [canPaste, setCanPaste] = useState(false)
     const [isHydrated, setIsHydrated] = useState(false)
     const iconSizePreset = props.iconSizePreset || 'medium'
     const iconSizeBucket = props.iconSizeBucket
@@ -19,6 +20,7 @@ function DesktopMenu(props) {
         // Prevent SSR/client hydration mismatches for UI that depends on client-only state like viewport size.
         // We intentionally render a stable, SSR-safe label until after the first client mount.
         setIsHydrated(true)
+        setCanPaste(Boolean(navigator?.clipboard?.readText))
         document.addEventListener('fullscreenchange', checkFullScreen);
         return () => {
             document.removeEventListener('fullscreenchange', checkFullScreen);
@@ -32,6 +34,18 @@ function DesktopMenu(props) {
 
     const openSettings = () => {
         props.openApp("settings");
+    }
+
+    const pasteFromClipboard = () => {
+        if (typeof props.pasteFromClipboard === 'function') {
+            props.pasteFromClipboard();
+        }
+    }
+
+    const openDesktopInFiles = () => {
+        if (typeof props.openDesktopInFiles === 'function') {
+            props.openDesktopInFiles();
+        }
     }
 
     const checkFullScreen = () => {
@@ -113,13 +127,30 @@ function DesktopMenu(props) {
                 )
             })}
             <Devider />
-            <div role="menuitem" aria-label="Paste" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <button
+                onClick={pasteFromClipboard}
+                type="button"
+                role="menuitem"
+                aria-label="Paste"
+                aria-disabled={!canPaste}
+                disabled={!canPaste}
+                className={
+                    (canPaste ? " text-white " : " text-gray-400 ") +
+                    " w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                }
+            >
                 <span className="ml-5">Paste</span>
-            </div>
+            </button>
             <Devider />
-            <div role="menuitem" aria-label="Show Desktop in Files" aria-disabled="true" className="w-full py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 text-gray-400">
+            <button
+                onClick={openDesktopInFiles}
+                type="button"
+                role="menuitem"
+                aria-label="Show Desktop in Files"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+            >
                 <span className="ml-5">Show Desktop in Files</span>
-            </div>
+            </button>
             <button
                 onClick={openTerminal}
                 type="button"
