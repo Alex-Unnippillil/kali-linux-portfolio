@@ -3,12 +3,14 @@ export const THEME_KEY = 'app:theme';
 // Score required to unlock each theme
 export const THEME_UNLOCKS: Record<string, number> = {
   default: 0,
+  light: 0,
+  ubuntu: 0,
   neon: 100,
   dark: 500,
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+const DARK_THEMES = ['dark', 'neon', 'matrix', 'ubuntu'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
@@ -49,7 +51,7 @@ export const isThemeUnlocked = (theme: string, highScore: number): boolean =>
 const buildWallpaperUrl = (name?: string | null): string | null => {
   if (!name) return null;
   if (name === 'kali-gradient') return null;
-  if (/^https?:\/\//.test(name) || name.startsWith('/')) return name;
+  if (/^data:image\//.test(name) || /^https?:\/\//.test(name) || name.startsWith('/')) return name;
   return `/wallpapers/${name}.webp`;
 };
 
@@ -71,10 +73,22 @@ type DesktopThemePreset = {
 };
 
 export const DESKTOP_THEME_PRESETS: Record<string, DesktopThemePreset> = {
+  light: {
+    accent: '#3b82f6',
+    wallpaperName: 'wall-4',
+    overlay: 'linear-gradient(165deg, rgba(255,255,255,0.65) 0%, rgba(238,242,255,0.4) 45%, rgba(255,255,255,0.2) 100%)',
+    useKaliWallpaper: false,
+  },
   dark: {
     accent: '#64b5f6',
     wallpaperName: 'wall-7',
     overlay: 'linear-gradient(160deg, rgba(0,0,0,0.78) 0%, rgba(0,0,0,0.52) 70%)',
+    useKaliWallpaper: false,
+  },
+  ubuntu: {
+    accent: '#f97316',
+    wallpaperName: 'wall-3',
+    overlay: 'linear-gradient(160deg, rgba(20,6,16,0.78) 0%, rgba(18,8,10,0.55) 55%, rgba(0,0,0,0.72) 100%)',
     useKaliWallpaper: false,
   },
   neon: {

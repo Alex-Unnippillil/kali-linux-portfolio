@@ -448,7 +448,7 @@ const NetworkIndicator: FC<NetworkIndicatorProps> = ({ className = "", allowNetw
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   useEffect(() => {
     if (!wifiEnabled && connectedNetwork.type === "wifi") {

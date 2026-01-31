@@ -215,7 +215,7 @@ const Clock = ({
             document.removeEventListener('touchstart', handleClick)
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [isOpen, prefersReducedMotion])
+    }, [isOpen, prefersReducedMotion, setIsOpen])
 
     useEffect(() => {
         if (!isOpen) return
@@ -342,11 +342,11 @@ const Clock = ({
 
     const handleToggle = useCallback(() => {
         setIsOpen((open) => !open)
-    }, [])
+    }, [setIsOpen])
 
     const handleClose = useCallback(() => {
         setIsOpen(false)
-    }, [])
+    }, [setIsOpen])
 
     const handleMonthChange = useCallback((offset) => {
         setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
@@ -406,11 +406,11 @@ const Clock = ({
                 setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1))
             }
         }
-    }, [prefersReducedMotion, viewDate])
+    }, [prefersReducedMotion, setIsOpen, viewDate])
 
     const handleDayClick = useCallback(() => {
         setIsOpen(false)
-    }, [])
+    }, [setIsOpen])
 
     const displayTime = useMemo(
         () =>

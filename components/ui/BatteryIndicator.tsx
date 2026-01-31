@@ -187,7 +187,7 @@ const BatteryIndicator: FC<BatteryIndicatorProps> = ({ className = "", isOpen, o
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open]);
+  }, [open, setOpen]);
 
   const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();

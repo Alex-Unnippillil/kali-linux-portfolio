@@ -5,7 +5,6 @@ import Image from 'next/image';
 import jsQR from 'jsqr';
 import { useSettings } from '../../hooks/useSettings';
 import { useTheme } from '../../hooks/useTheme';
-import { isDarkTheme } from '../../utils/theme';
 
 interface ControlCenterProps {
     className?: string;
@@ -33,7 +32,7 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
     const rootRef = useRef<HTMLDivElement>(null);
     const { theme, setTheme } = useTheme();
     const { fontScale, setFontScale, volume, setVolume } = useSettings();
-    const isDarkMode = isDarkTheme(theme);
+    const isLightTheme = theme === 'light';
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -83,31 +82,9 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
             document.removeEventListener("pointerdown", handlePointerDown);
             document.removeEventListener("keydown", handleKeyDown);
         };
-    }, [open]);
+    }, [open, setOpen]);
 
     // QR Scanner Logic
-    const startScan = useCallback(async () => {
-        if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            showToast("Camera not supported", "error");
-            return;
-        }
-
-        setScanning(true);
-        setScanResult(null);
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.play();
-                requestAnimationFrame(tick);
-            }
-        } catch (err) {
-            console.error("Camera access denied", err);
-            setScanning(false);
-            showToast("Camera access denied", "error");
-        }
-    }, [showToast]);
-
     const stopScan = useCallback(() => {
         setScanning(false);
         if (videoRef.current && videoRef.current.srcObject) {
@@ -117,7 +94,7 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
         }
     }, []);
 
-    const tick = () => {
+    const tick = useCallback(() => {
         if (!videoRef.current || !canvasRef.current || !scanning) return;
         if (videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA) {
             const video = videoRef.current;
@@ -142,7 +119,29 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
             }
         }
         if (scanning) requestAnimationFrame(tick);
-    };
+    }, [scanning, showToast, stopScan]);
+
+    const startScan = useCallback(async () => {
+        if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showToast("Camera not supported", "error");
+            return;
+        }
+
+        setScanning(true);
+        setScanResult(null);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                videoRef.current.play();
+                requestAnimationFrame(tick);
+            }
+        } catch (err) {
+            console.error("Camera access denied", err);
+            setScanning(false);
+            showToast("Camera access denied", "error");
+        }
+    }, [showToast, tick]);
 
     useEffect(() => {
         if (!scanning) stopScan();
@@ -212,8 +211,8 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
                     <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-sm font-bold uppercase tracking-wider text-white">Control Center</h3>
                         <div className="flex gap-2">
-                            <button onClick={() => setTheme(isDarkMode ? 'default' : 'dark')} className="rounded-full bg-white/5 p-2 hover:bg-white/10 transition-colors" title="Toggle Theme">
-                                {isDarkMode ? <MoonIcon /> : <SunIcon />}
+                            <button onClick={() => setTheme(isLightTheme ? 'default' : 'light')} className="rounded-full bg-white/5 p-2 hover:bg-white/10 transition-colors" title="Toggle Theme">
+                                {isLightTheme ? <MoonIcon /> : <SunIcon />}
                             </button>
                         </div>
                     </div>
@@ -221,8 +220,8 @@ const ControlCenter = ({ className = "", isOpen, onToggle }: ControlCenterProps)
                     {/* QR Scanner Area */}
                     {scanning ? (
                         <div className="mb-4 relative rounded-xl overflow-hidden aspect-video bg-black max-h-[40vh]">
-                            <video ref={videoRef} className="w-full h-full object-cover" muted playsInline />
-                            <canvas ref={canvasRef} className="hidden" />
+                            <video ref={videoRef} className="w-full h-full object-cover" muted playsInline aria-label="QR scanner video feed" />
+                            <canvas ref={canvasRef} className="hidden" aria-hidden="true" role="presentation" />
                             <button onClick={stopScan} className="absolute top-2 right-2 bg-black/50 p-2 rounded-full text-white hover:bg-black/70 transition-colors">
                                 <CloseIcon />
                             </button>

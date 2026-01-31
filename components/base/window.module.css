@@ -23,6 +23,27 @@
   transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, 0s;
 }
 
+.windowFrameEntering {
+  animation: windowOpen var(--window-motion-duration-open) var(--window-motion-ease-open) 1;
+  will-change: opacity, filter;
+}
+
+.windowFrameFocusPulse::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(56, 189, 248, 0.45),
+    0 0 16px rgba(56, 189, 248, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+  animation: windowFocusPulse var(--window-motion-duration-focus) var(--window-motion-ease-focus) 1;
+  z-index: 2;
+}
+
 .windowFrameActive {
   border-color: rgba(56, 189, 248, 0.7);
   filter: brightness(1.02) saturate(1.02);
@@ -279,6 +300,7 @@
   }
 
   .windowFrame,
+  .windowFrameEntering,
   .windowFrame::before,
   .snapPreview,
   .snapPreviewGlass,
@@ -291,6 +313,45 @@
   .windowFrame {
     --window-motion-transform-duration: 0ms;
     --window-motion-opacity-duration: 0ms;
+  }
+
+  .windowFrameEntering {
+    animation: none;
+  }
+
+  .windowFrameFocusPulse::after {
+    animation: none;
+    opacity: 0;
+  }
+}
+
+@keyframes windowOpen {
+  0% {
+    opacity: 0;
+    filter: brightness(0.9) saturate(0.9);
+  }
+  60% {
+    opacity: 1;
+    filter: brightness(1.04) saturate(1.05);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+@keyframes windowFocusPulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  45% {
+    opacity: 1;
+    transform: scale(1.01);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
   }
 }
 

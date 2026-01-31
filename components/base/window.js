@@ -246,12 +246,15 @@ export class Window extends Component {
             minWidth,
             minHeight,
             resizing: null,
+            entering: true,
         };
         this.windowRef = React.createRef();
         this._usageTimeout = null;
         this._uiExperiments = process.env.NEXT_PUBLIC_UI_EXPERIMENTS === 'true';
         this._menuOpener = null;
         this._closeTimeout = null;
+        this._focusPulseTimeout = null;
+        this._enterTimeout = null;
         this._resizeSession = null;
         this._dragFrame = null;
         this._pendingDragUpdate = null;
@@ -272,6 +275,22 @@ export class Window extends Component {
         this._isUnmounted = false;
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        const prefersReducedMotion = typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reducedMotionSetting = typeof document !== 'undefined'
+            && document.documentElement.classList.contains('reduce-motion');
+        const shouldReduceMotion = prefersReducedMotion || reducedMotionSetting;
+        if (shouldReduceMotion) {
+            this.setState({ entering: false });
+        } else {
+            const openDuration = readMotionDuration('--window-motion-duration-open', 260);
+            this._enterTimeout = scheduleTimeout(() => {
+                if (!this._isUnmounted) {
+                    this.setState({ entering: false });
+                }
+            }, Math.max(0, Math.round(openDuration)));
+        }
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -365,6 +384,14 @@ export class Window extends Component {
         if (this._closeTimeout) {
             clearScheduledTimeout(this._closeTimeout);
             this._closeTimeout = null;
+        }
+        if (this._focusPulseTimeout) {
+            clearScheduledTimeout(this._focusPulseTimeout);
+            this._focusPulseTimeout = null;
+        }
+        if (this._enterTimeout) {
+            clearScheduledTimeout(this._enterTimeout);
+            this._enterTimeout = null;
         }
         if (this._dragFrame) {
             cancelScheduledAnimationFrame(this._dragFrame);
@@ -1371,6 +1398,27 @@ export class Window extends Component {
         if (!alreadyFocused) {
             node.focus();
         }
+        const prefersReducedMotion = typeof window !== 'undefined'
+            && typeof window.matchMedia === 'function'
+            && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const reducedMotionSetting = typeof document !== 'undefined'
+            && document.documentElement.classList.contains('reduce-motion');
+        if (prefersReducedMotion || reducedMotionSetting) {
+            return;
+        }
+        if (styles.windowFrameFocusPulse && node.classList) {
+            node.classList.remove(styles.windowFrameFocusPulse);
+            void node.offsetHeight;
+            node.classList.add(styles.windowFrameFocusPulse);
+            const focusDuration = readMotionDuration('--window-motion-duration-focus', 240);
+            if (this._focusPulseTimeout) {
+                clearScheduledTimeout(this._focusPulseTimeout);
+            }
+            this._focusPulseTimeout = scheduleTimeout(() => {
+                node.classList.remove(styles.windowFrameFocusPulse);
+                this._focusPulseTimeout = null;
+            }, Math.max(0, Math.round(focusDuration)));
+        }
     }
 
     handleTitleBarDoubleClick = (event) => {
@@ -1739,6 +1787,7 @@ export class Window extends Component {
                             this.state.cursorType,
                             this.state.closed ? 'closed-window' : '',
                             this.props.minimized ? styles.windowFrameMinimized : '',
+                            this.state.entering ? styles.windowFrameEntering : '',
                             this.state.grabbed ? 'opacity-70' : '',
                             this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',

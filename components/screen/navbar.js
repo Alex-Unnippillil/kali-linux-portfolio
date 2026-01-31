@@ -967,7 +967,7 @@ export default class Navbar extends PureComponent {
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`group/btn relative flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${isFocused ? 'bg-white/[0.12]' : 'bg-transparent hover:bg-white/[0.06]'} text-white/80 hover:text-white`}
+                                className={`taskbar-app-button group/btn relative flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(8,145,178,0.25)] ${isFocused ? 'bg-white/[0.12]' : 'bg-transparent hover:bg-white/[0.06]'} text-white/80 hover:text-white`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
@@ -975,7 +975,7 @@ export default class Navbar extends PureComponent {
                                                 alt=""
                                                 width={24}
                                                 height={24}
-                                                className="h-5 w-5 transition-transform duration-150 group-hover/btn:scale-105"
+                                                className="taskbar-app-icon h-5 w-5 transition-transform duration-150 group-hover/btn:scale-105"
                                         />
                                         {badgeNode}
                                         {isActive && (
