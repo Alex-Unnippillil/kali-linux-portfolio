@@ -4750,13 +4750,14 @@ export class Desktop extends Component {
             const app = this.getAppById(appId);
             if (!app) return null;
 
+            const shouldPrefetch = app.prefetchOnHover !== false;
             const props = {
                 name: app.title,
                 id: app.id,
                 icon: app.icon,
                 openApp: this.openApp,
                 disabled: this.state.disabled_apps[app.id],
-                prefetch: app.screen?.prefetch,
+                prefetch: shouldPrefetch ? app.screen?.prefetch : undefined,
                 style: this.desktopIconVariables,
                 accentVariables: this.desktopAccentVariables,
             };

@@ -271,6 +271,7 @@ class AllApplications extends React.Component {
 
     renderAppTile = (app) => {
         const isFavorite = this.state.favorites.includes(app.id);
+        const shouldPrefetch = app.prefetchOnHover !== false;
         return (
             <div
                 key={app.id}
@@ -297,7 +298,7 @@ class AllApplications extends React.Component {
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
-                    prefetch={app.screen?.prefetch}
+                    prefetch={shouldPrefetch ? app.screen?.prefetch : undefined}
                 />
             </div>
         );
@@ -501,4 +502,3 @@ class AllApplications extends React.Component {
 }
 
 export default AllApplications;
-

@@ -108,6 +108,21 @@ const formatClock = (ms) => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
+const STORAGE_KEY = "chess-session-v1";
+
+const readStoredSession = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
 const safeLoadPgn = (game, pgn) => {
   if (!game || !pgn) return false;
   if (typeof game.load_pgn === "function") return game.load_pgn(pgn);
@@ -116,6 +131,16 @@ const safeLoadPgn = (game, pgn) => {
 };
 
 const ChessGame = () => {
+  const storedSession = useMemo(() => readStoredSession(), []);
+  const storedSettings = useMemo(
+    () => storedSession?.settings ?? {},
+    [storedSession],
+  );
+  const storedGame = useMemo(() => storedSession?.game ?? {}, [storedSession]);
+  const skipInitialResetRef = useRef(Boolean(storedGame?.pgn));
+  const hasRestoredRef = useRef(false);
+  const aiMoveRef = useRef(null);
+
   const canvasRef = useRef(null);
   const boardWrapperRef = useRef(null);
   const pgnInputRef = useRef(null);
@@ -154,18 +179,24 @@ const ChessGame = () => {
   const [status, setStatus] = useState("Your move");
   const [paused, setPaused] = useState(false);
   const [gameOver, setGameOver] = useState(false);
-  const [sound, setSound] = useState(true);
-  const [showHints, setShowHints] = useState(false);
+  const [sound, setSound] = useState(storedSettings.sound ?? true);
+  const [showHints, setShowHints] = useState(storedSettings.showHints ?? false);
   const [mateSquares, setMateSquares] = useState([]);
-  const [showArrows, setShowArrows] = useState(true);
-  const [orientation, setOrientation] = useState("white");
-  const [pieceSet, setPieceSet] = useState("sprites");
+  const [showArrows, setShowArrows] = useState(storedSettings.showArrows ?? true);
+  const [orientation, setOrientation] = useState(
+    storedSettings.orientation ?? "white",
+  );
+  const [pieceSet, setPieceSet] = useState(storedSettings.pieceSet ?? "sprites");
   const [spritesReady, setSpritesReady] = useState(false);
   const [sanLog, setSanLog] = useState([]);
   const [analysisMoves, setAnalysisMoves] = useState([]);
-  const [analysisDepth, setAnalysisDepth] = useState(2);
-  const [aiDepth, setAiDepth] = useState(2);
-  const [playerSide, setPlayerSide] = useState(WHITE);
+  const [analysisDepth, setAnalysisDepth] = useState(
+    storedSettings.analysisDepth ?? 2,
+  );
+  const [aiDepth, setAiDepth] = useState(storedSettings.aiDepth ?? 2);
+  const [playerSide, setPlayerSide] = useState(
+    storedSettings.playerSide ?? WHITE,
+  );
   const [boardPixelSize, setBoardPixelSize] = useState(SIZE);
   const [hoverSquare, setHoverSquare] = useState(null);
   const [turnLabel, setTurnLabel] = useState("White");
@@ -363,6 +394,115 @@ const ChessGame = () => {
     updateEval();
     updateMateHints();
   }, [syncBoardFromChess, updateEval, updateMateHints]);
+
+  useEffect(() => {
+    if (hasRestoredRef.current) return;
+    if (!storedGame?.pgn) {
+      hasRestoredRef.current = true;
+      return;
+    }
+
+    stopAi();
+    cancelReplay();
+    chessRef.current.reset();
+
+    const loaded = safeLoadPgn(chessRef.current, storedGame.pgn);
+    if (!loaded) {
+      hasRestoredRef.current = true;
+      return;
+    }
+
+    syncBoardFromChess();
+    setSanLog(chessRef.current.history());
+    setSelected(null);
+    setMoves([]);
+    lastMoveRef.current = null;
+    trailsRef.current = [];
+    particlesRef.current = [];
+    animationsRef.current = [];
+
+    updateEval();
+    updateMateHints();
+
+    const isOver = chessRef.current.isGameOver();
+    setGameOver(isOver);
+    gameOverRef.current = isOver;
+
+    if (storedGame?.paused) {
+      pausedRef.current = true;
+      setPaused(true);
+      clockRef.current.active = null;
+      setStatus("Paused.");
+    } else {
+      pausedRef.current = false;
+      setPaused(false);
+      startClockForSide(sideRef.current);
+      setStatus(
+        sideRef.current === playerSideRef.current ? "Your move" : "AI thinking...",
+      );
+      if (
+        sideRef.current !== playerSideRef.current &&
+        !gameOverRef.current &&
+        !pausedRef.current
+      ) {
+        aiTimeoutRef.current = setTimeout(
+          () => aiMoveRef.current?.(),
+          reduceMotion ? 100 : 260,
+        );
+      }
+    }
+
+    hasRestoredRef.current = true;
+  }, [
+    cancelReplay,
+    playerSide,
+    reduceMotion,
+    stopAi,
+    storedGame,
+    syncBoardFromChess,
+    updateEval,
+    updateMateHints,
+  ]);
+
+  const persistSession = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const payload = {
+        settings: {
+          playerSide,
+          aiDepth,
+          analysisDepth,
+          sound,
+          showHints,
+          showArrows,
+          pieceSet,
+          orientation,
+        },
+        game: {
+          pgn: chessRef.current.pgn(),
+          paused,
+        },
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore storage errors
+    }
+  }, [
+    aiDepth,
+    analysisDepth,
+    orientation,
+    paused,
+    pieceSet,
+    playerSide,
+    showArrows,
+    showHints,
+    sound,
+  ]);
+
+  useEffect(() => {
+    if (!hasRestoredRef.current) return;
+    persistSession();
+  }, [persistSession, sanLog]);
 
   useEffect(() => {
     return () => {
@@ -593,6 +733,8 @@ const ChessGame = () => {
     applyMove(chosen, { announce: true, triggerAi: false });
   };
 
+  aiMoveRef.current = aiMove;
+
   const resetGame = ({ autoplayAi } = { autoplayAi: true }) => {
     stopAi();
     cancelReplay();
@@ -640,6 +782,10 @@ const ChessGame = () => {
   };
 
   useEffect(() => {
+    if (skipInitialResetRef.current) {
+      skipInitialResetRef.current = false;
+      return;
+    }
     setOrientation(playerSide === WHITE ? "white" : "black");
     resetGame({ autoplayAi: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps

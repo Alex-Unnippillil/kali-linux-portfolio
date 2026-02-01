@@ -307,6 +307,7 @@ const gameList = [
     screen: displayGame2048,
     defaultWidth: 35,
     defaultHeight: 45,
+    prefetchOnHover: false,
   },
   {
     id: 'asteroids',
@@ -380,6 +381,7 @@ const gameList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayChess,
+    prefetchOnHover: false,
   },
   // Simple placeholder implementation
   {
