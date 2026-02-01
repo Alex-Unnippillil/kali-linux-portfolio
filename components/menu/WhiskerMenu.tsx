@@ -327,10 +327,10 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
     setCategoryHighlight(index === -1 ? 0 : index);
   }, [isVisible, currentCategory.id, categoryConfigs]);
 
-  const openSelectedApp = (id: string) => {
+  const openSelectedApp = useCallback((id: string) => {
     window.dispatchEvent(new CustomEvent('open-app', { detail: id }));
     setIsOpen(false);
-  };
+  }, [setIsOpen]);
 
   useEffect(() => {
     if (!isOpen && isVisible) {
@@ -410,7 +410,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, toggleMenu]);
+  }, [currentApps, highlight, hideMenu, isVisible, openSelectedApp, toggleMenu]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent | TouchEvent) => {
