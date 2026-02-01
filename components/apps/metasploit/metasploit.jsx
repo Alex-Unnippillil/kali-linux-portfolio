@@ -20,6 +20,103 @@ const timelineSteps = 5;
 
 const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
 
+const simulationScenarios = [
+  {
+    id: 'windows-lab',
+    label: 'Windows Lab Host',
+    target: '10.10.20.15',
+    intro: 'Simulated enterprise workstation discovery and credential gathering.',
+    steps: [
+      {
+        command: 'search type:auxiliary smb',
+        output: 'Matching modules: auxiliary/scanner/smb/smb_version',
+        note: 'Enumerate SMB version without touching credentials.'
+      },
+      {
+        command: 'use auxiliary/scanner/smb/smb_version',
+        output: 'Module selected. Ready to scan target host.',
+        note: 'Select the scanner module for the lab target.'
+      },
+      {
+        command: 'set RHOSTS 10.10.20.15',
+        output: 'RHOSTS => 10.10.20.15',
+        note: 'Set the simulated target address.'
+      },
+      {
+        command: 'run',
+        output: '[*] 10.10.20.15:445 - Windows 10 Pro 10.0 build 19045 (simulation)',
+        note: 'Returns deterministic, pre-baked banner output.'
+      },
+      {
+        command: 'use post/windows/gather/enum_logged_on_users',
+        output: 'Selected post module for user enumeration.',
+        note: 'Switch to a post module for contextual teaching.'
+      }
+    ]
+  },
+  {
+    id: 'linux-web',
+    label: 'Linux Web Server',
+    target: '172.16.8.42',
+    intro: 'Simulated web server review focusing on known CVEs and service banners.',
+    steps: [
+      {
+        command: 'search type:exploit apache',
+        output: 'Matching modules: exploit/linux/http/apache_mod_cgi_bash_env_exec',
+        note: 'Review available exploit modules without execution.'
+      },
+      {
+        command: 'use exploit/linux/http/apache_mod_cgi_bash_env_exec',
+        output: 'Module selected. Required options: RHOSTS, TARGETURI.',
+        note: 'Load exploit module in a controlled demo.'
+      },
+      {
+        command: 'set RHOSTS 172.16.8.42',
+        output: 'RHOSTS => 172.16.8.42',
+        note: 'Point to the simulated web server host.'
+      },
+      {
+        command: 'set TARGETURI /cgi-bin/status',
+        output: 'TARGETURI => /cgi-bin/status',
+        note: 'Demonstrate configuration without a real HTTP request.'
+      },
+      {
+        command: 'run',
+        output: '[demo] Exploit not executed. Use this output to explain mitigation steps.',
+        note: 'Demo mode only — no packets are sent.'
+      }
+    ]
+  },
+  {
+    id: 'database-audit',
+    label: 'Database Audit',
+    target: '10.20.40.25',
+    intro: 'Simulated configuration audit for SQL Server in a lab environment.',
+    steps: [
+      {
+        command: 'search type:auxiliary mssql',
+        output: 'Matching modules: auxiliary/admin/mssql/mssql_enum',
+        note: 'Choose a configuration audit module.'
+      },
+      {
+        command: 'use auxiliary/admin/mssql/mssql_enum',
+        output: 'Module selected. Configure credentials (demo only).',
+        note: 'Set up module options in a safe simulation.'
+      },
+      {
+        command: 'set RHOSTS 10.20.40.25',
+        output: 'RHOSTS => 10.20.40.25',
+        note: 'Use the lab database host.'
+      },
+      {
+        command: 'run',
+        output: '[*] Demo audit complete. Findings stored in notes.',
+        note: 'Use the mock output to discuss hardening.'
+      }
+    ]
+  }
+];
+
 const MetasploitApp = ({
   demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
   onLoadingChange = () => {},
@@ -35,6 +132,9 @@ const MetasploitApp = ({
   const [cveFilter, setCveFilter] = useState('');
   const [animationStyle, setAnimationStyle] = useState({ opacity: 1 });
   const [reduceMotion, setReduceMotion] = useState(false);
+  const [activeScenarioId, setActiveScenarioId] = useState(
+    simulationScenarios[0].id
+  );
 
   const [selectedModule, setSelectedModule] = useState(null);
   const [loot, setLoot] = useState([]);
@@ -91,6 +191,11 @@ const MetasploitApp = ({
     };
   }, []);
 
+  const activeScenario = useMemo(
+    () => simulationScenarios.find((s) => s.id === activeScenarioId),
+    [activeScenarioId]
+  );
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
     if (!q) return [];
@@ -143,6 +248,42 @@ const MetasploitApp = ({
     moduleRaf.current = requestAnimationFrame(step);
     return () => cancelAnimationFrame(moduleRaf.current);
   }, [selectedSeverity, reduceMotion]);
+
+  const applyScenario = () => {
+    if (!activeScenario) return;
+    setCommand(`set RHOSTS ${activeScenario.target}`);
+    recordSimulation({
+      tool: 'metasploit',
+      title: `Scenario: ${activeScenario.label}`,
+      summary: activeScenario.intro,
+      data: { target: activeScenario.target },
+    });
+  };
+
+  const runScenario = async () => {
+    if (!activeScenario) return;
+    setLoading(true);
+    try {
+      setOutput((prev) => `${prev}\n# Scenario: ${activeScenario.label}`);
+      for (const step of activeScenario.steps) {
+        setOutput((prev) => `${prev}\nmsf6 > ${step.command}\n${step.output}`);
+        recordSimulation({
+          tool: 'metasploit',
+          title: step.command,
+          summary: step.note,
+          data: { scenario: activeScenario.id },
+        });
+        await new Promise((r) => setTimeout(r, 300));
+      }
+      setNotes((prev) => [
+        ...prev,
+        { host: activeScenario.target, note: activeScenario.intro },
+      ]);
+      setShowLoot(true);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const runCommand = async () => {
     const cmd = command.trim();
@@ -311,6 +452,36 @@ const MetasploitApp = ({
         toolName="Metasploit"
         message="Module searches and console output are deterministic and stay inside this browser."
       />
+      <div className="flex flex-wrap items-center gap-2 px-2 pb-2 text-xs text-white/80">
+        <span className="font-semibold uppercase tracking-wide">Scenario lab</span>
+        <select
+          className="bg-ub-grey text-white p-1 rounded"
+          value={activeScenarioId}
+          onChange={(e) => setActiveScenarioId(e.target.value)}
+          aria-label="Select Metasploit scenario"
+        >
+          {simulationScenarios.map((scenario) => (
+            <option key={scenario.id} value={scenario.id}>
+              {scenario.label}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={applyScenario}
+          className="px-2 py-1 bg-blue-600 rounded text-white"
+        >
+          Load Scenario
+        </button>
+        <button
+          onClick={runScenario}
+          className="px-2 py-1 bg-ub-orange rounded text-black"
+        >
+          Run Guided Steps
+        </button>
+        {activeScenario && (
+          <span className="text-white/70">{activeScenario.intro}</span>
+        )}
+      </div>
       <div className="flex p-2">
         <input
           className="flex-grow bg-ub-grey text-white p-1 rounded"
@@ -320,6 +491,7 @@ const MetasploitApp = ({
             if (e.key === 'Enter') runCommand();
           }}
           placeholder="msfconsole command"
+          aria-label="Metasploit command input"
           spellCheck={false}
         />
         <button
@@ -370,12 +542,14 @@ const MetasploitApp = ({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search modules"
+              aria-label="Search Metasploit modules"
               spellCheck={false}
             />
             <select
               className="ml-2 bg-ub-grey text-white p-1 rounded"
               value={searchField}
               onChange={(e) => setSearchField(e.target.value)}
+              aria-label="Search field"
             >
               <option value="name">Name</option>
               <option value="type">Type</option>
@@ -403,6 +577,7 @@ const MetasploitApp = ({
               className="bg-ub-grey text-white p-1 rounded"
               value={selectedTag}
               onChange={(e) => setSelectedTag(e.target.value)}
+              aria-label="Filter by tag"
             >
               <option value="">All Tags</option>
               {allTags.map((t) => (
@@ -417,6 +592,7 @@ const MetasploitApp = ({
               className="bg-ub-grey text-white p-1 rounded"
               value={selectedPlatform}
               onChange={(e) => setSelectedPlatform(e.target.value)}
+              aria-label="Filter by platform"
             >
               <option value="">All Platforms</option>
               {allPlatforms.map((p) => (
@@ -432,6 +608,7 @@ const MetasploitApp = ({
               value={cveFilter}
               onChange={(e) => setCveFilter(e.target.value)}
               placeholder="Filter by CVE"
+              aria-label="Filter by CVE"
               spellCheck={false}
             />
           </div>
@@ -463,6 +640,7 @@ const MetasploitApp = ({
                       key={m.name}
                       type="button"
                       onClick={() => showModule(m)}
+                      aria-label={`Select module ${m.name}`}
                       className="p-2 text-left bg-ub-grey rounded flex"
                     >
                       <svg
@@ -515,6 +693,7 @@ const MetasploitApp = ({
                   aria-valuemin={0}
                   aria-valuemax={100}
                   aria-valuenow={Math.round(progress)}
+                  aria-label="Exploit replay progress"
                 >
                   <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
                 </div>

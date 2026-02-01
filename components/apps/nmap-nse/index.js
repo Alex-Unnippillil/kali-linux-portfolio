@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Toast from '../../ui/Toast';
+import SimulationBanner from '../SimulationBanner';
 import DiscoveryMap from './DiscoveryMap';
 
 // Basic script metadata. Example output is loaded from public/demo/nmap-nse.json
@@ -67,6 +68,30 @@ const portPresets = [
   { label: 'Full', flag: '-p-' }
 ];
 
+const scenarioPresets = [
+  {
+    id: 'web-app',
+    label: 'Public Web App',
+    target: 'shop.example.lab',
+    scripts: ['http-title', 'http-enum', 'ssl-cert'],
+    note: 'Simulated public web application audit. Review visible HTTP metadata only.'
+  },
+  {
+    id: 'file-server',
+    label: 'Internal File Server',
+    target: '10.20.30.15',
+    scripts: ['smb-os-discovery', 'ftp-anon'],
+    note: 'Simulated internal host reconnaissance for SMB/FTP exposure.'
+  },
+  {
+    id: 'dns',
+    label: 'DNS Inventory',
+    target: 'corp.lab',
+    scripts: ['dns-brute'],
+    note: 'Simulated DNS enumeration using curated wordlists.'
+  }
+];
+
 const cvssColor = (score) => {
   if (score >= 9) return 'bg-kali-severity-critical';
   if (score >= 7) return 'bg-kali-severity-high';
@@ -85,6 +110,8 @@ const NmapNSEApp = () => {
   const [activeScript, setActiveScript] = useState(scripts[0].name);
   const [phaseStep, setPhaseStep] = useState(0);
   const [toast, setToast] = useState('');
+  const [activeScenarioId, setActiveScenarioId] = useState(scenarioPresets[0].id);
+  const [scenarioNote, setScenarioNote] = useState(scenarioPresets[0].note);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -107,6 +134,17 @@ const NmapNSEApp = () => {
     });
     setActiveScript(name);
     setPhaseStep(0);
+  };
+
+  const applyScenario = () => {
+    const preset = scenarioPresets.find((s) => s.id === activeScenarioId);
+    if (!preset) return;
+    setTarget(preset.target);
+    setSelectedScripts(preset.scripts);
+    setActiveScript(preset.scripts[0] || '');
+    setPhaseStep(0);
+    setScenarioNote(preset.note);
+    setToast(`Loaded ${preset.label} scenario`);
   };
 
   useEffect(() => {
@@ -192,10 +230,40 @@ const NmapNSEApp = () => {
     <div className="flex h-full w-full flex-col text-kali-text md:flex-row">
       <div className="md:w-1/2 overflow-y-auto bg-kali-surface p-4">
         <h1 className="mb-4 text-lg font-semibold">Nmap NSE Demo</h1>
+        <SimulationBanner
+          toolName="Nmap NSE"
+          message="Simulated scripts and outputs. Commands are build-only; no packets are sent."
+          className="mb-4"
+        />
         <div className="mb-4 rounded border border-kali-severity-medium/60 bg-kali-severity-medium/15 p-3">
           <p className="text-sm font-semibold">
             Educational use only. Do not scan systems without permission.
           </p>
+        </div>
+        <div className="mb-4 rounded-lg border border-white/10 bg-kali-surface-muted/80 p-3">
+          <p className="mb-2 text-sm font-semibold">Guided scenario</p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <select
+              value={activeScenarioId}
+              onChange={(e) => setActiveScenarioId(e.target.value)}
+              className="rounded border border-white/10 bg-kali-dark px-3 py-2 text-sm text-kali-text"
+              aria-label="Select guided scenario"
+            >
+              {scenarioPresets.map((preset) => (
+                <option key={preset.id} value={preset.id}>
+                  {preset.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={applyScenario}
+              className="rounded px-3 py-2 text-sm font-medium text-black transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus bg-kali-control"
+            >
+              Load Scenario
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-white/70">{scenarioNote}</p>
         </div>
         <div className="mb-4">
           <label className="mb-1 block text-sm" htmlFor="target">
@@ -304,6 +372,12 @@ const NmapNSEApp = () => {
         </div>
       </div>
       <div className="md:w-1/2 overflow-y-auto bg-kali-surface-raised p-4">
+        {scenarioNote && (
+          <div className="mb-4 rounded border border-white/10 bg-kali-surface/80 p-3 text-sm text-white/80">
+            <p className="font-semibold text-white">Scenario summary</p>
+            <p>{scenarioNote}</p>
+          </div>
+        )}
         <h2 className="mb-2 text-lg font-semibold">Script phases</h2>
         {activeScript ? (
           <>
