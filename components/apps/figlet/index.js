@@ -402,7 +402,7 @@ const FigletApp = () => {
           className="px-2 bg-blue-700 hover:bg-blue-600 rounded text-white"
           aria-label="Copy all"
         >
-          Copy All
+          Copy Output
         </button>
         <button
           onClick={exportPNG}
