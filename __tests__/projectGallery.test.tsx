@@ -14,88 +14,88 @@ describe('ProjectGallery', () => {
 
   it('filters projects and updates live region', async () => {
     render(<ProjectGallery />);
-    await screen.findByText('Alpha');
+    await screen.findByText('Kali Linux Portfolio');
     fireEvent.change(screen.getByLabelText('Stack'), {
-      target: { value: 'TS' },
+      target: { value: 'MongoDB' },
     });
     await waitFor(() =>
-      expect(screen.queryByText('Alpha')).not.toBeInTheDocument()
+      expect(screen.queryByText('Kali Linux Portfolio')).not.toBeInTheDocument()
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
-      'Showing 1 project filtered by TS'
+      'Showing 1 project filtered by MongoDB'
     );
   });
 
   it('filters when clicking stack chip inside a project', async () => {
     render(<ProjectGallery />);
-    await screen.findByText('Alpha');
+    await screen.findByText('Kali Linux Portfolio');
     fireEvent.click(
-      screen.getAllByRole('button', { name: 'JS' })[0] // chip inside Alpha
+      screen.getAllByRole('button', { name: 'Next.js' })[0] // chip inside Kali Linux Portfolio
     );
     await waitFor(() =>
-      expect(screen.queryByText('Beta')).not.toBeInTheDocument()
+      expect(screen.queryByText('Recipe App')).not.toBeInTheDocument()
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
-      'Showing 1 project filtered by JS'
+      'Showing 1 project filtered by Next.js'
     );
   });
 
   it('filters projects by selected tags', async () => {
     render(<ProjectGallery />);
-    await screen.findByText('Alpha');
-    fireEvent.click(screen.getByLabelText('frontend'));
+    await screen.findByText('Canada Population Growth');
+    fireEvent.click(screen.getByLabelText('demographics'));
     await waitFor(() =>
-      expect(screen.queryByText('Beta')).not.toBeInTheDocument()
+      expect(screen.queryByText('Kali Linux Portfolio')).not.toBeInTheDocument()
     );
     expect(screen.getByText(/Showing/)).toHaveTextContent(
-      'Showing 1 project with tags frontend'
+      'Showing 1 project with tags demographics'
     );
   });
 
   it('persists filter selection to localStorage', async () => {
     render(<ProjectGallery />);
-    await screen.findByText('Alpha');
+    await screen.findByText('Recipe App');
     fireEvent.change(screen.getByLabelText('Stack'), {
-      target: { value: 'TS' },
+      target: { value: 'MongoDB' },
     });
-    fireEvent.click(screen.getByLabelText('frontend'));
+    fireEvent.click(screen.getByLabelText('crud'));
     await waitFor(() => {
       const stored = JSON.parse(
         localStorage.getItem('project-gallery-filters') || '{}'
       );
-      expect(stored.stack).toBe('TS');
-      expect(stored.tags).toEqual(['frontend']);
+      expect(stored.stack).toBe('MongoDB');
+      expect(stored.tags).toEqual(['crud']);
     });
   });
 
   it('loads persisted filters from localStorage', async () => {
     localStorage.setItem(
       'project-gallery-filters',
-      JSON.stringify({ search: '', stack: 'TS', year: '', type: '', tags: [] })
+      JSON.stringify({ search: '', stack: 'Python', year: '', type: '', tags: [] })
     );
     render(<ProjectGallery />);
-    await screen.findByText('Beta');
-    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+    await screen.findByText('Snake Game');
+    expect(screen.queryByText('Kali Linux Portfolio')).not.toBeInTheDocument();
   });
 
   it('compares two projects side-by-side', async () => {
     render(<ProjectGallery />);
-    await screen.findByText('Alpha');
+    await screen.findByText('Kali Linux Portfolio');
     fireEvent.click(
-      screen.getByRole('button', { name: 'Select Alpha for comparison' })
+      screen.getByRole('button', { name: 'Select Kali Linux Portfolio for comparison' })
     );
     fireEvent.click(
-      screen.getByRole('button', { name: 'Select Beta for comparison' })
+      screen.getByRole('button', { name: 'Select Recipe App for comparison' })
     );
     const table = await screen.findByRole('table');
     const tbl = within(table);
-    expect(tbl.getByText('Alpha')).toBeInTheDocument();
-    expect(tbl.getByText('Beta')).toBeInTheDocument();
+    expect(tbl.getByText('Kali Linux Portfolio')).toBeInTheDocument();
+    expect(tbl.getByText('Recipe App')).toBeInTheDocument();
     expect(tbl.getByText('Stack')).toBeInTheDocument();
     expect(tbl.getByText('Highlights')).toBeInTheDocument();
-    expect(tbl.getByText('JS')).toBeInTheDocument();
-    expect(tbl.getByText('TS')).toBeInTheDocument();
-    expect(tbl.getByText('frontend, react')).toBeInTheDocument();
-    expect(tbl.getByText('backend')).toBeInTheDocument();
+    expect(tbl.getByText('Next.js, Tailwind CSS, TypeScript')).toBeInTheDocument();
+    expect(tbl.getByText('Node.js, Express, MongoDB')).toBeInTheDocument();
+    expect(tbl.getByText('portfolio, desktop-ui, nextjs')).toBeInTheDocument();
+    expect(tbl.getByText('crud, api, recipes')).toBeInTheDocument();
   });
 });
