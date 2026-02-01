@@ -17,7 +17,6 @@ export const DEFAULT_DESKTOP_FOLDERS = [
       'screen-recorder',
       'files',
       'serial-terminal',
-      'gedit',
       'contact',
       'about',
       'settings',

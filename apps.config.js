@@ -104,7 +104,6 @@ const XApp = createDynamicApp(() => import('./components/apps/x'), 'X');
 const SpotifyApp = createDynamicApp(() => import('./components/apps/spotify'), 'Spotify');
 const SettingsApp = createDynamicApp(() => import('./components/apps/settings'), 'Settings');
 const FirefoxApp = createDynamicApp(() => import('./components/apps/firefox'), 'Firefox');
-const GeditApp = createDynamicApp(() => import('./components/apps/gedit'), 'Gedit');
 const TodoistApp = createDynamicApp(() => import('./components/apps/todoist'), 'Todoist');
 const WeatherApp = createDynamicApp(() => import('./components/apps/weather'), 'Weather');
 
@@ -209,7 +208,6 @@ const displayX = createDisplay(XApp);
 const displaySpotify = createDisplay(SpotifyApp);
 const displaySettings = createDisplay(SettingsApp);
 const displayFirefox = createDisplay(FirefoxApp);
-const displayGedit = createDisplay(GeditApp);
 const displayTodoist = createDisplay(TodoistApp);
 const displayWeather = createDisplay(WeatherApp);
 
@@ -856,17 +854,6 @@ const apps = [
     responsiveHeight: { mobile: 85, desktop: 70 },
   },
   {
-    id: 'gedit',
-    title: 'Contact Me',
-    icon: '/themes/Yaru/apps/gedit.png',
-    disabled: false,
-    favourite: false,
-    desktop_shortcut: true,
-    screen: displayGedit,
-    responsiveWidth: { mobile: 95, desktop: 55 },
-    responsiveHeight: { mobile: 85, desktop: 70 },
-  },
-  {
     id: 'converter',
     title: 'Converter',
     icon: '/themes/Yaru/apps/calc.svg',
@@ -1044,7 +1031,7 @@ const apps = [
   },
   {
     id: 'weather',
-    title: 'Weather',
+    title: 'Weather Dashboard',
     icon: '/themes/Yaru/apps/weather.svg',
     disabled: false,
     favourite: false,
