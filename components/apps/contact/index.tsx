@@ -72,6 +72,7 @@ export const processContactForm = async (
 
 const DRAFT_FILE = 'contact-draft.json';
 const EMAIL = 'alex.unnippillil@hotmail.com';
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
@@ -181,7 +182,7 @@ const ContactApp: React.FC = () => {
       setError('Form unavailable in this static preview. Use the options above.');
     })();
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
-    if (!siteKey || !(window as any).grecaptcha) {
+    if (!DEMO_MODE && (!siteKey || !(window as any).grecaptcha)) {
       setFallback(true);
     }
   }, []);
@@ -229,7 +230,10 @@ const ContactApp: React.FC = () => {
     let recaptchaToken = '';
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     let shouldFallback = fallback;
-    if (!shouldFallback && siteKey && (window as any).grecaptcha) {
+    if (DEMO_MODE) {
+      recaptchaToken = 'demo';
+      shouldFallback = false;
+    } else if (!shouldFallback && siteKey && (window as any).grecaptcha) {
       recaptchaToken = await getRecaptchaToken(siteKey);
       if (!recaptchaToken) shouldFallback = true;
     } else {
@@ -414,4 +418,3 @@ const ContactApp: React.FC = () => {
 };
 
 export default ContactApp;
-

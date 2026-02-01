@@ -11,16 +11,19 @@ const RATE_LIMIT_MAX = 5;
 export const rateLimit = new Map();
 
 export default async function handler(req, res) {
+  const demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   try {
     validateServerEnv(process.env);
   } catch {
-    if (!process.env.RECAPTCHA_SECRET) {
-      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
-    } else {
-      res.status(500).json({ ok: false });
-    }
+    if (!demoMode) {
+      if (!process.env.RECAPTCHA_SECRET) {
+        res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+      } else {
+        res.status(500).json({ ok: false });
+      }
 
-    return;
+      return;
+    }
   }
   if (req.method === 'GET') {
     const token = randomBytes(32).toString('hex');
@@ -36,7 +39,7 @@ export default async function handler(req, res) {
         secure: shouldUseSecure,
       })
     );
-    res.status(200).json({ ok: true, csrfToken: token });
+    res.status(200).json({ ok: true, csrfToken: token, demo: demoMode });
     return;
   }
 
@@ -75,41 +78,43 @@ export default async function handler(req, res) {
   }
 
   const { recaptchaToken = '', ...rest } = req.body || {};
-  const secret = process.env.RECAPTCHA_SECRET;
-  if (!secret) {
-    console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
-    res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
-    return;
-  }
-  if (!recaptchaToken) {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-    res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
-    return;
-  }
-  try {
-    const verify = await fetch(
-      'https://www.google.com/recaptcha/api/siteverify',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          secret: String(secret ?? ''),
-          response: String(recaptchaToken ?? ''),
-        }),
-      }
-    );
-    const captcha = await verify.json();
-    if (!captcha.success) {
+  if (!demoMode) {
+    const secret = process.env.RECAPTCHA_SECRET;
+    if (!secret) {
+      console.warn('Contact submission rejected', { ip, reason: 'recaptcha_disabled' });
+      res.status(503).json({ ok: false, code: 'recaptcha_disabled' });
+      return;
+    }
+    if (!recaptchaToken) {
       console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
       res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
       return;
     }
-  } catch {
-    console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
-    res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
-    return;
+    try {
+      const verify = await fetch(
+        'https://www.google.com/recaptcha/api/siteverify',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            secret: String(secret ?? ''),
+            response: String(recaptchaToken ?? ''),
+          }),
+        }
+      );
+      const captcha = await verify.json();
+      if (!captcha.success) {
+        console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+        res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+        return;
+      }
+    } catch {
+      console.warn('Contact submission rejected', { ip, reason: 'invalid_recaptcha' });
+      res.status(400).json({ ok: false, code: 'invalid_recaptcha' });
+      return;
+    }
   }
 
   let sanitized;
@@ -131,6 +136,8 @@ export default async function handler(req, res) {
     const supabase = getServiceSupabase();
     if (supabase) {
       await supabase.from('contact_messages').insert([sanitized]);
+    } else if (demoMode) {
+      console.info('Contact submission (demo)', { ip, ...sanitized });
     } else {
       console.warn('Supabase client not configured; contact message not stored', { ip });
     }
@@ -139,5 +146,5 @@ export default async function handler(req, res) {
   }
 
 
-  res.status(200).json({ ok: true });
+  res.status(200).json({ ok: true, demo: demoMode });
 }

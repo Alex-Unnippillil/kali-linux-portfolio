@@ -10,9 +10,9 @@ export function Settings() {
     const fileInput = useRef(null);
 
     const wallpapers = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 'wall-7', 'wall-8'];
+    const themes = ['default', 'dark', 'neon', 'matrix'];
 
-    const changeBackgroundImage = (e) => {
-        const name = e.currentTarget.dataset.path;
+    const changeBackgroundImage = (name) => {
         setWallpaper(name);
     };
 
@@ -69,19 +69,32 @@ export function Settings() {
                     />
                 )}
             </div>
-            <div className="flex justify-center my-4">
-                <label htmlFor="theme-select" className="mr-2 text-kali-text/80">Theme:</label>
-                <select
-                    id="theme-select"
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="bg-kali-surface-muted text-kali-text px-2 py-1 rounded-md border border-kali-border/70 transition-colors hover:border-kali-focus/60 focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-kali-surface"
-                >
-                    <option value="default">Default</option>
-                    <option value="dark">Dark</option>
-                    <option value="neon">Neon</option>
-                    <option value="matrix">Matrix</option>
-                </select>
+            <div className="flex flex-col items-center gap-3 my-4">
+                <label className="text-kali-text/80 text-sm">Theme</label>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {themes.map((option) => (
+                        <button
+                            key={option}
+                            type="button"
+                            onClick={() => setTheme(option)}
+                            className={`flex flex-col items-center gap-2 rounded-lg border px-3 py-3 text-xs uppercase tracking-wide transition-colors ${theme === option
+                                ? 'border-kali-primary/80 bg-kali-surface-raised text-kali-primary'
+                                : 'border-kali-border/60 bg-kali-surface-muted text-kali-text/70 hover:border-kali-focus/60'
+                                }`}
+                            aria-pressed={theme === option}
+                        >
+                            <span className={`h-10 w-16 rounded-md border ${option === 'default'
+                                ? 'bg-gray-100 border-gray-200'
+                                : option === 'dark'
+                                    ? 'bg-gray-900 border-gray-700'
+                                    : option === 'neon'
+                                        ? 'bg-black border-fuchsia-500/60'
+                                        : 'bg-black border-green-500/60'
+                                }`} />
+                            <span>{option}</span>
+                        </button>
+                    ))}
+                </div>
             </div>
             <div className="flex justify-center my-4">
                 <label className="mr-2 text-kali-text/80 flex items-center">
@@ -231,29 +244,28 @@ export function Settings() {
                     <span ref={liveRegion} role="status" aria-live="polite" className="sr-only"></span>
                 </div>
             </div>
-            <div className="flex flex-wrap justify-center items-center border-t border-kali-border/60">
-                {
-                    wallpapers.map((name, index) => (
-                        <div
-                            key={name}
-                            role="button"
-                            aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
-                            aria-pressed={name === wallpaper}
-                            tabIndex="0"
-                            onClick={changeBackgroundImage}
-                            onFocus={changeBackgroundImage}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    changeBackgroundImage(e);
-                                }
-                            }}
-                            data-path={name}
-                            className={`md:px-28 md:py-20 md:m-4 m-2 px-14 py-10 outline-none border-4 rounded-lg transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${name === wallpaper ? 'border-kali-primary/80 ring-2 ring-kali-primary/40 ring-offset-2 ring-offset-kali-surface' : 'border-transparent hover:border-kali-focus/40'}`}
-                            style={{ backgroundImage: `url(/wallpapers/${name}.webp)`, backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundPosition: "center center" }}
-                        ></div>
-                    ))
-                }
+            <div className="flex flex-col items-center gap-4 border-t border-kali-border/60 pt-6">
+                <p className="text-sm text-kali-text/70">Wallpaper Selector</p>
+                <div className="flex flex-wrap justify-center items-center">
+                    {
+                        wallpapers.map((name) => (
+                            <button
+                                key={name}
+                                type="button"
+                                aria-label={`Select ${name.replace('wall-', 'wallpaper ')}`}
+                                aria-pressed={name === wallpaper}
+                                onClick={() => changeBackgroundImage(name)}
+                                className={`md:m-3 m-2 outline-none border-4 rounded-lg transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${name === wallpaper ? 'border-kali-primary/80 ring-2 ring-kali-primary/40 ring-offset-2 ring-offset-kali-surface' : 'border-transparent hover:border-kali-focus/40'}`}
+                            >
+                                <img
+                                    src={`/wallpapers/${name}.webp`}
+                                    alt={name.replace('wall-', 'Wallpaper ')}
+                                    className="h-24 w-36 object-cover rounded"
+                                />
+                            </button>
+                        ))
+                    }
+                </div>
             </div>
             <div className="flex justify-center my-4 border-t border-kali-border/60 pt-4 space-x-4">
                 <button
@@ -279,6 +291,7 @@ export function Settings() {
                 </button>
                 <button
                     onClick={async () => {
+                        if (!window.confirm('Reset desktop personalization and settings?')) return;
                         await resetSettings();
                         setAccent(defaults.accent);
                         setWallpaper(defaults.wallpaper);
