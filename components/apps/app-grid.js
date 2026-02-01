@@ -187,6 +187,7 @@ const Cell = React.memo(({ columnIndex, rowIndex, style, data }) => {
   const meta = data.metadata[app.id] ?? buildAppMetadata(app);
   const isSelected = data.isGridActive && index === data.focusedIndex;
   const isHovered = index === data.hoveredIndex;
+  const shouldPrefetch = app.prefetchOnHover !== false;
 
   return (
     <div
@@ -223,7 +224,7 @@ const Cell = React.memo(({ columnIndex, rowIndex, style, data }) => {
               displayName={app.nodes}
               disabled={Boolean(app.disabled)}
               openApp={data.handleOpenApp}
-              prefetch={app.screen?.prefetch}
+              prefetch={shouldPrefetch ? app.screen?.prefetch : undefined}
               launchOnClick
               isSelected={isSelected}
               isHovered={isHovered}
@@ -450,6 +451,7 @@ export default function AppGrid({
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 placeholder="Search apps"
+                aria-label="Search apps"
                 aria-describedby="launcher-search-hint"
                 className="w-full rounded-md border border-slate-600/70 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-400/60"
               />
