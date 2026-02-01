@@ -246,6 +246,10 @@ export class Window extends Component {
             minWidth,
             minHeight,
             resizing: null,
+            position: {
+                x: this.startX,
+                y: this.startY,
+            },
         };
         this.windowRef = React.createRef();
         this._usageTimeout = null;
@@ -544,6 +548,16 @@ export class Window extends Component {
         let x = typeof dragData?.x === 'number' && Number.isFinite(dragData.x) ? dragData.x : null;
         let y = typeof dragData?.y === 'number' && Number.isFinite(dragData.y) ? dragData.y : null;
 
+        if (x === null || y === null) {
+            const position = this.state?.position;
+            if (position && typeof position.x === 'number' && Number.isFinite(position.x) && x === null) {
+                x = position.x;
+            }
+            if (position && typeof position.y === 'number' && Number.isFinite(position.y) && y === null) {
+                y = position.y;
+            }
+        }
+
         if (x !== null && y !== null) {
             return { x, y };
         }
@@ -745,26 +759,40 @@ export class Window extends Component {
         return Math.round(value / size) * size;
     }
 
-    setWinowsPosition = () => {
+    setWinowsPosition = (positionOverride = null) => {
         const node = this.getWindowNode();
         if (!node) return;
         const rect = node.getBoundingClientRect();
+        const position = this.state.position;
+        const rectX = Number.isFinite(rect.x) ? rect.x : rect.left;
+        const rectY = Number.isFinite(rect.y) ? rect.y : rect.top;
+        const overrideX = positionOverride && Number.isFinite(positionOverride.x) ? positionOverride.x : null;
+        const overrideY = positionOverride && Number.isFinite(positionOverride.y) ? positionOverride.y : null;
+        const hasMeasuredRect = Number.isFinite(rectX) && Number.isFinite(rectY) && (rectX !== 0 || rectY !== 0);
+        const usePositionFallback = position
+            && Number.isFinite(position.x)
+            && Number.isFinite(position.y)
+            && !hasMeasuredRect;
+        const baseX = overrideX ?? (usePositionFallback ? position.x : rectX);
+        const basePositionY = overrideY ?? (usePositionFallback ? position.y : rectY);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const viewportLeft = this.state.viewportOffset?.left ?? 0;
         const viewportTop = this.state.viewportOffset?.top ?? 0;
-        const relativeX = rect.x - viewportLeft;
+        const relativeX = baseX - viewportLeft;
         const snappedRelativeX = this.snapToGrid(relativeX, 'x');
         const minX = viewportLeft;
         const maxX = viewportLeft + this.state.parentSize.width;
         const absoluteX = Math.min(Math.max(snappedRelativeX + viewportLeft, minX), maxX);
-        const relativeY = rect.y - (viewportTop + topInset);
+        const relativeY = basePositionY - (viewportTop + topInset);
         const snappedRelativeY = this.snapToGrid(relativeY, 'y');
         const minY = viewportTop + topInset;
         const maxY = minY + this.state.parentSize.height;
-        const baseY = snappedRelativeY + minY;
-        const absoluteY = Math.min(Math.max(clampWindowTopPosition(baseY, minY), minY), maxY);
-        node.style.setProperty('--window-transform-x', `${absoluteX.toFixed(1)}px`);
-        node.style.setProperty('--window-transform-y', `${absoluteY.toFixed(1)}px`);
+        const snappedBaseY = snappedRelativeY + minY;
+        const absoluteY = Math.min(Math.max(clampWindowTopPosition(snappedBaseY, minY), minY), maxY);
+        const roundedX = Number(absoluteX.toFixed(1));
+        const roundedY = Number(absoluteY.toFixed(1));
+        this.updateTransformVariables(node, roundedX, roundedY);
+        this.updatePositionState(roundedX, roundedY);
 
         if (this.props.onPositionChange) {
             this.props.onPositionChange(absoluteX, absoluteY);
@@ -782,6 +810,11 @@ export class Window extends Component {
             const y = node.style.getPropertyValue('--window-transform-y');
             if (x && y) {
                 node.style.transform = `translate(${x},${y})`;
+                const parsedX = parsePxValue(x);
+                const parsedY = parsePxValue(y);
+                if (parsedX !== null && parsedY !== null) {
+                    this.updatePositionState(parsedX, parsedY);
+                }
             }
         }
         if (this.state.lastSize) {
@@ -887,6 +920,8 @@ export class Window extends Component {
         if (node) {
             this.setTransformMotionPreset(node, 'snap');
             node.style.transform = `translate(${translateX}px, ${translateY}px)`;
+            this.updateTransformVariables(node, translateX, translateY);
+            this.updatePositionState(translateX, translateY);
         }
 
         const widthBase = containerWidth || viewportWidth || region.width || 1;
@@ -990,6 +1025,29 @@ export class Window extends Component {
         }
     }
 
+    updatePositionState = (x, y) => {
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        this.setState((prevState) => {
+            const prevPosition = prevState.position;
+            if (prevPosition && prevPosition.x === x && prevPosition.y === y) {
+                return null;
+            }
+            return {
+                position: {
+                    x,
+                    y,
+                },
+            };
+        });
+    }
+
+    updateTransformVariables = (node, x, y) => {
+        if (!node) return;
+        node.style.transform = `translate(${x}px, ${y}px)`;
+        node.style.setProperty('--window-transform-x', `${x}px`);
+        node.style.setProperty('--window-transform-y', `${y}px`);
+    }
+
     scheduleDragUpdate = (dragData) => {
         if (this._isUnmounted) return;
         const node = this.resolveDragNode(dragData);
@@ -1002,13 +1060,15 @@ export class Window extends Component {
         }
 
         const coordinates = this.resolveDragCoordinates(dragData, node);
+        const resisted = this.getResistedPosition(coordinates);
         const update = {
             node,
-            x: coordinates.x,
-            y: coordinates.y,
+            x: resisted.x,
+            y: resisted.y,
         };
         this._pendingDragUpdate = update;
-        this.applyEdgeResistance(node, update);
+        this.updateTransformVariables(node, update.x, update.y);
+        this.updatePositionState(update.x, update.y);
 
         if (this._dragFrame !== null) {
             return;
@@ -1021,7 +1081,8 @@ export class Window extends Component {
             if (!pending || !pending.node || this._isUnmounted) {
                 return;
             }
-            this.applyEdgeResistance(pending.node, pending);
+            this.updateTransformVariables(pending.node, pending.x, pending.y);
+            this.updatePositionState(pending.x, pending.y);
             const rect = this.readNodeRect(pending.node);
             this.checkSnapPreview(pending.node, rect);
         });
@@ -1037,13 +1098,14 @@ export class Window extends Component {
         if (!pending || !pending.node || this._isUnmounted) {
             return;
         }
-        this.applyEdgeResistance(pending.node, pending);
+        this.updateTransformVariables(pending.node, pending.x, pending.y);
+        this.updatePositionState(pending.x, pending.y);
         const rect = this.readNodeRect(pending.node);
         this.checkSnapPreview(pending.node, rect);
     }
 
-    applyEdgeResistance = (node, data) => {
-        if (!node || !data) return;
+    getResistedPosition = (data) => {
+        if (!data) return { x: 0, y: 0 };
         const threshold = 30;
         const resistance = 0.35; // how much to slow near edges
         let { x, y } = data;
@@ -1064,15 +1126,21 @@ export class Window extends Component {
 
         x = resist(x, viewportLeft, maxX);
         y = resist(y, topBound, maxY);
-        const nextTransform = `translate(${x}px, ${y}px)`;
-        if (node.style.transform !== nextTransform) {
-            node.style.transform = nextTransform;
-        }
+        return { x, y };
     }
 
     handleDrag = (e, data) => {
         this.scheduleDragUpdate(data);
         this.flushPendingDragUpdate();
+    }
+
+    handleDragStart = (e, data) => {
+        this.changeCursorToMove();
+        const node = this.resolveDragNode(data);
+        const coordinates = this.resolveDragCoordinates(data, node);
+        const resisted = this.getResistedPosition(coordinates);
+        this.updateTransformVariables(node, resisted.x, resisted.y);
+        this.updatePositionState(resisted.x, resisted.y);
     }
 
     handleStop = () => {
@@ -1287,9 +1355,8 @@ export class Window extends Component {
 
         const node = this.getWindowNode();
         if (node) {
-            node.style.transform = `translate(${translateX}px, ${translateY}px)`;
-            node.style.setProperty('--window-transform-x', `${translateX}px`);
-            node.style.setProperty('--window-transform-y', `${translateY}px`);
+            this.updateTransformVariables(node, translateX, translateY);
+            this.updatePositionState(translateX, translateY);
         }
 
         const horizontalPercent = viewportWidth ? (widthPx / viewportWidth) * 100 : this.state.width;
@@ -1443,6 +1510,7 @@ export class Window extends Component {
             style['--window-transform-x'] = `${targetX}px`;
             style['--window-transform-y'] = `${targetY}px`;
         }
+        this.updatePositionState(targetX, targetY);
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             return;
@@ -1495,6 +1563,7 @@ export class Window extends Component {
                     style['--window-transform-x'] = '-1pt';
                     style['--window-transform-y'] = `${translateYOffset}px`;
                 }
+                this.updatePositionState(-1, translateYOffset);
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
                 this.notifySizeChange();
@@ -1552,14 +1621,17 @@ export class Window extends Component {
                 const node = this.getWindowNode();
                 if (node) {
                     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    let x = match ? parseFloat(match[1]) : 0;
-                    let y = match ? parseFloat(match[2]) : 0;
+                    const fallbackPosition = this.state.position;
+                    let x = match ? parseFloat(match[1]) : (fallbackPosition?.x ?? 0);
+                    let y = match ? parseFloat(match[2]) : (fallbackPosition?.y ?? 0);
                     x += dx;
                     y += dy;
                     node.style.transform = `translate(${x}px, ${y}px)`;
+                    this.updateTransformVariables(node, x, y);
+                    this.updatePositionState(x, y);
                     const rect = this.readNodeRect(node);
                     this.checkSnapPreview(node, rect);
-                    this.setWinowsPosition();
+                    this.setWinowsPosition({ x, y });
                 }
             }
         }
@@ -1710,14 +1782,15 @@ export class Window extends Component {
                     nodeRef={this.windowRef}
                     axis="both"
                     handle="[data-window-drag-handle]"
-                    cancel={`.${styles.windowControls}`}
+                    cancel={`.${styles.windowControls}, [data-resize-handle]`}
                     grid={this.props.snapEnabled ? snapGrid : [1, 1]}
                     scale={1}
-                    onStart={this.changeCursorToMove}
+                    onStart={this.handleDragStart}
                     onStop={this.handleStop}
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
+                    position={this.state.position}
                     bounds={{
                         left: viewportLeft - DRAG_BOUNDS_PADDING,
                         top: boundsTop - DRAG_BOUNDS_PADDING,

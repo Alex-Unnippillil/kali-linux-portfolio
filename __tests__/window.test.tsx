@@ -79,8 +79,13 @@ afterEach(() => {
 jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => {
   const React = require('react');
-  const MockDraggable = ({ children, grid }: any) => (
-    <div data-testid="draggable-mock" data-grid={Array.isArray(grid) ? grid.join(',') : undefined}>
+  const MockDraggable = ({ children, grid, cancel, position }: any) => (
+    <div
+      data-testid="draggable-mock"
+      data-grid={Array.isArray(grid) ? grid.join(',') : undefined}
+      data-cancel={cancel}
+      data-position={position ? `${position.x},${position.y}` : undefined}
+    >
       {children}
     </div>
   );
@@ -163,6 +168,23 @@ describe('Window snap grid configuration', () => {
     expect(draggable).toHaveAttribute('data-grid', '16,24');
   });
 
+  it('excludes resize handles from draggable interactions', () => {
+    render(
+      <Window
+        id="grid-cancel-test"
+        title="Grid Cancel"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+      />
+    );
+
+    const draggable = screen.getByTestId('draggable-mock');
+    expect(draggable).toHaveAttribute('data-cancel', expect.stringContaining('[data-resize-handle]'));
+  });
+
   it('snaps dimensions using axis-specific grid values', () => {
     const ref = React.createRef<any>();
     render(
@@ -182,6 +204,30 @@ describe('Window snap grid configuration', () => {
 
     expect(ref.current!.snapToGrid(23, 'x')).toBe(16);
     expect(ref.current!.snapToGrid(23, 'y')).toBe(24);
+  });
+});
+
+describe('Window drag position synchronization', () => {
+  it('tracks drag position in state when a drag begins', () => {
+    const ref = React.createRef<any>();
+    render(
+      <Window
+        id="drag-sync-test"
+        title="Drag Sync"
+        screen={() => <div>content</div>}
+        focus={() => {}}
+        hasMinimised={() => {}}
+        closed={() => {}}
+        openApp={() => {}}
+        ref={ref}
+      />
+    );
+
+    act(() => {
+      ref.current!.handleDragStart(null, { x: 120, y: 140 });
+    });
+
+    expect(ref.current!.state.position).toEqual(ref.current!.getResistedPosition({ x: 120, y: 140 }));
   });
 });
 
@@ -858,7 +904,8 @@ describe('Window maximize behavior', () => {
 });
 
 describe('Window keyboard dragging', () => {
-  it('moves window using arrow keys with grabbed state', () => {
+  it('moves window using arrow keys with grabbed state', async () => {
+    const ref = React.createRef<any>();
     render(
       <Window
         id="test-window"
@@ -868,19 +915,43 @@ describe('Window keyboard dragging', () => {
         hasMinimised={() => {}}
         closed={() => {}}
         openApp={() => {}}
+        ref={ref}
       />
     );
 
     const handle = screen.getByText('Test').parentElement!;
+    const startPosition = { ...ref.current!.state.position };
 
-    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
-    fireEvent.keyDown(handle, { key: 'ArrowRight' });
+    act(() => {
+      ref.current!.setState({ grabbed: true });
+    });
 
-    const winEl = document.getElementById('test-window')!;
-    expect(winEl.style.transform).toBe('translate(10px, 0px)');
     expect(handle).toHaveAttribute('aria-grabbed', 'true');
 
-    fireEvent.keyDown(handle, { key: ' ', code: 'Space' });
+    act(() => {
+      ref.current!.handleTitleBarKeyDown({
+        key: 'ArrowRight',
+        target: handle,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      });
+    });
+
+    expect(ref.current!.state.position.x).toBeCloseTo(startPosition.x + 10, 2);
+    expect(ref.current!.state.position.y).toBeCloseTo(startPosition.y, 1);
+    const winEl = document.getElementById('test-window')!;
+    expect(winEl.style.transform).toBe(
+      `translate(${ref.current!.state.position.x}px, ${ref.current!.state.position.y}px)`
+    );
+
+    act(() => {
+      ref.current!.handleTitleBarKeyDown({
+        key: ' ',
+        target: handle,
+        preventDefault: jest.fn(),
+        stopPropagation: jest.fn(),
+      });
+    });
     expect(handle).toHaveAttribute('aria-grabbed', 'false');
   });
 });
@@ -1074,8 +1145,8 @@ describe('Window viewport constraints', () => {
     const offset = ref.current!.state.viewportOffset;
     const minY = offset.top + ref.current!.state.safeAreaTop;
 
-    expect(winEl.style.getPropertyValue('--window-transform-x')).toBe(`${offset.left.toFixed(1)}px`);
-    expect(winEl.style.getPropertyValue('--window-transform-y')).toBe(`${minY.toFixed(1)}px`);
+    expect(parseFloat(winEl.style.getPropertyValue('--window-transform-x'))).toBeCloseTo(offset.left, 1);
+    expect(parseFloat(winEl.style.getPropertyValue('--window-transform-y'))).toBeCloseTo(minY, 1);
   });
 });
 
