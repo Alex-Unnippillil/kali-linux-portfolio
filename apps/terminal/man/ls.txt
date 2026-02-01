@@ -1,0 +1,7 @@
+ls - list directory contents
+
+usage:
+  ls [path]
+
+Lists folders and files from the demo VFS.
+Directories are shown with a trailing slash.

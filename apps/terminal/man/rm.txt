@@ -1,2 +1,3 @@
 rm <path>
-Simulated removal. The demo filesystem is read-only, and unsafe flags are blocked.
+Simulated removal. Entries are deleted from the demo VFS only.
+Unsafe flags are blocked and no real files are touched.

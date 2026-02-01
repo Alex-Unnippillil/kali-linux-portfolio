@@ -12,9 +12,20 @@ import React, {
 } from 'react';
 import { useTab } from '../../components/ui/TabbedWindow';
 import useOPFS from '../../hooks/useOPFS';
+import {
+  loadFauxFileSystem,
+  saveFauxFileSystem,
+} from '../../services/fileExplorer/fauxFileSystem';
 import commandRegistry, { CommandContext, CommandDefinition, getCommandList } from './commands';
 import TerminalContainer from './components/Terminal';
 import { createSessionManager } from './utils/sessionManager';
+import {
+  DEFAULT_HOME,
+  buildFileMap,
+  formatPath,
+  listEntries,
+  resolvePathSegments,
+} from './utils/vfs';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
@@ -95,6 +106,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   const workerRef = useRef<Worker | null>(null);
   const pendingWorkerResolveRef = useRef<(() => void) | null>(null);
   const filesRef = useRef<Record<string, string>>(files);
+  const vfsTreeRef = useRef<ReturnType<typeof loadFauxFileSystem> | null>(null);
+  const cwdRef = useRef<string[]>([...DEFAULT_HOME]);
+  const homeRef = useRef<string[]>([...DEFAULT_HOME]);
   const aliasesRef = useRef<Record<string, string>>({});
   const historyRef = useRef<string[]>([]);
   const safeModeRef = useRef(true);
@@ -231,6 +245,12 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   }, []);
 
   useEffect(() => {
+    const tree = loadFauxFileSystem();
+    vfsTreeRef.current = tree;
+    filesRef.current = buildFileMap(tree, cwdRef.current);
+  }, []);
+
+  useEffect(() => {
     safeModeRef.current = safeMode;
     contextRef.current.safeMode = safeModeRef.current;
     if (typeof window !== 'undefined') {
@@ -284,8 +304,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
     const pathColor = '\x1b[38;2;248;196;108m';
     const symbolColor = '\x1b[38;2;234;241;252m';
     const reset = '\x1b[0m';
+    const currentPath = formatPath(cwdRef.current, homeRef.current);
     termRef.current.writeln(
-      `${accent}┌──(${reset}${userColor}kali${reset}${accent}㉿${reset}${hostColor}kali${reset}${accent})-[${reset}${pathColor}~${reset}${accent}]${reset}`,
+      `${accent}┌──(${reset}${userColor}kali${reset}${accent}㉿${reset}${hostColor}kali${reset}${accent})-[${reset}${pathColor}${currentPath}${reset}${accent}]${reset}`,
     );
     termRef.current.write(`${accent}└─${reset} ${symbolColor}$${reset} `);
   }, []);
@@ -320,6 +341,43 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
       }),
     [cancelWorker, persistCommandHistory, prompt, writeLine],
   );
+
+  const updateVfsTree = useCallback((tree: ReturnType<typeof loadFauxFileSystem>) => {
+    vfsTreeRef.current = tree;
+    saveFauxFileSystem(tree);
+    filesRef.current = buildFileMap(tree, cwdRef.current);
+  }, []);
+
+  const setCwd = useCallback((segments: string[]) => {
+    cwdRef.current = segments;
+    if (vfsTreeRef.current) {
+      filesRef.current = buildFileMap(vfsTreeRef.current, cwdRef.current);
+    }
+  }, []);
+
+  const getAutocompleteEntries = useCallback((fragment: string) => {
+    const tree = vfsTreeRef.current;
+    if (!tree) return [];
+    const trimmed = fragment.trim();
+    const lastSlash = trimmed.lastIndexOf('/');
+    const basePrefix = lastSlash >= 0 ? trimmed.slice(0, lastSlash + 1) : '';
+    const partial = lastSlash >= 0 ? trimmed.slice(lastSlash + 1) : trimmed;
+    const basePath =
+      basePrefix === '/' ? '/' : basePrefix.replace(/\/$/, '') || '.';
+    const baseSegments = resolvePathSegments(
+      basePath,
+      cwdRef.current,
+      homeRef.current,
+    );
+    const { directories, files } = listEntries(tree, baseSegments);
+    const entries = [
+      ...directories.map((dir) => `${dir.name}/`),
+      ...files.map((file) => file.name),
+    ];
+    return entries
+      .filter((entry) => entry.startsWith(partial))
+      .map((entry) => `${basePrefix}${entry}`);
+  }, []);
 
   const clearTerminal = useCallback(() => {
     termRef.current?.clear();
@@ -406,6 +464,14 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp }, ref)
   contextRef.current.history = historyRef.current;
   contextRef.current.aliases = aliasesRef.current;
   contextRef.current.safeMode = safeModeRef.current;
+  contextRef.current.getAutocompleteEntries = getAutocompleteEntries;
+  contextRef.current.vfs = {
+    getTree: () => vfsTreeRef.current,
+    setTree: updateVfsTree,
+    getCwd: () => cwdRef.current,
+    setCwd,
+    home: homeRef.current,
+  };
 
   useEffect(() => {
     workerRef.current = createWorker();
