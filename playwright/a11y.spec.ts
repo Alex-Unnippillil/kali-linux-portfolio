@@ -22,7 +22,6 @@ const urls = [
   '/apps/x',
   '/apps/firefox',
   '/apps/trash',
-  '/apps/gedit',
   '/apps/todoist',
 ];
 

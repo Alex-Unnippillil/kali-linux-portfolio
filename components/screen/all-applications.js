@@ -30,7 +30,6 @@ const PRODUCTIVITY_APP_IDS = buildIdSet([
     'youtube',
     'firefox',
     'x',
-    'gedit',
 ]);
 
 const DEVELOPMENT_APP_IDS = buildIdSet([
@@ -501,4 +500,3 @@ class AllApplications extends React.Component {
 }
 
 export default AllApplications;
-
