@@ -7,6 +7,7 @@ This document tracks planned improvements and new features for the desktop portf
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
 - Register apps and games uniformly with `display*` helpers and small default window sizes.
 - Ensure new utilities have Jest tests mirroring existing ones.
+- Prioritize coverage for critical logic (parsers, state managers, persistence helpers) before adding UI polish.
 - Fix terminal build by importing `@xterm/xterm/css/xterm.css` and registering `FitAddon`.
 - Follow `docs/new-app-checklist.md` for all new apps.
 
@@ -125,10 +126,11 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
+- Track bundle size and load-time regressions; evaluate category-level code splitting (ex: load Games apps only when the Games folder is opened).
+- Keep README, `docs/tasks.md`, and `docs/app-ecosystem-roadmap.md` synchronized when features or statuses change.
 
 ### App Icon Refresh
 - Inventory every app logo under `public/apps`, `public/assets`, and other icon folders; note sizes and current formats.
-- Source high-resolution SVG replacements with permissive licenses suited for redistribution and attribution notes.
+- Source high-resolution SVG replacements with permissive licenses suited for redistribution and attribution notes (prefer assets that remain crisp on retina displays).
 - Replace bitmap logos in the repo with the curated SVGs and update any manifest or config references that expect new filenames.
 - Run a visual regression pass in the desktop shell to confirm icons render crisply at launcher, dock, and window chrome sizes.
-
