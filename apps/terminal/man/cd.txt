@@ -1,0 +1,8 @@
+cd - change the current directory
+
+usage:
+  cd <path>
+
+The terminal uses the demo virtual file system (VFS) shared with Files.
+Paths can be absolute (/Projects) or relative (Projects).
+Use `cd ~` to return to the home folder.

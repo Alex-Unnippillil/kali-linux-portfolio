@@ -1,0 +1,6 @@
+touch - create a new file
+
+usage:
+  touch <file>
+
+Creates an empty file in the demo VFS.

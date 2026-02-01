@@ -95,6 +95,22 @@ export function createSessionManager({
   };
 
   const autocomplete = () => {
+    if (buffer.includes(' ')) {
+      const lastSpace = buffer.lastIndexOf(' ');
+      const head = buffer.slice(0, lastSpace + 1);
+      const fragment = buffer.slice(lastSpace + 1);
+      const matches = context.getAutocompleteEntries?.(fragment) ?? [];
+      if (matches.length === 1) {
+        const completion = matches[0].slice(fragment.length);
+        if (completion) write(completion);
+        buffer = `${head}${matches[0]}`;
+      } else if (matches.length > 1) {
+        matches.forEach((line) => writeLine(line));
+        prompt();
+        if (buffer) write(buffer);
+      }
+      return;
+    }
     const registry = getRegistry();
     const entries = Object.values(registry);
     const matches = entries.filter((c) => c.name.startsWith(buffer));

@@ -1,5 +1,15 @@
 import type { CommandContext, CommandDefinition, CommandHandler } from './types';
 import projectsData from '../../../data/projects.json';
+import {
+  addFile,
+  addFolder,
+  formatPath,
+  getFileNode,
+  getFolderNode,
+  listEntries,
+  removeEntry,
+  resolvePathSegments,
+} from '../utils/vfs';
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -10,15 +20,20 @@ async function man(args: string, ctx: CommandContext) {
   const loaders: Record<string, () => Promise<string>> = {
     alias: () => fetch(new URL('../man/alias.txt', import.meta.url)).then((r) => r.text()),
     cat: () => fetch(new URL('../man/cat.txt', import.meta.url)).then((r) => r.text()),
+    cd: () => fetch(new URL('../man/cd.txt', import.meta.url)).then((r) => r.text()),
     grep: () => fetch(new URL('../man/grep.txt', import.meta.url)).then((r) => r.text()),
     history: () => fetch(new URL('../man/history.txt', import.meta.url)).then((r) => r.text()),
     jq: () => fetch(new URL('../man/jq.txt', import.meta.url)).then((r) => r.text()),
+    ls: () => fetch(new URL('../man/ls.txt', import.meta.url)).then((r) => r.text()),
     man: () => fetch(new URL('../man/man.txt', import.meta.url)).then((r) => r.text()),
+    mkdir: () => fetch(new URL('../man/mkdir.txt', import.meta.url)).then((r) => r.text()),
     open: () => fetch(new URL('../man/open.txt', import.meta.url)).then((r) => r.text()),
     projects: () => fetch(new URL('../man/projects.txt', import.meta.url)).then((r) => r.text()),
+    pwd: () => fetch(new URL('../man/pwd.txt', import.meta.url)).then((r) => r.text()),
     rm: () => fetch(new URL('../man/rm.txt', import.meta.url)).then((r) => r.text()),
     ssh: () => fetch(new URL('../man/ssh.txt', import.meta.url)).then((r) => r.text()),
     sudo: () => fetch(new URL('../man/sudo.txt', import.meta.url)).then((r) => r.text()),
+    touch: () => fetch(new URL('../man/touch.txt', import.meta.url)).then((r) => r.text()),
     whoami: () => fetch(new URL('../man/whoami.txt', import.meta.url)).then((r) => r.text()),
   };
   const loader = loaders[name];
@@ -70,9 +85,27 @@ const help: CommandHandler = (args, ctx) => {
   );
 };
 
-const ls: CommandHandler = (_args, ctx) => {
-  const entries = Object.keys(ctx.files);
-  ctx.writeLine(entries.length ? entries.join('  ') : '');
+const ls: CommandHandler = (args, ctx) => {
+  if (!ctx.vfs) {
+    const entries = Object.keys(ctx.files);
+    ctx.writeLine(entries.length ? entries.join('  ') : '');
+    return;
+  }
+  const tokens = args.split(/\s+/).filter(Boolean);
+  const targetArg = tokens.find((token) => !token.startsWith('-'));
+  const segments = resolvePathSegments(targetArg, ctx.vfs.getCwd(), ctx.vfs.home);
+  const tree = ctx.vfs.getTree();
+  const folder = getFolderNode(tree, segments);
+  if (!folder && targetArg) {
+    ctx.writeLine(`ls: cannot access '${targetArg}': No such file or directory`);
+    return;
+  }
+  const { directories, files } = listEntries(tree, segments);
+  const entries = [
+    ...directories.map((dir) => `${dir.name}/`),
+    ...files.map((file) => file.name),
+  ];
+  ctx.writeLine(entries.join('  '));
 };
 
 const cat: CommandHandler = async (args, ctx) => {
@@ -80,6 +113,21 @@ const cat: CommandHandler = async (args, ctx) => {
   if (!target) {
     ctx.writeLine('Usage: cat <file>');
     return;
+  }
+  if (ctx.vfs) {
+    const tree = ctx.vfs.getTree();
+    const segments = resolvePathSegments(target, ctx.vfs.getCwd(), ctx.vfs.home);
+    const file = getFileNode(tree, segments);
+    if (file) {
+      if (typeof file.content === 'string') {
+        ctx.writeLine(file.content);
+      } else if (file.url) {
+        ctx.writeLine(`cat: ${target}: Binary file (open in Files)`);
+      } else {
+        ctx.writeLine(`cat: ${target}: Empty file`);
+      }
+      return;
+    }
   }
   if (target in ctx.files) {
     ctx.writeLine(ctx.files[target]);
@@ -120,6 +168,90 @@ const projects: CommandHandler = (_args, ctx) => {
     ctx.writeLine(`- ${project.title}: ${project.description}${linkLine}`);
   });
   ctx.writeLine('Tip: run "open project-gallery" to explore the full gallery.');
+};
+
+const pwd: CommandHandler = (_args, ctx) => {
+  if (!ctx.vfs) {
+    ctx.writeLine('~');
+    return;
+  }
+  ctx.writeLine(formatPath(ctx.vfs.getCwd(), ctx.vfs.home));
+};
+
+const cd: CommandHandler = (args, ctx) => {
+  if (!ctx.vfs) {
+    ctx.writeLine('cd: filesystem unavailable');
+    return;
+  }
+  const target = args.trim() || '~';
+  const segments = resolvePathSegments(target, ctx.vfs.getCwd(), ctx.vfs.home);
+  const tree = ctx.vfs.getTree();
+  const folder = getFolderNode(tree, segments);
+  if (!folder) {
+    ctx.writeLine(`cd: no such file or directory: ${target}`);
+    return;
+  }
+  ctx.vfs.setCwd(segments);
+};
+
+const mkdir: CommandHandler = (args, ctx) => {
+  if (!ctx.vfs) {
+    ctx.writeLine('mkdir: filesystem unavailable');
+    return;
+  }
+  const name = args.trim();
+  if (!name) {
+    ctx.writeLine('usage: mkdir <folder>');
+    return;
+  }
+  const segments = resolvePathSegments(name, ctx.vfs.getCwd(), ctx.vfs.home);
+  const parentSegments = segments.slice(0, -1);
+  const folderName = segments[segments.length - 1];
+  if (!folderName) {
+    ctx.writeLine('mkdir: invalid folder name');
+    return;
+  }
+  const tree = ctx.vfs.getTree();
+  if (!tree) {
+    ctx.writeLine('mkdir: filesystem unavailable');
+    return;
+  }
+  const { tree: next, error } = addFolder(tree, parentSegments, folderName);
+  if (error || !next) {
+    ctx.writeLine(`mkdir: ${error ?? 'unable to create folder'}`);
+    return;
+  }
+  ctx.vfs.setTree(next);
+};
+
+const touch: CommandHandler = (args, ctx) => {
+  if (!ctx.vfs) {
+    ctx.writeLine('touch: filesystem unavailable');
+    return;
+  }
+  const name = args.trim();
+  if (!name) {
+    ctx.writeLine('usage: touch <file>');
+    return;
+  }
+  const segments = resolvePathSegments(name, ctx.vfs.getCwd(), ctx.vfs.home);
+  const parentSegments = segments.slice(0, -1);
+  const fileName = segments[segments.length - 1];
+  if (!fileName) {
+    ctx.writeLine('touch: invalid file name');
+    return;
+  }
+  const tree = ctx.vfs.getTree();
+  if (!tree) {
+    ctx.writeLine('touch: filesystem unavailable');
+    return;
+  }
+  const { tree: next, error } = addFile(tree, parentSegments, fileName);
+  if (error || !next) {
+    ctx.writeLine(`touch: ${error ?? 'unable to create file'}`);
+    return;
+  }
+  ctx.vfs.setTree(next);
 };
 
 const ssh: CommandHandler = (args, ctx) => {
@@ -173,7 +305,28 @@ const rm: CommandHandler = (args, ctx) => {
     ctx.writeLine('rm: dangerous operation blocked in demo mode.');
     return;
   }
-  ctx.writeLine(`rm: cannot remove '${target}': Read-only demo filesystem.`);
+  if (!ctx.vfs) {
+    ctx.writeLine(`rm: cannot remove '${target}': filesystem unavailable.`);
+    return;
+  }
+  const segments = resolvePathSegments(target, ctx.vfs.getCwd(), ctx.vfs.home);
+  if (segments.length === 0) {
+    ctx.writeLine('rm: refusing to remove root directory.');
+    return;
+  }
+  const parentSegments = segments.slice(0, -1);
+  const name = segments[segments.length - 1];
+  const tree = ctx.vfs.getTree();
+  if (!tree) {
+    ctx.writeLine(`rm: cannot remove '${target}': filesystem unavailable.`);
+    return;
+  }
+  const { tree: next, error } = removeEntry(tree, parentSegments, name);
+  if (error || !next) {
+    ctx.writeLine(`rm: cannot remove '${target}': ${error ?? 'Not found'}`);
+    return;
+  }
+  ctx.vfs.setTree(next);
 };
 
 const about: CommandHandler = (_args, ctx) => {
@@ -189,8 +342,12 @@ const commandList: CommandDefinition[] = [
   { name: 'man', description: 'Read the simulated manual pages.', usage: 'man <command>', handler: man },
   { name: 'history', description: 'Print command history for this session.', handler: history },
   { name: 'alias', description: 'Create or list aliases.', usage: "alias [name]='value'", handler: alias },
-  { name: 'ls', description: 'List available demo files.', handler: ls },
+  { name: 'ls', description: 'List available demo files.', usage: 'ls [path]', handler: ls },
   { name: 'cat', description: 'Print a file or pipe stdin.', usage: 'cat <file>', handler: cat },
+  { name: 'pwd', description: 'Print the current directory.', handler: pwd },
+  { name: 'cd', description: 'Change the current directory.', usage: 'cd <path>', handler: cd },
+  { name: 'mkdir', description: 'Create a folder in the demo VFS.', usage: 'mkdir <folder>', handler: mkdir },
+  { name: 'touch', description: 'Create a file in the demo VFS.', usage: 'touch <file>', handler: touch },
   { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
   { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
   { name: 'projects', description: 'List the portfolio project catalog.', handler: projects },

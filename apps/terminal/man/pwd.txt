@@ -1,0 +1,6 @@
+pwd - print working directory
+
+usage:
+  pwd
+
+Prints the current demo directory path.

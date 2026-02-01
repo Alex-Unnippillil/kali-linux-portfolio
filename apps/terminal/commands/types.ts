@@ -9,6 +9,14 @@ export interface CommandContext {
   clear: () => void;
   openApp?: (id: string) => void;
   listCommands: () => CommandDefinition[];
+  getAutocompleteEntries?: (fragment: string) => string[];
+  vfs?: {
+    getTree: () => import('../utils/vfs').FauxNode | null;
+    setTree: (tree: import('../utils/vfs').FauxNode) => void;
+    getCwd: () => string[];
+    setCwd: (segments: string[]) => void;
+    home: string[];
+  };
 }
 
 export type CommandHandler = (args: string, ctx: CommandContext) => void | Promise<void>;

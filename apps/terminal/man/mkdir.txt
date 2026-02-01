@@ -1,0 +1,6 @@
+mkdir - create a new directory
+
+usage:
+  mkdir <folder>
+
+Creates a new folder in the demo VFS so it appears in Files.

@@ -74,11 +74,11 @@ describe('Terminal component', () => {
     await act(async () => {
       await ref.current.runCommand('ls');
     });
-    expect(ref.current.getContent()).toContain('README.md');
+    expect(ref.current.getContent()).toContain('Welcome.txt');
     await act(async () => {
-      await ref.current.runCommand('cat README.md');
+      await ref.current.runCommand('cat Welcome.txt');
     });
-    expect(ref.current.getContent()).toContain('Welcome to the web terminal.');
+    expect(ref.current.getContent()).toContain('Welcome to your Kali-style desktop.');
   });
 
   it('clears history and prints about/date messages', async () => {
