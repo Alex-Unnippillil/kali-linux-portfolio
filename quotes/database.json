@@ -8,19 +8,139 @@
   {
     "id": 2,
     "quote": "Thinking is the capital, Enterprise is the way, Hard Work is the solution.",
-    "author": "Abdul Kalam",
+    "author": "A. P. J. Abdul Kalam",
     "tags": ["inspirational"]
   },
   {
     "id": 3,
     "quote": "It has become appallingly obvious that our technology has exceeded our humanity.",
     "author": "Albert Einstein",
-    "tags": ["technology"]
+    "tags": ["technology", "wisdom"]
   },
   {
     "id": 4,
     "quote": "A computer once beat me at chess, but it was no match for me at kick boxing.",
     "author": "Emo Philips",
     "tags": ["humor", "technology"]
+  },
+  {
+    "id": 5,
+    "quote": "The best way to predict the future is to invent it.",
+    "author": "Alan Kay",
+    "tags": ["technology", "inspirational"]
+  },
+  {
+    "id": 6,
+    "quote": "Life is what happens when you're busy making other plans.",
+    "author": "John Lennon",
+    "tags": ["life"]
+  },
+  {
+    "id": 7,
+    "quote": "The only way to do great work is to love what you do.",
+    "author": "Steve Jobs",
+    "tags": ["inspirational", "love"]
+  },
+  {
+    "id": 8,
+    "quote": "Wisdom is not a product of schooling but of the lifelong attempt to acquire it.",
+    "author": "Albert Einstein",
+    "tags": ["wisdom", "life"]
+  },
+  {
+    "id": 9,
+    "quote": "Simplicity is the soul of efficiency.",
+    "author": "Austin Freeman",
+    "tags": ["wisdom", "technology"]
+  },
+  {
+    "id": 10,
+    "quote": "Success is the sum of small efforts, repeated day in and day out.",
+    "author": "Robert Collier",
+    "tags": ["inspirational"]
+  },
+  {
+    "id": 11,
+    "quote": "Do not take life too seriously. You will never get out of it alive.",
+    "author": "Elbert Hubbard",
+    "tags": ["humor", "life"]
+  },
+  {
+    "id": 12,
+    "quote": "The purpose of our lives is to be happy.",
+    "author": "Dalai Lama",
+    "tags": ["life"]
+  },
+  {
+    "id": 13,
+    "quote": "Kindness is a language which the deaf can hear and the blind can see.",
+    "author": "Mark Twain",
+    "tags": ["wisdom", "love"]
+  },
+  {
+    "id": 14,
+    "quote": "If you want to lift yourself up, lift up someone else.",
+    "author": "Booker T. Washington",
+    "tags": ["inspirational", "love"]
+  },
+  {
+    "id": 15,
+    "quote": "The greatest wealth is to live content with little.",
+    "author": "Plato",
+    "tags": ["wisdom", "life"]
+  },
+  {
+    "id": 16,
+    "quote": "First, solve the problem. Then, write the code.",
+    "author": "John Johnson",
+    "tags": ["technology", "wisdom"]
+  },
+  {
+    "id": 17,
+    "quote": "A good laugh heals a lot of hurts.",
+    "author": "Madeleine L'Engle",
+    "tags": ["humor", "life"]
+  },
+  {
+    "id": 18,
+    "quote": "Happiness is not something ready made. It comes from your own actions.",
+    "author": "Dalai Lama",
+    "tags": ["inspirational", "life"]
+  },
+  {
+    "id": 19,
+    "quote": "Technology is best when it brings people together.",
+    "author": "Matt Mullenweg",
+    "tags": ["technology", "love"]
+  },
+  {
+    "id": 20,
+    "quote": "Curiosity is the wick in the candle of learning.",
+    "author": "William Arthur Ward",
+    "tags": ["wisdom", "inspirational"]
+  },
+  {
+    "id": 21,
+    "quote": "If you can't explain it simply, you don't understand it well enough.",
+    "author": "Albert Einstein",
+    "tags": ["wisdom", "technology"]
+  },
+  {
+    "id": 22,
+    "quote": "Wherever you go, go with all your heart.",
+    "author": "Confucius",
+    "tags": ["love", "life"]
+  },
+  {
+    "id": 23,
+    "quote": "The secret of getting ahead is getting started.",
+    "author": "Mark Twain",
+    "tags": ["inspirational"]
+  },
+  {
+    "id": 24,
+    "quote": "A day without sunshine is like, you know, night.",
+    "author": "Steve Martin",
+    "tags": ["humor", "general"]
   }
 ]
