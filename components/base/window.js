@@ -1083,6 +1083,7 @@ export class Window extends Component {
             this.snapWindow(snapPos);
         } else {
             this.setState({ snapPreview: null, snapPosition: null });
+            this.setWinowsPosition();
         }
     }
 
