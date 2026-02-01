@@ -11,6 +11,7 @@ import { trackEvent } from "@/lib/analytics-client";
 
 const DRAFT_KEY = "contact-draft";
 const EMAIL = "alex.unnippillil@hotmail.com";
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const threatChecklist = [
   {
@@ -134,8 +135,10 @@ const ContactApp: React.FC = () => {
     }
 
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
-    const recaptchaToken = await getRecaptchaToken(siteKey);
-    if (!recaptchaToken) {
+    const recaptchaToken = DEMO_MODE
+      ? "demo"
+      : await getRecaptchaToken(siteKey);
+    if (!DEMO_MODE && !recaptchaToken) {
       setError("Captcha verification failed. Please try again.");
       setSubmitting(false);
       trackEvent("contact_submit_error", { method: "form" });
