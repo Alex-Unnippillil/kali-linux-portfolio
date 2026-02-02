@@ -435,6 +435,8 @@ export class Desktop extends Component {
         this.allAppsCloseTimeout = null;
         this.allAppsEnterRaf = null;
         this.allAppsFocusTrapHandler = null;
+        this.windowFocusTrapHandler = null;
+        this.windowSwitcherReturnFocusId = null;
 
         this.desktopSelectionState = null;
 
@@ -2173,6 +2175,14 @@ export class Desktop extends Component {
         return Boolean(this.state.overlayWindows?.[resolved]?.open);
     };
 
+    isAnyOverlayActive = () => {
+        const overlays = this.state.overlayWindows || {};
+        return OVERLAY_WINDOW_LIST.some(({ id }) => {
+            const state = overlays[id];
+            return state?.open && !state?.minimized;
+        });
+    };
+
     getLauncherState = () => this.state.overlayWindows?.[LAUNCHER_OVERLAY_ID] || null;
 
     normalizePaletteIconPath = (icon) => {
@@ -3730,6 +3740,7 @@ export class Desktop extends Component {
         window.addEventListener('open-app', this.handleOpenAppEvent);
         this.setupPointerMediaWatcher();
         this.setupGestureListeners();
+        this.activateWindowFocusTrap();
     }
 
     componentDidUpdate(prevProps, prevState) {
@@ -3817,6 +3828,7 @@ export class Desktop extends Component {
             this.allAppsEnterRaf = null;
         }
         this.deactivateAllAppsFocusTrap();
+        this.deactivateWindowFocusTrap();
     }
 
     handleExternalTaskbarCommand = (event) => {
@@ -4078,6 +4090,15 @@ export class Desktop extends Component {
             e.preventDefault();
             this.cycleAppWindows(e.shiftKey ? -1 : 1);
         }
+        else if (e.metaKey && ['m', 'f'].includes(e.key.toLowerCase())) {
+            e.preventDefault();
+            const id = this.getFocusedWindowId();
+            if (id) {
+                const action = e.key.toLowerCase() === 'm' ? 'minimize' : 'toggle-maximize';
+                const event = new CustomEvent('super-action', { detail: action });
+                document.getElementById(id)?.dispatchEvent(event);
+            }
+        }
         else if (e.metaKey && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
             e.preventDefault();
             const id = this.getFocusedWindowId();
@@ -4295,6 +4316,71 @@ export class Desktop extends Component {
         }
     }
 
+    activateWindowFocusTrap = () => {
+        if (this.windowFocusTrapHandler || typeof document === 'undefined') return;
+
+        this.windowFocusTrapHandler = (event) => {
+            if (event.key !== 'Tab') return;
+            if (this.isAnyOverlayActive()) return;
+
+            const focusedId = this.getFocusedWindowId();
+            if (!focusedId) return;
+            const container = document.getElementById(focusedId);
+            if (!container) return;
+
+            const focusableSelectors = [
+                'a[href]',
+                'button:not([disabled])',
+                'textarea:not([disabled])',
+                'input:not([type="hidden"]):not([disabled])',
+                'select:not([disabled])',
+                '[tabindex]:not([tabindex="-1"])',
+            ];
+
+            const focusable = Array.from(
+                container.querySelectorAll(focusableSelectors.join(',')),
+            ).filter((element) => {
+                if (!(element instanceof HTMLElement)) return false;
+                if (element.hasAttribute('disabled')) return false;
+                if (element.getAttribute('aria-hidden') === 'true') return false;
+                if (!container.contains(element)) return false;
+                const rect = element.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+            });
+
+            if (!focusable.length) {
+                event.preventDefault();
+                return;
+            }
+
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+            if (event.shiftKey) {
+                if (!active || active === first || !container.contains(active)) {
+                    event.preventDefault();
+                    last.focus();
+                }
+                return;
+            }
+
+            if (!active || active === last || !container.contains(active)) {
+                event.preventDefault();
+                first.focus();
+            }
+        };
+
+        document.addEventListener('keydown', this.windowFocusTrapHandler, true);
+    }
+
+    deactivateWindowFocusTrap = () => {
+        if (this.windowFocusTrapHandler && typeof document !== 'undefined') {
+            document.removeEventListener('keydown', this.windowFocusTrapHandler, true);
+            this.windowFocusTrapHandler = null;
+        }
+    }
+
     getFocusedWindowId = () => {
         for (const key in this.state.focused_windows) {
             if (this.state.focused_windows[key]) {
@@ -4459,6 +4545,7 @@ export class Desktop extends Component {
             return;
         }
 
+        this.windowSwitcherReturnFocusId = this.getFocusedWindowId();
         const requestId = ++this.windowSwitcherRequestId;
         this.openOverlay(SWITCHER_OVERLAY_ID);
 
@@ -4487,10 +4574,18 @@ export class Desktop extends Component {
     closeWindowSwitcher = () => {
         this.setState({ switcherWindows: [] });
         this.closeOverlay(SWITCHER_OVERLAY_ID);
+        if (this.windowSwitcherReturnFocusId) {
+            const targetId = this.windowSwitcherReturnFocusId;
+            this.windowSwitcherReturnFocusId = null;
+            if (this.state.closed_windows[targetId] === false && !this.state.minimized_windows[targetId]) {
+                this.focus(targetId);
+            }
+        }
     }
 
     selectWindow = (id) => {
         this.setState({ switcherWindows: [] }, () => {
+            this.windowSwitcherReturnFocusId = null;
             this.closeOverlay(SWITCHER_OVERLAY_ID);
             this.openApp(id);
         });
