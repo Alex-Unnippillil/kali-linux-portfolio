@@ -9,7 +9,11 @@ import {
   findNodeByPathNames,
   listDirectory,
   loadFauxFileSystem,
+  createEntry,
+  deleteEntry,
+  duplicateEntry,
   moveEntry,
+  renameEntry,
   saveFauxFileSystem,
   searchFiles,
   updateFileContent,
@@ -72,6 +76,51 @@ export async function saveFileDialog(options = {}) {
   };
 }
 
+const formatBytes = (bytes) => {
+  if (bytes === null || bytes === undefined || Number.isNaN(bytes)) return 'Unknown size';
+  if (bytes === 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const idx = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+  const value = bytes / 1024 ** idx;
+  return `${value.toFixed(value >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`;
+};
+
+const formatTimestamp = (value) => {
+  if (!value) return 'Unknown date';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown date';
+  return date.toLocaleString();
+};
+
+const splitFileName = (name) => {
+  const dotIndex = name.lastIndexOf('.');
+  if (dotIndex <= 0) return { base: name, ext: '' };
+  return { base: name.slice(0, dotIndex), ext: name.slice(dotIndex) };
+};
+
+const buildDuplicateName = (name, existing) => {
+  const { base, ext } = splitFileName(name);
+  let attempt = `${base} copy${ext}`;
+  let index = 2;
+  while (existing.has(attempt.toLowerCase())) {
+    attempt = `${base} copy ${index}${ext}`;
+    index += 1;
+  }
+  return attempt;
+};
+
+const buildUniqueName = (name, existing) => {
+  if (!existing.has(name.toLowerCase())) return name;
+  const { base, ext } = splitFileName(name);
+  let index = 2;
+  let attempt = `${base} ${index}${ext}`;
+  while (existing.has(attempt.toLowerCase())) {
+    index += 1;
+    attempt = `${base} ${index}${ext}`;
+  }
+  return attempt;
+};
+
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
   const [supported, setSupported] = useState(true);
   const [currentFile, setCurrentFile] = useState(null);
@@ -81,12 +130,15 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [fileMeta, setFileMeta] = useState(null);
   const [fauxTree, setFauxTree] = useState(null);
   const [fauxPathIds, setFauxPathIds] = useState(['root']);
   const [fauxDirectories, setFauxDirectories] = useState([]);
   const [fauxFiles, setFauxFiles] = useState([]);
   const [fauxBreadcrumbs, setFauxBreadcrumbs] = useState([]);
   const [dragState, setDragState] = useState(null);
+  const [selectedEntries, setSelectedEntries] = useState(new Map());
+  const [indexStatus, setIndexStatus] = useState({ state: 'idle', indexed: 0, total: 0 });
   const workerRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
@@ -119,6 +171,12 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     () => currentFile && content !== savedContent,
     [content, currentFile, savedContent],
   );
+
+  const selectedList = useMemo(() => Array.from(selectedEntries.values()), [selectedEntries]);
+
+  useEffect(() => {
+    if (!currentFile) setFileMeta(null);
+  }, [currentFile]);
 
   useEffect(() => {
     const ok = !!window.showDirectoryPicker;
@@ -173,6 +231,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     syncFauxDirectory(tree, pathIds);
   }, [supported, context, initialPath, pathProp, syncFauxDirectory]);
 
+  useEffect(() => {
+    setSelectedEntries(new Map());
+  }, [dirHandle, fauxPathIds, supported]);
+
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
   };
@@ -185,6 +247,28 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const removeBuffer = async (name) => {
     if (unsavedDir) await opfsDelete(name, unsavedDir);
   };
+
+  const buildFileMeta = (name, file, override = {}) => {
+    const lower = name?.toLowerCase() || '';
+    const typeFromName = () => {
+      if (lower.endsWith('.md') || lower.endsWith('.markdown')) return 'Markdown';
+      if (lower.endsWith('.json')) return 'JSON';
+      if (lower.match(/\.(png|jpg|jpeg|gif|webp|svg)$/)) return 'Image';
+      if (lower.match(/\.(mp3|wav|ogg|m4a)$/)) return 'Audio';
+      if (lower.match(/\.(mp4|webm|ogv)$/)) return 'Video';
+      if (lower.endsWith('.pdf')) return 'PDF';
+      return 'File';
+    };
+    const size = override.size ?? file?.size ?? null;
+    const modified = override.modifiedAt ?? file?.lastModified ?? null;
+    const type = override.type ?? (file?.type || typeFromName());
+    return {
+      size,
+      modified,
+      type,
+    };
+  };
+
 
   const openFolder = async () => {
     const proceed = await ensureSaved();
@@ -212,7 +296,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     try {
       const allowed = await ensureHandlePermission(entry.handle);
       if (!allowed) {
-        setLocationError('Permission denied for this recent location. Please re-authorize access.');
+        setLocationError('Permission denied for this recent location. Use Reconnect to re-authorize access.');
         return;
       }
       await openHandle(entry.handle, { breadcrumbName: entry.name });
@@ -223,6 +307,17 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           : 'Unable to reopen recent location.',
       );
     }
+  };
+
+  const reconnectRecent = async (entry) => {
+    const proceed = await ensureSaved();
+    if (!proceed) return;
+    const allowed = await ensureHandlePermission(entry.handle);
+    if (!allowed) {
+      setLocationError('Reconnect failed. Please allow access in your browser prompt.');
+      return;
+    }
+    await openHandle(entry.handle, { breadcrumbName: entry.name, recordRecent: true });
   };
 
   const readFileContent = async (fileHandle, streamToUI = true) => {
@@ -257,9 +352,28 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       }
       return { type: 'image', url: URL.createObjectURL(file) };
     }
+    if (lower.match(/\.(mp3|wav|ogg|m4a)$/)) {
+      if (directUrl) {
+        return { type: 'audio', url: directUrl };
+      }
+      if (file) {
+        return { type: 'audio', url: URL.createObjectURL(file) };
+      }
+    }
+    if (lower.match(/\.(mp4|webm|ogv)$/)) {
+      if (directUrl) {
+        return { type: 'video', url: directUrl };
+      }
+      if (file) {
+        return { type: 'video', url: URL.createObjectURL(file) };
+      }
+    }
     if (lower.endsWith('.pdf')) {
       if (directUrl) {
         return { type: 'pdf', url: directUrl };
+      }
+      if (file) {
+        return { type: 'pdf', url: URL.createObjectURL(file) };
       }
       return null;
     }
@@ -296,6 +410,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (!proceed) return;
     setCurrentFile(file);
     setPreviewData(null);
+    setFileMeta(null);
     setContent('');
     setSavedContent('');
     let text = '';
@@ -310,6 +425,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         text = streamed;
       }
       setPreviewData(buildPreview(file.name, fetched, text));
+      setFileMeta(buildFileMeta(file.name, fetched));
       setContent(text);
       setSavedContent(streamed);
     } catch (error) {
@@ -328,12 +444,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (!proceed) return;
     setCurrentFile({ ...file, virtual: true });
     setPreviewData(null);
+    setFileMeta(null);
     setContent('');
     setSavedContent('');
     const text = file?.content ?? '';
     setContent(text);
     setSavedContent(text);
     setPreviewData(buildPreview(file.name, null, text, { url: file.url }));
+    setFileMeta(
+      buildFileMeta(file.name, null, {
+        size: typeof file?.size === 'number' ? file.size : text ? new Blob([text]).size : null,
+        modifiedAt: file?.modifiedAt,
+        type: file?.type,
+      }),
+    );
   };
 
   const openFauxDir = (dir) => {
@@ -383,6 +507,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       setFauxTree(nextTree);
       saveFauxFileSystem(nextTree);
       setSavedContent(content);
+      setFileMeta(
+        buildFileMeta(currentFile.name, null, {
+          size: new Blob([content]).size,
+          modifiedAt: Date.now(),
+          type: fileMeta?.type,
+        }),
+      );
       return;
     }
     try {
@@ -391,6 +522,13 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       await writable.close();
       if (opfsSupported) await removeBuffer(currentFile.name);
       setSavedContent(content);
+      setFileMeta(
+        buildFileMeta(currentFile.name, null, {
+          size: new Blob([content]).size,
+          modifiedAt: Date.now(),
+          type: fileMeta?.type,
+        }),
+      );
     } catch (error) {
       setLocationError(
         error?.name === 'NotAllowedError'
@@ -420,37 +558,338 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       );
       return;
     }
-    if (!dirHandle || !hasWorker) return;
-    setResults([]);
-    if (workerRef.current) workerRef.current.terminate();
-    if (typeof window !== 'undefined' && typeof Worker === 'function') {
-      workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
-      workerRef.current.onmessage = (e) => {
-        const { file, line, text, done } = e.data;
-        if (done) {
-          workerRef.current?.terminate();
-          workerRef.current = null;
-        } else {
-          setResults((r) => [...r, { file, line, text }]);
-        }
-      };
-      workerRef.current.postMessage({ directoryHandle: dirHandle, query });
+    if (!dirHandle || !hasWorker || !workerRef.current) return;
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setResults([]);
+      return;
     }
+    setResults([]);
+    workerRef.current.postMessage({ type: 'search', query: trimmed });
   };
+
+  useEffect(() => {
+    if (!hasWorker || isFauxMode) return;
+    if (!workerRef.current && typeof window !== 'undefined' && typeof Worker === 'function') {
+      workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
+    }
+    const worker = workerRef.current;
+    if (!worker) return;
+    const handleMessage = (event) => {
+      const { type, file, line, text, indexed, total } = event.data || {};
+      if (type === 'index-progress') {
+        setIndexStatus({ state: 'indexing', indexed: indexed ?? 0, total: 0 });
+        return;
+      }
+      if (type === 'index-complete') {
+        setIndexStatus({ state: 'ready', indexed: total ?? 0, total: total ?? 0 });
+        return;
+      }
+      if (type === 'search-result') {
+        setResults((r) => [...r, { file, line, text }]);
+        return;
+      }
+      if (type === 'search-complete') {
+        return;
+      }
+    };
+    worker.addEventListener('message', handleMessage);
+    return () => {
+      worker.removeEventListener('message', handleMessage);
+    };
+  }, [hasWorker, isFauxMode]);
+
+  useEffect(() => {
+    if (!hasWorker || isFauxMode || !dirHandle || !workerRef.current) return;
+    setIndexStatus({ state: 'indexing', indexed: 0, total: 0 });
+    workerRef.current.postMessage({ type: 'index', directoryHandle: dirHandle });
+  }, [dirHandle, hasWorker, isFauxMode]);
+
+  useEffect(() => {
+    if (isFauxMode) {
+      setIndexStatus({ state: 'idle', indexed: 0, total: 0 });
+    }
+  }, [isFauxMode]);
 
   useEffect(() => () => workerRef.current?.terminate(), []);
 
   useEffect(() => () => {
-    if (previewData?.type === 'image' && previewData.url) {
-      if (previewData.url.startsWith('blob:')) {
-        URL.revokeObjectURL(previewData.url);
-      }
+    const url = previewData?.url;
+    if (!url) return;
+    if (url.startsWith('blob:')) {
+      URL.revokeObjectURL(url);
     }
   }, [previewData]);
 
   const activeDirs = isFauxMode ? fauxDirectories : dirs;
   const activeFiles = isFauxMode ? fauxFiles : files;
   const activeBreadcrumbs = isFauxMode ? fauxBreadcrumbs : path;
+  const existingNames = useMemo(() => {
+    const names = new Set();
+    activeDirs?.forEach((dir) => names.add(dir.name.toLowerCase()));
+    activeFiles?.forEach((file) => names.add(file.name.toLowerCase()));
+    return names;
+  }, [activeDirs, activeFiles]);
+
+  const toggleSelection = (entry) => {
+    setSelectedEntries((prev) => {
+      const next = new Map(prev);
+      if (next.has(entry.key)) {
+        next.delete(entry.key);
+      } else {
+        next.set(entry.key, entry);
+      }
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelectedEntries(new Map());
+
+  const ensureWritable = async () => {
+    if (isFauxMode) return !!fauxTree;
+    if (!dirHandle) {
+      setLocationError('Open a folder to manage files.');
+      return false;
+    }
+    const allowed = await ensureHandlePermission(dirHandle, 'readwrite');
+    if (!allowed) {
+      setLocationError('Write permission denied for this folder. Use Reconnect to try again.');
+      return false;
+    }
+    return true;
+  };
+
+  const refreshDirectory = async () => {
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      syncFauxDirectory(fauxTree, fauxPathIds);
+      return;
+    }
+    if (dirHandle) {
+      await openHandle(dirHandle, { breadcrumbs: path });
+    }
+  };
+
+  const buildSelectionEntry = (entry, type) => {
+    if (isFauxMode) {
+      return {
+        key: `${type}:${entry.id}`,
+        id: entry.id,
+        name: entry.name,
+        type,
+      };
+    }
+    return {
+      key: `${type}:${entry.name}`,
+      name: entry.name,
+      type,
+      handle: entry.handle,
+    };
+  };
+
+  const copyFileHandle = async (sourceHandle, targetDir, name) => {
+    const file = await sourceHandle.getFile();
+    const destHandle = await targetDir.getFileHandle(name, { create: true });
+    const writable = await destHandle.createWritable();
+    await writable.write(await file.arrayBuffer());
+    await writable.close();
+  };
+
+  const copyDirectoryHandle = async (sourceHandle, targetDir) => {
+    for await (const [name, handle] of sourceHandle.entries()) {
+      if (handle.kind === 'file') {
+        await copyFileHandle(handle, targetDir, name);
+      } else if (handle.kind === 'directory') {
+        const nextDir = await targetDir.getDirectoryHandle(name, { create: true });
+        await copyDirectoryHandle(handle, nextDir);
+      }
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    const allowed = await ensureWritable();
+    if (!allowed) return;
+    const name = window.prompt('New folder name');
+    if (!name) return;
+    if (existingNames.has(name.toLowerCase())) {
+      setLocationError('A file or folder with that name already exists.');
+      return;
+    }
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      const nextTree = createEntry(fauxTree, fauxPathIds, { type: 'folder', name });
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      syncFauxDirectory(nextTree, fauxPathIds);
+      return;
+    }
+    await dirHandle.getDirectoryHandle(name, { create: true });
+    await refreshDirectory();
+  };
+
+  const handleCreateFile = async () => {
+    const allowed = await ensureWritable();
+    if (!allowed) return;
+    const name = window.prompt('New file name');
+    if (!name) return;
+    if (existingNames.has(name.toLowerCase())) {
+      setLocationError('A file or folder with that name already exists.');
+      return;
+    }
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      const nextTree = createEntry(fauxTree, fauxPathIds, { type: 'file', name, content: '' });
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      syncFauxDirectory(nextTree, fauxPathIds);
+      return;
+    }
+    const handle = await dirHandle.getFileHandle(name, { create: true });
+    const writable = await handle.createWritable();
+    await writable.write('');
+    await writable.close();
+    await refreshDirectory();
+  };
+
+  const handleRenameEntry = async () => {
+    const allowed = await ensureWritable();
+    if (!allowed || selectedList.length !== 1) return;
+    const entry = selectedList[0];
+    const nextName = window.prompt('Rename to', entry.name);
+    if (!nextName || nextName === entry.name) return;
+    if (existingNames.has(nextName.toLowerCase())) {
+      setLocationError('A file or folder with that name already exists.');
+      return;
+    }
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      const nextTree = renameEntry(fauxTree, fauxPathIds, entry.id, nextName);
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      syncFauxDirectory(nextTree, fauxPathIds);
+      clearSelection();
+      return;
+    }
+    if (entry.type === 'directory') {
+      const targetDir = await dirHandle.getDirectoryHandle(nextName, { create: true });
+      await copyDirectoryHandle(entry.handle, targetDir);
+      await dirHandle.removeEntry(entry.name, { recursive: true });
+    } else {
+      await copyFileHandle(entry.handle, dirHandle, nextName);
+      await dirHandle.removeEntry(entry.name);
+    }
+    await refreshDirectory();
+    clearSelection();
+  };
+
+  const handleDuplicateEntry = async () => {
+    const allowed = await ensureWritable();
+    if (!allowed || selectedList.length === 0) return;
+    const usedNames = new Set(existingNames);
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      let nextTree = fauxTree;
+      selectedList.forEach((entry) => {
+        const name = buildDuplicateName(entry.name, usedNames);
+        nextTree = duplicateEntry(nextTree, fauxPathIds, entry.id, name);
+        usedNames.add(name.toLowerCase());
+      });
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      syncFauxDirectory(nextTree, fauxPathIds);
+      clearSelection();
+      return;
+    }
+    for (const entry of selectedList) {
+      const name = buildDuplicateName(entry.name, usedNames);
+      if (entry.type === 'directory') {
+        const targetDir = await dirHandle.getDirectoryHandle(name, { create: true });
+        await copyDirectoryHandle(entry.handle, targetDir);
+      } else {
+        await copyFileHandle(entry.handle, dirHandle, name);
+      }
+      usedNames.add(name.toLowerCase());
+    }
+    await refreshDirectory();
+    clearSelection();
+  };
+
+  const handleDeleteEntry = async () => {
+    const allowed = await ensureWritable();
+    if (!allowed || selectedList.length === 0) return;
+    const confirmDelete = window.confirm(`Delete ${selectedList.length} item(s)?`);
+    if (!confirmDelete) return;
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      let nextTree = fauxTree;
+      selectedList.forEach((entry) => {
+        nextTree = deleteEntry(nextTree, fauxPathIds, entry.id);
+      });
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      syncFauxDirectory(nextTree, fauxPathIds);
+      clearSelection();
+      return;
+    }
+    for (const entry of selectedList) {
+      await dirHandle.removeEntry(entry.name, { recursive: entry.type === 'directory' });
+    }
+    await refreshDirectory();
+    clearSelection();
+  };
+
+  const handleMoveEntry = async () => {
+    const allowed = await ensureWritable();
+    if (!allowed || selectedList.length === 0) return;
+    if (isFauxMode) {
+      if (!fauxTree) return;
+      const targetPath = window.prompt('Move to folder path (e.g. Documents/Design)');
+      if (!targetPath) return;
+      const segments = targetPath.split('/').map((segment) => segment.trim()).filter(Boolean);
+      const targetIds = findNodeByPathNames(fauxTree, segments);
+      const resolvedNodes = findNodeByPathIds(fauxTree, targetIds);
+      if (!targetIds.length || resolvedNodes.length !== segments.length + 1) {
+        setLocationError('Target folder not found.');
+        return;
+      }
+      let nextTree = fauxTree;
+      selectedList.forEach((entry) => {
+        nextTree = moveEntry(nextTree, fauxPathIds, entry.id, targetIds);
+      });
+      setFauxTree(nextTree);
+      saveFauxFileSystem(nextTree);
+      syncFauxDirectory(nextTree, fauxPathIds);
+      clearSelection();
+      return;
+    }
+    if (typeof window === 'undefined' || !window.showDirectoryPicker) {
+      setLocationError('Move requires the browser directory picker.');
+      return;
+    }
+    const targetHandle = await window.showDirectoryPicker();
+    const allowedTarget = await ensureHandlePermission(targetHandle);
+    if (!allowedTarget) {
+      setLocationError('Permission denied for the destination folder.');
+      return;
+    }
+    const targetNames = new Set();
+    for await (const [name] of targetHandle.entries()) {
+      targetNames.add(name.toLowerCase());
+    }
+    for (const entry of selectedList) {
+      const targetName = buildUniqueName(entry.name, targetNames);
+      if (entry.type === 'directory') {
+        const newDir = await targetHandle.getDirectoryHandle(targetName, { create: true });
+        await copyDirectoryHandle(entry.handle, newDir);
+      } else {
+        await copyFileHandle(entry.handle, targetHandle, targetName);
+      }
+      targetNames.add(targetName.toLowerCase());
+      await dirHandle.removeEntry(entry.name, { recursive: entry.type === 'directory' });
+    }
+    await refreshDirectory();
+    clearSelection();
+  };
 
   const handleFauxDrop = (targetDirId) => {
     if (!fauxTree || !dragState) return;
@@ -467,6 +906,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     if (typeof window === 'undefined') return;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
+
+  const selectedCount = selectedList.length;
+  const canModify = isFauxMode ? !!fauxTree : !!dirHandle;
+  const canRename = selectedCount === 1;
+  const canBulkAction = selectedCount > 0;
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
@@ -532,6 +976,59 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
           </div>
         )}
       </div>
+      <div className={`px-2 py-1 text-xs ${isFauxMode ? 'bg-amber-900/40 text-amber-100' : 'bg-emerald-900/30 text-emerald-100'}`}>
+        {isFauxMode
+          ? 'Demo mode: using a simulated file system. Changes stay in this browser session and recents are disabled.'
+          : 'Real file system mode: managing files from the selected folder.'}
+      </div>
+      <div className="flex flex-wrap items-center gap-2 px-2 py-1 border-b border-gray-700 bg-black bg-opacity-20">
+        <span className="text-xs uppercase tracking-wide text-slate-300">Actions</span>
+        <button
+          onClick={handleCreateFile}
+          disabled={!canModify}
+          className={`px-2 py-1 rounded ${canModify ? 'bg-black bg-opacity-50 hover:bg-opacity-70' : 'bg-black bg-opacity-30 cursor-not-allowed'}`}
+        >
+          New File
+        </button>
+        <button
+          onClick={handleCreateFolder}
+          disabled={!canModify}
+          className={`px-2 py-1 rounded ${canModify ? 'bg-black bg-opacity-50 hover:bg-opacity-70' : 'bg-black bg-opacity-30 cursor-not-allowed'}`}
+        >
+          New Folder
+        </button>
+        <button
+          onClick={handleRenameEntry}
+          disabled={!canModify || !canRename}
+          className={`px-2 py-1 rounded ${canModify && canRename ? 'bg-black bg-opacity-50 hover:bg-opacity-70' : 'bg-black bg-opacity-30 cursor-not-allowed'}`}
+        >
+          Rename
+        </button>
+        <button
+          onClick={handleDuplicateEntry}
+          disabled={!canModify || !canBulkAction}
+          className={`px-2 py-1 rounded ${canModify && canBulkAction ? 'bg-black bg-opacity-50 hover:bg-opacity-70' : 'bg-black bg-opacity-30 cursor-not-allowed'}`}
+        >
+          Duplicate
+        </button>
+        <button
+          onClick={handleMoveEntry}
+          disabled={!canModify || !canBulkAction}
+          className={`px-2 py-1 rounded ${canModify && canBulkAction ? 'bg-black bg-opacity-50 hover:bg-opacity-70' : 'bg-black bg-opacity-30 cursor-not-allowed'}`}
+        >
+          Move
+        </button>
+        <button
+          onClick={handleDeleteEntry}
+          disabled={!canModify || !canBulkAction}
+          className={`px-2 py-1 rounded ${canModify && canBulkAction ? 'bg-red-700 hover:bg-red-600' : 'bg-black bg-opacity-30 cursor-not-allowed'}`}
+        >
+          Delete
+        </button>
+        <span className="ml-auto text-xs text-slate-300">
+          {selectedCount ? `${selectedCount} selected` : 'No selection'}
+        </span>
+      </div>
       <div className="flex flex-1 overflow-hidden">
         <div className="w-40 overflow-auto border-r border-gray-600">
           <div className="p-2 font-bold">Recent</div>
@@ -542,59 +1039,127 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
               </div>
             )
             : recent.map((r, i) => (
-                <div
-                  key={i}
-                  className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-                  onClick={() => openRecent(r)}
-                >
-                  {r.name}
+                <div key={i} className="px-2 py-1 hover:bg-black hover:bg-opacity-30">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      className="flex-1 text-left"
+                      onClick={() => openRecent(r)}
+                      disabled={r.permission === 'denied'}
+                    >
+                      {r.name}
+                    </button>
+                    {r.permission && r.permission !== 'granted' && (
+                      <button
+                        type="button"
+                        onClick={() => reconnectRecent(r)}
+                        className="px-2 py-0.5 text-xs bg-black bg-opacity-50 rounded"
+                      >
+                        Reconnect
+                      </button>
+                    )}
+                  </div>
+                  {r.permission && r.permission !== 'granted' && (
+                    <div className="text-[10px] text-amber-200">
+                      Access needs permission.
+                    </div>
+                  )}
                 </div>
               ))}
           <div className="p-2 font-bold">Directories</div>
-          {activeDirs.map((d, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => (isFauxMode ? openFauxDir(d) : openDir(d))}
-              onDragOver={(event) => {
-                if (!isFauxMode) return;
-                event.preventDefault();
-              }}
-              onDrop={() => handleFauxDrop(d.id)}
-            >
-              {d.name}
-            </div>
-          ))}
+          {activeDirs.map((d, i) => {
+            const entry = buildSelectionEntry(d, 'directory');
+            const isSelected = selectedEntries.has(entry.key);
+            return (
+              <div
+                key={i}
+                className={`px-2 flex items-center gap-2 hover:bg-black hover:bg-opacity-30 ${
+                  isSelected ? 'bg-black bg-opacity-40' : ''
+                }`}
+                onDragOver={(event) => {
+                  if (!isFauxMode) return;
+                  event.preventDefault();
+                }}
+                onDrop={() => handleFauxDrop(d.id)}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelection(entry)}
+                  aria-label={`Select ${d.name}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => (isFauxMode ? openFauxDir(d) : openDir(d))}
+                  className="flex-1 text-left"
+                >
+                  {d.name}
+                </button>
+              </div>
+            );
+          })}
           <div className="p-2 font-bold">Files</div>
-          {activeFiles.map((f, i) => (
-            <div
-              key={i}
-              className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
-              onClick={() => (isFauxMode ? openFauxFile(f) : openFile(f))}
-              draggable={isFauxMode}
-              onDragStart={() => {
-                if (!isFauxMode) return;
-                setDragState({ id: f.id, sourcePath: fauxPathIds });
-              }}
-              onDragEnd={() => {
-                if (isFauxMode) setDragState(null);
-              }}
-            >
-              {f.name}
-            </div>
-          ))}
+          {activeFiles.map((f, i) => {
+            const entry = buildSelectionEntry(f, 'file');
+            const isSelected = selectedEntries.has(entry.key);
+            return (
+              <div
+                key={i}
+                className={`px-2 flex items-center gap-2 hover:bg-black hover:bg-opacity-30 ${
+                  isSelected ? 'bg-black bg-opacity-40' : ''
+                }`}
+                draggable={isFauxMode}
+                onDragStart={() => {
+                  if (!isFauxMode) return;
+                  setDragState({ id: f.id, sourcePath: fauxPathIds });
+                }}
+                onDragEnd={() => {
+                  if (isFauxMode) setDragState(null);
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelection(entry)}
+                  aria-label={`Select ${f.name}`}
+                />
+                <button
+                  type="button"
+                  onClick={() => (isFauxMode ? openFauxFile(f) : openFile(f))}
+                  className="flex-1 text-left"
+                >
+                  {f.name}
+                </button>
+              </div>
+            );
+          })}
         </div>
         <div className="flex-1 flex flex-col">
           {currentFile && (
             <div className="flex flex-col flex-1 overflow-auto">
-              <div className="flex items-center justify-between px-2 py-1 border-b border-gray-600 bg-black bg-opacity-20">
-                <div className="font-semibold">{currentFile.name}</div>
-                {loading && <div className="text-xs text-gray-300">Loading...</div>}
+              <div className="px-2 py-1 border-b border-gray-600 bg-black bg-opacity-20">
+                <div className="flex items-center justify-between">
+                  <div className="font-semibold">{currentFile.name}</div>
+                  {loading && <div className="text-xs text-gray-300">Loading...</div>}
+                </div>
+                {fileMeta && (
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-300 mt-1">
+                    <span>Type: {fileMeta.type || 'Unknown'}</span>
+                    <span>Size: {formatBytes(fileMeta.size)}</span>
+                    <span>Modified: {formatTimestamp(fileMeta.modified)}</span>
+                  </div>
+                )}
               </div>
               {previewData && (
                 <div className="p-2 border-b border-gray-700 overflow-auto max-h-64 bg-black bg-opacity-20">
                   {previewData.type === 'image' && (
                     <img src={previewData.url} alt={`${currentFile.name} preview`} className="max-h-60 mx-auto" />
+                  )}
+                  {previewData.type === 'audio' && (
+                    <audio controls src={previewData.url} className="w-full" />
+                  )}
+                  {previewData.type === 'video' && (
+                    <video controls src={previewData.url} className="max-h-60 w-full" />
                   )}
                   {previewData.type === 'pdf' && (
                     <div className="flex items-center justify-between gap-3 text-xs">
@@ -612,7 +1177,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
                   )}
                   {previewData.type === 'markdown' && (
                     <div
-                      className="prose prose-invert max-w-none"
+                      className="prose prose-invert max-w-none prose-pre:bg-black/40 prose-pre:text-slate-100 prose-code:text-slate-200"
                       dangerouslySetInnerHTML={{ __html: previewData.html }}
                     />
                   )}
@@ -649,6 +1214,15 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
+            <div className="text-xs text-slate-300 mt-1">
+              {isFauxMode
+                ? 'Searching the demo file list.'
+                : indexStatus.state === 'indexing'
+                  ? `Indexing ${indexStatus.indexed} files...`
+                  : indexStatus.state === 'ready'
+                    ? `Indexed ${indexStatus.total} files.`
+                    : 'Index idle.'}
+            </div>
             <div className="max-h-40 overflow-auto mt-2">
               {results.map((r, i) => (
                 <div key={i}>
