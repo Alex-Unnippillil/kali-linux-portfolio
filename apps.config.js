@@ -2,6 +2,112 @@ import { createDynamicApp, createDisplay } from './utils/createDynamicApp';
 
 import { DEFAULT_DESKTOP_FOLDERS } from './data/desktopFolders';
 
+export const APP_CATEGORIES = {
+  system: {
+    id: 'system',
+    title: 'System & Workspace',
+    description: 'Core desktop controls and preferences.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#38bdf8',
+    defaultOpen: true,
+  },
+  productivity: {
+    id: 'productivity',
+    title: 'Productivity & Media',
+    description: 'Everyday apps, media, and communication.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#f97316',
+  },
+  development: {
+    id: 'development',
+    title: 'Development & Builders',
+    description: 'Coding, request builders, and terminals.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#a855f7',
+  },
+  recon: {
+    id: 'recon',
+    title: 'Recon & Monitoring',
+    description: 'Discovery, scanning, and situational awareness.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#22d3ee',
+  },
+  exploitation: {
+    id: 'exploitation',
+    title: 'Exploitation & Post-Exploitation',
+    description: 'Credential attacks and offensive tooling simulations.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#facc15',
+  },
+  forensics: {
+    id: 'forensics',
+    title: 'Forensics & Reverse Engineering',
+    description: 'Analysis suites and evidence tooling.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#f472b6',
+  },
+  utilities: {
+    id: 'utilities',
+    title: 'Utilities & Widgets',
+    description: 'Quick helpers, calculators, and widgets.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#34d399',
+  },
+  games: {
+    id: 'games',
+    title: 'Games & Arcade',
+    description: 'Retro games and quick challenges.',
+    icon: '/themes/Yaru/system/folder.png',
+    accent: '#fb7185',
+  },
+};
+
+const CATEGORY_DEFAULTS = {
+  system: {
+    tags: ['system', 'desktop', 'workspace'],
+    capabilities: ['system'],
+  },
+  productivity: {
+    tags: ['productivity', 'media', 'communication'],
+    capabilities: ['productivity'],
+  },
+  development: {
+    tags: ['development', 'builder', 'terminal'],
+    capabilities: ['development'],
+  },
+  recon: {
+    tags: ['recon', 'monitoring', 'discovery'],
+    capabilities: ['recon'],
+  },
+  exploitation: {
+    tags: ['exploitation', 'offensive', 'credential'],
+    capabilities: ['offensive'],
+  },
+  forensics: {
+    tags: ['forensics', 'analysis', 'reverse-engineering'],
+    capabilities: ['analysis'],
+  },
+  utilities: {
+    tags: ['utility', 'widget', 'helper'],
+    capabilities: ['utility'],
+  },
+  games: {
+    tags: ['game', 'arcade', 'retro'],
+    capabilities: ['game'],
+  },
+};
+
+const withCategoryDefaults = (app) => {
+  const defaults = CATEGORY_DEFAULTS[app.category] || {};
+  const tags = [...new Set([...(defaults.tags || []), ...(app.tags || [])])];
+  const capabilities = [...new Set([...(defaults.capabilities || []), ...(app.capabilities || [])])];
+  return {
+    ...app,
+    tags,
+    capabilities,
+  };
+};
+
 // Dynamic applications and games
 const TerminalApp = createDynamicApp(() => import('./components/apps/terminal'), 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -226,6 +332,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayQr,
+    category: 'utilities',
   },
   {
     id: 'ascii-art',
@@ -235,6 +342,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayAsciiArt,
+    category: 'utilities',
   },
   {
     id: 'figlet',
@@ -244,6 +352,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFiglet,
+    category: 'utilities',
   },
   {
     id: 'quote',
@@ -253,6 +362,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayQuote,
+    category: 'utilities',
   },
   {
     id: 'project-gallery',
@@ -262,6 +372,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayProjectGallery,
+    category: 'utilities',
   },
   {
     id: 'input-lab',
@@ -271,6 +382,7 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayInputLab,
+    category: 'utilities',
   },
   {
     id: 'subnet-calculator',
@@ -280,10 +392,11 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySubnetCalculator,
+    category: 'utilities',
   },
 ];
 
-export const utilities = utilityList;
+export const utilities = utilityList.map((app) => withCategoryDefaults(app));
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -610,7 +723,9 @@ const gameList = [
   },
 ];
 
-export const games = gameList.map((game) => ({ ...gameDefaults, ...game }));
+export const games = gameList.map((game) =>
+  withCategoryDefaults({ ...gameDefaults, ...game, category: 'games' })
+);
 
 const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   id: folder.id,
@@ -621,6 +736,7 @@ const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
   desktop_shortcut: true,
   isFolder: true,
   screen: displayDesktopFolder,
+  category: 'system',
   defaultWidth: 64,
   defaultHeight: 70,
   responsiveWidth: { mobile: 95, desktop: 55 },
@@ -637,6 +753,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayFirefox,
+    category: 'productivity',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -648,6 +765,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayCalculator,
+    category: 'productivity',
     resizable: false,
     allowMaximize: false,
     responsiveWidth: { mobile: 85, desktop: 28 },
@@ -661,6 +779,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayTerminal,
+    category: 'system',
     resizable: true,
     responsiveWidth: { mobile: 95, desktop: 68 },
     responsiveHeight: { mobile: 85, desktop: 72 },
@@ -674,6 +793,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayVsCode,
+    category: 'development',
     responsiveWidth: { mobile: 95, desktop: 85 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -685,6 +805,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayX,
+    category: 'productivity',
     responsiveWidth: { mobile: 95, desktop: 60 },
     responsiveHeight: { mobile: 85, desktop: 80 },
   },
@@ -696,6 +817,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySpotify,
+    category: 'productivity',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -707,6 +829,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayYouTube,
+    category: 'productivity',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 85, desktop: 80 },
   },
@@ -718,6 +841,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBeef,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -729,6 +853,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displayAboutAlex,
+    category: 'system',
     responsiveWidth: { mobile: 95, desktop: 55 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -740,6 +865,7 @@ const apps = [
     favourite: true,
     desktop_shortcut: true,
     screen: displaySettings,
+    category: 'system',
     responsiveWidth: { mobile: 95, desktop: 60 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -751,6 +877,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayFileExplorer,
+    category: 'system',
     responsiveWidth: { mobile: 95, desktop: 65 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -762,6 +889,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayResourceMonitor,
+    category: 'system',
     responsiveWidth: { mobile: 95, desktop: 60 },
     responsiveHeight: { mobile: 85, desktop: 75 },
   },
@@ -773,6 +901,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayScreenRecorder,
+    category: 'system',
     responsiveWidth: { mobile: 90, desktop: 50 },
     responsiveHeight: { mobile: 75, desktop: 55 },
   },
@@ -784,6 +913,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayEttercap,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -795,6 +925,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayBleSensor,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 55 },
     responsiveHeight: { mobile: 85, desktop: 70 },
   },
@@ -806,6 +937,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMetasploit,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -817,6 +949,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayWireshark,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 80 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -828,6 +961,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTodoist,
+    category: 'productivity',
     responsiveWidth: { mobile: 95, desktop: 50 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -839,6 +973,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayStickyNotes,
+    category: 'productivity',
     responsiveWidth: { mobile: 85, desktop: 40 },
     responsiveHeight: { mobile: 70, desktop: 60 },
   },
@@ -850,6 +985,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTrash,
+    category: 'system',
     responsiveWidth: { mobile: 90, desktop: 50 },
     responsiveHeight: { mobile: 85, desktop: 70 },
   },
@@ -861,6 +997,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayConverter,
+    category: 'productivity',
     responsiveWidth: { mobile: 85, desktop: 35 },
     responsiveHeight: { mobile: 70, desktop: 55 },
   },
@@ -872,6 +1009,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayKismet,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -883,6 +1021,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: false,
     screen: displayNikto,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -894,6 +1033,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayAutopsy,
+    category: 'forensics',
     responsiveWidth: { mobile: 95, desktop: 80 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -905,6 +1045,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayPluginManager,
+    category: 'system',
     responsiveWidth: { mobile: 95, desktop: 55 },
     responsiveHeight: { mobile: 85, desktop: 75 },
   },
@@ -916,6 +1057,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayReaver,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 65 },
     responsiveHeight: { mobile: 85, desktop: 75 },
   },
@@ -927,6 +1069,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayNessus,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -938,6 +1081,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayGhidra,
+    category: 'forensics',
     responsiveWidth: { mobile: 95, desktop: 85 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -949,6 +1093,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMimikatz,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -960,6 +1105,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMimikatzOffline,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -971,6 +1117,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySSH,
+    category: 'development',
     responsiveWidth: { mobile: 95, desktop: 55 },
     responsiveHeight: { mobile: 85, desktop: 70 },
   },
@@ -982,6 +1129,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHTTP,
+    category: 'development',
     responsiveWidth: { mobile: 95, desktop: 60 },
     responsiveHeight: { mobile: 85, desktop: 75 },
   },
@@ -993,6 +1141,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHtmlRewrite,
+    category: 'development',
     responsiveWidth: { mobile: 95, desktop: 65 },
     responsiveHeight: { mobile: 85, desktop: 75 },
   },
@@ -1004,6 +1153,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayContact,
+    category: 'productivity',
     responsiveWidth: { mobile: 95, desktop: 50 },
     responsiveHeight: { mobile: 85, desktop: 70 },
   },
@@ -1015,6 +1165,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHydra,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1026,6 +1177,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayNmapNSE,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1037,6 +1189,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayWeather,
+    category: 'utilities',
     responsiveWidth: { mobile: 90, desktop: 45 },
     responsiveHeight: { mobile: 80, desktop: 65 },
   },
@@ -1048,6 +1201,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayWeatherWidget,
+    category: 'utilities',
     responsiveWidth: { mobile: 85, desktop: 35 },
     responsiveHeight: { mobile: 70, desktop: 50 },
   },
@@ -1059,6 +1213,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySerialTerminal,
+    category: 'development',
     responsiveWidth: { mobile: 95, desktop: 65 },
     responsiveHeight: { mobile: 85, desktop: 70 },
   },
@@ -1070,6 +1225,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayRadare2,
+    category: 'forensics',
     responsiveWidth: { mobile: 95, desktop: 80 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -1081,6 +1237,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayVolatility,
+    category: 'forensics',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1092,6 +1249,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayHashcat,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1103,6 +1261,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayMsfPost,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -1114,6 +1273,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayEvidenceVault,
+    category: 'forensics',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1125,6 +1285,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayDsniff,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1136,6 +1297,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayJohn,
+    category: 'exploitation',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1147,6 +1309,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayOpenVAS,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 75 },
     responsiveHeight: { mobile: 90, desktop: 85 },
   },
@@ -1158,6 +1321,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayReconNG,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1169,6 +1333,7 @@ const apps = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySecurityTools,
+    category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
   },
@@ -1176,6 +1341,6 @@ const apps = [
   ...utilities,
   // Games are included so they appear alongside apps
   ...games,
-];
+].map((app) => withCategoryDefaults(app));
 
 export default apps;

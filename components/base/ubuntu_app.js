@@ -55,6 +55,7 @@ export class UbuntuApp extends Component {
             style,
             onKeyDown: customKeyDown,
             onBlur,
+            onFocus,
             assistiveHint,
             assistiveHintId,
             isSelected = false,
@@ -151,10 +152,15 @@ export class UbuntuApp extends Component {
                         this.openApp();
                     }
                 }}
+                onFocus={(event) => {
+                    this.handlePrefetch();
+                    if (typeof onFocus === 'function') {
+                        onFocus(event);
+                    }
+                }}
                 onBlur={onBlur}
                 tabIndex={this.props.disabled ? -1 : 0}
                 onMouseEnter={this.handlePrefetch}
-                onFocus={this.handlePrefetch}
                 aria-describedby={hintId}
             >
                 <Image
