@@ -1,162 +1,170 @@
 import React from 'react';
+import VirtualList from 'rc-virtual-list';
 import UbuntuApp from '../base/ubuntu_app';
+import { APP_CATEGORIES } from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
+import { addRecentApp, readRecentAppIds, writeRecentAppIds } from '../../utils/recentStorage';
 
 const FAVORITES_KEY = 'launcherFavorites';
-const RECENTS_KEY = 'recentApps';
 
 const DEFAULT_FOLDER_ICON = '/themes/Yaru/system/folder.png';
+const MAX_RECENT_APPS = 10;
+const GRID_ROW_HEIGHT = 176;
+const MAX_GRID_HEIGHT = 560;
 
-const buildIdSet = (ids) => new Set(ids);
-
-const SYSTEM_APP_IDS = buildIdSet([
-    'terminal',
-    'files',
-    'settings',
-    'resource-monitor',
-    'screen-recorder',
-    'plugin-manager',
-    'trash',
-    'about',
-    'contact',
-]);
-
-const PRODUCTIVITY_APP_IDS = buildIdSet([
-    'calculator',
-    'converter',
-    'todoist',
-    'sticky_notes',
-    'spotify',
-    'youtube',
-    'firefox',
-    'x',
-]);
-
-const DEVELOPMENT_APP_IDS = buildIdSet([
-    'vscode',
-    'ssh',
-    'http',
-    'html-rewriter',
-    'serial-terminal',
-]);
-
-const RECON_APP_IDS = buildIdSet([
-    'wireshark',
-    'nmap-nse',
-    'openvas',
-    'recon-ng',
-    'nessus',
-    'kismet',
-    'ble-sensor',
-    'nikto',
-    'security-tools',
-]);
-
-const EXPLOIT_APP_IDS = buildIdSet([
-    'metasploit',
-    'msf-post',
-    'hashcat',
-    'hydra',
-    'mimikatz',
-    'mimikatz/offline',
-    'john',
-    'reaver',
-    'dsniff',
-    'beef',
-    'ettercap',
-]);
-
-const FORENSICS_APP_IDS = buildIdSet([
-    'autopsy',
-    'evidence-vault',
-    'volatility',
-    'radare2',
-    'ghidra',
-]);
-
-const UTILITY_APP_IDS = buildIdSet([
-    'qr',
-    'ascii-art',
-    'clipboard-manager',
-    'figlet',
-    'quote',
-    'project-gallery',
-    'input-lab',
-    'subnet-calculator',
-    'weather',
-    'weather-widget',
-]);
+const SEARCH_WEIGHTS = {
+    exactTitle: 100,
+    startsWith: 80,
+    word: 60,
+    tag: 40,
+    description: 20,
+};
 
 const sortAppsByTitle = (collection = []) =>
     [...collection].sort((a, b) => a.title.localeCompare(b.title));
 
-const createFolderDefinitions = (gameIds = new Set()) => [
-    {
-        id: 'system',
-        title: 'System & Workspace',
-        description: 'Core desktop controls and preferences.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#38bdf8',
-        match: (app) => SYSTEM_APP_IDS.has(app.id),
-        defaultOpen: true,
-    },
-    {
-        id: 'productivity',
-        title: 'Productivity & Media',
-        description: 'Everyday apps, media, and communication.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#f97316',
-        match: (app) => PRODUCTIVITY_APP_IDS.has(app.id),
-    },
-    {
-        id: 'development',
-        title: 'Development & Builders',
-        description: 'Coding, request builders, and terminals.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#a855f7',
-        match: (app) => DEVELOPMENT_APP_IDS.has(app.id),
-    },
-    {
-        id: 'recon',
-        title: 'Recon & Monitoring',
-        description: 'Discovery, scanning, and situational awareness.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#22d3ee',
-        match: (app) => RECON_APP_IDS.has(app.id),
-    },
-    {
-        id: 'exploitation',
-        title: 'Exploitation & Post-Exploitation',
-        description: 'Credential attacks and offensive tooling simulations.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#facc15',
-        match: (app) => EXPLOIT_APP_IDS.has(app.id),
-    },
-    {
-        id: 'forensics',
-        title: 'Forensics & Reverse Engineering',
-        description: 'Analysis suites and evidence tooling.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#f472b6',
-        match: (app) => FORENSICS_APP_IDS.has(app.id),
-    },
-    {
-        id: 'utilities',
-        title: 'Utilities & Widgets',
-        description: 'Quick helpers, calculators, and widgets.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#34d399',
-        match: (app) => UTILITY_APP_IDS.has(app.id),
-    },
-    {
-        id: 'games',
-        title: 'Games & Arcade',
-        description: 'Retro games and quick challenges.',
-        icon: DEFAULT_FOLDER_ICON,
-        accent: '#fb7185',
-        match: (app) => gameIds.has(app.id),
-    },
-];
+const createFolderDefinitions = () =>
+    Object.values(APP_CATEGORIES).map((category) => ({
+        ...category,
+        icon: category.icon || DEFAULT_FOLDER_ICON,
+        items: [],
+    }));
+
+const getColumnCount = (width = 0) => {
+    if (width >= 1536) return 6;
+    if (width >= 1280) return 5;
+    if (width >= 1024) return 4;
+    if (width >= 768) return 3;
+    if (width >= 640) return 2;
+    return 1;
+};
+
+const chunkApps = (apps, columns) => {
+    if (!apps.length) return [];
+    const rows = [];
+    for (let i = 0; i < apps.length; i += columns) {
+        rows.push(apps.slice(i, i + columns));
+    }
+    return rows;
+};
+
+const buildTokens = (query) =>
+    query
+        .trim()
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(Boolean);
+
+const scoreAppMatch = (app, query, tokens) => {
+    const title = app.title.toLowerCase();
+    const description = (app.description || '').toLowerCase();
+    const tags = (app.tags || []).map((tag) => tag.toLowerCase());
+    const capabilities = (app.capabilities || []).map((cap) => cap.toLowerCase());
+    const titleWords = title.split(/\s+/);
+    const matchedTokens = new Set();
+    let score = 0;
+
+    if (title === query) {
+        score += SEARCH_WEIGHTS.exactTitle;
+        matchedTokens.add(query);
+    } else if (title.startsWith(query)) {
+        score += SEARCH_WEIGHTS.startsWith;
+        matchedTokens.add(query);
+    }
+
+    tokens.forEach((token) => {
+        if (titleWords.some((word) => word.startsWith(token))) {
+            score += SEARCH_WEIGHTS.word;
+            matchedTokens.add(token);
+            return;
+        }
+
+        if (tags.some((tag) => tag.includes(token)) || capabilities.some((cap) => cap.includes(token))) {
+            score += SEARCH_WEIGHTS.tag;
+            matchedTokens.add(token);
+            return;
+        }
+
+        if (description.includes(token)) {
+            score += SEARCH_WEIGHTS.description;
+            matchedTokens.add(token);
+        }
+    });
+
+    return { score, matchedTokens: [...matchedTokens] };
+};
+
+const rankApps = (apps, query) => {
+    if (!query.trim()) {
+        return { results: sortAppsByTitle(apps), matches: {} };
+    }
+
+    const tokens = buildTokens(query);
+    const matches = {};
+    const results = apps
+        .map((app) => {
+            const match = scoreAppMatch(app, query.toLowerCase(), tokens);
+            if (match.score > 0) {
+                matches[app.id] = match;
+            }
+            return { app, score: match.score };
+        })
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            return a.app.title.localeCompare(b.app.title);
+        })
+        .map(({ app }) => app);
+
+    return { results, matches };
+};
+
+const highlightMatch = (text, tokens = []) => {
+    if (!tokens.length) return text;
+    const pattern = tokens
+        .filter(Boolean)
+        .map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+        .join('|');
+    if (!pattern) return text;
+    const regex = new RegExp(`(${pattern})`, 'gi');
+    return text.split(regex).map((part, index) =>
+        part.match(regex) ? (
+            <mark key={`${part}-${index}`} className="rounded bg-sky-300/20 px-1 text-sky-200">
+                {part}
+            </mark>
+        ) : (
+            part
+        )
+    );
+};
+
+const VirtualizedAppGrid = ({ apps, columns, renderTile }) => {
+    const rows = React.useMemo(() => chunkApps(apps, columns), [apps, columns]);
+    const height = Math.min(rows.length * GRID_ROW_HEIGHT, MAX_GRID_HEIGHT);
+    if (!rows.length) return null;
+
+    return (
+        <VirtualList
+            data={rows}
+            height={height}
+            itemHeight={GRID_ROW_HEIGHT}
+            itemKey={(row) => row.map((app) => app.id).join('-')}
+        >
+            {(row) => (
+                <div
+                    className="w-full"
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                        gap: '1rem',
+                    }}
+                >
+                    {row.map((app) => renderTile(app))}
+                </div>
+            )}
+        </VirtualList>
+    );
+};
 
 const readStoredIds = (key) => {
     if (!safeLocalStorage) return [];
@@ -203,6 +211,9 @@ class AllApplications extends React.Component {
             unfilteredApps: [],
             favorites: [],
             recents: [],
+            searchMatches: {},
+            focusedIndex: null,
+            columnCount: 1,
         };
     }
 
@@ -215,44 +226,57 @@ class AllApplications extends React.Component {
         const sorted = sortAppsByTitle(combined);
         const availableIds = new Set(sorted.map((app) => app.id));
         const favorites = sanitizeIds(readStoredIds(FAVORITES_KEY), availableIds);
-        const recents = sanitizeIds(readStoredIds(RECENTS_KEY), availableIds, 10);
+        const recents = sanitizeIds(readRecentAppIds(), availableIds, MAX_RECENT_APPS);
 
         persistIds(FAVORITES_KEY, favorites);
-        persistIds(RECENTS_KEY, recents);
+        writeRecentAppIds(recents);
 
         this.setState({
             apps: sorted,
             unfilteredApps: sorted,
             favorites,
             recents,
+            columnCount: getColumnCount(window.innerWidth),
         });
+
+        this.handleResize = () => {
+            this.setState({ columnCount: getColumnCount(window.innerWidth) });
+        };
+        window.addEventListener('resize', this.handleResize);
+    }
+
+    componentWillUnmount() {
+        if (this.handleResize) {
+            window.removeEventListener('resize', this.handleResize);
+        }
     }
 
     handleChange = (e) => {
         const value = e.target.value;
         const { unfilteredApps } = this.state;
         const query = typeof value === 'string' ? value : '';
-        const lower = query.toLowerCase();
-        const filtered =
-            query === ''
-                ? unfilteredApps
-                : unfilteredApps.filter((app) =>
-                      app.title.toLowerCase().includes(lower)
-                  );
-        this.setState({ query, apps: sortAppsByTitle(filtered) });
+        const { results, matches } = rankApps(unfilteredApps, query);
+        this.setState({
+            query,
+            apps: results,
+            searchMatches: matches,
+            focusedIndex: null,
+        });
     };
 
     openApp = (id) => {
-        this.setState((state) => {
-            const filtered = state.recents.filter((recentId) => recentId !== id);
-            const next = [id, ...filtered].slice(0, 10);
-            persistIds(RECENTS_KEY, next);
-            return { recents: next };
-        }, () => {
-            if (typeof this.props.openApp === 'function') {
-                this.props.openApp(id);
+        this.setState(
+            (state) => {
+                const next = sanitizeIds(addRecentApp(id), new Set(state.unfilteredApps.map((app) => app.id)), MAX_RECENT_APPS);
+                writeRecentAppIds(next);
+                return { recents: next };
+            },
+            () => {
+                if (typeof this.props.openApp === 'function') {
+                    this.props.openApp(id);
+                }
             }
-        });
+        );
     };
 
     handleToggleFavorite = (event, id) => {
@@ -268,13 +292,99 @@ class AllApplications extends React.Component {
         });
     };
 
-    renderAppTile = (app) => {
+    handleToggleFavoriteById = (id) => {
+        this.setState((state) => {
+            const isFavorite = state.favorites.includes(id);
+            const favorites = isFavorite
+                ? state.favorites.filter((favId) => favId !== id)
+                : [...state.favorites, id];
+            persistIds(FAVORITES_KEY, favorites);
+            return { favorites };
+        });
+    };
+
+    handleKeyDown = (event) => {
+        const { apps, focusedIndex, columnCount } = this.state;
+        if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)) return;
+
+        if (event.target?.tagName === 'INPUT' && ['ArrowLeft', 'ArrowRight'].includes(event.key)) {
+            return;
+        }
+
+        if (!apps.length) return;
+
+        if (event.key === 'Enter' && focusedIndex !== null) {
+            event.preventDefault();
+            const app = apps[focusedIndex];
+            if (!app) return;
+            if (event.ctrlKey) {
+                this.handleToggleFavoriteById(app.id);
+                return;
+            }
+            this.openApp(app.id);
+            return;
+        }
+
+        if (event.key === 'ArrowDown' && focusedIndex === null) {
+            event.preventDefault();
+            this.focusAppIndex(0);
+            return;
+        }
+
+        if (focusedIndex === null) return;
+
+        let nextIndex = focusedIndex;
+        const rowJump = columnCount || 1;
+
+        switch (event.key) {
+            case 'ArrowUp':
+                nextIndex = Math.max(0, focusedIndex - rowJump);
+                break;
+            case 'ArrowDown':
+                nextIndex = Math.min(apps.length - 1, focusedIndex + rowJump);
+                break;
+            case 'ArrowLeft':
+                nextIndex = Math.max(0, focusedIndex - 1);
+                break;
+            case 'ArrowRight':
+                nextIndex = Math.min(apps.length - 1, focusedIndex + 1);
+                break;
+            default:
+                break;
+        }
+
+        if (nextIndex !== focusedIndex) {
+            event.preventDefault();
+            this.focusAppIndex(nextIndex);
+        }
+    };
+
+    focusAppIndex = (index) => {
+        this.setState({ focusedIndex: index }, () => {
+            const app = this.state.apps[index];
+            if (!app) return;
+            const node = document.getElementById(`app-${app.id}`);
+            if (node && typeof node.focus === 'function') {
+                node.focus();
+            }
+        });
+    };
+
+    renderAppTile = (app, index) => {
         const isFavorite = this.state.favorites.includes(app.id);
         const shouldPrefetch = app.prefetchOnHover !== false;
+        const match = this.state.searchMatches[app.id];
+        const highlightTokens = match ? match.matchedTokens : [];
+        const displayName = highlightMatch(app.title, highlightTokens);
         return (
             <div
                 key={app.id}
                 className="relative flex w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/70 p-3 shadow-lg transition hover:border-sky-300/70 focus-within:ring-2 focus-within:ring-sky-300/70"
+                onFocus={() => {
+                    if (typeof index === 'number') {
+                        this.setState({ focusedIndex: index });
+                    }
+                }}
             >
                 <button
                     type="button"
@@ -297,6 +407,13 @@ class AllApplications extends React.Component {
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
+                    displayName={displayName}
+                    isSelected={this.state.focusedIndex === index}
+                    onFocus={() => {
+                        if (typeof index === 'number') {
+                            this.setState({ focusedIndex: index });
+                        }
+                    }}
                     prefetch={shouldPrefetch ? app.screen?.prefetch : undefined}
                 />
             </div>
@@ -323,8 +440,15 @@ class AllApplications extends React.Component {
                             {apps.length} {apps.length === 1 ? 'app' : 'apps'}
                         </span>
                     </div>
-                    <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                        {apps.map((app) => this.renderAppTile(app))}
+                    <div className="mt-4">
+                        <VirtualizedAppGrid
+                            apps={apps}
+                            columns={this.state.columnCount}
+                            renderTile={(app) => {
+                                const index = this.appIndexMap?.get(app.id);
+                                return this.renderAppTile(app, index);
+                            }}
+                        />
                     </div>
                 </div>
             </section>
@@ -372,8 +496,15 @@ class AllApplications extends React.Component {
                         {countLabel}
                     </span>
                 </summary>
-                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
-                    {folder.items.map((app) => this.renderAppTile(app))}
+                <div className="mt-4">
+                    <VirtualizedAppGrid
+                        apps={folder.items}
+                        columns={this.state.columnCount}
+                        renderTile={(app) => {
+                            const index = this.appIndexMap?.get(app.id);
+                            return this.renderAppTile(app, index);
+                        }}
+                    />
                 </div>
             </details>
         );
@@ -383,6 +514,7 @@ class AllApplications extends React.Component {
         const { apps, favorites, recents } = this.state;
         const { searchInputRef, headingId = 'all-apps-title' } = this.props;
         const appMap = new Map(apps.map((app) => [app.id, app]));
+        this.appIndexMap = new Map(apps.map((app, index) => [app.id, index]));
         const favoriteApps = sortAppsByTitle(
             favorites
                 .map((id) => appMap.get(id))
@@ -391,19 +523,14 @@ class AllApplications extends React.Component {
         const recentApps = recents
             .map((id) => appMap.get(id))
             .filter(Boolean);
-        const gameIdSet = new Set((this.props.games || []).map((game) => game.id));
-        const folderTemplates = createFolderDefinitions(gameIdSet).map((folder) => ({
-            ...folder,
-            items: [],
-        }));
+        const folderTemplates = createFolderDefinitions();
+        const folderMap = new Map(folderTemplates.map((folder) => [folder.id, folder]));
         const assignedIds = new Set();
         apps.forEach((app) => {
-            for (const folder of folderTemplates) {
-                if (folder.match && folder.match(app)) {
-                    folder.items.push(app);
-                    assignedIds.add(app.id);
-                    return;
-                }
+            const targetFolder = app.category ? folderMap.get(app.category) : null;
+            if (targetFolder) {
+                targetFolder.items.push(app);
+                assignedIds.add(app.id);
             }
         });
         const remainingApps = apps.filter((app) => !assignedIds.has(app.id));
@@ -444,7 +571,7 @@ class AllApplications extends React.Component {
         const forceOpenFolders = Boolean(this.state.query);
 
         return (
-            <div className="flex w-full flex-col items-center text-white">
+            <div className="flex w-full flex-col items-center text-white" onKeyDown={this.handleKeyDown}>
                 <header className="w-full px-4 sm:px-6 md:px-8">
                     <div
                         className="mx-auto flex w-full max-w-5xl flex-col gap-6 rounded-3xl border bg-slate-900/70 p-6 backdrop-blur-xl"
@@ -474,14 +601,15 @@ class AllApplications extends React.Component {
                                 placeholder="Search"
                                 value={this.state.query}
                                 onChange={this.handleChange}
+                                onKeyDown={this.handleKeyDown}
                                 aria-label="Search applications"
                             />
                         </div>
                     </div>
                 </header>
                 <div className="mx-auto mt-10 flex w-full max-w-6xl flex-col items-stretch px-4 pb-12 sm:px-6 md:px-8 lg:px-10 xl:px-0">
-                    {this.renderSection('Favorites', favoriteApps)}
-                    {this.renderSection('Recent', recentApps)}
+                    {this.renderSection('Pinned', favoriteApps)}
+                    {this.renderSection('Suggested', recentApps)}
                     {folderSections.length ? (
                         <div className="mx-auto w-full space-y-6">
                             {folderSections.map((folder) =>

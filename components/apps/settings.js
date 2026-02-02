@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useSettings, ACCENT_OPTIONS } from '../../hooks/useSettings';
 import { resetSettings, defaults, exportSettings as exportSettingsData, importSettings as importSettingsData } from '../../utils/settingsStore';
+import { writeRecentAppIds } from '../../utils/recentStorage';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 export function Settings() {
@@ -226,6 +227,18 @@ export function Settings() {
                     />
                     Pong Spin
                 </label>
+            </div>
+            <div className="flex flex-col items-center gap-3 my-4 border-t border-kali-border/60 pt-4">
+                <p className="text-sm text-kali-text/70">Launcher</p>
+                <button
+                    onClick={() => {
+                        if (!window.confirm('Clear launcher suggested apps?')) return;
+                        writeRecentAppIds([]);
+                    }}
+                    className="px-4 py-2 rounded-md bg-kali-surface-raised text-kali-text/80 transition-colors hover:bg-kali-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                >
+                    Clear Suggested Apps
+                </button>
             </div>
             <div className="flex justify-center my-4">
                 <div
