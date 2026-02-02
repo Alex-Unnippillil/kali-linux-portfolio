@@ -18,6 +18,9 @@ import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../
 const EDGE_THRESHOLD_MIN = 48;
 const EDGE_THRESHOLD_MAX = 160;
 const EDGE_THRESHOLD_RATIO = 0.05;
+const SNAP_COMMIT_THRESHOLD_MIN = 24;
+const SNAP_COMMIT_THRESHOLD_MAX = 96;
+const SNAP_COMMIT_THRESHOLD_RATIO = 0.02;
 const DRAG_BOUNDS_PADDING = 96;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -38,7 +41,11 @@ const normalizePercentageDimension = (value, fallback) => {
     return value;
 };
 
-const computeEdgeThreshold = (size) => clamp(size * EDGE_THRESHOLD_RATIO, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
+const computeEdgeThreshold = (size, ratio = EDGE_THRESHOLD_RATIO) =>
+    clamp(size * ratio, EDGE_THRESHOLD_MIN, EDGE_THRESHOLD_MAX);
+
+const computeSnapCommitThreshold = (size) =>
+    clamp(size * SNAP_COMMIT_THRESHOLD_RATIO, SNAP_COMMIT_THRESHOLD_MIN, SNAP_COMMIT_THRESHOLD_MAX);
 
 const getViewportMetrics = () => {
     if (typeof window === 'undefined') {
@@ -262,6 +269,7 @@ export class Window extends Component {
         this._lastViewportMetrics = null;
         this._lastSnapBottomInset = null;
         this._lastSafeAreaBottom = null;
+        this._positionSyncFrame = null;
         this._isUnmounted = false;
     }
 
@@ -287,9 +295,11 @@ export class Window extends Component {
         window.addEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.addEventListener('super-arrow', this.handleSuperArrow);
+        root?.addEventListener('super-action', this.handleSuperAction);
         if (this._uiExperiments) {
             this.scheduleUsageCheck();
         }
+        this.schedulePositionSync();
         if (this.props.isFocused) {
             this.focusWindow();
         }
@@ -363,6 +373,7 @@ export class Window extends Component {
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
         root?.removeEventListener('super-arrow', this.handleSuperArrow);
+        root?.removeEventListener('super-action', this.handleSuperAction);
         if (this._usageTimeout) {
             clearTimeout(this._usageTimeout);
         }
@@ -374,9 +385,28 @@ export class Window extends Component {
             cancelScheduledAnimationFrame(this._dragFrame);
             this._dragFrame = null;
         }
+        if (this._positionSyncFrame) {
+            cancelScheduledAnimationFrame(this._positionSyncFrame);
+            this._positionSyncFrame = null;
+        }
         this._pendingDragUpdate = null;
         this.cancelResizeSession();
         this._resizeSession = null;
+    }
+
+    schedulePositionSync = () => {
+        if (this._positionSyncFrame !== null) {
+            cancelScheduledAnimationFrame(this._positionSyncFrame);
+        }
+        this._positionSyncFrame = scheduleAnimationFrame(() => {
+            this._positionSyncFrame = null;
+            if (this._isUnmounted) return;
+            const node = this.getWindowNode();
+            if (!node) return;
+            const { x, y } = this.readStoredPosition(node);
+            this.updateTransformVariables(node, x, y);
+            this.updatePositionState(x, y);
+        });
     }
 
     setDefaultWindowDimenstion = () => {
@@ -537,6 +567,56 @@ export class Window extends Component {
         return null;
     }
 
+    readStoredPosition = (node) => {
+        let x = null;
+        let y = null;
+        if (node) {
+            const style = node.style;
+            if (style && typeof style.getPropertyValue === 'function') {
+                const storedX = parsePxValue(style.getPropertyValue('--window-transform-x'));
+                const storedY = parsePxValue(style.getPropertyValue('--window-transform-y'));
+                if (storedX !== null) {
+                    x = storedX;
+                }
+                if (storedY !== null) {
+                    y = storedY;
+                }
+            }
+            if ((x === null || y === null) && typeof node.style?.transform === 'string') {
+                const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
+                if (match) {
+                    const parsedX = parseFloat(match[1]);
+                    const parsedY = parseFloat(match[2]);
+                    if (x === null && Number.isFinite(parsedX)) {
+                        x = parsedX;
+                    }
+                    if (y === null && Number.isFinite(parsedY)) {
+                        y = parsedY;
+                    }
+                }
+            }
+        }
+
+        if (x === null || y === null) {
+            const position = this.state?.position;
+            if (x === null && position && Number.isFinite(position.x)) {
+                x = position.x;
+            }
+            if (y === null && position && Number.isFinite(position.y)) {
+                y = position.y;
+            }
+        }
+
+        if (x === null || !Number.isFinite(x)) {
+            x = typeof this.startX === 'number' ? this.startX : 0;
+        }
+        if (y === null || !Number.isFinite(y)) {
+            y = typeof this.startY === 'number' ? this.startY : 0;
+        }
+
+        return { x, y };
+    }
+
     resolveDragNode = (dragData) => {
         if (dragData && dragData.node) {
             return dragData.node;
@@ -638,45 +718,13 @@ export class Window extends Component {
 
     getCurrentBounds = () => {
         const node = this.getWindowNode();
-        let x = typeof this.startX === 'number' ? this.startX : 0;
-        let y = typeof this.startY === 'number' ? this.startY : 0;
-
-        if (node) {
-            const style = node.style;
-            if (style && typeof style.getPropertyValue === 'function') {
-                const storedX = parsePxValue(style.getPropertyValue('--window-transform-x'));
-                const storedY = parsePxValue(style.getPropertyValue('--window-transform-y'));
-                if (storedX !== null) {
-                    x = storedX;
-                }
-                if (storedY !== null) {
-                    y = storedY;
-                }
-                if (storedX === null || storedY === null) {
-                    const rect = typeof node.getBoundingClientRect === 'function'
-                        ? node.getBoundingClientRect()
-                        : null;
-                    if (rect) {
-                        if (storedX === null) {
-                            x = rect.left;
-                        }
-                        if (storedY === null) {
-                            y = rect.top;
-                        }
-                    }
-                }
-            } else if (typeof node.getBoundingClientRect === 'function') {
-                const rect = node.getBoundingClientRect();
-                x = rect.left;
-                y = rect.top;
-            }
-        }
+        const position = this.readStoredPosition(node);
 
         return {
             width: Math.max(this.state.width, this.state.minWidth),
             height: Math.max(this.state.height, this.state.minHeight),
-            x,
-            y,
+            x: position.x,
+            y: position.y,
         };
     }
 
@@ -762,19 +810,11 @@ export class Window extends Component {
     setWinowsPosition = (positionOverride = null) => {
         const node = this.getWindowNode();
         if (!node) return;
-        const rect = node.getBoundingClientRect();
-        const position = this.state.position;
-        const rectX = Number.isFinite(rect.x) ? rect.x : rect.left;
-        const rectY = Number.isFinite(rect.y) ? rect.y : rect.top;
+        const position = this.readStoredPosition(node);
         const overrideX = positionOverride && Number.isFinite(positionOverride.x) ? positionOverride.x : null;
         const overrideY = positionOverride && Number.isFinite(positionOverride.y) ? positionOverride.y : null;
-        const hasMeasuredRect = Number.isFinite(rectX) && Number.isFinite(rectY) && (rectX !== 0 || rectY !== 0);
-        const usePositionFallback = position
-            && Number.isFinite(position.x)
-            && Number.isFinite(position.y)
-            && !hasMeasuredRect;
-        const baseX = overrideX ?? (usePositionFallback ? position.x : rectX);
-        const basePositionY = overrideY ?? (usePositionFallback ? position.y : rectY);
+        const baseX = overrideX ?? position.x;
+        const basePositionY = overrideY ?? position.y;
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const viewportLeft = this.state.viewportOffset?.left ?? 0;
         const viewportTop = this.state.viewportOffset?.top ?? 0;
@@ -956,17 +996,11 @@ export class Window extends Component {
         }
     }
 
-    checkSnapPreview = (nodeOverride, rectOverride) => {
-        if (this._isUnmounted) return;
-        const node = nodeOverride || this.getWindowNode();
-        if (!node || typeof node.getBoundingClientRect !== 'function') return;
-        const rect = rectOverride || node.getBoundingClientRect();
-        if (!rect) return;
+    resolveSnapCandidate = (rect, thresholdX, thresholdY) => {
+        if (!rect) return null;
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = this.getCachedViewportMetrics();
-        if (!viewportWidth || !viewportHeight) return;
+        if (!viewportWidth || !viewportHeight) return null;
 
-        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
-        const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const topInset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const snapBottomInset = this.getCachedSnapBottomInset();
         const safeAreaBottom = this.getCachedSafeAreaBottom();
@@ -985,10 +1019,10 @@ export class Window extends Component {
         const leftEdge = viewportLeft;
         const rightEdge = viewportLeft + viewportWidth;
 
-        const nearTop = rect.top <= topEdge + verticalThreshold;
-        const nearBottom = bottomEdge - rect.bottom <= verticalThreshold;
-        const nearLeft = rect.left - leftEdge <= horizontalThreshold;
-        const nearRight = rightEdge - rect.right <= horizontalThreshold;
+        const nearTop = rect.top <= topEdge + thresholdY;
+        const nearBottom = bottomEdge - rect.bottom <= thresholdY;
+        const nearLeft = rect.left - leftEdge <= thresholdX;
+        const nearRight = rightEdge - rect.right <= thresholdX;
 
         let candidate = null;
         if (nearTop && nearLeft && regions['top-left'].width > 0 && regions['top-left'].height > 0) {
@@ -1007,7 +1041,21 @@ export class Window extends Component {
             candidate = { position: 'right', preview: regions.right };
         }
 
-        const resolvedCandidate = normalizeRightCornerSnap(candidate, regions);
+        return normalizeRightCornerSnap(candidate, regions);
+    }
+
+    checkSnapPreview = (nodeOverride, rectOverride) => {
+        if (this._isUnmounted) return;
+        const node = nodeOverride || this.getWindowNode();
+        if (!node || typeof node.getBoundingClientRect !== 'function') return;
+        const rect = rectOverride || node.getBoundingClientRect();
+        if (!rect) return;
+
+        const { width: viewportWidth, height: viewportHeight } = this.getCachedViewportMetrics();
+        if (!viewportWidth || !viewportHeight) return;
+        const horizontalThreshold = computeEdgeThreshold(viewportWidth);
+        const verticalThreshold = computeEdgeThreshold(viewportHeight);
+        const resolvedCandidate = this.resolveSnapCandidate(rect, horizontalThreshold, verticalThreshold);
         if (resolvedCandidate) {
             const { position, preview } = resolvedCandidate;
             const samePosition = this.state.snapPosition === position;
@@ -1146,10 +1194,21 @@ export class Window extends Component {
     handleStop = () => {
         this.flushPendingDragUpdate();
         this.changeCursorToDefault();
-        const snapPos = this.state.snapPosition;
-        if (snapPos) {
-            this.snapWindow(snapPos);
-        } else {
+        const node = this.getWindowNode();
+        if (node && typeof node.getBoundingClientRect === 'function') {
+            const rect = node.getBoundingClientRect();
+            const { width: viewportWidth, height: viewportHeight } = this.getCachedViewportMetrics();
+            if (viewportWidth && viewportHeight) {
+                const commitThresholdX = computeSnapCommitThreshold(viewportWidth);
+                const commitThresholdY = computeSnapCommitThreshold(viewportHeight);
+                const commitCandidate = this.resolveSnapCandidate(rect, commitThresholdX, commitThresholdY);
+                if (commitCandidate?.position) {
+                    this.snapWindow(commitCandidate.position);
+                    return;
+                }
+            }
+        }
+        if (this.state.snapPreview || this.state.snapPosition) {
             this.setState({ snapPreview: null, snapPosition: null });
         }
     }
@@ -1170,10 +1229,9 @@ export class Window extends Component {
         }
 
         const rect = node.getBoundingClientRect();
-        const storedX = parsePxValue(node.style?.getPropertyValue?.('--window-transform-x'));
-        const storedY = parsePxValue(node.style?.getPropertyValue?.('--window-transform-y'));
-        const baseX = storedX !== null ? storedX : rect.left;
-        const baseY = storedY !== null ? storedY : rect.top;
+        const storedPosition = this.readStoredPosition(node);
+        const baseX = storedPosition.x;
+        const baseY = storedPosition.y;
         const topOffset = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
         const snapBottomInset = measureSnapBottomInset();
@@ -1473,6 +1531,7 @@ export class Window extends Component {
         const fallbackY = style && typeof style.getPropertyValue === 'function'
             ? parsePxValue(style.getPropertyValue('--window-transform-y'))
             : null;
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         const safeTop = this.state.safeAreaTop ?? DEFAULT_WINDOW_TOP_OFFSET;
         const targetX = hasStoredBounds && Number.isFinite(storedBounds.x)
             ? storedBounds.x
@@ -1481,6 +1540,29 @@ export class Window extends Component {
             ? storedBounds.y
             : (fallbackY !== null ? fallbackY : this.startY);
         const targetY = clampWindowTopPosition(targetYRaw, safeTop);
+        const widthPercent = hasStoredBounds && Number.isFinite(storedBounds.width)
+            ? storedBounds.width
+            : this.state.width;
+        const heightPercent = hasStoredBounds && Number.isFinite(storedBounds.height)
+            ? storedBounds.height
+            : this.state.height;
+        const size = {
+            width: (viewportWidth * Math.max(widthPercent, this.state.minWidth)) / 100,
+            height: (viewportHeight * Math.max(heightPercent, this.state.minHeight)) / 100,
+        };
+        const clampedPosition = clampWindowPositionWithinViewport(
+            { x: targetX, y: targetY },
+            size,
+            {
+                viewportWidth,
+                viewportHeight,
+                viewportLeft,
+                viewportTop,
+                topOffset: safeTop,
+                bottomInset: this.getCachedSafeAreaBottom(),
+                snapBottomInset: this.getCachedSnapBottomInset(),
+            },
+        ) || { x: targetX, y: targetY };
 
         if (hasStoredBounds) {
             const width = Math.max(storedBounds.width, this.state.minWidth);
@@ -1499,18 +1581,18 @@ export class Window extends Component {
             this.setState({ maximized: false, preMaximizeBounds: null });
         }
 
-        const endTransform = `translate(${targetX}px,${targetY}px)`;
+        const endTransform = `translate(${clampedPosition.x}px,${clampedPosition.y}px)`;
         const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         this.setTransformMotionPreset(node, 'restore');
         if (style && typeof style.setProperty === 'function') {
-            style.setProperty('--window-transform-x', `${targetX}px`);
-            style.setProperty('--window-transform-y', `${targetY}px`);
+            style.setProperty('--window-transform-x', `${clampedPosition.x}px`);
+            style.setProperty('--window-transform-y', `${clampedPosition.y}px`);
         } else if (style) {
-            style['--window-transform-x'] = `${targetX}px`;
-            style['--window-transform-y'] = `${targetY}px`;
+            style['--window-transform-x'] = `${clampedPosition.x}px`;
+            style['--window-transform-y'] = `${clampedPosition.y}px`;
         }
-        this.updatePositionState(targetX, targetY);
+        this.updatePositionState(clampedPosition.x, clampedPosition.y);
         if (prefersReducedMotion) {
             node.style.transform = endTransform;
             return;
@@ -1733,11 +1815,16 @@ export class Window extends Component {
         }
     }
 
-    render() {
-        const computedZIndex = typeof this.props.zIndex === 'number'
-            ? this.props.zIndex
-            : (this.props.isFocused ? 30 : 20);
+    handleSuperAction = (event) => {
+        const action = event.detail;
+        if (action === 'minimize') {
+            this.minimizeWindow();
+        } else if (action === 'toggle-maximize') {
+            this.maximizeWindow();
+        }
+    }
 
+    render() {
         const snapGrid = this.getSnapGrid();
 
         const viewportLeft = this.state.viewportOffset?.left ?? 0;
@@ -1806,7 +1893,7 @@ export class Window extends Component {
                             height: `${this.state.height}%`,
                             minWidth: `${this.state.minWidth}%`,
                             minHeight: `${this.state.minHeight}%`,
-                            zIndex: computedZIndex,
+                            zIndex: this.props.zIndex,
                         }}
                         className={[
                             this.state.cursorType,
