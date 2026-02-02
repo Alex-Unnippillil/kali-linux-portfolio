@@ -184,14 +184,6 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     schedulePersist();
   }, [schedulePersist]);
 
-  useEffect(() => {
-    appendTranscriptRef.current = appendTranscript;
-    buildPromptRef.current = buildPrompt;
-    buildPromptTextRef.current = buildPromptText;
-    loadSnapshotRef.current = loadSnapshot;
-    schedulePersistRef.current = schedulePersist;
-  }, [appendTranscript, buildPrompt, buildPromptText, loadSnapshot, schedulePersist]);
-
   const loadSnapshot = useCallback(async () => {
     if (!persistSession) return null;
     if (opfsRoot) {
@@ -206,6 +198,14 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       return null;
     }
   }, [opfsRoot, persistSession]);
+
+  useEffect(() => {
+    appendTranscriptRef.current = appendTranscript;
+    buildPromptRef.current = buildPrompt;
+    buildPromptTextRef.current = buildPromptText;
+    loadSnapshotRef.current = loadSnapshot;
+    schedulePersistRef.current = schedulePersist;
+  }, [appendTranscript, buildPrompt, buildPromptText, loadSnapshot, schedulePersist]);
 
   // --- Main Terminal Logic ---
   useEffect(() => {
