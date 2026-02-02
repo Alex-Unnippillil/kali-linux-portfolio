@@ -126,6 +126,7 @@ export default function YouTubeApp({ channelId }: Props) {
 
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const [filter, setFilter] = useState('');
 
   const [loadingDirectory, setLoadingDirectory] = useState(false);
@@ -171,7 +172,7 @@ export default function YouTubeApp({ channelId }: Props) {
             const body = await response.json().catch(() => ({}));
             throw new Error(
               body?.error ||
-                `YouTube directory request failed (${response.status} ${response.statusText})`,
+              `YouTube directory request failed (${response.status} ${response.statusText})`,
             );
           }
           const payload = (await response.json()) as {
@@ -227,15 +228,15 @@ export default function YouTubeApp({ channelId }: Props) {
       const playlistListings: PlaylistListing[] = playlistDirectory.sections.length
         ? playlistDirectory.sections
         : playlistDirectory.playlists.length
-        ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
-        : [];
+          ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
+          : [];
 
       const listings: PlaylistListing[] = playlistListings.map((listing) =>
         listing.sectionId === 'all'
           ? {
-              ...listing,
-              playlists: [...listing.playlists, allVideosSummary],
-            }
+            ...listing,
+            playlists: [...listing.playlists, allVideosSummary],
+          }
           : listing,
       );
 
@@ -449,8 +450,8 @@ export default function YouTubeApp({ channelId }: Props) {
 
     const selectedPlaylistStillVisible = selectedPlaylistId
       ? filteredDirectory.some((group) =>
-          group.playlists.some((playlist) => playlist.id === selectedPlaylistId),
-        )
+        group.playlists.some((playlist) => playlist.id === selectedPlaylistId),
+      )
       : false;
 
     if (selectedPlaylistStillVisible) return;
@@ -459,6 +460,11 @@ export default function YouTubeApp({ channelId }: Props) {
     setSelectedPlaylistId(firstMatch?.id ?? null);
     setSelectedVideoId(null);
   }, [filteredDirectory, selectedPlaylistId]);
+
+  // Reset expanded description when video changes
+  useEffect(() => {
+    setShowFullDescription(false);
+  }, [selectedVideoId]);
 
   const selectedPlaylist = selectedPlaylistId
     ? playlistIndex.get(selectedPlaylistId) ?? null
@@ -604,9 +610,8 @@ export default function YouTubeApp({ channelId }: Props) {
                                 setSelectedPlaylistId(playlist.id);
                                 setSelectedVideoId(null);
                               }}
-                              className={`${styles.playlistButton} ${
-                                active ? styles.playlistButtonActive : ''
-                              }`}
+                              className={`${styles.playlistButton} ${active ? styles.playlistButtonActive : ''
+                                }`}
                               aria-label={`Open playlist ${playlist.title}`}
                             >
                               {playlist.thumbnail ? (
@@ -652,8 +657,8 @@ export default function YouTubeApp({ channelId }: Props) {
                 {missingApiKeyHint
                   ? 'Configure a YouTube API key to load playlists.'
                   : resolvedChannelId
-                  ? 'No public playlists found for this channel.'
-                  : 'Enter a valid channel id to load playlists.'}
+                    ? 'No public playlists found for this channel.'
+                    : 'Enter a valid channel id to load playlists.'}
               </div>
             )}
           </div>
@@ -726,7 +731,28 @@ export default function YouTubeApp({ channelId }: Props) {
                   <div className={styles.panelHeader}>
                     <h3 className={styles.videoTitle}>{selectedVideo.title}</h3>
                   </div>
-                  <p className={styles.metaText}>Published {formatDate(selectedVideo.publishedAt)}</p>
+                  <p className={styles.metaText} style={{ marginBottom: 4 }}>
+                    Published {formatDate(selectedVideo.publishedAt)}
+                  </p>
+                  {selectedVideo.description && (
+                    <>
+                      <p className={styles.descriptionText}>
+                        {showFullDescription
+                          ? selectedVideo.description
+                          : selectedVideo.description.slice(0, 150) +
+                          (selectedVideo.description.length > 150 ? '...' : '')}
+                      </p>
+                      {selectedVideo.description.length > 150 && (
+                        <button
+                          type="button"
+                          className={styles.descriptionToggle}
+                          onClick={() => setShowFullDescription(!showFullDescription)}
+                        >
+                          {showFullDescription ? 'Show less' : 'Show more'}
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>

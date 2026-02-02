@@ -294,7 +294,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const protocol = resolvedUrl.protocol.toLowerCase();
           const isHttp = protocol === 'http:' || protocol === 'https:';
           const isSameOrigin = resolvedUrl.origin === window.location.origin;
-          if (isHttp && !isSameOrigin) {
+          const isAllowed = ['api.github.com'].includes(resolvedUrl.hostname);
+
+          if (isHttp && !isSameOrigin && !isAllowed) {
             return Promise.reject(new Error('Network requests disabled'));
           }
         }

@@ -1,6 +1,12 @@
+import { VirtualFileSystem } from '../utils/filesystem';
+
 export interface CommandContext {
   writeLine: (text: string) => void;
+  /** @deprecated use fs instead */
   files: Record<string, string>;
+  fs: VirtualFileSystem;
+  cwd: string;
+  setCwd: (path: string) => void;
   history: string[];
   aliases: Record<string, string>;
   safeMode: boolean;

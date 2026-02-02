@@ -4,6 +4,8 @@ export interface RunMessage {
   action: 'run';
   command: string;
   files?: Record<string, string>;
+  opfsRoot?: FileSystemDirectoryHandle;
+  cwd?: string;
 }
 
 export type TerminalWorkerRequest = RunMessage;
@@ -23,9 +25,11 @@ type Stream = AsyncGenerator<string>;
 
 interface Context {
   files: Record<string, string>;
+  opfsRoot?: FileSystemDirectoryHandle;
+  cwd: string;
 }
 
-async function* emptyStream(): Stream {}
+async function* emptyStream(): Stream { }
 
 function textToStream(text: string): Stream {
   return chunkString(text);
@@ -35,6 +39,52 @@ async function* chunkString(text: string, size = CHUNK_SIZE): Stream {
   for (let i = 0; i < text.length; i += size) {
     yield text.slice(i, i + size);
   }
+}
+
+// FS Utils (Inlined to avoid import issues in worker)
+async function getFileHandle(root: FileSystemDirectoryHandle, path: string): Promise<FileSystemFileHandle | null> {
+  const parts = path.split('/').filter(Boolean);
+  let current: FileSystemDirectoryHandle = root;
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    try {
+      if (i === parts.length - 1) {
+        return await current.getFileHandle(part);
+      }
+      current = await current.getDirectoryHandle(part);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function readFile(root: FileSystemDirectoryHandle, cwd: string, target: string): Promise<string | null> {
+  // Resolve path
+  let path = target;
+  if (target.startsWith('~/')) {
+    path = '/home' + target.slice(1);
+  } else if (target === '~') {
+    path = '/home';
+  } else if (!target.startsWith('/')) {
+    path = (cwd === '/' ? '' : cwd) + '/' + target;
+  }
+
+  // Normalize ..
+  const parts = path.split('/').filter(Boolean);
+  const stack: string[] = [];
+  for (const part of parts) {
+    if (part === '.') continue;
+    if (part === '..') stack.pop();
+    else stack.push(part);
+  }
+  const normalizedPath = '/' + stack.join('/');
+
+  // Read
+  const handle = await getFileHandle(root, normalizedPath);
+  if (!handle) return null;
+  const file = await handle.getFile();
+  return await file.text();
 }
 
 type CommandHandler = (args: string[], input: Stream, ctx: Context) => Stream;
@@ -51,10 +101,23 @@ const handlers: Record<string, CommandHandler> = {
   },
   cat: (args, input, ctx) => {
     if (args[0]) {
-      const content = ctx.files[args[0]];
-      if (typeof content === 'string') {
-        return textToStream(content);
+      // Try files map first (legacy/mock)
+      if (ctx.files[args[0]]) {
+        return textToStream(ctx.files[args[0]]);
       }
+      // Try OPFS
+      if (ctx.opfsRoot) {
+        const target = args[0];
+        return (async function* () {
+          const content = await readFile(ctx.opfsRoot!, ctx.cwd, target);
+          if (content !== null) {
+            yield content;
+          } else {
+            yield `cat: ${target}: No such file\n`;
+          }
+        })();
+      }
+
       return textToStream(`cat: ${args[0]}: No such file\n`);
     }
     return input;
@@ -63,11 +126,21 @@ const handlers: Record<string, CommandHandler> = {
     const [pattern, file] = args;
     let source: Stream;
     if (file) {
-      const content = ctx.files[file];
-      if (typeof content !== 'string') {
-        return textToStream(`grep: ${file}: No such file\n`);
+      if (ctx.files[file]) {
+        source = textToStream(ctx.files[file]);
+      } else if (ctx.opfsRoot) {
+        // Async source from OPFS
+        source = (async function* () {
+          const content = await readFile(ctx.opfsRoot!, ctx.cwd, file);
+          if (content !== null) {
+            for await (const chunk of chunkString(content)) yield chunk;
+          } else {
+            yield `grep: ${file}: No such file\n`;
+          }
+        })();
+      } else {
+        source = textToStream(`grep: ${file}: No such file\n`);
       }
-      source = textToStream(content);
     } else {
       source = input;
     }
@@ -85,12 +158,20 @@ const handlers: Record<string, CommandHandler> = {
     return (async function* () {
       let jsonText = '';
       if (file) {
-        const content = ctx.files[file];
-        if (typeof content !== 'string') {
+        if (ctx.files[file]) {
+          jsonText = ctx.files[file];
+        } else if (ctx.opfsRoot) {
+          const content = await readFile(ctx.opfsRoot!, ctx.cwd, file);
+          if (content !== null) {
+            jsonText = content;
+          } else {
+            yield `jq: ${file}: No such file\n`;
+            return;
+          }
+        } else {
           yield `jq: ${file}: No such file\n`;
           return;
         }
-        jsonText = content;
       } else {
         for await (const chunk of input) {
           jsonText += chunk;
@@ -141,7 +222,11 @@ function buildPipeline(command: string, ctx: Context): Stream {
 
 self.onmessage = async ({ data }: MessageEvent<TerminalWorkerRequest>) => {
   if (data.action === 'run') {
-    const ctx: Context = { files: data.files || {} };
+    const ctx: Context = {
+      files: data.files || {},
+      opfsRoot: data.opfsRoot,
+      cwd: data.cwd || '/home'
+    };
     const stream = buildPipeline(data.command, ctx);
     for await (const chunk of stream) {
       (self as any).postMessage({ type: 'data', chunk } as DataResponse);
@@ -150,4 +235,4 @@ self.onmessage = async ({ data }: MessageEvent<TerminalWorkerRequest>) => {
   }
 };
 
-export {};
+export { };

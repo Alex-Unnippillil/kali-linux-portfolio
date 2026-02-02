@@ -56,3 +56,5 @@ utils/gamepad.js
 tsconfig.gamepad.tsbuildinfo
 tsconfig.tsbuildinfo
 .env*.local
+
+.env.local.bak

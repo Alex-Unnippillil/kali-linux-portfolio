@@ -1,5 +1,11 @@
 import type { CommandContext, CommandDefinition, CommandHandler } from './types';
 import projectsData from '../../../data/projects.json';
+import registry from './registry';
+
+// Re-export registry for use by Terminal App
+export { default as commandRegistry } from './registry';
+export * from './types';
+export const getCommandList = () => registry.getAll();
 
 async function man(args: string, ctx: CommandContext) {
   const name = args.trim();
@@ -70,9 +76,60 @@ const help: CommandHandler = (args, ctx) => {
   );
 };
 
-const ls: CommandHandler = (_args, ctx) => {
-  const entries = Object.keys(ctx.files);
-  ctx.writeLine(entries.length ? entries.join('  ') : '');
+const ls: CommandHandler = async (_args, ctx) => {
+  const targetPath = _args.trim() ? ctx.fs.resolvePath(ctx.cwd, _args.trim()) : ctx.cwd;
+  const entries = await ctx.fs.readDirectory(targetPath);
+
+  if (!entries) {
+    ctx.writeLine(`ls: cannot access '${_args.trim()}': No such file or directory`);
+    return;
+  }
+
+  const output = entries.map(e => e.kind === 'directory' ? `\x1b[1;34m${e.name}/\x1b[0m` : e.name).join('  ');
+  ctx.writeLine(output);
+};
+
+const cd: CommandHandler = async (args, ctx) => {
+  const target = args.trim() || '~';
+  const resolved = ctx.fs.resolvePath(ctx.cwd, target);
+
+  // Check if exists and is directory
+  const exists = await ctx.fs.getHandle(resolved);
+  if (!exists || exists.kind !== 'directory') {
+    ctx.writeLine(`cd: ${target}: No such file or directory`);
+    return;
+  }
+  ctx.setCwd(resolved);
+};
+
+const pwd: CommandHandler = (_args, ctx) => {
+  ctx.writeLine(ctx.cwd);
+};
+
+const mkdir: CommandHandler = async (args, ctx) => {
+  const target = args.trim();
+  if (!target) {
+    ctx.writeLine('usage: mkdir <directory>');
+    return;
+  }
+  const resolved = ctx.fs.resolvePath(ctx.cwd, target);
+  const success = await ctx.fs.createDirectory(resolved);
+  if (!success) {
+    ctx.writeLine(`mkdir: cannot create directory '${target}': File exists or error`);
+  }
+};
+
+const touch: CommandHandler = async (args, ctx) => {
+  const target = args.trim();
+  if (!target) {
+    ctx.writeLine('usage: touch <file>');
+    return;
+  }
+  const resolved = ctx.fs.resolvePath(ctx.cwd, target);
+  const success = await ctx.fs.writeFile(resolved, ''); // Create empty file
+  if (!success) {
+    ctx.writeLine(`touch: cannot create file '${target}'`);
+  }
 };
 
 const cat: CommandHandler = async (args, ctx) => {
@@ -81,11 +138,16 @@ const cat: CommandHandler = async (args, ctx) => {
     ctx.writeLine('Usage: cat <file>');
     return;
   }
-  if (target in ctx.files) {
-    ctx.writeLine(ctx.files[target]);
+
+  const resolved = ctx.fs.resolvePath(ctx.cwd, target);
+  const content = await ctx.fs.readFile(resolved);
+
+  if (content !== null) {
+    ctx.writeLine(content);
     return;
   }
-  await ctx.runWorker(`cat ${args}`);
+
+  ctx.writeLine(`cat: ${target}: No such file or directory`);
 };
 
 const clear: CommandHandler = (_args, ctx) => {
@@ -98,11 +160,14 @@ const open: CommandHandler = (args, ctx) => {
     ctx.writeLine('Usage: open <app>');
     return;
   }
+  // Remove file extension if present (e.g., spotify.app -> spotify) - just in case
+  const appId = target.replace(/\.(app|exe|sh)$/, '');
+
   if (ctx.openApp) {
-    ctx.openApp(target);
-    ctx.writeLine(`Opening ${target}`);
+    ctx.openApp(appId);
+    ctx.writeLine(`Opening ${appId}...`);
   } else {
-    ctx.writeLine('Open command unavailable');
+    ctx.writeLine('Error: Desktop environment not connected (openApp missing).');
   }
 };
 
@@ -142,38 +207,53 @@ const whoami: CommandHandler = (_args, ctx) => {
   ctx.writeLine('guest@kali-portfolio');
 };
 
-const sudo: CommandHandler = (args, ctx) => {
-  const command = args.trim();
-  if (!command) {
+const sudo: CommandHandler = async (args, ctx) => {
+  const commandLine = args.trim();
+  if (!commandLine) {
     ctx.writeLine('usage: sudo <command>');
     return;
   }
-  if (command.includes('rm -rf /') || command.includes('rm --no-preserve-root')) {
+  if (commandLine.includes('rm -rf /') || commandLine.includes('rm --no-preserve-root')) {
     ctx.writeLine('sudo: refusing to delete /. This is a safe demo terminal.');
     return;
   }
-  if (command.startsWith('open ')) {
-    open(command.replace(/^open\s+/, ''), ctx);
+  if (commandLine.startsWith('open ')) {
+    open(commandLine.replace(/^open\s+/, ''), ctx);
     return;
   }
+
+  const [cmdName, ...cmdArgs] = commandLine.split(' ');
+  const cmd = registry.get(cmdName);
+  if (cmd) {
+    await cmd.handler(cmdArgs.join(' '), ctx);
+    return;
+  }
+
   ctx.writeLine(
     ctx.safeMode
-      ? `sudo: "${command}" skipped (safe mode is enabled).`
-      : `sudo: simulated privilege escalation for "${command}".`,
+      ? `sudo: "${commandLine}" skipped (safe mode is enabled).`
+      : `sudo: simulated privilege escalation for "${commandLine}".`,
   );
 };
 
-const rm: CommandHandler = (args, ctx) => {
+const rm: CommandHandler = async (args, ctx) => {
   const target = args.trim();
   if (!target) {
     ctx.writeLine('usage: rm <path>');
     return;
   }
-  if (target.includes('-rf /') || target.includes('--no-preserve-root')) {
-    ctx.writeLine('rm: dangerous operation blocked in demo mode.');
+
+  if (target === '/' || target === '/home' || target === '/etc' || target === '/var') {
+    ctx.writeLine(`rm: cannot remove '${target}': Permission denied`);
     return;
   }
-  ctx.writeLine(`rm: cannot remove '${target}': Read-only demo filesystem.`);
+
+  const resolved = ctx.fs.resolvePath(ctx.cwd, target);
+  const success = await ctx.fs.deleteEntry(resolved);
+
+  if (!success) {
+    ctx.writeLine(`rm: cannot remove '${target}': No such file or directory`);
+  }
 };
 
 const about: CommandHandler = (_args, ctx) => {
@@ -184,37 +264,40 @@ const date: CommandHandler = (_args, ctx) => {
   ctx.writeLine(new Date().toString());
 };
 
-const commandList: CommandDefinition[] = [
-  { name: 'help', description: 'Show this index or details for a single command.', usage: 'help [command]', handler: help },
-  { name: 'man', description: 'Read the simulated manual pages.', usage: 'man <command>', handler: man },
-  { name: 'history', description: 'Print command history for this session.', handler: history },
-  { name: 'alias', description: 'Create or list aliases.', usage: "alias [name]='value'", handler: alias },
-  { name: 'ls', description: 'List available demo files.', handler: ls },
-  { name: 'cat', description: 'Print a file or pipe stdin.', usage: 'cat <file>', handler: cat },
-  { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
-  { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
-  { name: 'projects', description: 'List the portfolio project catalog.', handler: projects },
-  {
-    name: 'ssh',
-    description: 'Start a simulated SSH session.',
-    usage: 'ssh <user@host>',
-    handler: ssh,
-    safeModeBypass: true,
-  },
-  { name: 'whoami', description: 'Print the current demo user.', handler: whoami },
-  { name: 'sudo', description: 'Pretend to run a command as root.', usage: 'sudo <command>', handler: sudo },
-  { name: 'rm', description: 'Remove a file (simulated).', usage: 'rm <path>', handler: rm },
-  { name: 'about', description: 'Show information about this terminal.', handler: about },
-  { name: 'date', description: 'Print the current date.', handler: date },
-  { name: 'grep', description: 'Search through text (simulated).', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
-  { name: 'jq', description: 'Filter JSON input (simulated).', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
-];
+const registerAll = () => {
+  const list: CommandDefinition[] = [
+    { name: 'help', description: 'Show this index or details for a single command.', usage: 'help [command]', handler: help },
+    { name: 'man', description: 'Read the simulated manual pages.', usage: 'man <command>', handler: man },
+    { name: 'history', description: 'Print command history for this session.', handler: history },
+    { name: 'alias', description: 'Create or list aliases.', usage: "alias [name]='value'", handler: alias },
+    { name: 'ls', description: 'List files and directories.', handler: ls },
+    { name: 'cd', description: 'Change directory.', handler: cd },
+    { name: 'pwd', description: 'Print working directory.', handler: pwd },
+    { name: 'mkdir', description: 'Create a directory.', handler: mkdir },
+    { name: 'touch', description: 'Create a file.', handler: touch },
+    { name: 'cat', description: 'Print a file.', usage: 'cat <file>', handler: cat },
+    { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
+    { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
+    { name: 'projects', description: 'List the portfolio project catalog.', handler: projects },
+    {
+      name: 'ssh',
+      description: 'Start a simulated SSH session.',
+      usage: 'ssh <user@host>',
+      handler: ssh,
+      safeModeBypass: true,
+    },
+    { name: 'whoami', description: 'Print the current demo user.', handler: whoami },
+    { name: 'sudo', description: 'Execute a command with elevated privileges.', usage: 'sudo <command>', handler: sudo },
+    { name: 'rm', description: 'Remove a file or directory.', usage: 'rm <path>', handler: rm },
+    { name: 'about', description: 'Show information about this terminal.', handler: about },
+    { name: 'date', description: 'Print the current date.', handler: date },
+    { name: 'grep', description: 'Search through text.', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
+    { name: 'jq', description: 'Filter JSON input.', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
+  ];
 
-const registry: Record<string, CommandDefinition> = Object.fromEntries(
-  commandList.map((def) => [def.name, def]),
-);
+  list.forEach(cmd => registry.register(cmd));
+};
 
-export const getCommandList = () => commandList;
+registerAll();
 
 export default registry;
-export type { CommandDefinition, CommandHandler, CommandContext } from './types';

@@ -21,6 +21,7 @@ export interface SessionManager {
   setBuffer: (value: string) => void;
   setScrollbackLimit: (limit: number) => void;
   getScrollbackLimit: () => number;
+  updateConfig: (config: Partial<SessionManagerConfig>) => void;
 }
 
 export function createSessionManager({
@@ -32,6 +33,21 @@ export function createSessionManager({
   onHistoryUpdate,
   onCancelRunning,
 }: SessionManagerConfig): SessionManager {
+  // Mutable config state
+  let currentConfig: SessionManagerConfig = {
+    getRegistry,
+    context,
+    prompt,
+    write,
+    writeLine,
+    onHistoryUpdate,
+    onCancelRunning
+  };
+
+  const updateConfig = (newConfig: Partial<SessionManagerConfig>) => {
+    currentConfig = { ...currentConfig, ...newConfig };
+  };
+
   let terminal: XTerm | null = null;
   let buffer = '';
   let scrollbackLimit = 1000;
@@ -60,34 +76,37 @@ export function createSessionManager({
     const trimmed = input.trim();
     if (!trimmed) return;
     const [name, ...rest] = trimmed.split(/\s+/);
-    const alias = context.aliases[name];
+    const alias = currentConfig.context.aliases[name];
     const expanded = alias
       ? `${alias} ${rest.join(' ')}`.trim()
       : trimmed;
     const [cmdName, ...cmdArgs] = expanded.split(/\s+/);
-    const registry = getRegistry();
+    const registry = currentConfig.getRegistry();
     const definition = registry[cmdName];
     const handler = definition?.handler;
-    context.history.push(trimmed);
-    onHistoryUpdate?.(context.history);
+    currentConfig.context.history.push(trimmed);
+    currentConfig.onHistoryUpdate?.(currentConfig.context.history);
+
+    // safe mode checks
     const riskyCommands = ['nmap', 'curl', 'wget', 'ssh', 'nc', 'netcat', 'telnet', 'ping'];
     const looksNetworkBound = /https?:\/\//i.test(expanded) || riskyCommands.includes(cmdName);
-    if (context.safeMode && looksNetworkBound && !definition?.safeModeBypass) {
-      writeLine('Safe mode: this command is simulated and cannot reach the network.');
-      writeLine(`[simulated] ${expanded}`);
+    if (currentConfig.context.safeMode && looksNetworkBound && !definition?.safeModeBypass) {
+      currentConfig.writeLine('Safe mode: this command is simulated and cannot reach the network.');
+      currentConfig.writeLine(`[simulated] ${expanded}`);
       return;
     }
+
     if (handler) {
       running = true;
       try {
-        await handler(cmdArgs.join(' '), context);
+        await handler(cmdArgs.join(' '), currentConfig.context);
       } finally {
         running = false;
       }
     } else if (cmdName) {
       running = true;
       try {
-        await context.runWorker(expanded);
+        await currentConfig.context.runWorker(expanded);
       } finally {
         running = false;
       }
@@ -95,12 +114,12 @@ export function createSessionManager({
   };
 
   const autocomplete = () => {
-    const registry = getRegistry();
+    const registry = currentConfig.getRegistry();
     const entries = Object.values(registry);
     const matches = entries.filter((c) => c.name.startsWith(buffer));
     if (matches.length === 1) {
       const completion = matches[0].name.slice(buffer.length);
-      if (completion) write(completion);
+      if (completion) currentConfig.write(completion);
       buffer = matches[0].name;
     } else if (matches.length > 1) {
       matches
@@ -108,9 +127,9 @@ export function createSessionManager({
           const padded = `${name}${' '.repeat(Math.max(2, 16 - name.length))}`;
           return `${padded}${description}`;
         })
-        .forEach((line) => writeLine(line));
-      prompt();
-      if (buffer) write(buffer);
+        .forEach((line) => currentConfig.writeLine(line));
+      currentConfig.prompt();
+      if (buffer) currentConfig.write(buffer);
     }
   };
 
@@ -120,26 +139,26 @@ export function createSessionManager({
         suppressNextPrompt = false;
         return;
       }
-      prompt();
+      currentConfig.prompt();
     });
   };
 
   const clearCurrentLine = () => {
-    if (!terminal || buffer.length === 0) return;
+    if (buffer.length === 0) return;
     const erase = '\b \b'.repeat(buffer.length);
-    terminal.write(erase);
+    currentConfig.write(erase);
   };
 
   const replaceBuffer = (next: string) => {
     clearCurrentLine();
     buffer = next;
     if (buffer) {
-      write(buffer);
+      currentConfig.write(buffer);
     }
   };
 
   const applyHistory = (direction: 'up' | 'down') => {
-    const history = context.history;
+    const history = currentConfig.context.history;
     if (!history.length) return;
 
     if (historyIndex === null) {
@@ -163,17 +182,15 @@ export function createSessionManager({
   const cancelInput = () => {
     if (running) {
       suppressNextPrompt = true;
-      onCancelRunning?.();
+      currentConfig.onCancelRunning?.();
       running = false;
     }
-    if (terminal) {
-      terminal.write('^C');
-      terminal.writeln('');
-    }
+    // Echo ^C
+    currentConfig.write('^C\r\n');
     buffer = '';
     historyIndex = null;
     draftBuffer = '';
-    prompt();
+    currentConfig.prompt();
   };
 
   const handleEscapeSequence = (sequence: string) => {
@@ -185,10 +202,11 @@ export function createSessionManager({
       applyHistory('down');
       return;
     }
-    // Ignore other navigation escape sequences.
   };
 
   const handleInput = (data: string) => {
+    // Debug: echo raw input char codes to confirm receipt
+    // currentConfig.write(`[DEBUG: ${data.split('').map(c => c.charCodeAt(0)).join(',')}]`);
     let i = 0;
     while (i < data.length) {
       const ch = data[i];
@@ -208,13 +226,13 @@ export function createSessionManager({
         i = end;
         continue;
       }
-      if (ch === '\x03') {
+      if (ch === '\x03') { // Ctrl+C
         cancelInput();
         i += 1;
         continue;
       }
       if (ch === '\r') {
-        if (terminal) terminal.writeln('');
+        currentConfig.write('\r\n'); // Echo newline
         const command = buffer;
         buffer = '';
         historyIndex = null;
@@ -223,9 +241,9 @@ export function createSessionManager({
         i += 1;
         continue;
       }
-      if (ch === '\u007F') {
+      if (ch === '\u007F') { // Backspace
         if (buffer.length > 0) {
-          if (terminal) terminal.write('\b \b');
+          currentConfig.write('\b \b');
           buffer = buffer.slice(0, -1);
         }
         i += 1;
@@ -233,7 +251,7 @@ export function createSessionManager({
       }
       if (ch >= ' ') {
         buffer += ch;
-        write(ch);
+        currentConfig.write(ch);
       }
       i += 1;
     }
@@ -247,10 +265,7 @@ export function createSessionManager({
   };
 
   const getBuffer = () => buffer;
-
-  const setBuffer = (value: string) => {
-    buffer = value;
-  };
+  const setBuffer = (value: string) => { buffer = value; };
 
   return {
     setTerminal,
@@ -262,6 +277,7 @@ export function createSessionManager({
     setBuffer,
     setScrollbackLimit,
     getScrollbackLimit,
+    updateConfig,
   };
 }
 
