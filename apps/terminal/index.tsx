@@ -63,6 +63,7 @@ const TerminalApp = ({ openApp }: TerminalProps) => {
     history: [],
     aliases: {},
     safeMode: true,
+    setAlias: (name, value) => { contextRef.current.aliases[name] = value; },
     runWorker: async () => { },
     clear: () => termRef.current?.clear(),
     openApp,
