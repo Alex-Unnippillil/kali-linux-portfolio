@@ -228,6 +228,8 @@ const Cell = React.memo(({ columnIndex, rowIndex, style, data }) => {
               launchOnClick
               isSelected={isSelected}
               isHovered={isHovered}
+              draggable={!app.disabled}
+              dragPayload={!app.disabled ? { id: app.id, section: 'launcher' } : null}
               assistiveHint={
                 app.disabled
                   ? 'Unavailable. This app is marked as disabled.'

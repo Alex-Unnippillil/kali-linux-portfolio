@@ -28,6 +28,7 @@ import { toPng } from 'html-to-image';
 import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
+import { buildPinnedAppsPayload } from '../../utils/taskbarPayload';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
@@ -1370,6 +1371,61 @@ export class Desktop extends Component {
         return true;
     };
 
+    getWindowStateForMenu = (windowId) => {
+        if (!windowId || typeof document === 'undefined') return null;
+        const node = document.getElementById(windowId);
+        if (!node) return null;
+        return node.dataset?.windowState || null;
+    };
+
+    moveAppToWorkspace = (appId, targetWorkspace) => {
+        if (!appId || typeof targetWorkspace !== 'number') return;
+        if (targetWorkspace === this.state.activeWorkspace) return;
+        if (targetWorkspace < 0 || targetWorkspace >= this.state.workspaces.length) return;
+        if (this.isOverlayId(appId)) return;
+        if (!this.validAppIds.has(appId)) return;
+        if (this.state.closed_windows?.[appId] !== false) return;
+
+        const baseSnapshot = this.workspaceSnapshots[targetWorkspace] || this.createEmptyWorkspaceState();
+        const currentPositions = this.state.window_positions || {};
+        const currentSizes = this.state.window_sizes || {};
+        const currentMinimized = this.state.minimized_windows || {};
+
+        const nextSnapshot = {
+            ...baseSnapshot,
+            closed_windows: { ...baseSnapshot.closed_windows, [appId]: false },
+            minimized_windows: { ...baseSnapshot.minimized_windows, [appId]: Boolean(currentMinimized[appId]) },
+            focused_windows: { ...baseSnapshot.focused_windows, [appId]: false },
+            window_positions: {
+                ...baseSnapshot.window_positions,
+                ...(currentPositions[appId] ? { [appId]: { ...currentPositions[appId] } } : {}),
+            },
+            window_sizes: {
+                ...baseSnapshot.window_sizes,
+                ...(currentSizes[appId] ? { [appId]: { ...currentSizes[appId] } } : {}),
+            },
+        };
+
+        this.workspaceSnapshots[targetWorkspace] = nextSnapshot;
+
+        const currentStack = this.workspaceStacks[this.state.activeWorkspace] || [];
+        const nextCurrentStack = currentStack.filter((id) => id !== appId);
+        const targetStack = this.workspaceStacks[targetWorkspace] || [];
+        const nextTargetStack = [appId, ...targetStack.filter((id) => id !== appId)];
+        this.workspaceStacks[this.state.activeWorkspace] = nextCurrentStack;
+        this.workspaceStacks[targetWorkspace] = nextTargetStack;
+
+        this.setWorkspaceState((prevState) => {
+            const closed_windows = { ...prevState.closed_windows, [appId]: true };
+            const minimized_windows = { ...prevState.minimized_windows, [appId]: false };
+            const focused_windows = { ...prevState.focused_windows, [appId]: false };
+            return { closed_windows, minimized_windows, focused_windows };
+        }, () => {
+            this.broadcastWorkspaceState();
+            this.giveFocusToLastApp();
+        });
+    };
+
     updateWorkspaceSnapshots = (baseState) => {
         const validKeys = new Set(Object.keys(baseState.closed_windows || {}));
         this.workspaceSnapshots = this.workspaceSnapshots.map((snapshot, index) => {
@@ -1475,6 +1531,7 @@ export class Desktop extends Component {
                 isRunning,
                 isFocused: Boolean(focused_windows[id]),
                 isMinimized: Boolean(minimized_windows[id]),
+                mobilePinned: Boolean(app.taskbarMobilePinned),
             };
         }).filter(Boolean);
     };
@@ -3484,6 +3541,15 @@ export class Desktop extends Component {
         if (moved) {
             event.preventDefault();
             this.preventNextIconClick = true;
+            const taskbarTarget = this.getTaskbarDropTarget(event);
+            if (taskbarTarget) {
+                this.pinAppAtPosition(dragState.id, null, true);
+                if (dragState.startPosition) {
+                    this.updateIconPosition(dragState.id, dragState.startPosition.x, dragState.startPosition.y, true);
+                }
+                this.setState({ draggingIconId: null });
+                return;
+            }
             const dropTarget = this.getFolderDropTarget(event, dragState);
             if (dropTarget && dropTarget.type === 'folder') {
                 this.moveIconIntoFolder(dragState.id, dropTarget.id);
@@ -3607,7 +3673,7 @@ export class Desktop extends Component {
             workspaces: this.getWorkspaceSummaries(),
             activeWorkspace: this.state.activeWorkspace,
             runningApps,
-            pinnedApps: this.getPinnedAppSummaries(),
+            pinnedApps: buildPinnedAppsPayload(this.getPinnedAppSummaries()),
             iconSizePreset: this.state.iconSizePreset,
         };
         window.dispatchEvent(new CustomEvent('workspace-state', { detail }));
@@ -3853,6 +3919,13 @@ export class Desktop extends Component {
             return;
         }
 
+        if (action === 'new-window') {
+            if (appId) {
+                this.openApp(appId);
+            }
+            return;
+        }
+
         if (action === 'unpin') {
             if (appId) {
                 const current = this.getPinnedAppIds();
@@ -3873,6 +3946,14 @@ export class Desktop extends Component {
             return;
         }
 
+        if (action === 'moveWorkspace') {
+            const workspaceId = typeof detail.workspaceId === 'number' ? detail.workspaceId : null;
+            if (workspaceId !== null) {
+                this.moveAppToWorkspace(detail.appId, workspaceId);
+            }
+            return;
+        }
+
         if (!appId || !this.validAppIds.has(appId)) return;
 
         if (this.isOverlayId(appId)) {
@@ -3881,6 +3962,10 @@ export class Desktop extends Component {
                     if (!this.state.minimized_windows[appId]) {
                         this.minimizeOverlay(appId);
                     }
+                    break;
+                case 'maximize':
+                case 'restore':
+                    this.toggleOverlayMaximize(appId);
                     break;
                 case 'focus':
                 case 'open':
@@ -3904,6 +3989,12 @@ export class Desktop extends Component {
                 if (!this.state.minimized_windows[appId]) {
                     this.hasMinimised(appId);
                 }
+                break;
+            case 'maximize':
+                this.dispatchWindowCommand(appId, 'ArrowUp');
+                break;
+            case 'restore':
+                this.dispatchWindowCommand(appId, 'ArrowDown');
                 break;
             case 'focus':
                 this.focus(appId);
@@ -3980,6 +4071,21 @@ export class Desktop extends Component {
         const fallback = dragState?.lastPosition || dragState?.startPosition || { x: 0, y: 0 };
         const snapped = this.snapIconPosition(fallback.x, fallback.y);
         return this.clampIconPosition(snapped.x, snapped.y);
+    };
+
+    getTaskbarDropTarget = (event) => {
+        if (typeof document === 'undefined') return null;
+        if (!Number.isFinite(event?.clientX) || !Number.isFinite(event?.clientY)) return null;
+        const taskbar = document.querySelector('.main-navbar-vp');
+        if (!taskbar || typeof taskbar.getBoundingClientRect !== 'function') return null;
+        const rect = taskbar.getBoundingClientRect();
+        const { clientX, clientY } = event;
+        const within =
+            clientX >= rect.left &&
+            clientX <= rect.right &&
+            clientY >= rect.top &&
+            clientY <= rect.bottom;
+        return within ? rect : null;
     };
 
     checkForNewFolders = () => {
@@ -5783,6 +5889,13 @@ export class Desktop extends Component {
         const closedEntries = this.getClosedWindowEntries();
         const showMinimizedShelf = this.state.mounted && (this.state.minimizedShelfOpen || minimizedEntries.length > 0);
         const showClosedShelf = this.state.mounted && (this.state.closedShelfOpen || closedEntries.length > 0);
+        const contextAppId = this.state.context_app;
+        const contextApp = contextAppId ? this.getAppById(contextAppId) : null;
+        const contextPinned = contextAppId ? this.getPinnedAppIds().includes(contextAppId) : false;
+        const contextWindowState = contextAppId ? this.getWindowStateForMenu(contextAppId) : null;
+        const contextIsMaximized = contextWindowState === 'maximized';
+        const supportsNewWindow = Boolean(contextApp && contextApp.supportsMultiWindow);
+        const allowMaximize = contextApp ? contextApp.allowMaximize !== false : true;
         return (
             <main
                 id="desktop"
@@ -5829,9 +5942,15 @@ export class Desktop extends Component {
                 />
                 <TaskbarMenu
                     active={this.state.context_menus.taskbar}
-                    minimized={this.state.context_app ? this.state.minimized_windows[this.state.context_app] : false}
+                    minimized={contextAppId ? this.state.minimized_windows[contextAppId] : false}
+                    pinned={contextPinned}
+                    supportsNewWindow={supportsNewWindow}
+                    isMaximized={contextIsMaximized}
+                    allowMaximize={allowMaximize}
+                    workspaces={this.state.workspaces}
+                    activeWorkspace={this.state.activeWorkspace}
                     onMinimize={() => {
-                        const id = this.state.context_app;
+                        const id = contextAppId;
                         if (!id) return;
                         const isOverlay = this.isOverlayId(id);
                         if (this.state.minimized_windows[id]) {
@@ -5848,8 +5967,42 @@ export class Desktop extends Component {
                             }
                         }
                     }}
+                    onMaximize={() => {
+                        const id = contextAppId;
+                        if (!id) return;
+                        if (this.isOverlayId(id)) {
+                            this.toggleOverlayMaximize(id);
+                        } else {
+                            this.dispatchWindowCommand(id, 'ArrowUp');
+                        }
+                    }}
+                    onRestore={() => {
+                        const id = contextAppId;
+                        if (!id) return;
+                        if (this.isOverlayId(id)) {
+                            this.toggleOverlayMaximize(id);
+                        } else {
+                            this.dispatchWindowCommand(id, 'ArrowDown');
+                        }
+                    }}
+                    onPin={() => {
+                        if (!contextAppId) return;
+                        this.pinApp(contextAppId);
+                    }}
+                    onUnpin={() => {
+                        if (!contextAppId) return;
+                        this.unpinApp(contextAppId);
+                    }}
+                    onNewWindow={() => {
+                        if (!contextAppId) return;
+                        this.openApp(contextAppId);
+                    }}
+                    onMoveWorkspace={(workspaceId) => {
+                        if (!contextAppId) return;
+                        this.moveAppToWorkspace(contextAppId, workspaceId);
+                    }}
                     onClose={() => {
-                        const id = this.state.context_app;
+                        const id = contextAppId;
                         if (!id) return;
                         if (this.isOverlayId(id)) {
                             this.closeOverlay(id);

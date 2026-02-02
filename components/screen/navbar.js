@@ -10,7 +10,7 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
-import ControlCenter from '../ui/ControlCenter';
+import { parsePinnedAppsPayload } from '../../utils/taskbarPayload';
 
 const BADGE_TONE_COLORS = Object.freeze({
         accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
@@ -38,14 +38,8 @@ const areWorkspacesEqual = (next, prev) => {
 };
 
 const TASKBAR_PREVIEW_WIDTH = 280;
-
-const normalizePinnedApps = (payload) => {
-        if (!payload) return [];
-        if (Array.isArray(payload)) {
-                return payload.filter((item) => item && typeof item.id !== 'undefined');
-        }
-        return [];
-};
+const TASKBAR_AUTO_SCROLL_THRESHOLD = 32;
+const TASKBAR_AUTO_SCROLL_STEP = 12;
 
 const clampIndex = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -68,31 +62,27 @@ const reorderList = (list, sourceId, targetId, insertAfter = false) => {
         return unchanged ? null : working;
 };
 
-const safeParsePinnedPayload = (payload) => {
-        if (Array.isArray(payload)) return normalizePinnedApps(payload);
-        if (typeof payload === 'string') {
-                try {
-                        const parsed = JSON.parse(payload);
-                        return normalizePinnedApps(parsed);
-                } catch (error) {
-                        return [];
-                }
-        }
-        return [];
-};
 
-const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop }, ref) => {
+const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop, onDragLeave, dropIndicator }, ref) => {
         if (!apps?.length) return null;
 
         return (
                 <ul
                         ref={ref}
-                        className="flex shrink min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm scrollbar-hide"
+                        className="relative flex shrink min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm scrollbar-hide"
                         role="list"
                         aria-label="Open applications"
                         onDragOver={onDragOver}
                         onDrop={onDrop}
+                        onDragLeave={onDragLeave}
                 >
+                        {dropIndicator?.section === 'running' ? (
+                                <span
+                                        aria-hidden="true"
+                                        className="taskbar-drop-indicator"
+                                        style={{ left: `${dropIndicator.left}px` }}
+                                />
+                        ) : null}
                         {apps.map((app) => renderItem(app))}
                 </ul>
         );
@@ -100,18 +90,26 @@ const RunningAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop
 
 RunningAppsList.displayName = 'RunningAppsList';
 
-const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop }, ref) => {
+const PinnedAppsList = React.forwardRef(({ apps, renderItem, onDragOver, onDrop, onDragLeave, dropIndicator }, ref) => {
         const hasItems = Array.isArray(apps) && apps.length > 0;
 
         return (
                 <ul
                         ref={ref}
-                        className="flex shrink min-w-0 min-h-[2.25rem] max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm scrollbar-hide"
+                        className="relative flex shrink min-w-0 min-h-[2.25rem] max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-white/[0.06] bg-slate-950/60 px-1.5 py-1 backdrop-blur-sm scrollbar-hide"
                         role="list"
                         aria-label="Pinned applications"
                         onDragOver={onDragOver}
                         onDrop={onDrop}
+                        onDragLeave={onDragLeave}
                 >
+                        {dropIndicator?.section === 'pinned' ? (
+                                <span
+                                        aria-hidden="true"
+                                        className="taskbar-drop-indicator"
+                                        style={{ left: `${dropIndicator.left}px` }}
+                                />
+                        ) : null}
                         {hasItems
                                 ? apps.map((app) => renderItem(app))
                                 : (
@@ -207,7 +205,8 @@ const arePinnedAppsEqual = (next = [], prev = []) => {
                         a.icon !== b.icon ||
                         a.isRunning !== b.isRunning ||
                         a.isFocused !== b.isFocused ||
-                        a.isMinimized !== b.isMinimized
+                        a.isMinimized !== b.isMinimized ||
+                        Boolean(a.mobilePinned) !== Boolean(b.mobilePinned)
                 ) {
                         return false;
                 }
@@ -228,8 +227,10 @@ export default class Navbar extends PureComponent {
                         preview: null,
                         pinnedApps: [],
                         activeDropdown: null,
+                        dropIndicator: null,
                 };
-                this.taskbarListRef = React.createRef();
+                this.runningListRef = React.createRef();
+                this.pinnedListRef = React.createRef();
                 this.draggingAppId = null;
                 this.pendingReorder = null;
                 this.previewFlyoutRef = React.createRef();
@@ -247,6 +248,11 @@ export default class Navbar extends PureComponent {
                 this.observedNavbarElement = null;
                 this.pendingOffsetUpdate = null;
                 this.lastNavbarHeight = null;
+                this.previewLifecycle = {
+                        state: 'hidden',
+                        appId: null,
+                        trigger: null,
+                };
         }
 
         isAppRunning = (app) => {
@@ -386,9 +392,9 @@ export default class Navbar extends PureComponent {
         };
 
         getTaskbarButtonElement = (appId) => {
-                if (!appId || !this.taskbarListRef?.current) return null;
+                if (!appId || !this.runningListRef?.current) return null;
                 const selectorValue = this.escapeAttributeValue(appId);
-                return this.taskbarListRef.current.querySelector(`button[data-app-id="${selectorValue}"]`);
+                return this.runningListRef.current.querySelector(`button[data-app-id="${selectorValue}"]`);
         };
 
         computePreviewPosition = (rect) => {
@@ -425,6 +431,35 @@ export default class Navbar extends PureComponent {
                 }
         };
 
+        setPreviewLifecycleState = (nextState, meta = {}) => {
+                const current = this.previewLifecycle || {};
+                const next = {
+                        ...current,
+                        ...meta,
+                        state: nextState || current.state,
+                };
+                const unchanged = current.state === next.state
+                        && current.appId === next.appId
+                        && current.trigger === next.trigger;
+                if (unchanged) {
+                        return;
+                }
+                this.previewLifecycle = next;
+        };
+
+        requestPreviewOpen = (app, target, options = {}) => {
+                if (!app || !target) return;
+                this.setPreviewLifecycleState('visible', { appId: app.id, trigger: options.trigger || 'hover' });
+                this.clearPreviewHideTimeout();
+                this.openPreviewForApp(app, target, options);
+        };
+
+        requestPreviewHide = (reason = 'blur') => {
+                if (this.previewLifecycle?.state === 'hidden') return;
+                this.setPreviewLifecycleState('pendingHide', { trigger: reason });
+                this.schedulePreviewHide();
+        };
+
         schedulePreviewHide = () => {
                 this.clearPreviewHideTimeout();
                 this.previewHideTimeout = setTimeout(() => {
@@ -434,6 +469,7 @@ export default class Navbar extends PureComponent {
 
         hidePreview = () => {
                 this.clearPreviewHideTimeout();
+                this.setPreviewLifecycleState('hidden', { appId: null, trigger: null });
                 this.previewFocusPending = false;
                 this.stopPreviewAutoRefresh();
                 this.clearPreviewUpdatingTimeout();
@@ -642,6 +678,9 @@ export default class Navbar extends PureComponent {
         };
 
         handlePreviewMouseEnter = () => {
+                if (this.state.preview?.appId) {
+                        this.setPreviewLifecycleState('visible', { appId: this.state.preview.appId, trigger: 'flyout-hover' });
+                }
                 this.clearPreviewHideTimeout();
         };
 
@@ -654,10 +693,13 @@ export default class Navbar extends PureComponent {
                 if (related && related instanceof Node && (this.previewFlyoutRef.current?.contains(related) || taskbarButton?.contains(related) || isTaskbarTarget)) {
                         return;
                 }
-                this.schedulePreviewHide();
+                this.requestPreviewHide('flyout-leave');
         };
 
         handlePreviewFocus = () => {
+                if (this.state.preview?.appId) {
+                        this.setPreviewLifecycleState('visible', { appId: this.state.preview.appId, trigger: 'flyout-focus' });
+                }
                 this.clearPreviewHideTimeout();
         };
 
@@ -673,7 +715,7 @@ export default class Navbar extends PureComponent {
                                 return;
                         }
                 }
-                this.schedulePreviewHide();
+                this.requestPreviewHide('flyout-blur');
         };
 
         handlePreviewKeyDown = (event) => {
@@ -697,12 +739,12 @@ export default class Navbar extends PureComponent {
                         this.hidePreview();
                         return;
                 }
-                this.openPreviewForApp(nextApp, button, { forceRefresh: true });
+                this.requestPreviewOpen(nextApp, button, { forceRefresh: true, trigger: 'refresh' });
         };
 
         handleAppButtonMouseEnter = (event, app) => {
                 if (!this.isAppRunning(app)) return;
-                this.openPreviewForApp(app, event.currentTarget);
+                this.requestPreviewOpen(app, event.currentTarget, { trigger: 'hover' });
         };
 
         handleAppButtonMouseLeave = (event) => {
@@ -712,12 +754,12 @@ export default class Navbar extends PureComponent {
                 if (related && ((isRelatedNode && this.previewFlyoutRef.current?.contains(related)) || isTaskbarTarget)) {
                         return;
                 }
-                this.schedulePreviewHide();
+                this.requestPreviewHide('hover-out');
         };
 
         handleAppButtonFocus = (event, app) => {
                 if (!this.isAppRunning(app)) return;
-                this.openPreviewForApp(app, event.currentTarget);
+                this.requestPreviewOpen(app, event.currentTarget, { trigger: 'focus' });
         };
 
         handleAppButtonBlur = (event) => {
@@ -725,7 +767,7 @@ export default class Navbar extends PureComponent {
                 if (related && related instanceof Node && this.previewFlyoutRef.current?.contains(related)) {
                         return;
                 }
-                this.schedulePreviewHide();
+                this.requestPreviewHide('blur');
         };
 
         handleWorkspaceStateUpdate = (event) => {
@@ -734,7 +776,7 @@ export default class Navbar extends PureComponent {
                 const nextWorkspaces = Array.isArray(workspaces) ? workspaces : [];
                 const nextActiveWorkspace = typeof activeWorkspace === 'number' ? activeWorkspace : 0;
                 const nextRunningApps = Array.isArray(detail.runningApps) ? detail.runningApps : [];
-                const nextPinnedApps = safeParsePinnedPayload(detail.pinnedApps);
+                const nextPinnedApps = parsePinnedAppsPayload(detail.pinnedApps);
 
                 let runningAppsChanged = false;
 
@@ -776,7 +818,7 @@ export default class Navbar extends PureComponent {
                 if (event.key === 'ArrowDown') {
                         if (!this.isAppRunning(app)) return;
                         event.preventDefault();
-                        this.openPreviewForApp(app, event.currentTarget, { forceRefresh: true, shouldFocus: true });
+                        this.requestPreviewOpen(app, event.currentTarget, { forceRefresh: true, shouldFocus: true, trigger: 'keyboard' });
                         return;
                 }
                 if (event.key === 'Escape' && this.state.preview) {
@@ -800,11 +842,13 @@ export default class Navbar extends PureComponent {
 
                 return (
                         <RunningAppsList
-                                ref={this.taskbarListRef}
+                                ref={this.runningListRef}
                                 apps={visibleApps}
                                 renderItem={this.renderRunningAppItem}
                                 onDragOver={this.handleTaskbarDragOver}
                                 onDrop={this.handleTaskbarDrop}
+                                onDragLeave={this.handleListDragLeave}
+                                dropIndicator={this.state.dropIndicator}
                         />
                 );
         };
@@ -827,17 +871,21 @@ export default class Navbar extends PureComponent {
 
         renderPinnedApps = () => {
                 const { pinnedApps = [] } = this.state;
-                // Filter pinned apps for mobile view (only show specific apps)
-                const MOBILE_PINNED_IDS = ['youtube', 'vscode', 'about', 'settings'];
                 const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-                const visibleApps = isMobile ? pinnedApps.filter((app) => MOBILE_PINNED_IDS.includes(app.id)) : pinnedApps;
+                const hasMobilePins = pinnedApps.some((app) => app.mobilePinned);
+                const visibleApps = isMobile && hasMobilePins
+                        ? pinnedApps.filter((app) => app.mobilePinned)
+                        : pinnedApps;
 
                 return (
                         <PinnedAppsList
+                                ref={this.pinnedListRef}
                                 apps={visibleApps}
                                 renderItem={this.renderPinnedAppItem}
                                 onDragOver={this.handlePinnedDragOver}
                                 onDrop={this.handlePinnedContainerDrop}
+                                onDragLeave={this.handleListDragLeave}
+                                dropIndicator={this.state.dropIndicator}
                         />
                 );
         };
@@ -991,22 +1039,120 @@ export default class Navbar extends PureComponent {
                 );
         };
 
+        setDropIndicator = (nextIndicator) => {
+                this.setState((prevState) => {
+                        const current = prevState.dropIndicator;
+                        if (!nextIndicator && !current) return null;
+                        if (!nextIndicator || !current) return { dropIndicator: nextIndicator || null };
+                        const unchanged = current.section === nextIndicator.section
+                                && current.left === nextIndicator.left;
+                        return unchanged ? null : { dropIndicator: nextIndicator };
+                });
+        };
+
+        clearDropIndicator = () => {
+                this.setDropIndicator(null);
+        };
+
+        shouldShowDropIndicator = (section, source) => {
+                if (!section || !source?.id) return false;
+                if (section === 'running') {
+                        return source.section === 'running';
+                }
+                if (section === 'pinned') {
+                        return source.section === 'pinned'
+                                || source.section === 'running'
+                                || source.section === 'launcher'
+                                || source.section === 'desktop'
+                                || !source.section;
+                }
+                return false;
+        };
+
+        resolveDropIndicatorLeft = (list, targetElement, insertAfter) => {
+                if (!list || typeof list.getBoundingClientRect !== 'function') return 0;
+                const listRect = list.getBoundingClientRect();
+                let edge = null;
+                if (targetElement && typeof targetElement.getBoundingClientRect === 'function' && targetElement !== list) {
+                        const targetRect = targetElement.getBoundingClientRect();
+                        edge = insertAfter ? targetRect.right : targetRect.left;
+                } else {
+                        const items = list.querySelectorAll('[data-app-id]');
+                        if (items.length) {
+                                const target = insertAfter ? items[items.length - 1] : items[0];
+                                const rect = target.getBoundingClientRect();
+                                edge = insertAfter ? rect.right : rect.left;
+                        } else {
+                                edge = listRect.left + 8;
+                        }
+                }
+                if (edge === null) {
+                        edge = listRect.left;
+                }
+                const left = edge - listRect.left + list.scrollLeft;
+                return Math.max(0, Math.min(left, list.scrollWidth));
+        };
+
+        updateDropIndicator = (event, section, options = {}) => {
+                const { targetElement, insertAfter } = options || {};
+                const listRef = section === 'pinned' ? this.pinnedListRef : this.runningListRef;
+                const list = listRef?.current;
+                if (!list) return;
+                const source = this.getDragSource(event);
+                if (!this.shouldShowDropIndicator(section, source)) {
+                        this.clearDropIndicator();
+                        return;
+                }
+                const left = this.resolveDropIndicatorLeft(list, targetElement || list, insertAfter);
+                this.setDropIndicator({ section, left });
+        };
+
+        handleAutoScroll = (event, list) => {
+                if (!list || typeof list.getBoundingClientRect !== 'function') return;
+                const rect = list.getBoundingClientRect();
+                const distanceLeft = event.clientX - rect.left;
+                const distanceRight = rect.right - event.clientX;
+                if (distanceLeft < TASKBAR_AUTO_SCROLL_THRESHOLD) {
+                        list.scrollLeft = Math.max(0, list.scrollLeft - TASKBAR_AUTO_SCROLL_STEP);
+                } else if (distanceRight < TASKBAR_AUTO_SCROLL_THRESHOLD) {
+                        list.scrollLeft = Math.min(list.scrollWidth, list.scrollLeft + TASKBAR_AUTO_SCROLL_STEP);
+                }
+        };
+
+        handleListDragLeave = (event) => {
+                const related = event?.relatedTarget;
+                if (related && event.currentTarget?.contains?.(related)) {
+                        return;
+                }
+                this.clearDropIndicator();
+        };
+
         handleTaskbarDragOver = (event) => {
                 event.preventDefault();
                 if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move';
                 }
+                const list = this.runningListRef?.current;
+                const rect = list?.getBoundingClientRect?.();
+                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : true;
+                this.updateDropIndicator(event, 'running', { targetElement: list, insertAfter });
+                this.handleAutoScroll(event, list);
         };
 
         handleTaskbarDrop = (event) => {
                 event.preventDefault();
                 const source = this.getDragSource(event);
+                this.clearDropIndicator();
                 if (!source.id) return;
                 if (source.section === 'pinned') {
                         this.dispatchTaskbarCommand({ action: 'unpin', appId: source.id });
                         return;
                 }
-                this.reorderRunningApps(source.id, null, true);
+                if (source.section === 'running') {
+                        this.reorderRunningApps(source.id, null, true);
+                        return;
+                }
+                this.pinAppFromDrag(source.id, null, true);
         };
 
         handleAppDragStart = (event, app) => {
@@ -1025,11 +1171,16 @@ export default class Navbar extends PureComponent {
                 if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move';
                 }
+                const rect = event.currentTarget?.getBoundingClientRect?.();
+                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
+                this.updateDropIndicator(event, 'running', { targetElement: event.currentTarget, insertAfter });
+                this.handleAutoScroll(event, this.runningListRef?.current);
         };
 
         handleAppDrop = (event, targetId) => {
                 event.preventDefault();
                 const source = this.getDragSource(event);
+                this.clearDropIndicator();
                 if (!source.id) return;
                 if (source.section === 'pinned') {
                         this.dispatchTaskbarCommand({ action: 'unpin', appId: source.id });
@@ -1037,12 +1188,17 @@ export default class Navbar extends PureComponent {
                 }
                 const rect = event.currentTarget?.getBoundingClientRect?.();
                 const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
-                this.reorderRunningApps(source.id, targetId, insertAfter);
+                if (source.section === 'running') {
+                        this.reorderRunningApps(source.id, targetId, insertAfter);
+                        return;
+                }
+                this.pinAppFromDrag(source.id, null, true);
         };
 
         handleAppDragEnd = () => {
                 this.draggingAppId = null;
                 this.draggingSection = null;
+                this.clearDropIndicator();
         };
 
         handlePinnedDragStart = (event, app) => {
@@ -1061,11 +1217,18 @@ export default class Navbar extends PureComponent {
                 if (event.dataTransfer) {
                         event.dataTransfer.dropEffect = 'move';
                 }
+                const rect = event.currentTarget?.getBoundingClientRect?.();
+                const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
+                const list = this.pinnedListRef?.current;
+                const targetElement = event.currentTarget?.dataset?.appId ? event.currentTarget : list;
+                this.updateDropIndicator(event, 'pinned', { targetElement, insertAfter });
+                this.handleAutoScroll(event, list);
         };
 
         handlePinnedDrop = (event, targetId) => {
                 event.preventDefault();
                 const source = this.getDragSource(event);
+                this.clearDropIndicator();
                 if (!source.id) return;
                 const rect = event.currentTarget?.getBoundingClientRect?.();
                 const insertAfter = rect ? (event.clientX - rect.left) > rect.width / 2 : false;
@@ -1073,23 +1236,33 @@ export default class Navbar extends PureComponent {
                         this.pinAppFromDrag(source.id, targetId, insertAfter);
                         return;
                 }
-                this.reorderPinnedApps(source.id, targetId, insertAfter);
+                if (source.section === 'pinned') {
+                        this.reorderPinnedApps(source.id, targetId, insertAfter);
+                        return;
+                }
+                this.pinAppFromDrag(source.id, targetId, insertAfter);
         };
 
         handlePinnedContainerDrop = (event) => {
                 event.preventDefault();
                 const source = this.getDragSource(event);
+                this.clearDropIndicator();
                 if (!source.id) return;
                 if (source.section === 'running') {
                         this.pinAppFromDrag(source.id, null, true);
                         return;
                 }
-                this.reorderPinnedApps(source.id, null, true);
+                if (source.section === 'pinned') {
+                        this.reorderPinnedApps(source.id, null, true);
+                        return;
+                }
+                this.pinAppFromDrag(source.id, null, true);
         };
 
         handlePinnedDragEnd = () => {
                 this.draggingAppId = null;
                 this.draggingSection = null;
+                this.clearDropIndicator();
         };
 
         getDragSource = (event) => {
@@ -1097,6 +1270,7 @@ export default class Navbar extends PureComponent {
                 if (transfer) {
                         const explicit = transfer.getData('application/x-taskbar-app-id');
                         const section = transfer.getData('application/x-taskbar-section');
+                        const plain = transfer.getData('text/plain');
                         const legacy = transfer.getData('application/x-taskbar-app-id-legacy');
                         if (explicit) {
                                 if (section) {
@@ -1111,6 +1285,9 @@ export default class Navbar extends PureComponent {
                                         return { id: id || explicit, section: legacySection || 'running' };
                                 }
                                 return { id: explicit, section: 'running' };
+                        }
+                        if (plain) {
+                                return { id: plain, section: section || 'launcher' };
                         }
                 }
                 if (this.draggingAppId) {

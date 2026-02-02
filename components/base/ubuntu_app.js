@@ -7,12 +7,26 @@ export class UbuntuApp extends Component {
         this.state = { launching: false, dragging: false, prefetched: false };
     }
 
-    handleDragStart = () => {
+    handleDragStart = (event) => {
         this.setState({ dragging: true });
+        const payload = this.props.dragPayload;
+        if (payload && event?.dataTransfer) {
+            const section = payload.section || 'launcher';
+            event.dataTransfer.effectAllowed = payload.effectAllowed || 'copy';
+            event.dataTransfer.setData('application/x-taskbar-app-id', payload.id);
+            event.dataTransfer.setData('application/x-taskbar-section', section);
+            event.dataTransfer.setData('text/plain', payload.id);
+        }
+        if (typeof this.props.onDragStart === 'function') {
+            this.props.onDragStart(event);
+        }
     }
 
-    handleDragEnd = () => {
+    handleDragEnd = (event) => {
         this.setState({ dragging: false });
+        if (typeof this.props.onDragEnd === 'function') {
+            this.props.onDragEnd(event);
+        }
     }
 
     openApp = () => {
