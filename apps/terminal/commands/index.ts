@@ -72,6 +72,10 @@ const help: CommandHandler = (args, ctx) => {
     ctx.writeLine(line.slice(0, termWidth));
   }
   ctx.writeLine(
+    `Safe mode is ${ctx.safeMode ? 'ON' : 'OFF'} — simulated network commands are ${ctx.safeMode ? 'blocked' : 'available'}.`,
+  );
+  ctx.writeLine('Tip: toggle Safe Mode from the toolbar if you need simulated networking.');
+  ctx.writeLine(
     'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
   );
 };
@@ -231,7 +235,7 @@ const sudo: CommandHandler = async (args, ctx) => {
 
   ctx.writeLine(
     ctx.safeMode
-      ? `sudo: "${commandLine}" skipped (safe mode is enabled).`
+      ? `Safe mode: "${commandLine}" blocked. Toggle Safe Mode to run simulated privileged commands.`
       : `sudo: simulated privilege escalation for "${commandLine}".`,
   );
 };

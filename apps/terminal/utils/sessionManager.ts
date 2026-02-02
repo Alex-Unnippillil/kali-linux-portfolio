@@ -9,6 +9,7 @@ export interface SessionManagerConfig {
   writeLine: (text: string) => void;
   onHistoryUpdate?: (history: string[]) => void;
   onCancelRunning?: () => void;
+  onCommand?: (command: string) => void;
 }
 
 export interface SessionManager {
@@ -32,6 +33,7 @@ export function createSessionManager({
   writeLine,
   onHistoryUpdate,
   onCancelRunning,
+  onCommand,
 }: SessionManagerConfig): SessionManager {
   // Mutable config state
   let currentConfig: SessionManagerConfig = {
@@ -55,6 +57,10 @@ export function createSessionManager({
   let draftBuffer = '';
   let running = false;
   let suppressNextPrompt = false;
+  let reverseSearchActive = false;
+  let reverseSearchQuery = '';
+  let reverseSearchIndex: number | null = null;
+  let reverseSearchBaseBuffer = '';
 
   const setTerminal = (term: XTerm | null) => {
     terminal = term;
@@ -86,13 +92,14 @@ export function createSessionManager({
     const handler = definition?.handler;
     currentConfig.context.history.push(trimmed);
     currentConfig.onHistoryUpdate?.(currentConfig.context.history);
+    currentConfig.onCommand?.(trimmed);
 
     // safe mode checks
     const riskyCommands = ['nmap', 'curl', 'wget', 'ssh', 'nc', 'netcat', 'telnet', 'ping'];
     const looksNetworkBound = /https?:\/\//i.test(expanded) || riskyCommands.includes(cmdName);
     if (currentConfig.context.safeMode && looksNetworkBound && !definition?.safeModeBypass) {
-      currentConfig.writeLine('Safe mode: this command is simulated and cannot reach the network.');
-      currentConfig.writeLine(`[simulated] ${expanded}`);
+      currentConfig.writeLine(`Safe mode: "${cmdName}" blocked. Toggle Safe Mode to run simulated network commands.`);
+      currentConfig.writeLine(`[blocked] ${expanded}`);
       return;
     }
 
@@ -194,6 +201,9 @@ export function createSessionManager({
   };
 
   const handleEscapeSequence = (sequence: string) => {
+    if (reverseSearchActive) {
+      return;
+    }
     if (sequence === '\x1b[A') {
       applyHistory('up');
       return;
@@ -210,6 +220,49 @@ export function createSessionManager({
     let i = 0;
     while (i < data.length) {
       const ch = data[i];
+      if (reverseSearchActive) {
+        if (ch === '\x03') {
+          reverseSearchActive = false;
+          currentConfig.write('\r\n');
+          cancelInput();
+          i += 1;
+          continue;
+        }
+        if (ch === '\r') {
+          const history = currentConfig.context.history;
+          const match =
+            reverseSearchIndex !== null ? history[reverseSearchIndex] : reverseSearchBaseBuffer;
+          reverseSearchActive = false;
+          buffer = match || reverseSearchBaseBuffer;
+          currentConfig.write('\r\n');
+          currentConfig.prompt();
+          if (buffer) currentConfig.write(buffer);
+          i += 1;
+          continue;
+        }
+        if (ch === '\x1b' || ch === '\x07') {
+          reverseSearchActive = false;
+          buffer = reverseSearchBaseBuffer;
+          currentConfig.write('\r\n');
+          currentConfig.prompt();
+          if (buffer) currentConfig.write(buffer);
+          i += 1;
+          continue;
+        }
+        if (ch === '\u007F') {
+          reverseSearchQuery = reverseSearchQuery.slice(0, -1);
+        } else if (ch === '\x12') {
+          if (reverseSearchIndex !== null) {
+            reverseSearchIndex = reverseSearchIndex - 1;
+          }
+        } else if (ch >= ' ') {
+          reverseSearchQuery += ch;
+        }
+        reverseSearchIndex = findReverseMatch(reverseSearchQuery, reverseSearchIndex);
+        renderReverseSearch(reverseSearchQuery, reverseSearchIndex);
+        i += 1;
+        continue;
+      }
       if (ch === '\x1b') {
         let end = i + 1;
         if (data[end] === '[') {
@@ -228,6 +281,16 @@ export function createSessionManager({
       }
       if (ch === '\x03') { // Ctrl+C
         cancelInput();
+        i += 1;
+        continue;
+      }
+      if (ch === '\x12') { // Ctrl+R reverse search
+        reverseSearchActive = true;
+        reverseSearchQuery = '';
+        reverseSearchIndex = findReverseMatch(reverseSearchQuery, null);
+        reverseSearchBaseBuffer = buffer;
+        currentConfig.write('\r\n');
+        renderReverseSearch(reverseSearchQuery, reverseSearchIndex);
         i += 1;
         continue;
       }
@@ -255,6 +318,29 @@ export function createSessionManager({
       }
       i += 1;
     }
+  };
+
+  const findReverseMatch = (query: string, startIndex: number | null) => {
+    const history = currentConfig.context.history;
+    if (!history.length) return null;
+    if (!query) {
+      const fallback = startIndex ?? history.length - 1;
+      return fallback >= 0 ? fallback : null;
+    }
+    let idx = startIndex ?? history.length - 1;
+    for (; idx >= 0; idx -= 1) {
+      if (history[idx].includes(query)) {
+        return idx;
+      }
+    }
+    return null;
+  };
+
+  const renderReverseSearch = (query: string, matchIndex: number | null) => {
+    const history = currentConfig.context.history;
+    const match = matchIndex !== null ? history[matchIndex] : '';
+    currentConfig.write('\r\x1b[2K');
+    currentConfig.write(`(reverse-i-search)\`${query}\`: ${match}`);
   };
 
   const handlePaste = (text: string) => {
