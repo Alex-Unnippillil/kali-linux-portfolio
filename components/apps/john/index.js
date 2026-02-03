@@ -36,9 +36,12 @@ const JohnApp = () => {
   const [candidates, setCandidates] = useState([]);
   const [potfileEntries, setPotfileEntries] = useState([]);
   const [potFilter, setPotFilter] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const workerRef = useRef(null);
   const statsWorkerRef = useRef(null);
   const controllerRef = useRef(null);
+  const startRef = useRef(0);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -67,6 +70,18 @@ const JohnApp = () => {
     },
     []
   );
+
+  useEffect(() => {
+    if (!loading) {
+      setElapsed(0);
+      return;
+    }
+    startRef.current = Date.now();
+    const interval = setInterval(() => {
+      setElapsed((Date.now() - startRef.current) / 1000);
+    }, 250);
+    return () => clearInterval(interval);
+  }, [loading]);
 
   const startProgress = (total) => {
     if (workerRef.current) workerRef.current.terminate();
@@ -316,6 +331,34 @@ const JohnApp = () => {
         toolName="John the Ripper"
         message={johnPlaceholders.banners.desktop}
       />
+      <div className="px-4 pt-4">
+        <button
+          type="button"
+          onClick={() => setShowHelp((prev) => !prev)}
+          className="rounded border border-kali-border/70 px-3 py-1 text-xs text-kali-text/80 hover:text-kali-text"
+          aria-expanded={showHelp}
+        >
+          {showHelp ? 'Hide' : 'About this tool'}
+        </button>
+        {showHelp && (
+          <div className="mt-2 rounded border border-kali-border/70 bg-kali-dark/60 p-3 text-xs text-kali-text/80">
+            <p className="font-semibold text-kali-text">Learning notes</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              <li>
+                John the Ripper compares hash candidates from wordlists, rules, or
+                incremental modes to demonstrate cracking workflows.
+              </li>
+              <li>
+                The progress bar represents keyspace coverage in this demo, not
+                real brute-force speed.
+              </li>
+              <li>
+                Results are mock outputs suitable for safe classroom walkthroughs.
+              </li>
+            </ul>
+          </div>
+        )}
+      </div>
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
         <label htmlFor="john-hashes" id="john-hashes-label" className="text-sm">
           Hashes (one per line)
@@ -490,6 +533,9 @@ const JohnApp = () => {
             <p className="text-xs mt-1 text-kali-text" aria-live="polite">
               {`Keyspace ${Math.round(progress)}% - ${phase}`}
             </p>
+            <p className="text-xs text-kali-text/80">
+              {`Elapsed time: ${formatTime(elapsed)}`}
+            </p>
           </>
         )}
         {error && <FormError id="john-error">{error}</FormError>}
@@ -548,4 +594,3 @@ export default JohnApp;
 export const displayJohn = (addFolder, openApp) => (
   <JohnApp addFolder={addFolder} openApp={openApp} />
 );
-

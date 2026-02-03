@@ -68,6 +68,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   const [error, setError] = useState('');
   const [activeSampleId, setActiveSampleId] = useState(sampleCaptures[0].id);
   const [sampleNote, setSampleNote] = useState(sampleCaptures[0].note);
+  const [showHelp, setShowHelp] = useState(false);
   const workerRef = useRef(null);
   const pausedRef = useRef(false);
   const prefersReducedMotion = useRef(false);
@@ -239,6 +240,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     .filter((p) => matchesBpf(p, bpf))
     .filter((p) => !protocolFilter || protocolName(p.protocol) === protocolFilter);
   const hasTlsKeys = !!tlsKeys;
+  const filteredCount = filteredPackets.length;
 
   return (
     <div
@@ -255,6 +257,36 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       <p className="text-yellow-300 text-xs p-2 bg-gray-900">
         Bundled capture for lab use only. No live traffic.
       </p>
+      <div className="px-2 pb-2 bg-gray-900 text-xs flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowHelp((prev) => !prev)}
+          className="rounded border border-white/10 px-2 py-1 text-white/80 hover:text-white"
+          aria-expanded={showHelp}
+        >
+          {showHelp ? 'Hide' : 'About this tool'}
+        </button>
+        <span className="text-white/70">
+          Practice display filters, packet inspection, and protocol decoding in a safe demo.
+        </span>
+      </div>
+      {showHelp && (
+        <div className="mx-2 mb-2 rounded border border-white/10 bg-gray-900 p-3 text-xs text-white/80">
+          <p className="font-semibold text-white">Wireshark learning tips</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            <li>
+              Display filters highlight matching packets; BPF filters reduce the
+              capture set before display.
+            </li>
+            <li>
+              Try filters like <span className="font-mono">tcp</span>,{' '}
+              <span className="font-mono">http</span>, or{' '}
+              <span className="font-mono">ip.addr == 10.0.0.5</span>.
+            </li>
+            <li>Packet details explain common fields (IP, TCP, HTTP).</li>
+          </ul>
+        </div>
+      )}
       {error && (
         <p className="text-red-400 text-xs p-2 bg-gray-900">{error}</p>
       )}
@@ -405,6 +437,9 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       </div>
       <BurstChart minutes={minuteData} />
       <div className="p-2 flex space-x-2 bg-gray-900 overflow-x-auto">
+        <span className="text-xs text-gray-300 self-center">
+          Showing {filteredCount} of {packets.length} packets
+        </span>
         <button
           className={`px-2 py-1 rounded border ${
             protocolFilter === '' ? 'bg-gray-700' : 'bg-gray-800'
@@ -492,6 +527,23 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                     {toHex(selectedPacket.data)}
                   </pre>
                 )}
+                <div className="mt-2 text-xs text-white/70">
+                  <p className="font-semibold text-white">Field guide</p>
+                  <ul className="mt-1 list-disc space-y-1 pl-4">
+                    <li>
+                      IP: source/destination addresses identify the hosts in the
+                      conversation.
+                    </li>
+                    <li>
+                      TCP/UDP: ports reveal the service (HTTP, DNS, SSH) and
+                      flags show connection state.
+                    </li>
+                    <li>
+                      Info: a short summary of the packet payload and protocol
+                      context.
+                    </li>
+                  </ul>
+                </div>
               </>
             ) : (
               <p className="text-gray-400">Select a packet to view details</p>

@@ -5,6 +5,10 @@ import { recordSimulation } from '../../../utils/simulationLog';
 import modules from './modules.json';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ConsolePane from './ConsolePane';
+import {
+  defaultMetasploitState,
+  parseMetasploitCommand,
+} from './commandParser';
 
 const severities = ['critical', 'high', 'medium', 'low'];
 const severityStyles = {
@@ -135,6 +139,8 @@ const MetasploitApp = ({
   const [activeScenarioId, setActiveScenarioId] = useState(
     simulationScenarios[0].id
   );
+  const [showHelp, setShowHelp] = useState(false);
+  const [demoState, setDemoState] = useState(defaultMetasploitState);
 
   const [selectedModule, setSelectedModule] = useState(null);
   const [loot, setLoot] = useState([]);
@@ -291,13 +297,19 @@ const MetasploitApp = ({
     setLoading(true);
     try {
       if (demoMode || process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true') {
+        const { output: demoOutput, nextState } = parseMetasploitCommand(
+          cmd,
+          modules,
+          demoState
+        );
+        setDemoState(nextState);
         setOutput((prev) => {
-          const next = `${prev}\nmsf6 > ${cmd}\n[demo mode] command disabled`;
+          const next = `${prev}\nmsf6 > ${cmd}\n${demoOutput || '[demo] no output'}`;
           recordSimulation({
             tool: 'metasploit',
             title: cmd || 'msf6',
             summary: 'Command replayed in demo mode',
-            data: { mode: 'demo', command: cmd },
+            data: { mode: 'demo', command: cmd, output: demoOutput },
           });
           return next;
         });
@@ -452,6 +464,37 @@ const MetasploitApp = ({
         toolName="Metasploit"
         message="Module searches and console output are deterministic and stay inside this browser."
       />
+      <div className="flex items-center gap-2 px-2 pb-2 text-xs text-white/80">
+        <button
+          type="button"
+          onClick={() => setShowHelp((prev) => !prev)}
+          className="rounded border border-white/10 px-2 py-1 text-xs text-white/80 hover:text-white"
+          aria-expanded={showHelp}
+        >
+          {showHelp ? 'Hide' : 'About this tool'}
+        </button>
+        <span>
+          Practice safe module discovery, option setting, and audit notes in a
+          contained lab.
+        </span>
+      </div>
+      {showHelp && (
+        <div className="mx-2 mb-2 rounded border border-white/10 bg-ub-grey/70 p-3 text-xs text-white/80">
+          <p className="font-semibold text-white">Metasploit demo guidance</p>
+          <ul className="mt-1 list-disc space-y-1 pl-4">
+            <li>Use <span className="font-mono">search</span> to find modules by keyword.</li>
+            <li>
+              Select a module with <span className="font-mono">use</span>, then
+              explore <span className="font-mono">show options</span> to see required
+              settings.
+            </li>
+            <li>
+              Run steps are simulated only: no packets leave the browser and outputs
+              are deterministic.
+            </li>
+          </ul>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2 px-2 pb-2 text-xs text-white/80">
         <span className="font-semibold uppercase tracking-wide">Scenario lab</span>
         <select
