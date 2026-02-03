@@ -112,6 +112,7 @@ const NmapNSEApp = () => {
   const [toast, setToast] = useState('');
   const [activeScenarioId, setActiveScenarioId] = useState(scenarioPresets[0].id);
   const [scenarioNote, setScenarioNote] = useState(scenarioPresets[0].note);
+  const [showHelp, setShowHelp] = useState(false);
   const outputRef = useRef(null);
   const phases = ['prerule', 'hostrule', 'portrule'];
 
@@ -235,6 +236,33 @@ const NmapNSEApp = () => {
           message="Simulated scripts and outputs. Commands are build-only; no packets are sent."
           className="mb-4"
         />
+        <button
+          type="button"
+          onClick={() => setShowHelp((prev) => !prev)}
+          className="mb-4 rounded border border-white/10 bg-kali-surface-muted/80 px-3 py-2 text-sm text-white/80 hover:text-white"
+          aria-expanded={showHelp}
+        >
+          {showHelp ? 'Hide' : 'About this tool'}
+        </button>
+        {showHelp && (
+          <div className="mb-4 rounded border border-white/10 bg-kali-surface-muted/80 p-3 text-sm text-white/80">
+            <p className="font-semibold text-white">Nmap NSE walkthrough</p>
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              <li>
+                NSE scripts simulate reconnaissance modules such as HTTP discovery,
+                SMB fingerprinting, and DNS enumeration.
+              </li>
+              <li>
+                Adjust the port preset and script arguments to see how the command
+                line changes in a real scan.
+              </li>
+              <li>
+                Output shown here is curated for learning and does not probe any
+                live hosts.
+              </li>
+            </ul>
+          </div>
+        )}
         <div className="mb-4 rounded border border-kali-severity-medium/60 bg-kali-severity-medium/15 p-3">
           <p className="text-sm font-semibold">
             Educational use only. Do not scan systems without permission.

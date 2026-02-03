@@ -251,6 +251,9 @@ function HashcatApp() {
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
   const workerRef = useRef(null);
   const frameRef = useRef(null);
+  const [showHelp, setShowHelp] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(0);
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -298,6 +301,18 @@ function HashcatApp() {
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
+
+  useEffect(() => {
+    if (!isCracking) {
+      setElapsed(0);
+      return;
+    }
+    startRef.current = Date.now();
+    const interval = setInterval(() => {
+      setElapsed((Date.now() - startRef.current) / 1000);
+    }, 250);
+    return () => clearInterval(interval);
+  }, [isCracking]);
 
   const startCracking = () => {
     if (isCracking) return;
@@ -398,6 +413,35 @@ function HashcatApp() {
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-center gap-4 bg-ub-cool-grey text-white">
+      <div className="text-center space-y-2">
+        <h1 className="text-xl font-semibold">Hashcat Simulator</h1>
+        <button
+          type="button"
+          onClick={() => setShowHelp((prev) => !prev)}
+          className="rounded border border-white/10 px-3 py-1 text-xs text-white/80 hover:text-white"
+          aria-expanded={showHelp}
+        >
+          {showHelp ? 'Hide' : 'About this tool'}
+        </button>
+        {showHelp && (
+          <div className="rounded border border-white/10 bg-ub-grey/70 p-3 text-xs text-white/80">
+            <p className="font-semibold text-white">Learning notes</p>
+            <ul className="mt-1 list-disc space-y-1 pl-4">
+              <li>
+                Hashcat tests password candidates against hashes; higher speeds
+                mean faster keyspace coverage.
+              </li>
+              <li>
+                Try different attack modes to see how wordlists and masks affect
+                the estimated keyspace.
+              </li>
+              <li>
+                Output is simulated and does not use real GPU hardware.
+              </li>
+            </ul>
+          </div>
+        )}
+      </div>
       <div>
         <label className="mr-2" htmlFor="hash-input">
           Hash:
@@ -644,6 +688,11 @@ function HashcatApp() {
         info={info}
         reduceMotion={prefersReducedMotion}
       />
+      {isCracking && (
+        <div className="text-xs text-white/80">
+          Elapsed time: {formatTime(elapsed)}
+        </div>
+      )}
       {result && <div>Result: {result}</div>}
       <pre className="bg-black text-green-400 p-2 rounded text-xs w-full max-w-md overflow-x-auto mt-4">
         {sampleOutput}
@@ -658,4 +707,3 @@ function HashcatApp() {
 export default HashcatApp;
 
 export const displayHashcat = () => <HashcatApp />;
-
