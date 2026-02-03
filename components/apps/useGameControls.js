@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import useGamepad from '../../hooks/useGamepad';
 import usePersistedState from '../../hooks/usePersistedState';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
 /**
  * Multifunctional game control hook.
@@ -19,14 +20,8 @@ const defaultMap = {
   hyperspace: 'h',
 };
 
-const isTextInput = (el) => {
-  if (!el || !(el instanceof HTMLElement)) return false;
-  const tag = el.tagName;
-  return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
-};
-
 const useGameControls = (arg, gameId = 'default', options = {}) => {
-  const { enabled = true, preventDefault = false } = options || {};
+  const { enabled = true, preventDefault = false, isFocused = true } = options || {};
   const onDirection = typeof arg === 'function' ? arg : null;
   const canvasRef = typeof arg === 'function' ? null : arg;
   const stateRef = useRef({
@@ -42,22 +37,22 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
   useEffect(() => {
     if (!onDirection || !enabled) return undefined;
     const handleKey = (e) => {
-      if (isTextInput(e.target)) return;
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.up) {
-        if (preventDefault) e.preventDefault();
+        if (preventDefault) consumeGameKey(e);
         onDirection({ x: 0, y: -1 });
       }
       if (e.key === map.down) {
-        if (preventDefault) e.preventDefault();
+        if (preventDefault) consumeGameKey(e);
         onDirection({ x: 0, y: 1 });
       }
       if (e.key === map.left) {
-        if (preventDefault) e.preventDefault();
+        if (preventDefault) consumeGameKey(e);
         onDirection({ x: -1, y: 0 });
       }
       if (e.key === map.right) {
-        if (preventDefault) e.preventDefault();
+        if (preventDefault) consumeGameKey(e);
         onDirection({ x: 1, y: 0 });
       }
     };
@@ -75,11 +70,11 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       window.removeEventListener('keydown', debounced);
       if (timeout) clearTimeout(timeout);
     };
-  }, [onDirection, gameId, enabled, preventDefault]);
+  }, [onDirection, gameId, enabled, preventDefault, isFocused]);
 
   // touch swipe controls for directional games
   useEffect(() => {
-    if (!onDirection || !enabled) return undefined;
+    if (!onDirection || !enabled || !isFocused) return undefined;
     let startX = 0;
     let startY = 0;
 
@@ -106,11 +101,11 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       window.removeEventListener('touchstart', start);
       window.removeEventListener('touchend', end);
     };
-  }, [onDirection, enabled]);
+  }, [onDirection, enabled, isFocused]);
 
   // gamepad controls for directional games
   useEffect(() => {
-    if (!onDirection || !enabled) return;
+    if (!onDirection || !enabled || !isFocused) return;
     const now = Date.now();
     if (now - padTime.current < 100) return;
     const { moveX, moveY } = gamepad;
@@ -119,20 +114,20 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       else onDirection({ x: 0, y: Math.sign(moveY) });
       padTime.current = now;
     }
-  }, [gamepad, onDirection, enabled]);
+  }, [gamepad, onDirection, enabled, isFocused]);
 
   // keyboard controls for advanced games
   useEffect(() => {
     if (onDirection || !enabled) return undefined;
     const handleDown = (e) => {
-      if (isTextInput(e.target)) return;
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.fire) stateRef.current.fire = true;
       else if (e.key === map.hyperspace) stateRef.current.hyperspace = true;
       else stateRef.current.keys[e.key] = true;
     };
     const handleUp = (e) => {
-      if (isTextInput(e.target)) return;
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.fire) stateRef.current.fire = false;
       else if (e.key === map.hyperspace) stateRef.current.hyperspace = false;
@@ -144,11 +139,11 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       window.removeEventListener('keydown', handleDown);
       window.removeEventListener('keyup', handleUp);
     };
-  }, [gameId, onDirection, enabled]);
+  }, [gameId, onDirection, enabled, isFocused]);
 
   // touch controls for advanced games
   useEffect(() => {
-    if (onDirection || !canvasRef?.current || !enabled) return undefined;
+    if (onDirection || !canvasRef?.current || !enabled || !isFocused) return undefined;
     const canvas = canvasRef.current;
 
     const rect = () => canvas.getBoundingClientRect();
@@ -192,15 +187,15 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       canvas.removeEventListener('touchmove', move);
       canvas.removeEventListener('touchend', end);
     };
-  }, [canvasRef, onDirection, enabled]);
+  }, [canvasRef, onDirection, enabled, isFocused]);
 
   // gamepad controls for advanced games
   useEffect(() => {
-    if (onDirection || !enabled) return;
+    if (onDirection || !enabled || !isFocused) return;
     stateRef.current.joystick.x = gamepad.moveX;
     stateRef.current.joystick.y = gamepad.moveY;
     stateRef.current.fire = gamepad.fire || stateRef.current.fire;
-  }, [gamepad, onDirection, enabled]);
+  }, [gamepad, onDirection, enabled, isFocused]);
 
   return onDirection ? null : stateRef.current;
 };

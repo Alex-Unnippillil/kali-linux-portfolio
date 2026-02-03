@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import { PieceGenerator } from '../../games/tetris/logic';
+import useIsTouchDevice from '../../hooks/useIsTouchDevice';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
 const WIDTH = 10;
 const HEIGHT = 20;
@@ -234,7 +236,9 @@ const defaultKeys = {
   settings: 's',
 };
 
-const Tetris = () => {
+const Tetris = ({ windowMeta } = {}) => {
+  const isFocused = windowMeta?.isFocused ?? true;
+  const isTouch = useIsTouchDevice();
   const canvasRef = useCanvasResize(WIDTH * CELL_SIZE, HEIGHT * CELL_SIZE);
   const boardContainerRef = useRef(null);
   const settingsRef = useRef(null);
@@ -279,6 +283,7 @@ const Tetris = () => {
   );
   const [showSettings, setShowSettings] = useState(false);
   const [paused, setPaused] = useState(false);
+  const focusPausedRef = useRef(false);
   const [sound, setSound] = usePersistentState(
     'tetris-sound',
     true,
@@ -826,12 +831,26 @@ const Tetris = () => {
   }, [gameOver, setPaused]);
   const toggleSound = useCallback(() => setSound((s) => !s), [setSound]);
 
+  useEffect(() => {
+    if (!isFocused && !paused && !gameOver) {
+      focusPausedRef.current = true;
+      setPaused(true);
+      return;
+    }
+    if (isFocused && focusPausedRef.current) {
+      focusPausedRef.current = false;
+      setPaused(false);
+    }
+  }, [gameOver, isFocused, paused]);
+
   const handleKeyDown = useCallback(
     (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (showSettings) return;
       const action = actionFromKey(e.key, e.code);
       if (!action) return;
       e.preventDefault();
+      e.stopPropagation();
       if (action === 'left' || action === 'right') {
         if (isInputLocked) return;
         const dir = action === 'left' ? -1 : 1;
@@ -874,14 +893,16 @@ const Tetris = () => {
         setShowSettings(true);
       }
     },
-    [actionFromKey, arr, clearAnimation, das, hardDrop, holdPiece, isInputLocked, move, moveDown, resetGame, rotatePiece, showSettings, togglePause, toggleSound],
+    [actionFromKey, arr, clearAnimation, das, hardDrop, holdPiece, isInputLocked, move, moveDown, resetGame, rotatePiece, showSettings, togglePause, toggleSound, isFocused],
   );
 
   const handleKeyUp = useCallback(
     (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (showSettings) return;
       const action = actionFromKey(e.key, e.code);
       if (!action) return;
+      consumeGameKey(e);
       if (action === 'left' || action === 'right') {
         keyHeld.current[action] = false;
         if (dasTimer.current[action]) {
@@ -898,6 +919,40 @@ const Tetris = () => {
       }
     },
     [actionFromKey, showSettings],
+  );
+
+  const handleTouchAction = useCallback(
+    (action) => {
+      if (clearAnimation || gameOver || paused || showSettings) return;
+      if (action === 'left' || action === 'right') {
+        if (isInputLocked) return;
+        move(action === 'left' ? -1 : 1);
+        return;
+      }
+      if (action === 'down') {
+        if (isInputLocked) return;
+        moveDown(true);
+        return;
+      }
+      if (action === 'rotate') {
+        if (isInputLocked) return;
+        rotatePiece();
+        return;
+      }
+      if (action === 'drop') {
+        if (isInputLocked) return;
+        hardDrop();
+        return;
+      }
+      if (action === 'hold') {
+        holdPiece();
+        return;
+      }
+      if (action === 'pause') {
+        togglePause();
+      }
+    },
+    [clearAnimation, gameOver, hardDrop, holdPiece, isInputLocked, move, moveDown, paused, rotatePiece, showSettings, togglePause],
   );
 
   useEffect(() => () => {
@@ -1167,6 +1222,69 @@ const Tetris = () => {
     [keyBindings],
   );
 
+  const touchControls = isTouch ? (
+    <div className="mt-4 grid w-full max-w-xs grid-cols-3 gap-2 text-lg">
+      <div />
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('rotate')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Rotate"
+      >
+        ⟳
+      </button>
+      <div />
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('left')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Move left"
+      >
+        ←
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('down')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Soft drop"
+      >
+        ↓
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('right')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Move right"
+      >
+        →
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('hold')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Hold piece"
+      >
+        H
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('drop')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Hard drop"
+      >
+        ⤓
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('pause')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label={paused ? 'Resume' : 'Pause'}
+      >
+        {paused ? '▶' : 'Ⅱ'}
+      </button>
+    </div>
+  ) : null;
+
   const bindingConflicts = useMemo(() => {
     const entries = Object.entries(keyBindings);
     const normalized = entries.map(([action, key]) => [action, key.toLowerCase()]);
@@ -1431,6 +1549,7 @@ const Tetris = () => {
                 />
               </div>
             )}
+            {touchControls}
           </div>
           <aside className="space-y-4">
             <section className="rounded-2xl border border-slate-800/70 bg-slate-900/60 p-4 shadow-lg" aria-labelledby="piece-queue">

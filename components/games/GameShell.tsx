@@ -13,6 +13,7 @@ interface GameShellProps {
   settings?: ReactNode;
   onPause?: () => void;
   onResume?: () => void;
+  isFocused?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ export default function GameShell({
   settings = null,
   onPause = () => {},
   onResume = () => {},
+  isFocused = true,
 }: GameShellProps) {
   useOrientationGuard();
 
@@ -54,7 +56,7 @@ export default function GameShell({
     }
   };
 
-  useGameInput({ onInput: handleInput, game });
+  useGameInput({ onInput: handleInput, game, isFocused });
 
   const fileRef = useRef<HTMLInputElement>(null);
 

@@ -15,6 +15,7 @@ import {
   serialize as serializeRng,
   deserialize as deserializeRng,
 } from '../../apps/games/rng';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
 interface GameLayoutProps {
   gameId?: string;
@@ -29,6 +30,7 @@ interface GameLayoutProps {
   pauseHotkeys?: string[];
   restartHotkeys?: string[];
   settingsPanel?: React.ReactNode;
+  isFocused?: boolean;
 }
 
 interface RecordedInput {
@@ -77,6 +79,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   pauseHotkeys,
   restartHotkeys,
   settingsPanel,
+  isFocused = true,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -191,6 +194,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   // Keyboard shortcut to toggle help overlay
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       const target = e.target as HTMLElement;
       const isInput =
         target.tagName === 'INPUT' ||
@@ -198,13 +202,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         target.isContentEditable;
       if (isInput) return;
       if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
-        e.preventDefault();
+        consumeGameKey(e);
         setShowHelp((h) => !h);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [isFocused]);
 
   // Show tutorial overlay on first visit
   useEffect(() => {
@@ -224,14 +228,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   useEffect(() => {
     if (!showHelp) return;
     const handler = (e: KeyboardEvent) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (e.key === 'Escape') {
-        e.preventDefault();
+        consumeGameKey(e);
         setShowHelp(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [showHelp]);
+  }, [showHelp, isFocused]);
 
   // Auto-pause when page becomes hidden or window loses focus
   useEffect(() => {
@@ -267,20 +272,21 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     const pauseKeys = pauseHotkeys?.length ? pauseHotkeys : [];
     const restartKeys = restartHotkeys?.length ? restartHotkeys : [];
     const handler = (e: KeyboardEvent) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (isTextInput(e.target)) return;
       if (pauseKeys.length && matchesHotkey(e, pauseKeys)) {
-        e.preventDefault();
+        consumeGameKey(e);
         setPaused((p) => !p);
         return;
       }
       if (restartKeys.length && matchesHotkey(e, restartKeys)) {
-        e.preventDefault();
+        consumeGameKey(e);
         handleRestart();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [pauseHotkeys, restartHotkeys, handleRestart]);
+  }, [pauseHotkeys, restartHotkeys, handleRestart, isFocused]);
 
   return (
     <RecorderContext.Provider value={contextValue}>

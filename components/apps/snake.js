@@ -12,6 +12,7 @@ import useGameHaptics from '../../hooks/useGameHaptics';
 import usePersistentState from '../../hooks/usePersistentState';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import useIsTouchDevice from '../../hooks/useIsTouchDevice';
 import {
   GRID_SIZE,
   createInitialState,
@@ -117,7 +118,9 @@ const lerpColor = (a, b, t) => {
   });
 };
 
-const Snake = () => {
+const Snake = ({ windowMeta } = {}) => {
+  const isFocused = windowMeta?.isFocused ?? true;
+  const isTouch = useIsTouchDevice();
   const canvasRef = useCanvasResize(GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
   const ctxRef = useRef(null);
   const particlesRef = useRef([]);
@@ -207,10 +210,11 @@ const Snake = () => {
   const [selectedReplay, setSelectedReplay] = useState('');
   const [showTouchControls, setShowTouchControls] = usePersistentState(
     'snake_touch_controls',
-    false,
+    isTouch,
     (v) => typeof v === 'boolean',
   );
   const playingRef = useRef(false);
+  const focusPausedRef = useRef(false);
   const playbackRef = useRef([]);
   const playbackIndexRef = useRef(0);
   const recordingRef = useRef([]);
@@ -676,6 +680,20 @@ const Snake = () => {
     runningRef.current = running;
   }, [running]);
 
+  useEffect(() => {
+    if (!isFocused && running) {
+      focusPausedRef.current = true;
+      runningRef.current = false;
+      setRunning(false);
+      return;
+    }
+    if (isFocused && focusPausedRef.current && !gameOver && !won) {
+      focusPausedRef.current = false;
+      runningRef.current = true;
+      setRunning(true);
+    }
+  }, [isFocused, running, gameOver, won]);
+
   useGameLoop(tick, running);
 
   const enqueueDirection = useCallback(
@@ -692,6 +710,7 @@ const Snake = () => {
 
   useGameControls(enqueueDirection, 'snake', {
     preventDefault: true,
+    isFocused,
   });
 
   useEffect(() => {
@@ -963,6 +982,7 @@ const Snake = () => {
       pauseHotkeys={[' ', 'space', 'spacebar']}
       restartHotkeys={['r']}
       settingsPanel={settingsPanel}
+      isFocused={isFocused}
     >
       <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none px-3 pb-4">
         <p id="snake-instructions" className="sr-only">

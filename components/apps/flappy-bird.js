@@ -5,6 +5,7 @@ import {
   BIRD_ANIMATION_FRAMES,
   PIPE_SKINS,
 } from "../../apps/games/flappy-bird/skins";
+import { consumeGameKey, shouldHandleGameKey } from "../../utils/gameInput";
 
 const WIDTH = 400;
 const HEIGHT = 300;
@@ -62,7 +63,8 @@ const getPrefersReducedMotion = () => {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 };
 
-const FlappyBird = () => {
+const FlappyBird = ({ windowMeta } = {}) => {
+  const isWindowFocused = windowMeta?.isFocused ?? true;
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const containerRef = useRef(null);
   const liveRef = useRef(null);
@@ -87,6 +89,7 @@ const FlappyBird = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [bestOverall, setBestOverall] = useState(0);
   const [isFocused, setIsFocused] = useState(false);
+  const focusPausedRef = useRef(false);
   const [settings, setSettings] = useState({
     gravityVariant: 1,
     practiceMode: false,
@@ -321,6 +324,7 @@ const FlappyBird = () => {
 
   const handleRootKeyDown = useCallback(
     (event) => {
+      if (!isWindowFocused) return;
       if (!keyHandlerRef.current) return;
       if (document.activeElement !== canvasRef.current) return;
       const target = event.target;
@@ -333,9 +337,11 @@ const FlappyBird = () => {
       ) {
         return;
       }
+      if (!shouldHandleGameKey(event, { isFocused: isFocused && isWindowFocused })) return;
+      consumeGameKey(event);
       keyHandlerRef.current(event);
     },
-    [canvasRef],
+    [canvasRef, isFocused, isWindowFocused],
   );
 
   useEffect(() => {
@@ -343,6 +349,18 @@ const FlappyBird = () => {
       focusCanvas();
     }
   }, [focusCanvas, started]);
+
+  useEffect(() => {
+    if (!isWindowFocused && gameState === "running") {
+      focusPausedRef.current = true;
+      pauseGame();
+      return;
+    }
+    if (isWindowFocused && focusPausedRef.current && gameState === "paused") {
+      focusPausedRef.current = false;
+      resumeGame();
+    }
+  }, [gameState, isWindowFocused, pauseGame, resumeGame]);
 
   useEffect(() => {
     if (!started) return;
