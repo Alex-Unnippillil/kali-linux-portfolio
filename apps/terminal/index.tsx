@@ -215,6 +215,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     let contextMenuHandler: ((event: MouseEvent) => void) | null = null;
     let focusHandler: (() => void) | null = null;
     let keyStopHandler: ((event: KeyboardEvent) => void) | null = null;
+    let keyCaptureHandler: ((event: KeyboardEvent) => void) | null = null;
+    let inputElement: HTMLTextAreaElement | null = null;
 
     const init = async () => {
       if (!containerRef.current) return;
@@ -332,6 +334,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         term.focus();
       };
       keyStopHandler = (event: KeyboardEvent) => event.stopPropagation();
+      keyCaptureHandler = (event: KeyboardEvent) => event.stopPropagation();
+      inputElement = (term as any).textarea ?? null;
 
       contextMenuHandler = (event: MouseEvent) => {
         event.preventDefault();
@@ -343,6 +347,9 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       containerRef.current?.addEventListener('contextmenu', contextMenuHandler);
       containerRef.current?.addEventListener('pointerdown', focusHandler, true);
       term.element?.addEventListener('keydown', keyStopHandler);
+      inputElement?.addEventListener('keydown', keyCaptureHandler, true);
+      inputElement?.addEventListener('keypress', keyCaptureHandler, true);
+      inputElement?.addEventListener('keyup', keyCaptureHandler, true);
 
       // Handle Resize
       resizeHandler = () => fit.fit();
@@ -408,6 +415,11 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       }
       if (keyStopHandler && terminalInstance?.element) {
         terminalInstance.element.removeEventListener('keydown', keyStopHandler);
+      }
+      if (keyCaptureHandler && inputElement) {
+        inputElement.removeEventListener('keydown', keyCaptureHandler, true);
+        inputElement.removeEventListener('keypress', keyCaptureHandler, true);
+        inputElement.removeEventListener('keyup', keyCaptureHandler, true);
       }
       termRef.current = null;
     };
