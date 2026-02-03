@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import ErrorBoundary from '../components/core/ErrorBoundary';
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 interface ProblemChildProps {
   shouldThrow?: boolean;
@@ -61,4 +60,3 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('All good')).toBeInTheDocument();
   });
 });
-

@@ -6,7 +6,7 @@ import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
 import Navbar from './screen/navbar';
 import Layout from './desktop/Layout';
-import ReactGA from 'react-ga4';
+import { logEvent, logPageView } from '../utils/analytics';
 import { safeLocalStorage } from '../utils/safeStorage';
 import NotificationCenter from './common/NotificationCenter';
 import SystemNotifications from './common/SystemNotifications';
@@ -166,11 +166,10 @@ export default class Ubuntu extends Component {
         };
 
         lockScreen = () => {
-                // google analytics
-                ReactGA.send({ hitType: "pageview", page: "/lock-screen", title: "Lock Screen" });
-                ReactGA.event({
-                        category: `Screen Change`,
-                        action: `Set Screen to Locked`
+                logPageView('/lock-screen', 'Lock Screen');
+                logEvent({
+                        category: 'Screen Change',
+                        action: 'Set Screen to Locked'
                 });
 
                 const statusBar = document.getElementById('status-bar');
@@ -188,7 +187,7 @@ export default class Ubuntu extends Component {
         };
 
         unLockScreen = () => {
-                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+                logPageView('/desktop', 'Custom Title');
 
                 window.removeEventListener('click', this.unLockScreen);
                 window.removeEventListener('keypress', this.unLockScreen);
@@ -203,11 +202,11 @@ export default class Ubuntu extends Component {
         };
 
         shutDown = () => {
-                ReactGA.send({ hitType: "pageview", page: "/switch-off", title: "Custom Title" });
+                logPageView('/switch-off', 'Custom Title');
 
-                ReactGA.event({
-                        category: `Screen Change`,
-                        action: `Switched off the Ubuntu`
+                logEvent({
+                        category: 'Screen Change',
+                        action: 'Switched off the Ubuntu'
                 });
 
                 const statusBar = document.getElementById('status-bar');
@@ -218,7 +217,7 @@ export default class Ubuntu extends Component {
         };
 
         turnOn = () => {
-                ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+                logPageView('/desktop', 'Custom Title');
 
                 this.setState({ shutDownScreen: false, booting_screen: true }, this.waitForBootSequence);
                 safeLocalStorage?.setItem('shut-down', false);

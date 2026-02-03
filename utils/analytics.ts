@@ -1,20 +1,55 @@
-import ReactGA from 'react-ga4';
+type AnalyticsEvent = {
+  category?: string;
+  action?: string;
+  label?: string;
+  value?: number;
+  nonInteraction?: boolean;
+};
 
-type EventInput = Parameters<typeof ReactGA.event>[0];
+type GtagEventParams = {
+  event_category?: string;
+  event_label?: string;
+  value?: number;
+  non_interaction?: boolean;
+  page_path?: string;
+  page_title?: string;
+};
 
-const safeEvent = (...args: Parameters<typeof ReactGA.event>): void => {
+declare global {
+  interface Window {
+    gtag?: (command: 'event', eventName: string, params?: GtagEventParams) => void;
+  }
+}
+
+const isAnalyticsEnabled = (): boolean =>
+  process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true' && typeof window !== 'undefined';
+
+const sendEvent = (eventName: string, params?: GtagEventParams): void => {
+  if (!isAnalyticsEnabled()) return;
+  if (typeof window.gtag !== 'function') return;
+
   try {
-    const eventFn = ReactGA.event;
-    if (typeof eventFn === 'function') {
-      eventFn(...args);
-    }
+    window.gtag('event', eventName, params);
   } catch {
     // Ignore analytics errors
   }
 };
 
-export const logEvent = (event: EventInput): void => {
-  safeEvent(event);
+export const logEvent = (event: AnalyticsEvent): void => {
+  const action = event.action ?? 'event';
+  sendEvent(action, {
+    event_category: event.category,
+    event_label: event.label,
+    value: event.value,
+    non_interaction: event.nonInteraction,
+  });
+};
+
+export const logPageView = (page: string, title?: string): void => {
+  sendEvent('page_view', {
+    page_path: page,
+    page_title: title,
+  });
 };
 
 export const logGameStart = (game: string): void => {

@@ -293,7 +293,6 @@ Copy `.env.local.example` to `.env.local` and populate the keys relevant to your
 | Variable | Purpose |
 | :--- | :--- |
 | NEXT_PUBLIC_ENABLE_ANALYTICS | Toggles Google Analytics 4 tracking on the client. |
-| NEXT_PUBLIC_TRACKING_ID | GA4 Measurement ID (G-XXXXXXX). |
 | NEXT_PUBLIC_SERVICE_ID | EmailJS service ID for contact forms. |
 | NEXT_PUBLIC_TEMPLATE_ID | EmailJS template ID. |
 | NEXT_PUBLIC_USER_ID | EmailJS public key. |
@@ -322,7 +321,7 @@ Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes.
 
 ### Analytics
 
-`utils/analytics.ts` wraps GA4. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
+`utils/analytics.ts` dispatches events to `window.gtag` when available. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
 
 ## Deployment Guides
 
@@ -368,7 +367,6 @@ Build and run locally:
 ```bash
 docker build -t kali-portfolio .
 docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_TRACKING_ID=... \
   -e NEXT_PUBLIC_SERVICE_ID=... \
   kali-portfolio
 ```

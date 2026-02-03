@@ -3,7 +3,6 @@ import { z } from 'zod';
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_ENABLE_ANALYTICS: z.string().optional(),
   NEXT_PUBLIC_RECAPTCHA_SITE_KEY: z.string().optional(),
-  NEXT_PUBLIC_TRACKING_ID: z.string().optional(),
   NEXT_PUBLIC_USER_ID: z.string().optional(),
   NEXT_PUBLIC_SERVICE_ID: z.string().optional(),
   NEXT_PUBLIC_TEMPLATE_ID: z.string().optional(),

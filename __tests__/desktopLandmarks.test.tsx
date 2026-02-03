@@ -3,7 +3,6 @@ import { render, screen } from '@testing-library/react';
 import { Desktop } from '../components/screen/desktop';
 
 jest.mock('next/dynamic', () => () => () => null);
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 jest.mock('../components/util-components/background-image', () => () => <div data-testid="background" />);
 jest.mock('../components/base/window', () => () => <div data-testid="window" />);

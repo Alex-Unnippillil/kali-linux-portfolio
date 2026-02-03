@@ -30,7 +30,6 @@ function MockTaskbarMenu() {
   return <div data-testid="taskbar-menu" />;
 }
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 jest.mock('../components/util-components/background-image', () => MockBackgroundImage);
 jest.mock('../components/base/ubuntu_app', () => MockUbuntuApp);

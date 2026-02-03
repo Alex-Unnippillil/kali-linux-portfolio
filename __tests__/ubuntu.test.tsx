@@ -11,7 +11,6 @@ jest.mock('../components/screen/navbar', () => function NavbarMock() {
 jest.mock('../components/screen/lock_screen', () => function LockScreenMock() {
   return <div data-testid="lock-screen" />;
 });
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 
 describe('Ubuntu component', () => {
   beforeEach(() => {

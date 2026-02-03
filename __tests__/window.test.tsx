@@ -76,7 +76,6 @@ afterEach(() => {
   setVisualViewport();
 });
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => {
   const React = require('react');
   const MockDraggable = ({ children, grid, cancel, position }: any) => (

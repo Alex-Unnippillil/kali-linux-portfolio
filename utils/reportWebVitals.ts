@@ -1,5 +1,5 @@
-import ReactGA from 'react-ga4';
 import type { NextWebVitalsMetric } from 'next/app';
+import { logEvent } from './analytics';
 
 type VitalName = Extract<NextWebVitalsMetric['name'], 'LCP' | 'INP'>;
 
@@ -14,7 +14,7 @@ export const reportWebVitals = ({ id, name, value }: NextWebVitalsMetric): void 
 
   const rounded = Math.round(value);
 
-  ReactGA.event({
+  logEvent({
     category: 'Web Vitals',
     action: name,
     label: id,
@@ -24,7 +24,7 @@ export const reportWebVitals = ({ id, name, value }: NextWebVitalsMetric): void 
 
   const threshold = thresholds[name as VitalName];
   if (threshold !== undefined && value > threshold) {
-    ReactGA.event({
+    logEvent({
       category: 'Performance Alert',
       action: `${name} degraded`,
       label: id,

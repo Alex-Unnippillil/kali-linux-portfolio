@@ -1,41 +1,59 @@
-import ReactGA from 'react-ga4';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../utils/analytics';
 
-jest.mock('react-ga4', () => ({
-  event: jest.fn(),
-}));
-
 describe('analytics utilities', () => {
-  const mockEvent = ReactGA.event as jest.Mock;
+  const originalEnv = process.env;
+  let gtagMock: jest.Mock;
 
   beforeEach(() => {
-    mockEvent.mockReset();
+    process.env = { ...originalEnv, NEXT_PUBLIC_ENABLE_ANALYTICS: 'true' };
+    gtagMock = jest.fn();
+    window.gtag = gtagMock;
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+    delete window.gtag;
   });
 
   it('logs generic events', () => {
     const event = { category: 'test', action: 'act' } as any;
     logEvent(event);
-    expect(mockEvent).toHaveBeenCalledWith(event);
+    expect(gtagMock).toHaveBeenCalledWith(
+      'event',
+      'act',
+      expect.objectContaining({ event_category: 'test' })
+    );
   });
 
   it('logs game start', () => {
     logGameStart('chess');
-    expect(mockEvent).toHaveBeenCalledWith({ category: 'chess', action: 'start' });
+    expect(gtagMock).toHaveBeenCalledWith(
+      'event',
+      'start',
+      expect.objectContaining({ event_category: 'chess' })
+    );
   });
 
   it('logs game end with label', () => {
     logGameEnd('chess', 'win');
-    expect(mockEvent).toHaveBeenCalledWith({ category: 'chess', action: 'end', label: 'win' });
+    expect(gtagMock).toHaveBeenCalledWith(
+      'event',
+      'end',
+      expect.objectContaining({ event_category: 'chess', event_label: 'win' })
+    );
   });
 
   it('logs game error with message', () => {
     logGameError('chess', 'oops');
-    expect(mockEvent).toHaveBeenCalledWith({ category: 'chess', action: 'error', label: 'oops' });
+    expect(gtagMock).toHaveBeenCalledWith(
+      'event',
+      'error',
+      expect.objectContaining({ event_category: 'chess', event_label: 'oops' })
+    );
   });
 
-  it('handles errors from ReactGA.event without throwing', () => {
-    mockEvent.mockImplementationOnce(() => { throw new Error('fail'); });
+  it('handles errors from gtag without throwing', () => {
+    gtagMock.mockImplementationOnce(() => { throw new Error('fail'); });
     expect(() => logEvent({ category: 't', action: 'a' } as any)).not.toThrow();
   });
 });
-

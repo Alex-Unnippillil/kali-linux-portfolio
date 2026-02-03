@@ -1,6 +1,5 @@
 import { Desktop } from '../components/screen/desktop';
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 jest.mock('../components/util-components/background-image', () => () => null);
 jest.mock('../components/base/window', () => () => null);

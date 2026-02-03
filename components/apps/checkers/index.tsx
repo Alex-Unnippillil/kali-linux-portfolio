@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import ReactGA from 'react-ga4';
+import { logEvent } from '../../../utils/analytics';
 import { pointerHandlers } from '../../../utils/pointer';
 import { Move, serializePosition } from './engine';
 import {
@@ -83,10 +83,10 @@ const Checkers = () => {
 
     if (events.winner) {
       setWinner(events.winner);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: events.winner });
+      logEvent({ category: 'Checkers', action: 'game_over', label: events.winner });
     } else if (events.draw) {
       setDraw(true);
-      ReactGA.event({ category: 'Checkers', action: 'game_over', label: 'draw' });
+      logEvent({ category: 'Checkers', action: 'game_over', label: 'draw' });
     }
 
     if (events.turnEnded) {

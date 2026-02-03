@@ -86,18 +86,6 @@ const isSpeedInsightsEnabled =
 
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
-    const initAnalytics = async (): Promise<void> => {
-      const trackingId = process.env.NEXT_PUBLIC_TRACKING_ID;
-      if (trackingId) {
-        const { default: ReactGA } = await import('react-ga4');
-        ReactGA.initialize(trackingId);
-      }
-    };
-
-    void initAnalytics().catch((err) => {
-      console.error('Analytics initialization failed', err);
-    });
-
     // In dev, a previously-registered service worker (e.g. from a production run on localhost)
     // can keep serving stale cached `_next/static/*` assets, causing `ChunkLoadError`.
     // Proactively unregister + clear SW caches once per tab session.
