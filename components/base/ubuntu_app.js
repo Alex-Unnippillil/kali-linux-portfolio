@@ -125,6 +125,8 @@ export class UbuntuApp extends Component {
             ...style,
         };
 
+        const tooltip = this.props.tooltip || this.props.displayName || this.props.name;
+
         return (
             <div
                 role="button"
@@ -149,6 +151,7 @@ export class UbuntuApp extends Component {
                         this.handleActivate(event);
                     }
                 }}
+                title={tooltip}
                 style={combinedStyle}
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 outline-none rounded select-none flex flex-col justify-start items-center text-center text-white transition-colors transition-shadow duration-150 ease-out border focus-visible:ring-2 focus-visible:ring-sky-300/70 "}

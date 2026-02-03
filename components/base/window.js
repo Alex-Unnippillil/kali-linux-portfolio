@@ -271,6 +271,7 @@ export class Window extends Component {
         this._lastSafeAreaBottom = null;
         this._positionSyncFrame = null;
         this._isUnmounted = false;
+        this._hasRestoredLayout = false;
     }
 
     notifySizeChange = () => {
@@ -284,6 +285,7 @@ export class Window extends Component {
         this._isUnmounted = false;
         this.id = this.props.id;
         this.setDefaultWindowDimenstion();
+        this.restorePersistentLayout();
 
         // google analytics
         ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
@@ -617,6 +619,184 @@ export class Window extends Component {
         return { x, y };
     }
 
+    getLayoutStorageKey = () => {
+        const id = this.id ?? this.props.id;
+        if (!id) return null;
+        return `window-layout:${id}`;
+    }
+
+    readPersistentLayout = () => {
+        if (typeof window === 'undefined') return null;
+        const key = this.getLayoutStorageKey();
+        if (!key) return null;
+        try {
+            const raw = window.localStorage.getItem(key);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+            const { width, height, position, maximized, snapped, lastSize, preMaximizeBounds } = parsed;
+            const normalizedWidth = normalizePercentageDimension(width, null);
+            const normalizedHeight = normalizePercentageDimension(height, null);
+            const normalizedPosition = position && typeof position === 'object' ? {
+                x: Number.isFinite(position.x) ? position.x : null,
+                y: Number.isFinite(position.y) ? position.y : null,
+            } : null;
+            if (
+                normalizedWidth === null
+                || normalizedHeight === null
+                || !normalizedPosition
+                || normalizedPosition.x === null
+                || normalizedPosition.y === null
+            ) {
+                return null;
+            }
+            const normalizedLastSize = lastSize && typeof lastSize === 'object' ? {
+                width: normalizePercentageDimension(lastSize.width, null),
+                height: normalizePercentageDimension(lastSize.height, null),
+            } : null;
+            const normalizedPreBounds = preMaximizeBounds && typeof preMaximizeBounds === 'object' ? {
+                width: normalizePercentageDimension(preMaximizeBounds.width, null),
+                height: normalizePercentageDimension(preMaximizeBounds.height, null),
+                x: Number.isFinite(preMaximizeBounds.x) ? preMaximizeBounds.x : null,
+                y: Number.isFinite(preMaximizeBounds.y) ? preMaximizeBounds.y : null,
+            } : null;
+            return {
+                width: normalizedWidth,
+                height: normalizedHeight,
+                position: normalizedPosition,
+                maximized: Boolean(maximized),
+                snapped: typeof snapped === 'string' ? snapped : null,
+                lastSize: normalizedLastSize,
+                preMaximizeBounds: normalizedPreBounds,
+            };
+        } catch (error) {
+            return null;
+        }
+    }
+
+    persistLayout = () => {
+        if (typeof window === 'undefined') return;
+        const key = this.getLayoutStorageKey();
+        if (!key) return;
+        const node = this.getWindowNode();
+        const position = this.readStoredPosition(node);
+        const layout = {
+            width: Math.max(this.state.width, this.state.minWidth),
+            height: Math.max(this.state.height, this.state.minHeight),
+            position: {
+                x: position.x,
+                y: position.y,
+            },
+            maximized: Boolean(this.state.maximized),
+            snapped: this.state.snapped || null,
+            lastSize: this.state.lastSize || null,
+            preMaximizeBounds: this.state.preMaximizeBounds || null,
+        };
+        try {
+            window.localStorage.setItem(key, JSON.stringify(layout));
+        } catch (error) {
+            // ignore storage write errors
+        }
+    }
+
+    restorePersistentLayout = () => {
+        if (this._hasRestoredLayout) return;
+        const stored = this.readPersistentLayout();
+        if (!stored) return;
+        this._hasRestoredLayout = true;
+
+        const {
+            width,
+            height,
+            position,
+            maximized,
+            snapped,
+            lastSize,
+            preMaximizeBounds,
+        } = stored;
+
+        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
+        const topInset = measureWindowTopOffset();
+        const snapBottomInset = measureSnapBottomInset();
+        const safeAreaBottom = Math.max(0, measureSafeAreaInset('bottom'));
+        const normalizedWidth = Math.max(width, this.state.minWidth);
+        const normalizedHeight = Math.max(height, this.state.minHeight);
+        const size = {
+            width: (viewportWidth * normalizedWidth) / 100,
+            height: (viewportHeight * normalizedHeight) / 100,
+        };
+        const clampedPosition = clampWindowPositionWithinViewport(
+            { x: position.x, y: position.y },
+            size,
+            {
+                viewportWidth,
+                viewportHeight,
+                viewportLeft,
+                viewportTop,
+                topOffset: topInset,
+                bottomInset: safeAreaBottom,
+                snapBottomInset,
+            },
+        ) || { x: position.x, y: position.y };
+
+        const node = this.getWindowNode();
+        const applyPosition = (x, y) => {
+            if (!node) return;
+            this.updateTransformVariables(node, x, y);
+        };
+
+        if (maximized) {
+            const baseBounds = preMaximizeBounds && typeof preMaximizeBounds.width === 'number'
+                && typeof preMaximizeBounds.height === 'number'
+                ? preMaximizeBounds
+                : { width: normalizedWidth, height: normalizedHeight, x: clampedPosition.x, y: clampedPosition.y };
+            this.setState({
+                width: Math.max(baseBounds.width, this.state.minWidth),
+                height: Math.max(baseBounds.height, this.state.minHeight),
+                preMaximizeBounds: baseBounds,
+                maximized: false,
+                snapped: null,
+                position: { x: baseBounds.x ?? clampedPosition.x, y: baseBounds.y ?? clampedPosition.y },
+            }, () => {
+                applyPosition(baseBounds.x ?? clampedPosition.x, baseBounds.y ?? clampedPosition.y);
+                this.maximizeWindow();
+                this.persistLayout();
+            });
+            return;
+        }
+
+        if (snapped) {
+            const fallbackSize = lastSize && typeof lastSize.width === 'number' && typeof lastSize.height === 'number'
+                ? lastSize
+                : { width: normalizedWidth, height: normalizedHeight };
+            this.setState({
+                width: Math.max(fallbackSize.width, this.state.minWidth),
+                height: Math.max(fallbackSize.height, this.state.minHeight),
+                lastSize: fallbackSize,
+                maximized: false,
+                snapped: null,
+                position: { x: clampedPosition.x, y: clampedPosition.y },
+            }, () => {
+                applyPosition(clampedPosition.x, clampedPosition.y);
+                this.snapWindow(snapped);
+                this.persistLayout();
+            });
+            return;
+        }
+
+        this.setState({
+            width: normalizedWidth,
+            height: normalizedHeight,
+            maximized: false,
+            snapped: null,
+            position: { x: clampedPosition.x, y: clampedPosition.y },
+        }, () => {
+            applyPosition(clampedPosition.x, clampedPosition.y);
+            this.resizeBoundries();
+            this.notifySizeChange();
+        });
+    }
+
     resolveDragNode = (dragData) => {
         if (dragData && dragData.node) {
             return dragData.node;
@@ -868,11 +1048,13 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistLayout();
             });
         } else {
             this.setState({ snapped: null, preMaximizeBounds: null }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistLayout();
             });
         }
     }
@@ -979,6 +1161,7 @@ export class Window extends Component {
         }, () => {
             this.resizeBoundries();
             this.notifySizeChange();
+            this.persistLayout();
         });
     }
 
@@ -1183,6 +1366,9 @@ export class Window extends Component {
     }
 
     handleDragStart = (e, data) => {
+        if (e?.cancelable && (e.type === 'touchstart' || e.pointerType === 'touch')) {
+            e.preventDefault();
+        }
         this.changeCursorToMove();
         const node = this.resolveDragNode(data);
         const coordinates = this.resolveDragCoordinates(data, node);
@@ -1211,6 +1397,7 @@ export class Window extends Component {
         if (this.state.snapPreview || this.state.snapPosition) {
             this.setState({ snapPreview: null, snapPosition: null });
         }
+        this.persistLayout();
     }
 
     beginResize = (direction, event) => {
@@ -1484,6 +1671,7 @@ export class Window extends Component {
             if (didResize) {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistLayout();
             }
         });
     }
@@ -1514,6 +1702,7 @@ export class Window extends Component {
     minimizeWindow = () => {
         this.setWinowsPosition();
         this.props.hasMinimised(this.id);
+        this.persistLayout();
     }
 
     restoreWindow = () => {
@@ -1575,10 +1764,13 @@ export class Window extends Component {
             }, () => {
                 this.resizeBoundries();
                 this.notifySizeChange();
+                this.persistLayout();
             });
         } else {
             this.setDefaultWindowDimenstion();
-            this.setState({ maximized: false, preMaximizeBounds: null });
+            this.setState({ maximized: false, preMaximizeBounds: null }, () => {
+                this.persistLayout();
+            });
         }
 
         const endTransform = `translate(${clampedPosition.x}px,${clampedPosition.y}px)`;
@@ -1649,6 +1841,7 @@ export class Window extends Component {
             }
             this.setState({ maximized: true, height: heightPercent, width: 100.2, preMaximizeBounds: preBounds }, () => {
                 this.notifySizeChange();
+                this.persistLayout();
             });
         }
     }
@@ -1900,7 +2093,7 @@ export class Window extends Component {
                             this.state.closed ? 'closed-window' : '',
                             this.props.minimized ? styles.windowFrameMinimized : '',
                             this.state.grabbed ? 'opacity-70' : '',
-                            this.state.snapPreview ? 'ring-2 ring-blue-400' : '',
+                            this.state.snapPreview ? styles.windowFrameSnapReady : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
