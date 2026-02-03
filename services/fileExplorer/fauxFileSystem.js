@@ -10,11 +10,38 @@ const cloneTree = (tree) => {
   return JSON.parse(JSON.stringify(tree));
 };
 
-const buildDefaultTree = () => ({
-  id: 'root',
-  name: '/',
-  type: 'folder',
-  children: [
+const createId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `node-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const withTimestamps = (node, timestamp = Date.now()) => {
+  const next = { ...node };
+  if (!next.createdAt) next.createdAt = timestamp;
+  if (!next.modifiedAt) next.modifiedAt = next.createdAt;
+  if (next.type === 'file' && typeof next.size !== 'number') {
+    if (typeof Blob === 'function' && typeof next.content === 'string') {
+      next.size = new Blob([next.content]).size;
+    } else {
+      next.size = null;
+    }
+  }
+  if (next.type === 'folder') {
+    next.children = Array.isArray(next.children)
+      ? next.children.map((child) => withTimestamps(child, timestamp))
+      : [];
+  }
+  return next;
+};
+
+const buildDefaultTree = () =>
+  withTimestamps({
+    id: 'root',
+    name: '/',
+    type: 'folder',
+    children: [
     {
       id: 'desktop',
       name: 'Desktop',
@@ -95,7 +122,7 @@ const buildDefaultTree = () => ({
       ],
     },
   ],
-});
+  });
 
 const loadNewDesktopFolders = () => {
   if (!safeLocalStorage) return [];
@@ -144,6 +171,8 @@ const ensureDesktopFolders = (tree) => {
         name: folder.name,
         type: 'folder',
         children: [],
+        createdAt: Date.now(),
+        modifiedAt: Date.now(),
       });
       changed = true;
     }
@@ -222,6 +251,8 @@ const moveEntry = (tree, sourcePathIds, entryId, targetPathIds) => {
   }
   source.children = sourceChildren;
   target.children = targetChildren;
+  source.modifiedAt = Date.now();
+  target.modifiedAt = Date.now();
   return next;
 };
 
@@ -235,6 +266,95 @@ const updateFileContent = (tree, pathIds, fileId, content) => {
   const target = children.find((child) => child?.id === fileId && child.type === 'file');
   if (!target) return tree;
   target.content = content;
+  target.size = typeof Blob === 'function' ? new Blob([content]).size : null;
+  target.modifiedAt = Date.now();
+  return next;
+};
+
+const createEntry = (tree, pathIds, entry) => {
+  if (!entry?.name || !entry?.type) return tree;
+  const next = cloneTree(tree);
+  const nodes = findNodeByPathIds(next, pathIds);
+  const directory = nodes[nodes.length - 1];
+  if (!directory || directory.type !== 'folder') return tree;
+  const children = Array.isArray(directory.children) ? directory.children : [];
+  const now = Date.now();
+  const node = withTimestamps(
+    {
+      id: createId(),
+      name: entry.name,
+      type: entry.type,
+      content: entry.type === 'file' ? entry.content ?? '' : undefined,
+      url: entry.type === 'file' ? entry.url : undefined,
+      children: entry.type === 'folder' ? [] : undefined,
+    },
+    now,
+  );
+  children.push(node);
+  directory.children = children;
+  directory.modifiedAt = now;
+  return next;
+};
+
+const deleteEntry = (tree, pathIds, entryId) => {
+  if (!entryId) return tree;
+  const next = cloneTree(tree);
+  const nodes = findNodeByPathIds(next, pathIds);
+  const directory = nodes[nodes.length - 1];
+  if (!directory || directory.type !== 'folder') return tree;
+  const children = Array.isArray(directory.children) ? directory.children : [];
+  const nextChildren = children.filter((child) => child?.id !== entryId);
+  if (nextChildren.length === children.length) return tree;
+  directory.children = nextChildren;
+  directory.modifiedAt = Date.now();
+  return next;
+};
+
+const renameEntry = (tree, pathIds, entryId, nextName) => {
+  if (!entryId || !nextName) return tree;
+  const next = cloneTree(tree);
+  const nodes = findNodeByPathIds(next, pathIds);
+  const directory = nodes[nodes.length - 1];
+  if (!directory || directory.type !== 'folder') return tree;
+  const children = Array.isArray(directory.children) ? directory.children : [];
+  const target = children.find((child) => child?.id === entryId);
+  if (!target) return tree;
+  target.name = nextName;
+  target.modifiedAt = Date.now();
+  directory.modifiedAt = Date.now();
+  return next;
+};
+
+const cloneEntryWithNewIds = (entry, now = Date.now()) => {
+  if (!entry) return entry;
+  const next = {
+    ...entry,
+    id: createId(),
+    createdAt: now,
+    modifiedAt: now,
+  };
+  if (entry.type === 'folder') {
+    const children = Array.isArray(entry.children) ? entry.children : [];
+    next.children = children.map((child) => cloneEntryWithNewIds(child, now));
+  }
+  return next;
+};
+
+const duplicateEntry = (tree, pathIds, entryId, nextName) => {
+  if (!entryId) return tree;
+  const next = cloneTree(tree);
+  const nodes = findNodeByPathIds(next, pathIds);
+  const directory = nodes[nodes.length - 1];
+  if (!directory || directory.type !== 'folder') return tree;
+  const children = Array.isArray(directory.children) ? directory.children : [];
+  const target = children.find((child) => child?.id === entryId);
+  if (!target) return tree;
+  const now = Date.now();
+  const clone = cloneEntryWithNewIds(target, now);
+  clone.name = nextName || `${target.name} copy`;
+  children.push(clone);
+  directory.children = children;
+  directory.modifiedAt = now;
   return next;
 };
 
@@ -294,6 +414,10 @@ export {
   findNodeByPathIds,
   listDirectory,
   moveEntry,
+  createEntry,
+  deleteEntry,
+  renameEntry,
+  duplicateEntry,
   updateFileContent,
   searchFiles,
 };
