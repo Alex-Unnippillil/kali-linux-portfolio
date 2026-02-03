@@ -18,7 +18,10 @@ const DEFAULT_MAP = {
 // actions like `up`/`down`/`pause` instead of raw keyboard events. A `game`
 // identifier can be provided to scope bindings per game.
 /**
- * @typedef {{ action: string; type: string }} GameInputPayload
+ * @typedef {'up' | 'down' | 'left' | 'right' | 'action' | 'pause'} GameInputAction
+ */
+/**
+ * @typedef {{ action: GameInputAction; type: string }} GameInputPayload
  */
 /**
  * @param {{ onInput?: (event: GameInputPayload) => void; game?: string; isFocused?: boolean }} options
