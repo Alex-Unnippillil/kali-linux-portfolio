@@ -77,6 +77,13 @@
   transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 
+.windowFrameSnapReady {
+  box-shadow:
+    0 2px 8px rgba(15, 23, 42, 0.35),
+    0 0 0 2px var(--kali-blue),
+    0 0 18px var(--kali-blue-glow);
+}
+
 @supports ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
   .windowFrameActive {
     background-color: rgba(15, 23, 42, 0.72);

@@ -1005,6 +1005,7 @@ export default class Navbar extends PureComponent {
                         <button
                                 type="button"
                                 aria-label={buttonLabel}
+                                title={buttonLabel}
                                 aria-pressed={isActive}
                                 data-context="taskbar"
                                 data-app-id={app.id}
