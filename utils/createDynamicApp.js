@@ -58,7 +58,7 @@ export const createDisplay = (Component) => {
   const DynamicComponent = dynamic(() => Promise.resolve({ default: Component }), {
     ssr: false,
   });
-  const Display = (addFolder, openApp, context) => {
+  const Display = (addFolder, openApp, context, windowMeta) => {
     const extraProps =
       context && typeof context === 'object' ? context : undefined;
     return (
@@ -66,6 +66,7 @@ export const createDisplay = (Component) => {
         addFolder={addFolder}
         openApp={openApp}
         context={context}
+        windowMeta={windowMeta}
         {...(extraProps || {})}
       />
     );

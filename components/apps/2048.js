@@ -12,6 +12,8 @@ import {
 } from '../../apps/games/rng';
 import { useSettings } from '../../hooks/useSettings';
 import GameShell from '../games/GameShell';
+import useIsTouchDevice from '../../hooks/useIsTouchDevice';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
 // Basic 2048 game logic with tile merging mechanics.
 
@@ -232,7 +234,9 @@ const validateBoard = (b) =>
     (row) => Array.isArray(row) && row.length === SIZE && row.every((n) => typeof n === 'number'),
   );
 
-const Game2048 = () => {
+const Game2048 = ({ windowMeta } = {}) => {
+  const isFocused = windowMeta?.isFocused ?? true;
+  const isTouch = useIsTouchDevice();
   const isTestEnv = typeof jest !== 'undefined';
   const [seed, setSeedState] = usePersistentState('2048-seed', '', (v) => typeof v === 'string');
   const [board, setBoard] = usePersistentState('2048-board', initBoard, validateBoard);
@@ -271,6 +275,7 @@ const Game2048 = () => {
   const [glowCells, setGlowCells] = useState(new Set());
   const [milestoneValue, setMilestoneValue] = useState(0);
   const [paused, setPaused] = useState(false);
+  const focusPausedRef = useRef(false);
   const moveLock = useRef(false);
   const moveUnlockRef = useRef(null);
   const workerRef = useRef(null);
@@ -613,13 +618,20 @@ const Game2048 = () => {
     ],
   );
 
-  useGameControls(handleDirection, '2048');
+  useGameControls(handleDirection, '2048', {
+    preventDefault: true,
+    isFocused,
+  });
 
   useEffect(() => {
-    const stop = () => setDemo(false);
+    const stop = (event) => {
+      if (!shouldHandleGameKey(event, { isFocused })) return;
+      consumeGameKey(event);
+      setDemo(false);
+    };
     window.addEventListener('keydown', stop);
     return () => window.removeEventListener('keydown', stop);
-  }, []);
+  }, [isFocused]);
 
   useEffect(() => {
     if (!demo || !hint || paused) return;
@@ -640,14 +652,28 @@ const Game2048 = () => {
   }, [demo, hint, handleDirection, paused]);
 
   useEffect(() => {
+    if (!isFocused && !paused) {
+      focusPausedRef.current = true;
+      setPaused(true);
+      return;
+    }
+    if (isFocused && focusPausedRef.current) {
+      focusPausedRef.current = false;
+      setPaused(false);
+    }
+  }, [isFocused, paused]);
+
+  useEffect(() => {
     const esc = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (e.key === 'Escape') {
+        consumeGameKey(e);
         document.getElementById('close-2048')?.click();
       }
     };
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
-  }, []);
+  }, [isFocused]);
 
   const reset = useCallback(() => {
     resetRng(seed || today);
@@ -728,18 +754,19 @@ const Game2048 = () => {
 
   useEffect(() => {
     const handler = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace') {
-        e.preventDefault();
+        consumeGameKey(e);
         undo();
       }
       if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
+        consumeGameKey(e);
         reset();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, reset]);
+  }, [undo, reset, isFocused]);
 
   const sortedHistory = useMemo(
     () => [...scoreHistory].sort((a, b) => b.score - a.score),
@@ -802,6 +829,45 @@ const Game2048 = () => {
     </div>
   );
 
+  const touchControls = isTouch ? (
+    <div className="mt-3 grid w-full max-w-xs grid-cols-3 gap-2 text-lg">
+      <div />
+      <button
+        type="button"
+        onPointerDown={() => handleDirection({ x: 0, y: -1 })}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Move up"
+      >
+        ↑
+      </button>
+      <div />
+      <button
+        type="button"
+        onPointerDown={() => handleDirection({ x: -1, y: 0 })}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Move left"
+      >
+        ←
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleDirection({ x: 0, y: 1 })}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Move down"
+      >
+        ↓
+      </button>
+      <button
+        type="button"
+        onPointerDown={() => handleDirection({ x: 1, y: 0 })}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Move right"
+      >
+        →
+      </button>
+    </div>
+  ) : null;
+
   const settingsPanel = (
     <div className="flex flex-col gap-3 text-sm text-slate-100">
       <label className="flex items-center justify-between gap-3 rounded-xl border border-white/5 bg-slate-900/60 px-3 py-2">
@@ -848,13 +914,14 @@ const Game2048 = () => {
   );
 
   return (
-    <GameLayout gameId="2048" score={score} highScore={highScore}>
+    <GameLayout gameId="2048" score={score} highScore={highScore} isFocused={isFocused}>
       <GameShell
         game="2048"
         controls={controls}
         settings={settingsPanel}
         onPause={() => setPaused(true)}
         onResume={() => setPaused(false)}
+        isFocused={isFocused}
       >
         <div className="flex flex-col gap-4 text-slate-100">
           <div className={`${infoCardClass} space-y-4`} aria-live="polite" aria-atomic="true">
@@ -978,6 +1045,7 @@ const Game2048 = () => {
               )}
             </div>
             <div className="text-xs text-slate-300 sm:text-sm">{instructionsCopy}</div>
+            {touchControls}
           </div>
           {sortedHistory.length > 0 && (
             <div className={infoCardClass}>

@@ -1,6 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import useAssetLoader from '../../hooks/useAssetLoader';
 import SpeedControls from '../../games/pacman/components/SpeedControls';
+import useIsTouchDevice from '../../hooks/useIsTouchDevice';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
 /**
  * Small Pacman implementation used inside the portfolio. The goal of this
@@ -54,7 +56,9 @@ const modeSchedule = [
 const TARGET_MODE_LEVEL = 2; // level index where ghosts begin targeting
 const TUNNEL_SPEED = 0.5; // multiplier for speed inside tunnels
 
-const Pacman = () => {
+const Pacman = ({ windowMeta } = {}) => {
+  const isFocused = windowMeta?.isFocused ?? true;
+  const isTouch = useIsTouchDevice();
   const { loading, error } = useAssetLoader({
     images: ['/themes/Yaru/status/ubuntu_white_hex.svg'],
     sounds: [],
@@ -122,6 +126,7 @@ const Pacman = () => {
   const touchStartRef = useRef(null);
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
+  const focusPausedRef = useRef(false);
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
@@ -657,29 +662,37 @@ const Pacman = () => {
     if (!canvas) return;
 
     const handleKey = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       switch (e.key) {
         case 'ArrowUp':
+          consumeGameKey(e);
           pacRef.current.nextDir = { x: 0, y: -1 };
           break;
         case 'ArrowDown':
+          consumeGameKey(e);
           pacRef.current.nextDir = { x: 0, y: 1 };
           break;
         case 'ArrowLeft':
+          consumeGameKey(e);
           pacRef.current.nextDir = { x: -1, y: 0 };
           break;
         case 'ArrowRight':
+          consumeGameKey(e);
           pacRef.current.nextDir = { x: 1, y: 0 };
           break;
         case 'p':
         case 'P':
+          consumeGameKey(e);
           setPaused((p) => !p);
           break;
         case 'r':
         case 'R':
+          consumeGameKey(e);
           reset();
           break;
         case 'm':
         case 'M':
+          consumeGameKey(e);
           setSoundEnabled((s) => !s);
           break;
         default:
@@ -737,7 +750,19 @@ const Pacman = () => {
       canvas.removeEventListener('touchend', handleTouchEnd);
       if (id) cancelAnimationFrame(id);
     };
-  }, [loading, error, draw, reset, setPaused, setSoundEnabled]);
+  }, [loading, error, draw, reset, setPaused, setSoundEnabled, isFocused]);
+
+  useEffect(() => {
+    if (!isFocused && !paused) {
+      focusPausedRef.current = true;
+      setPaused(true);
+      return;
+    }
+    if (isFocused && focusPausedRef.current) {
+      focusPausedRef.current = false;
+      setPaused(false);
+    }
+  }, [isFocused, paused]);
 
 
   if (loading) {
@@ -846,6 +871,45 @@ const Pacman = () => {
           <span>P: pause</span>
         </div>
       </div>
+
+      {isTouch && (
+        <div className="mt-4 grid grid-cols-3 gap-2 text-lg">
+          <div />
+          <button
+            type="button"
+            onPointerDown={() => { pacRef.current.nextDir = { x: 0, y: -1 }; }}
+            className="h-12 w-12 rounded bg-ub-grey/80 shadow-sm transition hover:bg-ub-grey focus:outline-none focus:ring"
+            aria-label="Move up"
+          >
+            ↑
+          </button>
+          <div />
+          <button
+            type="button"
+            onPointerDown={() => { pacRef.current.nextDir = { x: -1, y: 0 }; }}
+            className="h-12 w-12 rounded bg-ub-grey/80 shadow-sm transition hover:bg-ub-grey focus:outline-none focus:ring"
+            aria-label="Move left"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onPointerDown={() => { pacRef.current.nextDir = { x: 0, y: 1 }; }}
+            className="h-12 w-12 rounded bg-ub-grey/80 shadow-sm transition hover:bg-ub-grey focus:outline-none focus:ring"
+            aria-label="Move down"
+          >
+            ↓
+          </button>
+          <button
+            type="button"
+            onPointerDown={() => { pacRef.current.nextDir = { x: 1, y: 0 }; }}
+            className="h-12 w-12 rounded bg-ub-grey/80 shadow-sm transition hover:bg-ub-grey focus:outline-none focus:ring"
+            aria-label="Move right"
+          >
+            →
+          </button>
+        </div>
+      )}
 
       <div className="mt-2 px-2 py-1 bg-ub-grey rounded">
         {modeInfo.mode.toUpperCase()} {Math.ceil(modeInfo.timer / 60)}s

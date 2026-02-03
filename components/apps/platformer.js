@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { TILE_SIZE, cameraDefaults, parseLevel, step } from '../../games/platformer/logic';
+import useIsTouchDevice from '../../hooks/useIsTouchDevice';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
 // Level definitions are data driven: edit the string arrays to tweak layouts or add more.
 // Each row must share the same width. Tokens: # solid, . empty, S spawn, G goal, ^ spikes, C coin, M moving platform.
@@ -86,12 +88,15 @@ function formatTime(seconds) {
   return `${mins}:${secs}.${ms}`;
 }
 
-export default function PlatformerApp() {
+export default function PlatformerApp({ windowMeta } = {}) {
+  const isFocused = windowMeta?.isFocused ?? true;
+  const isTouch = useIsTouchDevice();
   const canvasRef = useRef(null);
   const requestRef = useRef(null);
   const lastTimeRef = useRef(0);
   const accumulatorRef = useRef(0);
   const pausedRef = useRef(false);
+  const focusPausedRef = useRef(false);
   const reduceMotionRef = useRef(false);
   const inputRef = useRef({ left: false, right: false, jumpHeld: false, jumpPressed: false, jumpReleased: false });
   const prevSnapshotRef = useRef(null);
@@ -144,18 +149,27 @@ export default function PlatformerApp() {
     window.addEventListener('resize', handleResize);
 
     const handleKeyDown = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (e.repeat) return;
       if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = true;
       if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = true;
       if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+        consumeGameKey(e);
         if (!inputRef.current.jumpHeld) inputRef.current.jumpPressed = true;
         inputRef.current.jumpHeld = true;
       }
-      if (e.code === 'KeyR') restartLevel();
-      if (e.code === 'KeyP' || e.code === 'Escape') togglePause();
+      if (e.code === 'KeyR') {
+        consumeGameKey(e);
+        restartLevel();
+      }
+      if (e.code === 'KeyP' || e.code === 'Escape') {
+        consumeGameKey(e);
+        togglePause();
+      }
     };
 
     const handleKeyUp = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
       if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = false;
       if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = false;
       if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
@@ -210,7 +224,7 @@ export default function PlatformerApp() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResize);
     };
-  }, [resizeCanvas]);
+  }, [resizeCanvas, isFocused]);
 
   const snapshot = (state) => ({
     player: { ...state.player },
@@ -358,6 +372,31 @@ export default function PlatformerApp() {
     setUi((prev) => ({ ...prev, paused: pausedRef.current }));
   };
 
+  useEffect(() => {
+    if (!isFocused && !pausedRef.current) {
+      focusPausedRef.current = true;
+      pausedRef.current = true;
+      setUi((prev) => ({ ...prev, paused: true }));
+      return;
+    }
+    if (isFocused && focusPausedRef.current) {
+      focusPausedRef.current = false;
+      pausedRef.current = false;
+      setUi((prev) => ({ ...prev, paused: false }));
+    }
+  }, [isFocused]);
+
+  const handleJumpTap = () => {
+    if (pausedRef.current) return;
+    inputRef.current.jumpPressed = true;
+    inputRef.current.jumpHeld = true;
+  };
+
+  const handleJumpRelease = () => {
+    inputRef.current.jumpHeld = false;
+    inputRef.current.jumpReleased = true;
+  };
+
   return (
     <div className="relative w-full h-full flex flex-col bg-slate-950 text-slate-100">
       <div className="flex items-center gap-3 px-3 py-2 text-xs bg-slate-900 border-b border-slate-800">
@@ -403,12 +442,55 @@ export default function PlatformerApp() {
             ref={canvasRef}
             className="w-full h-full rounded select-none"
             style={{ imageRendering: 'pixelated' }}
+            onPointerDown={isTouch ? handleJumpTap : undefined}
+            onPointerUp={isTouch ? handleJumpRelease : undefined}
+            onPointerCancel={isTouch ? handleJumpRelease : undefined}
           />
           <div className="absolute bottom-2 left-2 text-[10px] text-slate-300 bg-slate-900/70 px-2 py-1 rounded">
             Controls: ←/A + →/D to move • Space/W/↑ to jump • R restart • P/Esc pause
           </div>
         </div>
       </div>
+      {isTouch && (
+        <div className="mb-4 flex flex-col items-center gap-3">
+          <div className="grid grid-cols-3 gap-2 text-lg">
+            <div />
+            <button
+              type="button"
+              onPointerDown={handleJumpTap}
+              onPointerUp={handleJumpRelease}
+              onPointerCancel={handleJumpRelease}
+              className="h-12 w-12 rounded bg-slate-800 shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring"
+              aria-label="Jump"
+            >
+              ⤒
+            </button>
+            <div />
+            <button
+              type="button"
+              onPointerDown={() => { inputRef.current.left = true; }}
+              onPointerUp={() => { inputRef.current.left = false; }}
+              onPointerCancel={() => { inputRef.current.left = false; }}
+              className="h-12 w-12 rounded bg-slate-800 shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring"
+              aria-label="Move left"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              onPointerDown={() => { inputRef.current.right = true; }}
+              onPointerUp={() => { inputRef.current.right = false; }}
+              onPointerCancel={() => { inputRef.current.right = false; }}
+              className="h-12 w-12 rounded bg-slate-800 shadow-sm transition hover:bg-slate-700 focus:outline-none focus:ring"
+              aria-label="Move right"
+            >
+              →
+            </button>
+            <div />
+          </div>
+          <div className="text-xs text-slate-400">Tap the canvas or use the jump button to hop.</div>
+        </div>
+      )}
     </div>
   );
 }
