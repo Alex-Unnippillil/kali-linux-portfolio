@@ -17,6 +17,12 @@ const DEFAULT_MAP = {
 // Keyboard input handler that respects user remapping. It emits high level
 // actions like `up`/`down`/`pause` instead of raw keyboard events. A `game`
 // identifier can be provided to scope bindings per game.
+/**
+ * @typedef {{ action: string; type: string }} GameInputPayload
+ */
+/**
+ * @param {{ onInput?: (event: GameInputPayload) => void; game?: string; isFocused?: boolean }} options
+ */
 export default function useGameInput({ onInput, game, isFocused = true } = {}) {
   const mapRef = useRef(DEFAULT_MAP);
 
@@ -49,5 +55,5 @@ export default function useGameInput({ onInput, game, isFocused = true } = {}) {
       window.removeEventListener('keydown', handle);
       window.removeEventListener('keyup', handle);
     };
-  }, [onInput]);
+  }, [onInput, isFocused]);
 }
