@@ -213,6 +213,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     let terminalInstance: any = null;
     let resizeHandler: (() => void) | null = null;
     let contextMenuHandler: ((event: MouseEvent) => void) | null = null;
+    let focusHandler: (() => void) | null = null;
+    let keyStopHandler: ((event: KeyboardEvent) => void) | null = null;
 
     const init = async () => {
       if (!containerRef.current) return;
@@ -238,6 +240,7 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         fontWeight: '500',
         fontFamily: '"Fira Code", monospace',
         allowProposedApi: true,
+        disableStdin: false,
         theme: {
           background: '#0a0a0a',
           foreground: '#ffffff', // High Contrast
@@ -268,6 +271,7 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
 
       term.open(containerRef.current);
       fit.fit();
+      term.focus();
 
       termRef.current = term;
       fitRef.current = fit;
@@ -300,10 +304,12 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       // Pass terminal for scrollback config
       sessionRef.current.setTerminal(term);
 
+      const handleTerminalInput = (data: string) => {
+        sessionRef.current?.handleInput(data);
+      };
+
       // Bind Input
-      term.onData((data: string) => {
-        sessionRef.current.handleInput(data);
-      });
+      term.onData(handleTerminalInput);
 
       term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
         if (event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
@@ -322,6 +328,11 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         return true;
       });
 
+      focusHandler = () => {
+        term.focus();
+      };
+      keyStopHandler = (event: KeyboardEvent) => event.stopPropagation();
+
       contextMenuHandler = (event: MouseEvent) => {
         event.preventDefault();
         const selection = term.getSelection();
@@ -330,6 +341,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         }
       };
       containerRef.current?.addEventListener('contextmenu', contextMenuHandler);
+      containerRef.current?.addEventListener('pointerdown', focusHandler, true);
+      term.element?.addEventListener('keydown', keyStopHandler);
 
       // Handle Resize
       resizeHandler = () => fit.fit();
@@ -389,6 +402,12 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       }
       if (contextMenuHandler && containerRef.current) {
         containerRef.current.removeEventListener('contextmenu', contextMenuHandler);
+      }
+      if (focusHandler && containerRef.current) {
+        containerRef.current.removeEventListener('pointerdown', focusHandler, true);
+      }
+      if (keyStopHandler && terminalInstance?.element) {
+        terminalInstance.element.removeEventListener('keydown', keyStopHandler);
       }
       termRef.current = null;
     };
