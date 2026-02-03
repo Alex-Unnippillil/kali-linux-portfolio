@@ -3,7 +3,7 @@
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
 import Settings from '../apps/settings';
-import ReactGA from 'react-ga4';
+import { logPageView } from '../../utils/analytics';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -287,8 +287,7 @@ export class Window extends Component {
         this.setDefaultWindowDimenstion();
         this.restorePersistentLayout();
 
-        // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${this.id}`, title: "Custom Title" });
+        logPageView(`/${this.id}`, 'Custom Title');
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
@@ -368,7 +367,7 @@ export class Window extends Component {
 
     componentWillUnmount() {
         this._isUnmounted = true;
-        ReactGA.send({ hitType: "pageview", page: "/desktop", title: "Custom Title" });
+        logPageView('/desktop', 'Custom Title');
 
         window.removeEventListener('resize', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);

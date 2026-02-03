@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import ReactGA from 'react-ga4';
+import { logEvent } from '../../utils/analytics';
 import { vibrate } from './Games/common/haptics';
 import {
   generateLaneConfig,
@@ -360,7 +360,7 @@ const Frogger = () => {
   }, [moveFrog]);
 
   useEffect(() => {
-    ReactGA.event({ category: 'Frogger', action: 'level_start', value: 1 });
+    logEvent({ category: 'Frogger', action: 'level_start', value: 1 });
   }, []);
 
   const reset = useCallback(
@@ -384,7 +384,7 @@ const Frogger = () => {
         setSkin(getRandomSkin(colorMode));
         nextLife.current = 500;
         deathStreakRef.current = 0;
-        ReactGA.event({
+        logEvent({
           category: 'Frogger',
           action: 'level_start',
           value: 1,
@@ -405,7 +405,7 @@ const Frogger = () => {
       }
       deathStreakRef.current += 1;
       if (deathStreakRef.current >= 2) safeFlashRef.current = 2;
-      ReactGA.event({ category: 'Frogger', action: 'death', value: level });
+      logEvent({ category: 'Frogger', action: 'death', value: level });
       playTone(220, 0.2);
       setLives((l) => {
         const newLives = l - 1;
@@ -805,14 +805,14 @@ const Frogger = () => {
           setStatus('Level Complete!');
           setScore((s) => s + 100);
           playTone(880, 0.2);
-          ReactGA.event({
+          logEvent({
             category: 'Frogger',
             action: 'level_complete',
             value: level,
           });
           const newLevel = level + 1;
           setLevel(newLevel);
-          ReactGA.event({
+          logEvent({
             category: 'Frogger',
             action: 'level_start',
             value: newLevel,

@@ -2,7 +2,6 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import Window from '../components/base/window';
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('react-draggable', () => ({
   __esModule: true,
   default: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

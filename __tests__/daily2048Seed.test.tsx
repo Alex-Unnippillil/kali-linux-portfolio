@@ -2,7 +2,6 @@ import { render, waitFor } from '@testing-library/react';
 import Page2048 from '../apps/2048';
 import { getDailySeed } from '../utils/dailySeed';
 
-jest.mock('react-ga4', () => ({ event: jest.fn() }));
 jest.mock('../utils/dailySeed');
 
 test('daily seed produces identical starting boards', async () => {

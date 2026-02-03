@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import Head from 'next/head';
-import ReactGA from 'react-ga4';
+import { logEvent, logPageView } from '../../../utils/analytics';
 import Certs from '../certs';
 import data from '../alex/data.json';
 import SafetyNote from './SafetyNote';
@@ -61,7 +61,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
     const screen = e.id || e.target.id;
     if (screen === this.state.active_screen) return;
     localStorage.setItem('about-section', screen);
-    ReactGA.send({ hitType: 'pageview', page: `/${screen}`, title: 'Custom Title' });
+    logPageView(`/${screen}`, 'Custom Title');
     this.setState({ screen: this.screens[screen], active_screen: screen });
   };
 
@@ -515,7 +515,7 @@ function Projects({ projects }: { projects: any[] }) {
 
 function Resume() {
   const handleDownload = () => {
-    ReactGA.event({ category: 'resume', action: 'download' });
+    logEvent({ category: 'resume', action: 'download' });
   };
 
   const shareContact = async () => {

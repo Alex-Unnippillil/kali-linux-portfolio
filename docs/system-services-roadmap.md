@@ -8,7 +8,7 @@ This document establishes a shared roadmap for the desktop shell services that p
 - Hosts the top-level desktop lifecycle (boot, lock, shutdown) and orchestrates screens rendered within `Layout`.
 - Reads and writes persisted UI state through `safeLocalStorage` (background image, boot seen flag, lock/shutdown status) to deliver user continuity while remaining SSR-safe.
 - Drives boot sequencing with `waitForBootSequence`, combining `window.load` and a timeout fallback to ensure the boot screen clears even when `load` is delayed.
-- Emits screen change analytics via `ReactGA.send` and `ReactGA.event`, keeping navigation events consistent for dashboards and simulations.
+- Emits screen change analytics via `utils/analytics.ts` helpers, keeping navigation events consistent for dashboards and simulations.
 - Exposes actions (`lockScreen`, `unLockScreen`, `shutDown`, `turnOn`, `changeBackgroundImage`) consumed by child components, centralizing side effects such as DOM focus management and persistence.
 
 ### `components/base/ubuntu_app.js`
@@ -18,7 +18,7 @@ This document establishes a shared roadmap for the desktop shell services that p
 - Normalizes UI state (hover, selection, accent variables) and hints for assistive tech, guaranteeing consistency across all desktop apps.
 
 ### Supporting Utilities
-- **Analytics (`utils/analytics.ts`)** – Wraps GA4 calls with try/catch to fail safely and provides semantic helpers (`logGameStart`, `logGameEnd`, etc.) for apps to emit consistent events.
+- **Analytics (`utils/analytics.ts`)** – Dispatches events to `window.gtag` when available, uses try/catch to fail safely, and provides semantic helpers (`logGameStart`, `logGameEnd`, etc.) for apps to emit consistent events.
 - **Storage (`utils/safeStorage.ts`)** – Exposes `safeLocalStorage`, which guards direct `localStorage` access when the API is unavailable (SSR, privacy mode). Desktop services should always interact through this shim.
 - **Boot sequencing** – Implemented in `components/ubuntu.js` via requestAnimationFrame/timeout mix. Future features should reuse the same sequencing hooks to avoid reintroducing race conditions.
 
@@ -34,7 +34,7 @@ This document establishes a shared roadmap for the desktop shell services that p
 ## Data Flow & Extension Guidelines
 
 - **Persistence**: Maintain all desktop-level settings through `safeLocalStorage`. New keys must include a version prefix (e.g., `v2:session:active`) and feature-flag guards to support migrations.
-- **Analytics**: Emit screen and service events through `ReactGA` helpers. Add new semantic wrappers in `utils/analytics.ts` instead of inline GA calls to keep typings centralized. All analytics additions require accompanying unit tests that validate the wrapper usage.
+- **Analytics**: Emit screen and service events through `utils/analytics.ts` helpers. Add new semantic wrappers in `utils/analytics.ts` instead of inline calls to keep typings centralized. All analytics additions require accompanying unit tests that validate the wrapper usage.
 - **Mock services**: Background features should rely on in-repo mock modules (e.g., `utils/moduleStore.ts`, `utils/pubsub.ts`) rather than network calls. When creating a new mock service, provide TypeScript types and a Jest suite covering success, timeout, and failure paths.
 - **Feature flags**: Gate experimental services behind `utils/feature.ts` toggles or environment variables defined in `.env.local.example`. Document each flag in this roadmap and in the README when promoted to stable.
 - **Testing**: Extend Jest coverage around new data flows and, where applicable, add Playwright smoke checks that exercise state persistence. Regression tests should cover serialization/deserialization of stored state and analytics emission under both enabled/disabled flag conditions.

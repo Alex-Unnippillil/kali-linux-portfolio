@@ -2,7 +2,6 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import ProjectGallery from '../components/apps/project-gallery';
 
-jest.mock('react-ga4', () => ({ event: jest.fn() }));
 jest.mock('@monaco-editor/react', () => function MonacoEditorMock() {
   return <div />;
 });

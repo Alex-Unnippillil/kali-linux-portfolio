@@ -10692,13 +10692,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-ga4@npm:^2.1.0":
-  version: 2.1.0
-  resolution: "react-ga4@npm:2.1.0"
-  checksum: 10c0/314aa86dd7cb868535f26bfb8b537d3b3c20649c66b2b942fba72e081295441446932a4ae96499231c8a4836ab0a222a97b1bd03633b8cc1477991efe93444cd
-  languageName: node
-  linkType: hard
-
 "react-is@npm:^16.13.1":
   version: 16.13.1
   resolution: "react-is@npm:16.13.1"
@@ -12583,7 +12576,6 @@ __metadata:
     react-dom: "npm:19.2.3"
     react-draggable: "npm:^4.4.5"
     react-force-graph: "npm:^1.45.0"
-    react-ga4: "npm:^2.1.0"
     react-virtualized-auto-sizer: "npm:^1.0.26"
     react-window: "npm:^2.0.2"
     rrule: "npm:2.7.2"

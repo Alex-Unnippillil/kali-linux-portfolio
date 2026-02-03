@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
-import ReactGA from 'react-ga4';
+import { logEvent, logPageView } from '../../utils/analytics';
 import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
@@ -46,8 +46,7 @@ export class AboutAlex extends Component {
         // store this state
         localStorage.setItem("about-section", screenId);
 
-        // google analytics
-        ReactGA.send({ hitType: "pageview", page: `/${screenId}`, title: "Custom Title" });
+        logPageView(`/${screenId}`, 'Custom Title');
 
 
         this.setState({
@@ -459,7 +458,7 @@ function Resume({ data: resume }) {
     const [liveMessage, setLiveMessage] = React.useState('');
 
     const handleDownload = () => {
-        ReactGA.event({ category: 'resume', action: 'download' });
+        logEvent({ category: 'resume', action: 'download' });
         window.print();
     };
 

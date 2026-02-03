@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import ReactGA from 'react-ga4';
+import { logEvent } from '../../../utils/analytics';
 import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import {
   initializeGame,
@@ -409,7 +409,7 @@ const Solitaire = () => {
   useEffect(() => {
     if (game.foundations.every((p) => p.length === 13)) {
       setWon(true);
-      ReactGA.event({ category: 'Solitaire', action: 'win' });
+      logEvent({ category: 'Solitaire', action: 'win' });
     }
   }, [game]);
 
@@ -482,7 +482,7 @@ const Solitaire = () => {
   const draw = () => {
     const changed = applyMove((g) => drawFromStock(g));
     if (changed) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'draw' });
+      logEvent({ category: 'Solitaire', action: 'move', label: 'draw' });
       setAriaMessage('Drew cards from stock');
     } else if (!game.stock.length && game.redeals === 0) {
       setAriaMessage('No redeals remaining');
@@ -702,7 +702,7 @@ const Solitaire = () => {
       moved = applyMove((g) => moveWasteToTableau(g, pileIndex));
     }
     if (moved) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'tableau' });
+      logEvent({ category: 'Solitaire', action: 'move', label: 'tableau' });
       setAriaMessage('Moved cards to tableau');
     }
     finishDrag();
@@ -715,7 +715,7 @@ const Solitaire = () => {
       const next = moveToFoundation(current, 'tableau', drag.pile);
       if (next !== current) {
         recordManualMove(current);
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        logEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
         flyMove(current, next, 'tableau', drag.pile, () =>
           setAriaMessage('Moved card to foundation'),
         );
@@ -725,7 +725,7 @@ const Solitaire = () => {
       const next = moveToFoundation(current, 'waste', null);
       if (next !== current) {
         recordManualMove(current);
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'foundation' });
+        logEvent({ category: 'Solitaire', action: 'move', label: 'foundation' });
         flyMove(current, next, 'waste', null, () =>
           setAriaMessage('Moved card to foundation'),
         );
@@ -742,7 +742,7 @@ const Solitaire = () => {
       source === 'tableau' ? pile : null,
     );
     if (next !== current) {
-      ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+      logEvent({ category: 'Solitaire', action: 'move', label: 'auto' });
       recordManualMove(current);
       flyMove(
         current,
@@ -791,7 +791,7 @@ const Solitaire = () => {
       for (let i = 0; i < game.tableau.length; i += 1) {
         const moved = applyMove((state) => moveWasteToTableau(state, i));
         if (moved) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'keyboard' });
+          logEvent({ category: 'Solitaire', action: 'move', label: 'keyboard' });
           setAriaMessage('Moved waste card to tableau');
           return;
         }
@@ -829,7 +829,7 @@ const Solitaire = () => {
             return moveTableauToTableau(state, pileIndex, length - 1, i);
           });
           if (moved) {
-            ReactGA.event({ category: 'Solitaire', action: 'move', label: 'keyboard' });
+            logEvent({ category: 'Solitaire', action: 'move', label: 'keyboard' });
             setAriaMessage('Moved tableau card to another pile');
             return;
           }
@@ -859,7 +859,7 @@ const Solitaire = () => {
     (g: GameState) => {
       let next = moveToFoundation(g, 'waste', null);
       if (next !== g) {
-        ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+        logEvent({ category: 'Solitaire', action: 'move', label: 'auto' });
         recordManualMove(g);
         flyMove(g, next, 'waste', null, () => autoCompleteNext(next));
         return;
@@ -867,7 +867,7 @@ const Solitaire = () => {
       for (let i = 0; i < g.tableau.length; i += 1) {
         next = moveToFoundation(g, 'tableau', i);
         if (next !== g) {
-          ReactGA.event({ category: 'Solitaire', action: 'move', label: 'auto' });
+          logEvent({ category: 'Solitaire', action: 'move', label: 'auto' });
           recordManualMove(g);
           flyMove(g, next, 'tableau', i, () => autoCompleteNext(next));
           return;
@@ -1076,7 +1076,7 @@ const Solitaire = () => {
               value={variant}
               onChange={(e) => {
                 const v = e.target.value as Variant;
-                ReactGA.event({ category: 'Solitaire', action: 'variant_select', label: v });
+                logEvent({ category: 'Solitaire', action: 'variant_select', label: v });
                 setVariant(v);
               }}
             >
@@ -1131,7 +1131,7 @@ const Solitaire = () => {
               className={controlButtonClasses}
               onClick={() => {
                 const mode = drawMode === 1 ? 3 : 1;
-                ReactGA.event({
+                logEvent({
                   category: 'Solitaire',
                   action: 'variant_select',
                   label: mode === 1 ? 'draw1' : 'draw3',
@@ -1148,7 +1148,7 @@ const Solitaire = () => {
               onClick={() => {
                 const opts = [3, 1, Infinity];
                 const next = opts[(opts.indexOf(passLimit) + 1) % opts.length];
-                ReactGA.event({
+                logEvent({
                   category: 'Solitaire',
                   action: 'variant_select',
                   label: `passes_${next === Infinity ? 'unlimited' : next}`,

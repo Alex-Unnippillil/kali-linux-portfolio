@@ -14,7 +14,6 @@ jest.mock('next/image', () => {
   };
 });
 
-jest.mock('react-ga4', () => ({ send: jest.fn(), event: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn().mockResolvedValue('data:image/png;base64,') }));
 function createMockComponent(testId: string, displayName: string) {
   function MockComponent() {

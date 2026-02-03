@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ReactGA from 'react-ga4';
+import { logEvent } from '../../utils/analytics';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { getDailySeed } from '../../utils/dailySeed';
 
@@ -223,7 +223,7 @@ const Page2048 = () => {
       const spawn = addRandomTile(moved, rngRef.current);
       const newHighest = checkHighest(moved);
       if ((newHighest === 2048 || newHighest === 4096) && newHighest > highest) {
-        ReactGA.event('post_score', { score: newHighest, board: boardType });
+        logEvent({ category: '2048', action: 'post_score', value: newHighest, label: boardType });
       }
       setHighest(newHighest);
       setBoard(moved);
@@ -523,4 +523,3 @@ const Page2048 = () => {
 };
 
 export default Page2048;
-
