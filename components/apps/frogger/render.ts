@@ -22,6 +22,57 @@ const withAlpha = (hex: string, alpha: number) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
+const hashNoise = (x: number, y: number, seed: number) => {
+  const v = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+  return v - Math.floor(v);
+};
+
+const drawTextureDots = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  alpha: number,
+  density: number,
+  seed: number,
+) => {
+  ctx.save();
+  ctx.fillStyle = withAlpha(color, alpha);
+  const step = Math.max(2, Math.floor(8 / density));
+  for (let yy = y; yy < y + height; yy += step) {
+    for (let xx = x; xx < x + width; xx += step) {
+      if (hashNoise(xx, yy, seed) > 0.82) {
+        ctx.fillRect(xx, yy, 1.5, 1.5);
+      }
+    }
+  }
+  ctx.restore();
+};
+
+const drawDiagonalHatch = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  alpha: number,
+  spacing = 10,
+) => {
+  ctx.save();
+  ctx.strokeStyle = withAlpha(color, alpha);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = -height; i < width; i += spacing) {
+    ctx.moveTo(x + i, y + height);
+    ctx.lineTo(x + i + height, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+};
+
 export interface FroggerRenderState {
   frog: FrogPosition;
   cars: LaneState[];
@@ -115,6 +166,16 @@ export const renderFroggerFrame = (
       ctx.fillRect(0, top, widthPx, CELL_SIZE);
       ctx.fillStyle = withAlpha(grassGlow, 0.12 + sparkle * 0.08);
       ctx.fillRect(0, top + CELL_SIZE * 0.18, widthPx, CELL_SIZE * 0.15);
+      drawDiagonalHatch(
+        ctx,
+        0,
+        top,
+        widthPx,
+        CELL_SIZE,
+        grassHighlight,
+        0.08,
+        12,
+      );
       ctx.fillStyle = withAlpha(hudAccent, 0.08 + effects.safeFlash * 0.1);
       ctx.fillRect(0, top, widthPx, 3);
       ctx.fillRect(0, top + CELL_SIZE - 3, widthPx, 3);
@@ -135,6 +196,7 @@ export const renderFroggerFrame = (
       ctx.fillStyle = withAlpha(laneEdge, 0.25);
       ctx.fillRect(0, top + CELL_SIZE * 0.2, widthPx, 1);
       ctx.fillRect(0, top + CELL_SIZE * 0.8, widthPx, 1);
+      drawTextureDots(ctx, 0, top, widthPx, CELL_SIZE, laneEdge, 0.18, 0.6, y);
       ctx.fillStyle = withAlpha(laneStripe, 0.55 + sparkle * 0.25);
       ctx.fillRect(0, top + CELL_SIZE / 2 - 1, widthPx, 2);
       ctx.fillStyle = withAlpha(laneEdge, 0.35);
@@ -153,6 +215,17 @@ export const renderFroggerFrame = (
       ctx.fillStyle = withAlpha(waterHighlight, 0.08 + sparkle * 0.06);
       ctx.fillRect(0, top + CELL_SIZE * 0.15, widthPx, 1);
       ctx.fillRect(0, top + CELL_SIZE * 0.78, widthPx, 1);
+      drawTextureDots(
+        ctx,
+        0,
+        top,
+        widthPx,
+        CELL_SIZE,
+        waterHighlight,
+        0.12,
+        0.5,
+        y + 12,
+      );
       if (!reduceMotion) {
         ctx.save();
         ctx.globalAlpha = 0.4;
@@ -194,6 +267,11 @@ export const renderFroggerFrame = (
     ctx.beginPath();
     ctx.arc(0, 0, CELL_SIZE * 0.45, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = withAlpha(padHighlight, 0.35);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, CELL_SIZE * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.lineWidth = 2;
     ctx.strokeStyle = withAlpha(padShadow, 0.4);
     ctx.beginPath();
@@ -221,9 +299,15 @@ export const renderFroggerFrame = (
       gradient.addColorStop(1, logShadow);
       ctx.fillStyle = gradient;
       ctx.fillRect(x, y, width, CELL_SIZE);
+      drawDiagonalHatch(ctx, x, y + 2, width, CELL_SIZE - 4, logShadow, 0.08, 8);
       ctx.fillStyle = withAlpha(logShadow, 0.35);
       ctx.fillRect(x, y + CELL_SIZE * 0.3, width, 2);
       ctx.fillRect(x, y + CELL_SIZE * 0.7, width, 2);
+      ctx.fillStyle = withAlpha(logShadow, 0.35);
+      ctx.beginPath();
+      ctx.arc(x + 4, y + CELL_SIZE / 2, CELL_SIZE * 0.18, 0, Math.PI * 2);
+      ctx.arc(x + width - 4, y + CELL_SIZE / 2, CELL_SIZE * 0.18, 0, Math.PI * 2);
+      ctx.fill();
       const reflectionTop = y + CELL_SIZE;
       if (reflectionTop < heightPx) {
         const reflectionGradient = ctx.createLinearGradient(
