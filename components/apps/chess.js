@@ -1665,9 +1665,18 @@ const ChessGame = () => {
           } else {
             const move = moves.find((m) => m.toSq === sqIndex);
             if (move) {
-              ctx.strokeStyle = "rgba(102, 204, 255, 0.7)";
-              ctx.lineWidth = 2;
-              ctx.strokeRect(x + 4, y + 4, sq - 8, sq - 8);
+              if (move.isCapture) {
+                ctx.strokeStyle = "rgba(239, 68, 68, 0.75)";
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(x + sq / 2, y + sq / 2, sq * 0.32, 0, Math.PI * 2);
+                ctx.stroke();
+              } else {
+                ctx.fillStyle = "rgba(102, 204, 255, 0.7)";
+                ctx.beginPath();
+                ctx.arc(x + sq / 2, y + sq / 2, sq * 0.16, 0, Math.PI * 2);
+                ctx.fill();
+              }
             }
           }
 
@@ -1900,6 +1909,8 @@ const ChessGame = () => {
           ...m,
           fromSq: algToSq(m.from),
           toSq: algToSq(m.to),
+          isCapture:
+            Boolean(m.captured) || (typeof m.flags === "string" && m.flags.includes("e")),
         }))
         .filter((m) => m.fromSq !== null && m.toSq !== null);
       setMoves(legals);
