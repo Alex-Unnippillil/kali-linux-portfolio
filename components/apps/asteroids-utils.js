@@ -1,6 +1,8 @@
-import { POWER_UPS } from '../../games/asteroids/powerups';
-
-export { POWER_UPS };
+export const POWER_UPS = {
+  SHIELD: 'shield',
+  RAPID_FIRE: 'rapid-fire',
+  EXTRA_LIFE: 'extra-life',
+};
 
 export function wrap(value, max, margin = 0) {
   const range = max + margin * 2;
@@ -75,7 +77,7 @@ export function createGA(handler) {
 export function spawnPowerUp(list, x, y, rng = Math.random) {
   const types = Object.values(POWER_UPS);
   const type = types[Math.floor(rng() * types.length)];
-  list.push({ type, x, y, r: 12, life: 600 });
+  list.push({ type, x, y, px: x, py: y, r: 12, life: 600 });
 }
 
 export function applyPowerUp(powerUp, ship, lives, shieldDuration = 600, rapidFireDuration = 600) {
@@ -207,6 +209,9 @@ export function sweptCircleCircleTorus(a, b, worldW, worldH) {
     x: torusDelta(a.px ?? a.x, b.px ?? b.x, worldW),
     y: torusDelta(a.py ?? a.y, b.py ?? b.y, worldH),
   };
+  if (Math.hypot(r0.x, r0.y) <= rSum) {
+    return { hit: true, t: 0 };
+  }
   const nextDx = torusDelta(a.x, b.x, worldW);
   const nextDy = torusDelta(a.y, b.y, worldH);
   const r1 = {
