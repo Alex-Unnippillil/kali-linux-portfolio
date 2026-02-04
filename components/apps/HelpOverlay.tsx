@@ -195,7 +195,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   "candy-crush": {
     objective: "Match three gems to clear them.",
     controls:
-      "Swap adjacent gems by dragging or clicking. Use the overlay to pause or mute, H for hint, 1 for Shuffle, and 2 for Color Bomb.",
+      "Swap adjacent gems by dragging, tapping, or swiping. Use the overlay to pause or mute, H for hint, 1 for Shuffle, and 2 for Color Bomb.",
   },
   gomoku: {
     objective: "Get five stones in a row before your opponent.",

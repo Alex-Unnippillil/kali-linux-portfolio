@@ -30,7 +30,9 @@ import {
 import usePersistentState from '../../hooks/usePersistentState';
 import { getAudioContext } from '../../utils/audio';
 
-const cellSize = 48;
+const DEFAULT_CELL_SIZE = 48;
+const MIN_CELL_SIZE = 34;
+const MAX_CELL_SIZE = 56;
 const gridGap = 8;
 const MOVES_PER_LEVEL = 24;
 
@@ -460,11 +462,16 @@ interface CandyGridProps {
   reducedMotion: boolean;
   isInteractionDisabled: boolean;
   gridStyle: React.CSSProperties;
+  cellSize: number;
+  containerRef: React.RefObject<HTMLDivElement>;
   gridCellRefs: React.MutableRefObject<Array<HTMLButtonElement | null>>;
   onFocusCell: (index: number) => void;
   onDragStart: (index: number, event: React.DragEvent<HTMLButtonElement>) => void;
   onDrop: (index: number) => void;
   onDragEnd: () => void;
+  onPointerDown: (index: number, event: React.PointerEvent<HTMLButtonElement>) => void;
+  onPointerMove: (event: React.PointerEvent<HTMLButtonElement>) => void;
+  onPointerUp: (event: React.PointerEvent<HTMLButtonElement>) => void;
   onClickCell: (index: number) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => void;
   comboBanner: ComboBanner | null;
@@ -482,18 +489,26 @@ const CandyGrid = React.memo(
     reducedMotion,
     isInteractionDisabled,
     gridStyle,
+    cellSize,
+    containerRef,
     gridCellRefs,
     onFocusCell,
     onDragStart,
     onDrop,
     onDragEnd,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp,
     onClickCell,
     onKeyDown,
     comboBanner,
     particleBursts,
   }: CandyGridProps) => (
     <div className="flex flex-1 flex-col items-center gap-4">
-      <div className="relative rounded-3xl border border-cyan-500/20 bg-slate-950/60 p-4 shadow-[0_0_40px_rgba(8,145,178,0.35)] backdrop-blur-lg">
+      <div
+        ref={containerRef}
+        className="relative rounded-3xl border border-cyan-500/20 bg-slate-950/60 p-4 shadow-[0_0_40px_rgba(8,145,178,0.35)] backdrop-blur-lg"
+      >
         <LayoutGroup>
           <div className="relative">
             <div
@@ -533,6 +548,10 @@ const CandyGrid = React.memo(
                       onDrop(index);
                     }}
                     onDragEnd={onDragEnd}
+                    onPointerDown={(event) => onPointerDown(index, event)}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                    onPointerCancel={onPointerUp}
                     onClick={() => onClickCell(index)}
                     aria-label={`${gem.label} gem at row ${row}, column ${col}`}
                     whileHover={{ scale: isInteractionDisabled || reducedMotion ? 1 : 1.05 }}
@@ -611,12 +630,12 @@ const CandyGrid = React.memo(
       </div>
       <p id="candy-crush-instructions" className="sr-only">
         Use arrow keys to move around the grid. Press Enter or Space to select a gem, then press Enter on an adjacent gem to
-        swap. Press Escape to clear selection. Press H for a hint, 1 for Shuffle, 2 for Color Bomb, P to pause, M to mute, and R
-        to restart the level.
+        swap. Swipe on touch devices to swap. Press Escape to clear selection. Press H for a hint, 1 for Shuffle, 2 for Color
+        Bomb, P to pause, M to mute, and R to restart the level.
       </p>
       <p className="text-xs text-cyan-300/70">
-        Drag or click adjacent gems to swap. Keyboard: arrows, Enter, Esc, H hint, 1 shuffle, 2 color bomb, P pause, M mute, R
-        restart.
+        Drag, tap, or swipe adjacent gems to swap. Keyboard: arrows, Enter, Esc, H hint, 1 shuffle, 2 color bomb, P pause, M
+        mute, R restart.
       </p>
     </div>
   ),
@@ -695,6 +714,7 @@ const CandyCrush = () => {
   const [board, setBoard] = useState<CandyCell[]>(() =>
     createPlayableBoard(BOARD_WIDTH, GEM_IDS, rngRef.current),
   );
+  const [cellSize, setCellSize] = useState(DEFAULT_CELL_SIZE);
   const [score, setScore] = useState(0);
   const [streak, setStreak] = useState(0);
   const [moves, setMoves] = useState(0);
@@ -721,6 +741,8 @@ const CandyCrush = () => {
   const started = useRef(false);
   const needsResolve = useRef(false);
   const burstTimers = useRef<number[]>([]);
+  const gridContainerRef = useRef<HTMLDivElement | null>(null);
+  const pointerStart = useRef<{ index: number; x: number; y: number; pointerId: number } | null>(null);
   const gridCellRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const hintTimeout = useRef<number | null>(null);
   const { bestScore, bestStreak, updateStats } = useCandyCrushStats();
@@ -810,6 +832,26 @@ const CandyCrush = () => {
       target.focus();
     }
   }, [activeIndex]);
+
+  useEffect(() => {
+    const container = gridContainerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      const padding = 32;
+      const available = Math.min(width, height) - padding * 2;
+      if (available <= 0) return;
+      const raw = Math.floor((available - gridGap * (BOARD_WIDTH - 1)) / BOARD_WIDTH);
+      const next = Math.max(MIN_CELL_SIZE, Math.min(MAX_CELL_SIZE, raw));
+      setCellSize((prev) => (prev === next ? prev : next));
+    });
+
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!comboBanner) return;
@@ -1014,6 +1056,48 @@ const CandyCrush = () => {
   const handleDragEnd = useCallback(() => {
     dragSource.current = null;
     setSelected(null);
+  }, []);
+
+  const handlePointerDown = useCallback(
+    (index: number, event: React.PointerEvent<HTMLButtonElement>) => {
+      if (event.pointerType === 'mouse' || isInteractionDisabled) return;
+      pointerStart.current = { index, x: event.clientX, y: event.clientY, pointerId: event.pointerId };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setActiveIndex(index);
+      clearHint();
+      setSelected(index);
+    },
+    [clearHint, isInteractionDisabled],
+  );
+
+  const handlePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLButtonElement>) => {
+      const start = pointerStart.current;
+      if (!start || start.pointerId !== event.pointerId || isInteractionDisabled) return;
+
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
+      const threshold = 18;
+      if (Math.abs(dx) < threshold && Math.abs(dy) < threshold) return;
+
+      const dir =
+        Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 1 : -1) : dy > 0 ? BOARD_WIDTH : -BOARD_WIDTH;
+      const target = start.index + dir;
+
+      pointerStart.current = null;
+      event.currentTarget.releasePointerCapture(event.pointerId);
+
+      if (target < 0 || target >= board.length) return;
+      attemptSwap(start.index, target);
+    },
+    [attemptSwap, board.length, isInteractionDisabled],
+  );
+
+  const handlePointerUp = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
+    const start = pointerStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    pointerStart.current = null;
+    event.currentTarget.releasePointerCapture(event.pointerId);
   }, []);
 
   const handleShuffle = useCallback(() => {
@@ -1278,7 +1362,7 @@ const CandyCrush = () => {
       gridTemplateColumns: `repeat(${BOARD_WIDTH}, ${cellSize}px)`,
       gridAutoRows: `${cellSize}px`,
     }),
-    [],
+    [cellSize],
   );
 
   const scoreProgress = targetScore > 0 ? Math.min(1, score / targetScore) * 100 : 0;
@@ -1344,11 +1428,16 @@ const CandyCrush = () => {
           reducedMotion={Boolean(reducedMotion)}
           isInteractionDisabled={isInteractionDisabled}
           gridStyle={gridStyle}
+          cellSize={cellSize}
+          containerRef={gridContainerRef}
           gridCellRefs={gridCellRefs}
           onFocusCell={setActiveIndex}
           onDragStart={handleDragStart}
           onDrop={handleDrop}
           onDragEnd={handleDragEnd}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
           onClickCell={(index) => {
             setActiveIndex(index);
             handleCellClick(index);
