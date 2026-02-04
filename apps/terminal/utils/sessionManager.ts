@@ -15,6 +15,7 @@ export interface SessionManagerConfig {
 export interface SessionManager {
   setTerminal: (term: XTerm | null) => void;
   runCommand: (input: string) => Promise<void>;
+  renderPrompt: () => void;
   handleInput: (data: string) => void;
   handlePaste: (text: string) => void;
   autocomplete: () => void;
@@ -129,14 +130,14 @@ export function createSessionManager({
       if (completion) currentConfig.write(completion);
       buffer = matches[0].name;
     } else if (matches.length > 1) {
+      currentConfig.write('\r\n');
       matches
         .map(({ name, description }) => {
           const padded = `${name}${' '.repeat(Math.max(2, 16 - name.length))}`;
           return `${padded}${description}`;
         })
         .forEach((line) => currentConfig.writeLine(line));
-      currentConfig.prompt();
-      if (buffer) currentConfig.write(buffer);
+      renderPrompt();
     }
   };
 
@@ -148,6 +149,13 @@ export function createSessionManager({
       }
       currentConfig.prompt();
     });
+  };
+
+  const renderPrompt = () => {
+    currentConfig.prompt();
+    if (buffer) {
+      currentConfig.write(buffer);
+    }
   };
 
   const clearCurrentLine = () => {
@@ -356,6 +364,7 @@ export function createSessionManager({
   return {
     setTerminal,
     runCommand,
+    renderPrompt,
     handleInput,
     handlePaste,
     autocomplete,

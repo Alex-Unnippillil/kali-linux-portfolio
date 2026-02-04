@@ -1,7 +1,7 @@
 'use client';
 
 import '@xterm/xterm/css/xterm.css';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import useOPFS from '../../hooks/useOPFS';
 import usePersistentState from '../../hooks/usePersistentState';
 import commandRegistry, { CommandContext } from './commands';
@@ -9,6 +9,9 @@ import TerminalContainer from './components/Terminal';
 import { useTab } from '../../components/ui/TabbedWindow';
 import { createSessionManager } from './utils/sessionManager';
 import { FauxFileSystem, TerminalFileSystem, VirtualFileSystem } from './utils/filesystem';
+import { createOutputBuffer, stripAnsi } from './utils/outputBuffer';
+import { createWorkerRunner } from './utils/workerRunner';
+import { useTerminalPreferences, type TerminalPrefs } from './hooks/useTerminalPreferences';
 
 // --- Polished Icons ---
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -17,13 +20,18 @@ const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx={12} cy={12} r={3} /></svg>
 );
-const PersistIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg viewBox="0 0 24 24" width={18} height={18} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 2h9l3 3v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" /><path d="M14 2v4H8V2" /><path d="M8 12h8" /><path d="M8 16h6" /></svg>
-);
 
 export interface TerminalProps {
   openApp?: (id: string) => void;
   sessionName?: string;
+}
+
+export interface TerminalHandle {
+  runCommand: (command: string) => Promise<void>;
+  getTranscript: () => string;
+  getContent: () => string;
+  clearTranscript: () => void;
+  focus: () => void;
 }
 
 interface TranscriptEntry {
@@ -40,12 +48,14 @@ interface TerminalSessionSnapshot {
   safeMode: boolean;
 }
 
-const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessionName }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
   const sessionRef = useRef<any>(null);
   const tab = useTab();
+  const outputBufferRef = useRef(createOutputBuffer(1200));
+  const workerRunnerRef = useRef(createWorkerRunner());
 
   // File System State
   const { root: opfsRoot, supported: opfsSupported } = useOPFS();
@@ -54,12 +64,20 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
 
   // Terminal State
   const [isReady, setIsReady] = useState(false);
-  const [safeMode, setSafeMode] = useState(true);
+  const preferences = useTerminalPreferences();
+  const { prefs, aliases, history, ready, setAliases, setHistory, setPrefs } = preferences;
+  const [safeMode, setSafeMode] = useState(preferences.prefs.safeMode);
   const [persistSession, setPersistSession] = usePersistentState<boolean>(
     'terminal-session-persist',
     true,
     (value): value is boolean => typeof value === 'boolean',
   );
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchAddonRef = useRef<{
+    findNext: (term: string, options?: { incremental?: boolean; caseSensitive?: boolean }) => boolean;
+  } | null>(null);
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const appendTranscriptRef = useRef<(entry: Omit<TranscriptEntry, 'timestamp'>) => void>(() => {});
   const persistTimerRef = useRef<number | null>(null);
@@ -67,12 +85,25 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
   const buildPromptTextRef = useRef<() => string>(() => '');
   const loadSnapshotRef = useRef<() => Promise<TerminalSessionSnapshot | null>>(async () => null);
   const schedulePersistRef = useRef<() => void>(() => {});
+  const appendOutput = useCallback((text: string) => {
+    outputBufferRef.current.append(text);
+  }, []);
+  const prefsRef = useRef(prefs);
+  const appendOutputRef = useRef((text: string) => outputBufferRef.current.append(text));
+  const setHistoryRef = useRef(setHistory);
+
+  useEffect(() => {
+    prefsRef.current = prefs;
+    appendOutputRef.current = appendOutput;
+    setHistoryRef.current = setHistory;
+  }, [appendOutput, prefs, setHistory]);
 
   // Context Ref (Stable)
   const contextRef = useRef<CommandContext>({
     writeLine: (t) => {
       termRef.current?.writeln(t);
-      appendTranscriptRef.current({ type: 'output', text: t });
+      appendOutput(t + '\n');
+      appendTranscriptRef.current({ type: 'output', text: stripAnsi(t) });
     },
     files: {},
     fs: fsRef.current,
@@ -83,7 +114,10 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     safeMode: true,
     setAlias: (name, value) => { contextRef.current.aliases[name] = value; },
     runWorker: async () => { },
-    clear: () => termRef.current?.clear(),
+    clear: () => {
+      termRef.current?.clear();
+      outputBufferRef.current.clear();
+    },
     openApp,
     listCommands: () => commandRegistry.getAll(),
   });
@@ -124,6 +158,27 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     contextRef.current.safeMode = safeMode;
   }, [safeMode]);
 
+  useEffect(() => {
+    if (!ready) return;
+    setSafeMode(prefs.safeMode);
+    contextRef.current.aliases = aliases;
+    contextRef.current.history = history;
+    contextRef.current.setAlias = (name, value) => {
+      const next = { ...contextRef.current.aliases, [name]: value };
+      contextRef.current.aliases = next;
+      setAliases(next);
+    };
+  }, [aliases, history, prefs.safeMode, ready, setAliases]);
+
+  useEffect(() => {
+    outputBufferRef.current.setMaxLines(prefs.scrollback);
+    if (termRef.current) {
+      termRef.current.options.fontSize = prefs.fontSize;
+      termRef.current.options.scrollback = prefs.scrollback;
+      termRef.current.options.screenReaderMode = prefs.screenReaderMode;
+    }
+  }, [prefs.fontSize, prefs.scrollback, prefs.screenReaderMode]);
+
   const formatCwd = useCallback(() => {
     const cwd = contextRef.current.cwd;
     if (homePathRef.current === '/home') {
@@ -147,6 +202,68 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
   const buildPrompt = useCallback(() => buildPromptFor(safeMode), [buildPromptFor, safeMode]);
   const buildPromptText = useCallback(() => buildPromptTextFor(safeMode), [buildPromptTextFor, safeMode]);
 
+  const simulateNetworkCommand = useCallback((command: string) => {
+    const normalized = command.trim();
+    const seed = Array.from(normalized).reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const latency = 20 + (seed % 180);
+    const ip = `192.168.${(seed % 200) + 1}.${(seed % 50) + 10}`;
+    return [
+      `[simulated] ${normalized}`,
+      `Connecting to ${ip}...`,
+      `Latency: ${latency}ms`,
+      'Note: network access is simulated in this portfolio terminal.',
+    ].join('\n');
+  }, []);
+
+  const collectWorkerFiles = useCallback(async (command: string) => {
+    const files: Record<string, string> = {};
+    const segments = command
+      .split('|')
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+    for (const segment of segments) {
+      const [name, ...args] = segment.split(/\s+/);
+      if (name === 'cat' && args[0]) {
+        const resolved = contextRef.current.fs.resolvePath(contextRef.current.cwd, args[0]);
+        const content = await contextRef.current.fs.readFile(resolved);
+        if (content !== null) files[args[0]] = content;
+      }
+      if (name === 'grep') {
+        const file = args.filter((arg) => !arg.startsWith('-')).slice(1)[0];
+        if (file) {
+          const resolved = contextRef.current.fs.resolvePath(contextRef.current.cwd, file);
+          const content = await contextRef.current.fs.readFile(resolved);
+          if (content !== null) files[file] = content;
+        }
+      }
+      if (name === 'jq') {
+        const file = args[1];
+        if (file) {
+          const resolved = contextRef.current.fs.resolvePath(contextRef.current.cwd, file);
+          const content = await contextRef.current.fs.readFile(resolved);
+          if (content !== null) files[file] = content;
+        }
+      }
+    }
+    return files;
+  }, []);
+
+  const runWorkerCommand = useCallback(async (command: string) => {
+    const [name] = command.trim().split(/\s+/);
+    const risky = ['curl', 'wget', 'nmap', 'ping', 'telnet', 'nc', 'netcat', 'ssh'];
+    if (risky.includes(name)) {
+      const output = simulateNetworkCommand(command);
+      contextRef.current.writeLine(output);
+      return;
+    }
+    const files = await collectWorkerFiles(command);
+    const output = await workerRunnerRef.current.run(command, { files });
+    output.split('\n').forEach((line, idx, arr) => {
+      if (line.length === 0 && idx === arr.length - 1) return;
+      contextRef.current.writeLine(line);
+    });
+  }, [collectWorkerFiles, simulateNetworkCommand]);
+
   const persistSnapshot = useCallback(async () => {
     if (!persistSession) return;
     const snapshot: TerminalSessionSnapshot = {
@@ -158,8 +275,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     };
     const payload = JSON.stringify(snapshot);
     if (opfsRoot) {
-      await fsRef.current.createDirectory('/.terminal');
-      await fsRef.current.writeFile('/.terminal/session.json', payload);
+      await fsRef.current.createDirectory('/kali-terminal');
+      await fsRef.current.writeFile('/kali-terminal/session.json', payload);
     } else {
       try {
         window.localStorage.setItem('terminal-session', payload);
@@ -184,10 +301,14 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     schedulePersist();
   }, [schedulePersist]);
 
+  useEffect(() => {
+    contextRef.current.runWorker = runWorkerCommand;
+  }, [runWorkerCommand]);
+
   const loadSnapshot = useCallback(async () => {
     if (!persistSession) return null;
     if (opfsRoot) {
-      const payload = await fsRef.current.readFile('/.terminal/session.json');
+      const payload = await fsRef.current.readFile('/kali-terminal/session.json');
       if (!payload) return null;
       return JSON.parse(payload) as TerminalSessionSnapshot;
     }
@@ -212,6 +333,9 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     let isMounted = true;
     let terminalInstance: any = null;
     let resizeHandler: (() => void) | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let containerEl: HTMLDivElement | null = null;
+    const workerRunner = workerRunnerRef.current;
     let contextMenuHandler: ((event: MouseEvent) => void) | null = null;
     let focusHandler: (() => void) | null = null;
     let keyStopHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -219,12 +343,15 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     let inputElement: HTMLTextAreaElement | null = null;
 
     const init = async () => {
-      if (!containerRef.current) return;
+      containerEl = containerRef.current;
+      if (!containerEl) return;
 
       // Dynamic imports to avoid SSR issues
-      const [{ Terminal }, { FitAddon }] = await Promise.all([
+      const [{ Terminal }, { FitAddon }, { SearchAddon }, { WebLinksAddon }] = await Promise.all([
         import('@xterm/xterm'),
         import('@xterm/addon-fit'),
+        import('@xterm/addon-search'),
+        import('@xterm/addon-web-links'),
       ]);
 
       // Check mount status after async load
@@ -238,11 +365,13 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
 
       const term = new Terminal({
         cursorBlink: true,
-        fontSize: 15,
+        fontSize: prefsRef.current.fontSize,
         fontWeight: '500',
         fontFamily: '"Fira Code", monospace',
         allowProposedApi: true,
         disableStdin: false,
+        scrollback: prefsRef.current.scrollback,
+        screenReaderMode: prefsRef.current.screenReaderMode,
         theme: {
           background: '#0a0a0a',
           foreground: '#ffffff', // High Contrast
@@ -269,9 +398,18 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
 
       const fit = new FitAddon();
       term.loadAddon(fit);
+      const searchAddon = new SearchAddon();
+      term.loadAddon(searchAddon);
+      const webLinks = new WebLinksAddon((_event, uri) => {
+        const safe = uri.startsWith('http://') || uri.startsWith('https://');
+        if (!safe) return;
+        window.open(uri, '_blank', 'noopener,noreferrer');
+      });
+      term.loadAddon(webLinks);
+      searchAddonRef.current = searchAddon;
 
 
-      term.open(containerRef.current);
+      term.open(containerEl);
       fit.fit();
       term.focus();
 
@@ -290,9 +428,13 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         write: (t) => term.write(t),
         writeLine: (t) => {
           term.writeln(t);
-          appendTranscriptRef.current({ type: 'output', text: t });
+          appendOutputRef.current(t + '\n');
+          appendTranscriptRef.current({ type: 'output', text: stripAnsi(t) });
         },
-        onHistoryUpdate: () => schedulePersistRef.current(),
+        onHistoryUpdate: (history) => {
+          setHistoryRef.current(history.slice(-500));
+          schedulePersistRef.current();
+        },
         onCancelRunning: () => {},
         onCommand: (command) => {
           appendTranscriptRef.current({
@@ -314,6 +456,11 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       term.onData(handleTerminalInput);
 
       term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
+          event.preventDefault();
+          setSearchOpen(true);
+          return false;
+        }
         if (event.ctrlKey && event.shiftKey && event.code === 'KeyC') {
           const selection = term.getSelection();
           if (selection) {
@@ -335,7 +482,7 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       };
       keyStopHandler = (event: KeyboardEvent) => event.stopPropagation();
       keyCaptureHandler = (event: KeyboardEvent) => event.stopPropagation();
-      inputElement = (term as any).textarea ?? null;
+      inputElement = (term as { textarea?: HTMLTextAreaElement }).textarea ?? null;
 
       contextMenuHandler = (event: MouseEvent) => {
         event.preventDefault();
@@ -344,8 +491,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
           navigator.clipboard?.writeText(selection).catch(() => {});
         }
       };
-      containerRef.current?.addEventListener('contextmenu', contextMenuHandler);
-      containerRef.current?.addEventListener('pointerdown', focusHandler, true);
+      containerEl.addEventListener('contextmenu', contextMenuHandler);
+      containerEl.addEventListener('pointerdown', focusHandler, true);
       term.element?.addEventListener('keydown', keyStopHandler);
       inputElement?.addEventListener('keydown', keyCaptureHandler, true);
       inputElement?.addEventListener('keypress', keyCaptureHandler, true);
@@ -353,9 +500,19 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
 
       // Handle Resize
       resizeHandler = () => fit.fit();
-      window.addEventListener('resize', resizeHandler);
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver = new ResizeObserver(() => fit.fit());
+        resizeObserver.observe(containerEl);
+      } else {
+        window.addEventListener('resize', resizeHandler);
+      }
 
       const snapshot = await loadSnapshotRef.current();
+      const writeOutputLine = (text: string) => {
+        term.writeln(text);
+        appendOutputRef.current(text + '\n');
+      };
+
       if (snapshot) {
         contextRef.current.history = snapshot.history ?? [];
         contextRef.current.cwd = snapshot.cwd || contextRef.current.cwd;
@@ -366,12 +523,12 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         }
         if (snapshot.transcript?.length) {
           snapshot.transcript.forEach((entry) => {
-            term.writeln(entry.text);
+            writeOutputLine(entry.text);
           });
         }
       } else {
-        term.writeln('\x1b[1;37mWelcome to the Kali Linux Portfolio Terminal.\x1b[0m');
-        term.writeln('Type \x1b[1;33mhelp\x1b[0m to list commands.');
+        writeOutputLine('\x1b[1;37mWelcome to the Kali Linux Portfolio Terminal.\x1b[0m');
+        writeOutputLine('Type \x1b[1;33mhelp\x1b[0m to list commands.');
       }
 
       // Initial Prompt
@@ -404,14 +561,17 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
       if (terminalInstance) {
         terminalInstance.dispose();
       }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
       if (resizeHandler) {
         window.removeEventListener('resize', resizeHandler);
       }
-      if (contextMenuHandler && containerRef.current) {
-        containerRef.current.removeEventListener('contextmenu', contextMenuHandler);
+      if (contextMenuHandler && containerEl) {
+        containerEl.removeEventListener('contextmenu', contextMenuHandler);
       }
-      if (focusHandler && containerRef.current) {
-        containerRef.current.removeEventListener('pointerdown', focusHandler, true);
+      if (focusHandler && containerEl) {
+        containerEl.removeEventListener('pointerdown', focusHandler, true);
       }
       if (keyStopHandler && terminalInstance?.element) {
         terminalInstance.element.removeEventListener('keydown', keyStopHandler);
@@ -421,6 +581,7 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         inputElement.removeEventListener('keypress', keyCaptureHandler, true);
         inputElement.removeEventListener('keyup', keyCaptureHandler, true);
       }
+      workerRunner.dispose();
       termRef.current = null;
     };
   }, []);
@@ -433,7 +594,8 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
         write: (t: string) => termRef.current.write(t),
         writeLine: (t: string) => {
           termRef.current.writeln(t);
-          appendTranscriptRef.current({ type: 'output', text: t });
+          appendOutput(t + '\n');
+          appendTranscriptRef.current({ type: 'output', text: stripAnsi(t) });
         },
         prompt: () => {
           termRef.current.write(buildPromptRef.current());
@@ -443,8 +605,19 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     }
   });
 
-  const handleSelectAll = () => {
-    if (termRef.current) {
+  const handleCopySelection = async () => {
+    if (!termRef.current) return;
+    const selection = termRef.current.getSelection();
+    if (selection) {
+      try {
+        await navigator.clipboard.writeText(selection);
+        termRef.current.writeln('\r\n\x1b[1;33m[System] Selection copied.\x1b[0m');
+        appendOutput('[System] Selection copied.\n');
+      } catch {
+        termRef.current.writeln('\r\n\x1b[1;33m[System] Clipboard blocked. Use Ctrl+Shift+C.\x1b[0m');
+        appendOutput('[System] Clipboard blocked. Use Ctrl+Shift+C.\n');
+      }
+    } else {
       termRef.current.selectAll();
       termRef.current.focus();
     }
@@ -453,13 +626,13 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
   const toggleSafeMode = () => {
     const newVal = !safeMode;
     setSafeMode(newVal);
+    setPrefs({ ...prefs, safeMode: newVal });
     if (termRef.current) {
       const message = `[System] Safe Mode: ${newVal ? 'ON' : 'OFF'}`;
       termRef.current.writeln(`\r\n\x1b[1;33m${message}\x1b[0m`);
+      appendOutput(message + '\n');
       appendTranscriptRef.current({ type: 'system', text: message });
-      // Reprompt
-      termRef.current.write(buildPromptFor(newVal));
-      appendTranscriptRef.current({ type: 'prompt', text: buildPromptTextFor(newVal) });
+      sessionRef.current?.renderPrompt();
     }
   };
 
@@ -469,20 +642,44 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
     if (termRef.current) {
       const message = `[System] Session persistence: ${next ? 'ON' : 'OFF'}`;
       termRef.current.writeln(`\r\n\x1b[1;33m${message}\x1b[0m`);
+      appendOutput(message + '\n');
       appendTranscriptRef.current({ type: 'system', text: message });
       if (next) {
         void persistSnapshot();
       }
-      termRef.current.write(buildPromptFor(safeMode));
-      appendTranscriptRef.current({ type: 'prompt', text: buildPromptTextFor(safeMode) });
+      sessionRef.current?.renderPrompt();
     }
   };
+
+  const updatePrefs = useCallback(
+    (patch: Partial<TerminalPrefs>) => {
+      setPrefs({ ...prefs, ...patch });
+    },
+    [prefs, setPrefs],
+  );
+
+  const applySearch = useCallback(() => {
+    if (!searchAddonRef.current || !searchQuery) return;
+    searchAddonRef.current.findNext(searchQuery, { incremental: true, caseSensitive: false });
+  }, [searchQuery]);
 
   useEffect(() => {
     if (tab?.active && termRef.current) {
       termRef.current.focus();
     }
   }, [tab?.active, isReady]);
+
+  useImperativeHandle(ref, () => ({
+    runCommand: async (command: string) => {
+      if (!sessionRef.current) return;
+      await sessionRef.current.runCommand(command);
+      sessionRef.current.renderPrompt();
+    },
+    getTranscript: () => outputBufferRef.current.getText(),
+    clearTranscript: () => outputBufferRef.current.clear(),
+    focus: () => termRef.current?.focus(),
+    getContent: () => outputBufferRef.current.getText(),
+  }), []);
 
   return (
     <div className="flex h-full flex-col bg-[#0a0a0a] text-white font-mono text-sm overflow-hidden rounded-b-lg">
@@ -498,33 +695,120 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
           {safeMode && <span className="px-1.5 py-0.5 rounded bg-green-900/50 text-green-400 text-[10px] uppercase tracking-wider">Safe Mode</span>}
           {persistSession && <span className="px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-300 text-[10px] uppercase tracking-wider">Persisted</span>}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 relative">
           <button
-            onClick={handleSelectAll}
+            onClick={handleCopySelection}
             className="p-1.5 hover:bg-[#333] rounded transition-colors text-gray-400 hover:text-white"
-            title="Select All"
+            title="Copy selection (or select all)"
           >
             <CopyIcon />
           </button>
           <button
-            onClick={toggleSafeMode}
-            className={`p-1.5 hover:bg-[#333] rounded transition-colors text-gray-400 hover:text-white ${!safeMode ? 'text-red-400 hover:text-red-300' : ''}`}
-            title="Toggle Safe Mode"
+            onClick={() => setSettingsOpen((open) => !open)}
+            className="p-1.5 hover:bg-[#333] rounded transition-colors text-gray-400 hover:text-white"
+            title="Terminal settings"
           >
             <SettingsIcon />
           </button>
-          <button
-            onClick={togglePersistence}
-            className={`p-1.5 hover:bg-[#333] rounded transition-colors text-gray-400 hover:text-white ${persistSession ? 'text-blue-300 hover:text-blue-200' : ''}`}
-            title="Toggle Session Persistence"
-          >
-            <PersistIcon />
-          </button>
+          {settingsOpen && (
+            <div className="absolute right-0 top-10 z-20 w-64 rounded border border-[#333] bg-[#111] p-3 text-xs text-gray-200 shadow-lg">
+              <div className="flex items-center justify-between py-1">
+                <span>Safe Mode</span>
+                <button
+                  type="button"
+                  className={`rounded px-2 py-0.5 text-[10px] uppercase ${safeMode ? 'bg-green-900/60 text-green-300' : 'bg-red-900/60 text-red-200'}`}
+                  onClick={toggleSafeMode}
+                >
+                  {safeMode ? 'On' : 'Off'}
+                </button>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span>Persistence</span>
+                <button
+                  type="button"
+                  className={`rounded px-2 py-0.5 text-[10px] uppercase ${persistSession ? 'bg-blue-900/60 text-blue-300' : 'bg-gray-800 text-gray-300'}`}
+                  onClick={togglePersistence}
+                >
+                  {persistSession ? 'On' : 'Off'}
+                </button>
+              </div>
+              <div className="py-1">
+                <label htmlFor="terminal-font-size" className="block text-[10px] uppercase text-gray-400">Font size</label>
+                <input
+                  id="terminal-font-size"
+                  aria-label="Font size"
+                  type="range"
+                  min={12}
+                  max={20}
+                  value={prefs.fontSize}
+                  onChange={(event) => updatePrefs({ fontSize: Number(event.target.value) })}
+                  className="w-full"
+                />
+              </div>
+              <div className="py-1">
+                <label htmlFor="terminal-scrollback" className="block text-[10px] uppercase text-gray-400">Scrollback</label>
+                <input
+                  id="terminal-scrollback"
+                  aria-label="Scrollback size"
+                  type="number"
+                  min={300}
+                  max={5000}
+                  value={prefs.scrollback}
+                  onChange={(event) => updatePrefs({ scrollback: Number(event.target.value) })}
+                  className="w-full rounded bg-[#1b1b1b] px-2 py-1 text-xs text-white"
+                />
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span>Screen reader</span>
+                <button
+                  type="button"
+                  className={`rounded px-2 py-0.5 text-[10px] uppercase ${prefs.screenReaderMode ? 'bg-green-900/60 text-green-300' : 'bg-gray-800 text-gray-300'}`}
+                  onClick={() => updatePrefs({ screenReaderMode: !prefs.screenReaderMode })}
+                >
+                  {prefs.screenReaderMode ? 'On' : 'Off'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Terminal Area */}
       <div className="relative flex-1 min-h-0 bg-[#0a0a0a]">
+        {searchOpen && (
+          <div className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded border border-[#333] bg-[#111] px-3 py-2 text-xs text-gray-200 shadow-lg">
+            <input
+              aria-label="Search scrollback"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  applySearch();
+                }
+                if (event.key === 'Escape') {
+                  setSearchOpen(false);
+                }
+              }}
+              placeholder="Search scrollback…"
+              className="w-48 rounded bg-[#1b1b1b] px-2 py-1 text-xs text-white"
+            />
+            <button
+              type="button"
+              className="rounded bg-[#222] px-2 py-1 text-[10px] uppercase text-gray-200"
+              onClick={applySearch}
+            >
+              Find
+            </button>
+            <button
+              type="button"
+              className="rounded bg-[#222] px-2 py-1 text-[10px] uppercase text-gray-200"
+              onClick={() => setSearchOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+        )}
         {/* Wrapper to ensure size */}
         <TerminalContainer
           ref={containerRef}
@@ -533,9 +817,37 @@ const TerminalApp = ({ openApp, sessionName }: TerminalProps) => {
           onMouseDown={() => termRef.current?.focus()}
         />
       </div>
+      <form
+        className="flex items-center gap-2 border-t border-[#333] bg-[#0f0f0f] px-3 py-2 md:hidden"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const input = form.elements.namedItem('mobile-command') as HTMLInputElement | null;
+          const value = input?.value.trim();
+          if (value) {
+            void sessionRef.current?.runCommand(value).then(() => {
+              sessionRef.current?.renderPrompt();
+            });
+            if (input) input.value = '';
+          }
+        }}
+      >
+        <input
+          name="mobile-command"
+          aria-label="Command input"
+          placeholder="Type a command…"
+          className="flex-1 rounded bg-[#1b1b1b] px-3 py-2 text-xs text-white"
+        />
+        <button
+          type="submit"
+          className="rounded bg-[#222] px-3 py-2 text-[10px] uppercase text-gray-200"
+        >
+          Run
+        </button>
+      </form>
     </div>
   );
-};
+});
 
 TerminalApp.displayName = 'TerminalApp';
 export default TerminalApp;

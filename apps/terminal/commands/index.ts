@@ -25,6 +25,7 @@ async function man(args: string, ctx: CommandContext) {
     open: () => fetch(new URL('../man/open.txt', import.meta.url)).then((r) => r.text()),
     projects: () => fetch(new URL('../man/projects.txt', import.meta.url)).then((r) => r.text()),
     rm: () => fetch(new URL('../man/rm.txt', import.meta.url)).then((r) => r.text()),
+    security: () => fetch(new URL('../man/security.txt', import.meta.url)).then((r) => r.text()),
     ssh: () => fetch(new URL('../man/ssh.txt', import.meta.url)).then((r) => r.text()),
     sudo: () => fetch(new URL('../man/sudo.txt', import.meta.url)).then((r) => r.text()),
     whoami: () => fetch(new URL('../man/whoami.txt', import.meta.url)).then((r) => r.text()),
@@ -309,6 +310,11 @@ const about: CommandHandler = (_args, ctx) => {
   ctx.writeLine('This terminal is powered by xterm.js');
 };
 
+const security: CommandHandler = async (_args, ctx) => {
+  const response = await fetch(new URL('../man/security.txt', import.meta.url));
+  ctx.writeLine(await response.text());
+};
+
 const date: CommandHandler = (_args, ctx) => {
   ctx.writeLine(new Date().toString());
 };
@@ -341,6 +347,7 @@ const registerAll = () => {
     { name: 'sudo', description: 'Execute a command with elevated privileges.', usage: 'sudo <command>', handler: sudo },
     { name: 'rm', description: 'Remove a file or directory.', usage: 'rm <path>', handler: rm },
     { name: 'about', description: 'Show information about this terminal.', handler: about },
+    { name: 'security', description: 'Explain the terminal simulation model.', handler: security },
     { name: 'date', description: 'Print the current date.', handler: date },
     { name: 'grep', description: 'Search through text.', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
     { name: 'jq', description: 'Filter JSON input.', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
