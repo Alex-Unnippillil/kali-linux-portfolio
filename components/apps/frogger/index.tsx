@@ -796,8 +796,25 @@ const Frogger = ({ windowMeta }: FroggerProps = {}) => {
         ref={containerRef}
         id="frogger-container"
         className="h-full w-full overflow-auto bg-ub-cool-grey text-white"
+        style={{ touchAction: 'none' }}
       >
         <div className="mx-auto flex h-full w-full max-w-4xl flex-col items-center gap-5 px-4 py-6">
+          <div
+            className="w-full rounded-2xl border border-slate-700/70 px-4 py-3 text-sm shadow-lg backdrop-blur"
+            style={{ background: hudBg, color: hudText }}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-lg font-semibold">Frogger</div>
+                <div className="text-xs text-slate-300">
+                  Hop to the pads, dodge traffic, and ride the logs safely.
+                </div>
+              </div>
+              <div className="text-xs text-slate-300">
+                Arrow keys or WASD · P/Space pause · R restart
+              </div>
+            </div>
+          </div>
           <div className="w-full">
             <div className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-black/50 shadow-2xl">
               <canvas
