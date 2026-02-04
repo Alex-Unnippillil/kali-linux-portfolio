@@ -209,6 +209,9 @@ export function sweptCircleCircleTorus(a, b, worldW, worldH) {
     x: torusDelta(a.px ?? a.x, b.px ?? b.x, worldW),
     y: torusDelta(a.py ?? a.y, b.py ?? b.y, worldH),
   };
+  if (Math.hypot(r0.x, r0.y) <= rSum) {
+    return { hit: true, t: 0 };
+  }
   const nextDx = torusDelta(a.x, b.x, worldW);
   const nextDy = torusDelta(a.y, b.y, worldH);
   const r1 = {

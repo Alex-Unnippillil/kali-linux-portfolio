@@ -17,6 +17,8 @@ const MAX_MULTIPLIER = 5;
 const SHIELD_DURATION = 600;
 export const SAFE_SPAWN_RADIUS = 120;
 const MAX_UFO_BULLETS = 6;
+const ASTEROID_VERTS = 9;
+const ASTEROID_JITTER = 0.35;
 
 const makeRng = (seed) => {
   rngApi.reset(seed);
@@ -24,6 +26,17 @@ const makeRng = (seed) => {
 };
 
 const defaultRunSeed = (level, userSeed = 'asteroids') => `asteroids:${level}:${userSeed}`;
+
+const createAsteroidShape = (radius, rng) => {
+  const points = [];
+  for (let i = 0; i < ASTEROID_VERTS; i += 1) {
+    const theta = (i / ASTEROID_VERTS) * Math.PI * 2;
+    const offset = (rng.random() * 2 - 1) * ASTEROID_JITTER;
+    const r = radius * (1 + offset);
+    points.push({ x: Math.cos(theta) * r, y: Math.sin(theta) * r });
+  }
+  return points;
+};
 
 export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1, saveData }) => {
   const rng = makeRng(defaultRunSeed(startLevel, seed));
@@ -117,6 +130,9 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
         dx: Math.cos(angle) * speed,
         dy: Math.sin(angle) * speed,
         r,
+        angle: gameState.rng.random() * Math.PI * 2,
+        spin: (gameState.rng.random() * 2 - 1) * 0.02,
+        shape: createAsteroidShape(r, gameState.rng),
       });
     }
   };
@@ -173,6 +189,7 @@ const destroyAsteroid = (state, index) => {
   if (a.r > 20) {
     for (let i = 0; i < 2; i += 1) {
       const angle = state.rng.random() * Math.PI * 2;
+      const r = a.r / 2;
       state.asteroids.push({
         x: a.x,
         y: a.y,
@@ -180,11 +197,15 @@ const destroyAsteroid = (state, index) => {
         py: a.y,
         dx: Math.cos(angle) * 2,
         dy: Math.sin(angle) * 2,
-        r: a.r / 2,
+        r,
+        angle: state.rng.random() * Math.PI * 2,
+        spin: (state.rng.random() * 2 - 1) * 0.03,
+        shape: createAsteroidShape(r, state.rng),
       });
     }
   }
   state.asteroids.splice(index, 1);
+  state.events.push({ type: 'asteroidDestroyed', x: a.x, y: a.y, r: a.r });
   if (state.rng.random() < 0.1) spawnPowerUp(state.powerUps, a.x, a.y, state.rng.random);
 };
 
@@ -202,6 +223,7 @@ const destroyShip = (state) => {
     ship.angle = 0;
   }
   ship.hitCooldown = COLLISION_COOLDOWN;
+  state.events.push({ type: 'shipHit', x: ship.x, y: ship.y });
   if (state.lives <= 0) {
     state.events.push({
       type: 'gameOver',
@@ -216,6 +238,7 @@ const destroyUfo = (state) => {
   state.score += 500 * state.multiplier;
   state.multiplier = Math.min(state.multiplier + 1, MAX_MULTIPLIER);
   state.multiplierTimer = MULTIPLIER_TIMEOUT;
+  state.events.push({ type: 'ufoDestroyed', x: state.ufo.x, y: state.ufo.y });
 };
 
 const updateBulletsWithHistory = (state, dtScale) => {
@@ -234,6 +257,7 @@ const updateAsteroids = (state, dtScale) => {
     storePrevious(a);
     a.x = wrap(a.x + a.dx * dtScale, state.worldW, a.r);
     a.y = wrap(a.y + a.dy * dtScale, state.worldH, a.r);
+    a.angle += a.spin * dtScale;
   });
 };
 
@@ -367,6 +391,7 @@ export const tick = (state, input, dt = 16) => {
   ship.x += ship.velX * dtScale;
   ship.y += ship.velY * dtScale;
   wrapObject(ship, state.worldW, state.worldH);
+  ship.thrusting = input.thrust > 0;
   state.currentRun.push({ x: ship.x, y: ship.y, angle: ship.angle });
   ship.cooldown = Math.max(0, ship.cooldown - 1 * dtScale);
   ship.rapidFire = Math.max(0, ship.rapidFire - 1 * dtScale);
@@ -424,6 +449,7 @@ export const tick = (state, input, dt = 16) => {
     type: 'hud',
     score: state.score,
     multiplier: state.multiplier,
+    multiplierTimer: state.multiplierTimer,
     lives: state.lives,
   });
 

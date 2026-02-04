@@ -15,6 +15,10 @@
 - Pause, Restart, Snapshot, and Replay controls live in the game toolbar.
 - Snapshot dumps the recorded input stream to a JSON file.
 - Replay replays the recorded input stream using the game RNG state.
+- Settings panel includes toggles for particles, screen shake, and sound effects.
+- On-screen inventory buttons mirror the 1-9 shortcuts (useful on touch devices).
+- The multiplier meter shows how long the combo bonus will last.
+- Game over modal provides quick restart or wave selection.
 
 ## Debugging Tips
 

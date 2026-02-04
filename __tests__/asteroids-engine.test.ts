@@ -59,4 +59,11 @@ describe('asteroids engine', () => {
     );
     expect(tooClose).toBe(false);
   });
+
+  it('builds asteroid shapes for classic outlines', () => {
+    const game = createGame({ worldW: 800, worldH: 600, seed: 'shape-test', startLevel: 1 });
+    const asteroid = game.asteroids[0];
+    expect(Array.isArray(asteroid.shape)).toBe(true);
+    expect(asteroid.shape.length).toBeGreaterThan(6);
+  });
 });
