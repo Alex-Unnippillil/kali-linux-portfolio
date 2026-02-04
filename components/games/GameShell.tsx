@@ -120,6 +120,7 @@ export default function GameShell({
         type="file"
         accept="application/json"
         ref={fileRef}
+        aria-label="Import settings file"
         style={{ display: 'none' }}
         onChange={(e) => {
           const file = e.target.files && e.target.files[0];
