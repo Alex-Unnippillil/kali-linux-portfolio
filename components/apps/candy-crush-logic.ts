@@ -43,6 +43,21 @@ const randomGem = (pool: readonly GemId[], rng: () => number): GemId => {
   return pool[idx];
 };
 
+export const computeCellSize = (
+  availableWidth: number,
+  availableHeight: number,
+  boardWidth: number,
+  gap: number,
+  minSize: number,
+  maxSize: number,
+): number => {
+  if (!Number.isFinite(availableWidth) || !Number.isFinite(availableHeight)) return minSize;
+  const available = Math.min(availableWidth, availableHeight);
+  const raw = Math.floor((available - gap * (boardWidth - 1)) / boardWidth);
+  if (!Number.isFinite(raw)) return minSize;
+  return Math.max(minSize, Math.min(maxSize, raw));
+};
+
 const createCandyCell = (gem: GemId): CandyCell => ({
   id: `${gem}-${nextCandyId()}`,
   gem,
