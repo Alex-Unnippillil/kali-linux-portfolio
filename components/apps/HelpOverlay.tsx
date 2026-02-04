@@ -90,7 +90,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "connect-four": {
     objective: "Get four of your discs in a row.",
-    controls: "Left/Right select column, Space drops, or click a column.",
+    controls:
+      "Left/Right select column, Enter/Space drops. Click/tap any column to drop (or tap twice if Confirm move is enabled).",
   },
   frogger: {
     objective: "Cross the road and river to reach the goal.",
