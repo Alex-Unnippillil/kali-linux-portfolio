@@ -217,6 +217,7 @@ const FigletApp = createDynamicApp(() => import('./components/apps/figlet'), 'Fi
 const ResourceMonitorApp = createDynamicApp(() => import('./components/apps/resource_monitor'), 'Resource Monitor');
 const ScreenRecorderApp = createDynamicApp(() => import('./components/apps/screen-recorder'), 'Screen Recorder');
 const NiktoApp = createDynamicApp(() => import('./components/apps/nikto'), 'Nikto');
+const CameraApp = createDynamicApp(() => import('./components/apps/camera'), 'Camera');
 
 
 
@@ -321,6 +322,7 @@ const displayFiglet = createDisplay(FigletApp);
 const displayResourceMonitor = createDisplay(ResourceMonitorApp);
 const displayScreenRecorder = createDisplay(ScreenRecorderApp);
 const displayNikto = createDisplay(NiktoApp);
+const displayCamera = createDisplay(CameraApp);
 
 // Utilities list used for the "Utilities" folder on the desktop
 const utilityList = [
@@ -392,6 +394,16 @@ const utilityList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displaySubnetCalculator,
+    category: 'utilities',
+  },
+  {
+    id: 'camera',
+    title: 'Camera',
+    icon: '/themes/Yaru/apps/camera.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: true,
+    screen: displayCamera,
     category: 'utilities',
   },
 ];

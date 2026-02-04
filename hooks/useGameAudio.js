@@ -154,6 +154,42 @@ export default function useGameAudio() {
     });
   }, [muted, gameVolume]);
 
+  /**
+   * Play a short synthesized tone routed through the master gain node.
+   * Useful for lightweight SFX when no audio assets exist.
+   */
+  const playTone = useCallback(
+    (
+      frequency,
+      {
+        duration = 0.08,
+        type = 'sine',
+        volume = 0.5,
+        attack = 0.01,
+        release = 0.05,
+      } = {},
+    ) => {
+      const ctx = ctxRef.current;
+      const gainDest = masterGainRef.current;
+      if (!ctx || !gainDest || muted) return;
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = frequency;
+      gain.gain.value = 0;
+      osc.connect(gain);
+      gain.connect(gainDest);
+      const now = ctx.currentTime;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(volume, now + attack);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration + release);
+      osc.start(now);
+      osc.stop(now + duration + release + 0.02);
+    },
+    [muted],
+  );
+
   return {
     context: ctxRef.current,
     muted,
@@ -161,6 +197,7 @@ export default function useGameAudio() {
     volume: gameVolume,
     setVolume: setGameVolume,
     playSfx,
+    playTone,
     addMusicLayer,
     setMusicState,
   };

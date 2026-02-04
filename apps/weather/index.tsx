@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  DragEvent,
   FormEvent,
   MouseEvent,
   useCallback,
@@ -19,7 +20,7 @@ import useWeatherState, {
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
 import WeatherIcon from './components/WeatherIcon';
-import { fetchWeather } from '../../components/apps/weather';
+import { fetchWeather, WeatherFetchError } from '../../components/apps/weather';
 import { useSettings } from '../../hooks/useSettings';
 
 interface GeoResult {
@@ -34,7 +35,7 @@ interface GeoResult {
 interface CityTileProps {
   city: City;
   loading: boolean;
-  offline: boolean;
+  statusLabel?: string;
   onOpen: () => void;
   onRefresh: () => void;
   onRemove: () => void;
@@ -42,10 +43,18 @@ interface CityTileProps {
   onMoveUp: () => void;
   onMoveDown: () => void;
   onClearError: () => void;
+  onDragStart: (event: DragEvent<HTMLButtonElement>) => void;
+  onDragEnd: () => void;
   canMoveUp: boolean;
   canMoveDown: boolean;
   canFetch: boolean;
 }
+
+type WeatherResponse = {
+  data: any;
+  meta?: { stale?: boolean; timestamp?: number };
+  revalidate?: Promise<{ data: any; meta?: { stale?: boolean; timestamp?: number } } | null>;
+};
 
 const WEATHER_TTL = 10 * 60 * 1000;
 const DEFAULT_DAILY =
@@ -59,11 +68,11 @@ const formatCityLabel = (result: GeoResult) => {
   return parts.join(', ');
 };
 
-const formatUpdatedTime = (time?: number) => {
+const formatUpdatedTime = (time?: number, stale?: boolean) => {
   if (!time) return 'No cached data';
   const date = new Date(time);
   if (Number.isNaN(date.getTime())) return 'No cached data';
-  return `Updated ${date.toLocaleTimeString([], {
+  return `${stale ? 'Cached' : 'Updated'} ${date.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   })}`;
@@ -72,7 +81,7 @@ const formatUpdatedTime = (time?: number) => {
 function CityTile({
   city,
   loading,
-  offline,
+  statusLabel,
   onOpen,
   onRefresh,
   onRemove,
@@ -80,6 +89,8 @@ function CityTile({
   onMoveUp,
   onMoveDown,
   onClearError,
+  onDragStart,
+  onDragEnd,
   canMoveUp,
   canMoveDown,
   canFetch,
@@ -115,17 +126,28 @@ function CityTile({
           >
             {tempLabel}
           </div>
-          {offline && (
+          {statusLabel && (
             <div className="mt-2 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">
-              Offline
+              {statusLabel}
             </div>
           )}
         </button>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col items-end gap-1">
+          <button
+            type="button"
+            draggable
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            className="cursor-grab rounded border border-[color:var(--kali-panel-border)] px-2 py-1 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 active:cursor-grabbing"
+            aria-label={`Drag ${city.name}`}
+            title="Drag to reorder"
+          >
+            Drag
+          </button>
           <button
             type="button"
             onClick={onRefresh}
-            disabled={!canFetch}
+            disabled={!canFetch || loading}
             className="rounded border border-[color:var(--kali-panel-border)] px-2 py-1 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/70 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label={`Refresh ${city.name}`}
           >
@@ -147,10 +169,15 @@ function CityTile({
           >
             Remove
           </button>
+          {loading && (
+            <span className="text-[10px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">
+              Updating…
+            </span>
+          )}
         </div>
         <WeatherIcon
           code={iconCode}
-          className="h-16 w-16 text-[color:color-mix(in_srgb,var(--kali-text)_80%,transparent)] sm:h-20 sm:w-20"
+          className="h-16 w-16 sm:h-20 sm:w-20"
         />
       </div>
 
@@ -192,7 +219,7 @@ function CityTile({
       )}
 
       <div className="mt-auto flex items-center justify-between text-xs text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">
-        <span>{formatUpdatedTime(reading?.time)}</span>
+        <span>{formatUpdatedTime(reading?.time, city.lastReadingStale)}</span>
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -230,8 +257,10 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
   const [lon, setLon] = useState(String(city.lon));
   const [error, setError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const nameRef = useRef<HTMLInputElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const descriptionId = useRef(`edit-city-desc-${city.id}`);
 
   useEffect(() => {
     previousFocusRef.current = document.activeElement as HTMLElement | null;
@@ -249,6 +278,32 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  useEffect(() => {
+    const handleFocusTrap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const container = dialogRef.current;
+      if (!container) return;
+      const focusable = container.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleFocusTrap);
+    return () => {
+      document.removeEventListener('keydown', handleFocusTrap);
+    };
+  }, []);
 
   const handleOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === overlayRef.current) {
@@ -282,6 +337,8 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="edit-city-title"
+        aria-describedby={descriptionId.current}
+        ref={dialogRef}
         className="w-full max-w-md rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] p-4 text-[color:var(--kali-text)]"
       >
         <div className="mb-3 flex items-center justify-between">
@@ -296,6 +353,12 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
             Close
           </button>
         </div>
+        <p
+          id={descriptionId.current}
+          className="text-xs text-[color:color-mix(in_srgb,var(--kali-text)_65%,transparent)]"
+        >
+          Update the city name or coordinates. Changes to coordinates will refresh cached data.
+        </p>
         <form className="space-y-3" onSubmit={handleSubmit}>
           <label className="space-y-1 text-sm">
             <span className="text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
@@ -368,6 +431,10 @@ export default function WeatherApp() {
     'idle',
   );
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'idle' | 'loading' | 'error'>(
+    'idle',
+  );
+  const [locationError, setLocationError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [manualName, setManualName] = useState('');
   const [manualLat, setManualLat] = useState('');
@@ -381,8 +448,13 @@ export default function WeatherApp() {
   const dragSrc = useRef<number | null>(null);
   const controllersRef = useRef<Map<string, AbortController>>(new Map());
   const searchAbortRef = useRef<AbortController | null>(null);
+  const searchDebounceRef = useRef<number | null>(null);
+  const lastSearchRef = useRef<string>('');
 
-  const canFetch = allowNetwork && !offline;
+  const isRefreshingAny = useMemo(
+    () => Object.keys(loadingIds).length > 0,
+    [loadingIds],
+  );
 
   const citySignature = useMemo(
     () => cities.map((city) => `${city.id}:${city.lat}:${city.lon}`).join('|'),
@@ -438,13 +510,10 @@ export default function WeatherApp() {
 
   const fetchCityWeather = useCallback(
     async (city: City, { force = false }: { force?: boolean } = {}) => {
-      if (!allowNetwork || offline) return;
       const now = Date.now();
-      if (
-        !force &&
-        city.lastReading &&
-        now - city.lastReading.time < WEATHER_TTL
-      ) {
+      const withinTtl =
+        city.lastReading && now - city.lastReading.time < WEATHER_TTL;
+      if (!force && withinTtl && !city.lastReadingStale) {
         return;
       }
       const existing = controllersRef.current.get(city.id);
@@ -456,7 +525,12 @@ export default function WeatherApp() {
       updateCity(city.id, { lastError: undefined });
 
       try {
-        const data = await fetchWeather('openMeteo', {
+        const strategy = allowNetwork
+          ? force && !offline
+            ? 'network-first'
+            : 'cache-first'
+          : 'cache-only';
+        const response = (await fetchWeather('openMeteo', {
           lat: city.lat,
           lon: city.lon,
           timezone: city.timezone ?? 'auto',
@@ -464,18 +538,24 @@ export default function WeatherApp() {
           daily: DEFAULT_DAILY,
           forecast_days: 5,
           signal: controller.signal,
-        });
+          strategy,
+          allowNetwork,
+          revalidate: allowNetwork && !offline && !force,
+          ttl: WEATHER_TTL,
+        })) as WeatherResponse;
 
         if (controllersRef.current.get(city.id) !== controller) return;
 
+        const data = response?.data ?? response;
         const current = data?.current_weather ?? {};
+        const readingTime = response?.meta?.timestamp ?? Date.now();
         const nextReading: WeatherReading | undefined =
           typeof current.temperature === 'number' &&
           typeof current.weathercode === 'number'
             ? {
                 temp: current.temperature,
                 condition: current.weathercode,
-                time: Date.now(),
+                time: readingTime,
               }
             : city.lastReading;
 
@@ -492,18 +572,66 @@ export default function WeatherApp() {
 
         updateCity(city.id, {
           lastReading: nextReading,
+          lastReadingStale: Boolean(response?.meta?.stale),
           forecast: forecast.length ? forecast : city.forecast,
           timezone: data?.timezone ?? city.timezone,
           lastError: undefined,
         });
+
+        if (response?.revalidate) {
+          response.revalidate.then((next: WeatherResponse | null) => {
+            if (!next || controllersRef.current.get(city.id) !== controller) return;
+            const nextData = next.data;
+            const nextCurrent = nextData?.current_weather ?? {};
+            const nextReading: WeatherReading | undefined =
+              typeof nextCurrent.temperature === 'number' &&
+              typeof nextCurrent.weathercode === 'number'
+                ? {
+                    temp: nextCurrent.temperature,
+                    condition: nextCurrent.weathercode,
+                    time: next.meta?.timestamp ?? Date.now(),
+                  }
+                : city.lastReading;
+            const nextForecast: ForecastDay[] = Array.isArray(nextData?.daily?.time)
+              ? nextData.daily.time.reduce(
+                  (acc: ForecastDay[], date: string, idx: number) => {
+                    const temp = nextData.daily.temperature_2m_max?.[idx];
+                    const condition = nextData.daily.weathercode?.[idx];
+                    if (typeof temp === 'number' && typeof condition === 'number') {
+                      acc.push({ date, temp, condition });
+                    }
+                    return acc;
+                  },
+                  [],
+                )
+              : [];
+            updateCity(city.id, {
+              lastReading: nextReading,
+              lastReadingStale: Boolean(next.meta?.stale),
+              forecast: nextForecast.length ? nextForecast : city.forecast,
+              timezone: nextData?.timezone ?? city.timezone,
+              lastError: undefined,
+            });
+          });
+        }
       } catch (error) {
         if (controller.signal.aborted) return;
-        updateCity(city.id, {
-          lastError:
-            error instanceof Error
-              ? error.message
-              : 'Unable to update this city right now.',
-        });
+        if (error instanceof WeatherFetchError) {
+          const message =
+            error.type === 'network-disabled'
+              ? 'Network access is disabled in Settings.'
+              : error.type === 'offline'
+                ? 'You are offline.'
+                : error.message;
+          updateCity(city.id, { lastError: message });
+        } else {
+          updateCity(city.id, {
+            lastError:
+              error instanceof Error
+                ? error.message
+                : 'Unable to update this city right now.',
+          });
+        }
       } finally {
         if (controllersRef.current.get(city.id) === controller) {
           controllersRef.current.delete(city.id);
@@ -519,24 +647,16 @@ export default function WeatherApp() {
   );
 
   useEffect(() => {
-    if (!canFetch) return;
     cities.forEach((city) => {
       const needsRefresh =
         !city.lastReading ||
-        Date.now() - city.lastReading.time > WEATHER_TTL;
+        Date.now() - city.lastReading.time > WEATHER_TTL ||
+        city.lastReadingStale;
       if (needsRefresh) {
         fetchCityWeather(city);
       }
     });
-  }, [canFetch, cities, fetchCityWeather]);
-
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setSearchResults([]);
-      setSearchStatus('idle');
-      setSearchError(null);
-    }
-  }, [searchQuery]);
+  }, [cities, fetchCityWeather]);
 
   const addCity = useCallback(
     (newCity: City) => {
@@ -548,57 +668,112 @@ export default function WeatherApp() {
     [setCities],
   );
 
-  const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const query = searchQuery.trim();
-    if (!query) return;
-    if (!canFetch) {
-      setSearchError(
-        allowNetwork
-          ? 'You are offline. Connect to fetch city suggestions.'
-          : 'Network access is disabled in Settings.',
-      );
-      setSearchStatus('error');
+  const runSearch = useCallback(
+    async (query: string, { immediate = false }: { immediate?: boolean } = {}) => {
+      const trimmed = query.trim();
+      if (!trimmed) return;
+
+      const strategy = allowNetwork
+        ? offline
+          ? 'cache-first'
+          : 'network-first'
+        : 'cache-only';
+
+      if (!allowNetwork && strategy === 'cache-only' && !immediate) {
+        setSearchError('Network access is disabled in Settings.');
+        setSearchStatus('error');
+        return;
+      }
+
+      searchAbortRef.current?.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
+      setSearchStatus('loading');
+      setSearchError(null);
+
+      try {
+        const response = await fetchWeather('openMeteoGeo', {
+          name: trimmed,
+          count: 6,
+          language: 'en',
+          format: 'json',
+          signal: controller.signal,
+          allowNetwork,
+          strategy,
+        });
+        if (searchAbortRef.current !== controller) return;
+        const data = response?.data ?? response;
+        const results = Array.isArray(data?.results) ? data.results : [];
+        const seen = new Set<string>();
+        const cleaned = results
+          .filter(
+            (item: any): item is GeoResult =>
+              typeof item?.name === 'string' &&
+              typeof item?.latitude === 'number' &&
+              typeof item?.longitude === 'number',
+          )
+          .filter((item: GeoResult) => {
+            const key = `${item.name}-${item.latitude}-${item.longitude}`;
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .slice(0, 6);
+        setSearchResults(cleaned);
+        setSearchStatus('idle');
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        setSearchStatus('error');
+        if (error instanceof WeatherFetchError) {
+          const message =
+            error.type === 'network-disabled'
+              ? 'Network access is disabled in Settings.'
+              : error.type === 'offline'
+                ? 'You are offline. Connect to fetch city suggestions.'
+                : error.message;
+          setSearchError(message);
+        } else {
+          setSearchError(
+            error instanceof Error
+              ? error.message
+              : 'Unable to find matching cities.',
+          );
+        }
+      }
+    },
+    [allowNetwork, offline],
+  );
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setSearchStatus('idle');
+      setSearchError(null);
+      lastSearchRef.current = '';
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
       return;
     }
-
-    searchAbortRef.current?.abort();
-    const controller = new AbortController();
-    searchAbortRef.current = controller;
-    setSearchStatus('loading');
-    setSearchError(null);
-
-    try {
-      const response = await fetch(
-        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-          query,
-        )}&count=6&language=en&format=json`,
-        { signal: controller.signal },
-      );
-      if (!response.ok) {
-        throw new Error('Failed to fetch city list');
-      }
-      const data = await response.json();
-      const results = Array.isArray(data?.results) ? data.results : [];
-      const cleaned = results
-        .filter(
-          (item: any): item is GeoResult =>
-            typeof item?.name === 'string' &&
-            typeof item?.latitude === 'number' &&
-            typeof item?.longitude === 'number',
-        )
-        .slice(0, 6);
-      setSearchResults(cleaned);
-      setSearchStatus('idle');
-    } catch (error) {
-      if (controller.signal.aborted) return;
-      setSearchStatus('error');
-      setSearchError(
-        error instanceof Error
-          ? error.message
-          : 'Unable to find matching cities.',
-      );
+    if (searchDebounceRef.current) {
+      window.clearTimeout(searchDebounceRef.current);
     }
+    searchDebounceRef.current = window.setTimeout(() => {
+      if (lastSearchRef.current === searchQuery.trim()) return;
+      lastSearchRef.current = searchQuery.trim();
+      runSearch(searchQuery);
+    }, 350);
+    return () => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [searchQuery, runSearch]);
+
+  const handleSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!searchQuery.trim()) return;
+    runSearch(searchQuery, { immediate: true });
   };
 
   const handleManualAdd = () => {
@@ -614,8 +789,59 @@ export default function WeatherApp() {
     setManualLon('');
   };
 
-  const onDragStart = (i: number) => {
+  const handleUseLocation = () => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationStatus('error');
+      setLocationError('Geolocation is not supported in this browser.');
+      return;
+    }
+    setLocationStatus('loading');
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = Number(position.coords.latitude.toFixed(4));
+        const lon = Number(position.coords.longitude.toFixed(4));
+        const nextCity: City = {
+          id: 'my-location',
+          name: 'My location',
+          lat,
+          lon,
+        };
+        setCities((prev) => {
+          const idx = prev.findIndex((entry) => entry.id === 'my-location');
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...nextCity };
+            return next;
+          }
+          return [...prev, nextCity];
+        });
+        fetchCityWeather(nextCity, { force: true });
+        setLocationStatus('idle');
+      },
+      (error) => {
+        setLocationStatus('error');
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError('Location permission was denied.');
+        } else if (error.code === error.TIMEOUT) {
+          setLocationError('Location request timed out.');
+        } else {
+          setLocationError('Unable to access your location.');
+        }
+      },
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 },
+    );
+  };
+
+  const onDragStart = (event: DragEvent<HTMLButtonElement>, i: number) => {
     dragSrc.current = i;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', 'move');
+  };
+
+  const onDragEnd = () => {
+    dragSrc.current = null;
   };
 
   const onDrop = (i: number) => {
@@ -673,10 +899,10 @@ export default function WeatherApp() {
           <button
             type="button"
             onClick={() => cities.forEach((city) => fetchCityWeather(city, { force: true }))}
-            disabled={!canFetch || cities.length === 0}
+            disabled={cities.length === 0 || isRefreshingAny}
             className="rounded bg-kali-control px-3 py-1 text-xs font-semibold uppercase tracking-wide text-black shadow-[0_0_12px_rgba(15,148,210,0.35)] transition disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Refresh all
+            {isRefreshingAny ? 'Refreshing…' : 'Refresh all'}
           </button>
         </div>
 
@@ -738,6 +964,15 @@ export default function WeatherApp() {
             </button>
             <button
               type="button"
+              onClick={handleUseLocation}
+              disabled={locationStatus === 'loading'}
+              className="rounded border border-[color:var(--kali-panel-border)] px-3 py-1 text-sm font-medium text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 disabled:cursor-not-allowed disabled:opacity-60"
+              aria-label="Use my location"
+            >
+              {locationStatus === 'loading' ? 'Locating…' : 'Use my location'}
+            </button>
+            <button
+              type="button"
               onClick={() => setShowAdvanced((prev) => !prev)}
               className="rounded border border-[color:var(--kali-panel-border)] px-3 py-1 text-sm font-medium text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent)]"
             >
@@ -752,6 +987,11 @@ export default function WeatherApp() {
           {searchError && (
             <div className="rounded border border-[color:color-mix(in_srgb,var(--kali-panel-border)_60%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_85%,transparent)] p-2 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
               {searchError}
+            </div>
+          )}
+          {locationError && (
+            <div className="rounded border border-[color:color-mix(in_srgb,var(--kali-panel-border)_60%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_85%,transparent)] p-2 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
+              {locationError}
             </div>
           )}
           {searchResults.length > 0 && (
@@ -841,8 +1081,6 @@ export default function WeatherApp() {
             {cities.map((city, i) => (
               <div
                 key={city.id}
-                draggable
-                onDragStart={() => onDragStart(i)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => onDrop(i)}
                 className="rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] p-4 transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)] focus-within:bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)]"
@@ -850,8 +1088,16 @@ export default function WeatherApp() {
                 <CityTile
                   city={city}
                   loading={Boolean(loadingIds[city.id])}
-                  offline={!canFetch}
-                  canFetch={canFetch}
+                  statusLabel={
+                    !allowNetwork
+                      ? 'Network disabled'
+                      : offline
+                        ? 'Offline'
+                        : city.lastReadingStale
+                          ? 'Cached'
+                          : undefined
+                  }
+                  canFetch={!loadingIds[city.id]}
                   onOpen={() => setSelectedId(city.id)}
                   onRefresh={() => fetchCityWeather(city, { force: true })}
                   onEdit={() => setEditingCity(city)}
@@ -877,6 +1123,8 @@ export default function WeatherApp() {
                       return next;
                     })
                   }
+                  onDragStart={(event) => onDragStart(event, i)}
+                  onDragEnd={onDragEnd}
                   canMoveUp={i > 0}
                   canMoveDown={i < cities.length - 1}
                 />
