@@ -1,4 +1,13 @@
-import { initLane, updateCars, handlePads, PAD_POSITIONS, rampLane, carLaneDefs, logLaneDefs } from '../components/apps/frogger';
+import {
+  clampDelta,
+  initLane,
+  updateCars,
+  handlePads,
+  PAD_POSITIONS,
+  rampLane,
+  carLaneDefs,
+  logLaneDefs,
+} from '../components/apps/frogger';
 
 describe('frogger mechanics', () => {
   test('lane spawn variance via lane-local RNG', () => {
@@ -43,5 +52,11 @@ describe('frogger mechanics', () => {
     expect(hard.speed).toBeCloseTo(carLaneDefs[0].speed * 1.2);
     const easy = rampLane(carLaneDefs[0], 1, 0.3, 0.8);
     expect(easy.speed).toBeCloseTo(carLaneDefs[0].speed * 0.8);
+  });
+
+  test('clamps large dt values to avoid simulation spikes', () => {
+    expect(clampDelta(1.5)).toBeCloseTo(0.25);
+    expect(clampDelta(-1)).toBeCloseTo(0);
+    expect(clampDelta(0.1)).toBeCloseTo(0.1);
   });
 });

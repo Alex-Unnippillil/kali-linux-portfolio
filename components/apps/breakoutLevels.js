@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   BREAKOUT_PRESETS,
   BREAKOUT_STORAGE_PREFIX,
@@ -21,6 +21,7 @@ const getSavedLevels = () => {
 
 export default function BreakoutLevels({ onSelect, onClose }) {
   const [savedLevels, setSavedLevels] = useState([]);
+  const dialogRef = useRef(null);
 
   const refreshSaved = useCallback(() => {
     try {
@@ -45,6 +46,30 @@ export default function BreakoutLevels({ onSelect, onClose }) {
     return () => window.removeEventListener('keydown', handler);
   }, [onClose]);
 
+  useEffect(() => {
+    const node = dialogRef.current;
+    if (!node) return undefined;
+    const focusable = node.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (first) first.focus();
+    const handleTab = (e) => {
+      if (e.key !== 'Tab') return;
+      if (focusable.length === 0) return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    node.addEventListener('keydown', handleTab);
+    return () => node.removeEventListener('keydown', handleTab);
+  }, [savedLevels]);
+
   const handleSelect = useCallback(
     (selection) => {
       onSelect?.(selection);
@@ -54,6 +79,7 @@ export default function BreakoutLevels({ onSelect, onClose }) {
 
   const handleDelete = useCallback(
     (name) => {
+      if (!window.confirm(`Delete "${name}"?`)) return;
       try {
         localStorage.removeItem(`${BREAKOUT_STORAGE_PREFIX}${name}`);
       } catch {
@@ -93,7 +119,10 @@ export default function BreakoutLevels({ onSelect, onClose }) {
       aria-modal="true"
       aria-label="Choose Breakout level"
     >
-      <div className="w-[90%] max-w-xl rounded-lg border border-slate-700/70 bg-slate-900/95 p-4 shadow-xl">
+      <div
+        ref={dialogRef}
+        className="w-[90%] max-w-xl rounded-lg border border-slate-700/70 bg-slate-900/95 p-4 shadow-xl"
+      >
         <div className="flex items-center justify-between">
           <div className="text-lg font-semibold">Choose a level</div>
           <button

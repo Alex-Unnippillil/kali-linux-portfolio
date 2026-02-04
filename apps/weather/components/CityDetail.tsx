@@ -2,7 +2,7 @@
 
 import { MouseEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useSettings } from '../../../hooks/useSettings';
-import { fetchWeather } from '../../../components/apps/weather';
+import { fetchWeather, WeatherFetchError } from '../../../components/apps/weather';
 import type { City, HourlySnapshot } from '../state';
 
 interface Props {
@@ -11,6 +11,12 @@ interface Props {
   onUpdateCity: (id: string, update: Partial<City>) => void;
 }
 
+type WeatherResponse = {
+  data: any;
+  meta?: { stale?: boolean; timestamp?: number };
+  revalidate?: Promise<{ data: any; meta?: { stale?: boolean; timestamp?: number } } | null>;
+};
+
 const CHART_HEIGHT = 90;
 const CHART_WIDTH = 260;
 const CHART_PADDING = 8;
@@ -18,6 +24,7 @@ const CHART_PADDING = 8;
 export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
   const { allowNetwork } = useSettings();
   const titleId = useId();
+  const descriptionId = useId();
   const [unit, setUnit] = useState<'C' | 'F'>('C');
   const [hourly, setHourly] = useState<HourlySnapshot | null>(
     city.hourly ?? null,
@@ -33,6 +40,7 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
   const workerRef = useRef<Worker | null>(null);
   const requestRef = useRef(0);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
@@ -73,6 +81,32 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
   }, [onClose]);
 
   useEffect(() => {
+    const handleFocusTrap = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const container = dialogRef.current;
+      if (!container) return;
+      const focusable = container.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleFocusTrap);
+    return () => {
+      document.removeEventListener('keydown', handleFocusTrap);
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof Worker === 'undefined') return;
     const worker = new Worker(
       new URL('../../../components/apps/weather.worker.js', import.meta.url),
@@ -109,12 +143,17 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
   }, [city.hourly, city.id]);
 
   useEffect(() => {
-    if (!allowNetwork || offline) return;
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     setStatus('loading');
     setError(null);
+
+    const strategy = allowNetwork
+      ? offline
+        ? 'cache-first'
+        : 'cache-first'
+      : 'cache-only';
 
     fetchWeather('openMeteo', {
       lat: city.lat,
@@ -122,9 +161,14 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
       timezone: city.timezone ?? 'auto',
       hourly: 'temperature_2m,precipitation_probability',
       forecast_days: 1,
+      strategy,
+      allowNetwork,
       signal: controller.signal,
+      revalidate: allowNetwork && !offline,
     })
-      .then((data) => {
+      .then((response: WeatherResponse) => {
+        if (abortRef.current !== controller) return;
+        const data = response?.data ?? response;
         const temps = Array.isArray(data?.hourly?.temperature_2m)
           ? data.hourly.temperature_2m.filter(
               (t: unknown): t is number =>
@@ -149,22 +193,71 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
           temps,
           times,
           precipProbability,
-          updatedAt: Date.now(),
+          updatedAt: response?.meta?.timestamp ?? Date.now(),
         };
 
-        if (abortRef.current !== controller) return;
         setHourly(snapshot);
-        onUpdateCity(city.id, { hourly: snapshot });
+        onUpdateCity(city.id, {
+          hourly: snapshot,
+          hourlyStale: Boolean(response?.meta?.stale),
+        });
         setStatus('idle');
+
+        if (response?.revalidate) {
+          response.revalidate.then((next: WeatherResponse | null) => {
+            if (!next || abortRef.current !== controller) return;
+            const nextData = next.data;
+            const nextTemps = Array.isArray(nextData?.hourly?.temperature_2m)
+              ? nextData.hourly.temperature_2m.filter(
+                  (t: unknown): t is number =>
+                    typeof t === 'number' && Number.isFinite(t),
+                )
+              : [];
+            const nextTimes = Array.isArray(nextData?.hourly?.time)
+              ? nextData.hourly.time.filter(
+                  (t: unknown): t is string => typeof t === 'string',
+                )
+              : [];
+            const nextPrecip = Array.isArray(
+              nextData?.hourly?.precipitation_probability,
+            )
+              ? nextData.hourly.precipitation_probability.filter(
+                  (p: unknown): p is number =>
+                    typeof p === 'number' && Number.isFinite(p),
+                )
+              : [];
+            const refreshed: HourlySnapshot = {
+              temps: nextTemps,
+              times: nextTimes,
+              precipProbability: nextPrecip,
+              updatedAt: next.meta?.timestamp ?? Date.now(),
+            };
+            setHourly(refreshed);
+            onUpdateCity(city.id, {
+              hourly: refreshed,
+              hourlyStale: Boolean(next.meta?.stale),
+            });
+          });
+        }
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
         setStatus('error');
-        setError(
-          err instanceof Error
-            ? err.message
-            : 'Unable to fetch hourly forecast.',
-        );
+        if (err instanceof WeatherFetchError) {
+          if (err.type === 'network-disabled') {
+            setError('Network access is disabled in Settings.');
+          } else if (err.type === 'offline') {
+            setError('You are offline.');
+          } else {
+            setError(err.message);
+          }
+        } else {
+          setError(
+            err instanceof Error
+              ? err.message
+              : 'Unable to fetch hourly forecast.',
+          );
+        }
       });
 
     return () => {
@@ -193,6 +286,9 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
         minute: '2-digit',
       })
     : null;
+  const updatedAtText = updatedAtLabel
+    ? `${city.hourlyStale ? 'Cached' : 'Updated'} ${updatedAtLabel}`
+    : null;
 
   const hasTemps = temps.length > 0;
   const isOfflineState = !allowNetwork || offline;
@@ -207,6 +303,8 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        aria-describedby={descriptionId}
+        ref={dialogRef}
         className="w-full max-w-lg rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel)] p-4 text-[color:var(--kali-text)] shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
       >
         <div className="flex items-start justify-between gap-4">
@@ -217,7 +315,10 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
             >
               {city.name}
             </div>
-            <div className="text-xs uppercase tracking-wider text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">
+            <div
+              id={descriptionId}
+              className="text-xs uppercase tracking-wider text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]"
+            >
               Hourly forecast
             </div>
           </div>
@@ -259,9 +360,9 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
           >
             °F
           </button>
-          {updatedAtLabel && (
+          {updatedAtText && (
             <div className="ml-auto text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]">
-              Updated {updatedAtLabel}
+              {updatedAtText}
             </div>
           )}
         </div>

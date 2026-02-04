@@ -835,6 +835,7 @@ const Snake = ({ windowMeta } = {}) => {
             type="checkbox"
             className="h-4 w-4"
             checked={wrap}
+            aria-label="Wrap"
             onChange={(e) => setWrap(e.target.checked)}
           />
         </label>
@@ -844,6 +845,7 @@ const Snake = ({ windowMeta } = {}) => {
             type="checkbox"
             className="h-4 w-4"
             checked={obstaclesEnabled}
+            aria-label="Obstacles"
             onChange={(e) => {
               setObstaclesEnabled(e.target.checked);
               reset();
@@ -856,6 +858,7 @@ const Snake = ({ windowMeta } = {}) => {
             type="checkbox"
             className="h-4 w-4"
             checked={sound}
+            aria-label="Sound"
             onChange={(e) => setSound(e.target.checked)}
           />
         </label>
@@ -865,6 +868,7 @@ const Snake = ({ windowMeta } = {}) => {
             type="checkbox"
             className="h-4 w-4"
             checked={haptics.enabled}
+            aria-label="Haptics"
             onChange={haptics.toggle}
           />
         </label>
@@ -891,6 +895,7 @@ const Snake = ({ windowMeta } = {}) => {
             type="checkbox"
             className="h-4 w-4"
             checked={colorblindMode}
+            aria-label="Colorblind assist"
             onChange={(e) => setColorblindMode(e.target.checked)}
           />
         </label>
@@ -919,6 +924,7 @@ const Snake = ({ windowMeta } = {}) => {
             type="checkbox"
             className="h-4 w-4"
             checked={showTouchControls}
+            aria-label="Touch D-pad"
             onChange={(e) => setShowTouchControls(e.target.checked)}
           />
         </label>

@@ -22,10 +22,10 @@ const cellClass = (cell, active) => {
 };
 
 const BRUSHES = [
-  { type: 0, label: 'Eraser' },
-  { type: 1, label: 'Normal brick' },
-  { type: 2, label: 'Multi-ball brick' },
-  { type: 3, label: 'Magnet brick' },
+  { type: 0, label: 'Eraser', key: '1' },
+  { type: 1, label: 'Normal brick', key: '2' },
+  { type: 2, label: 'Multi-ball brick', key: '3' },
+  { type: 3, label: 'Magnet brick', key: '4' },
 ];
 
 const listSaved = () => {
@@ -39,12 +39,14 @@ const listSaved = () => {
   return saved.sort();
 };
 
-export default function BreakoutEditor({ onLoad }) {
+export default function BreakoutEditor({ onLoad } = {}) {
   const [grid, setGrid] = useState(() => normalizeLayout(DEFAULT_LAYOUT));
   const [brush, setBrush] = useState(1);
   const [name, setName] = useState('level1');
   const [savedLevels, setSavedLevels] = useState([]);
   const [selectedSaved, setSelectedSaved] = useState('');
+  const [importValue, setImportValue] = useState('');
+  const [exportValue, setExportValue] = useState('');
   const pointerDown = useRef(false);
 
   const refreshSaved = useCallback(() => {
@@ -69,6 +71,24 @@ export default function BreakoutEditor({ onLoad }) {
       window.removeEventListener('pointerup', endPointer);
       window.removeEventListener('pointercancel', endPointer);
     };
+  }, []);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+      const match = BRUSHES.find((item) => item.key === e.key);
+      if (match) {
+        e.preventDefault();
+        setBrush(match.type);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   const updateCell = useCallback((r, c, value) => {
@@ -145,6 +165,7 @@ export default function BreakoutEditor({ onLoad }) {
   const deleteLevel = useCallback(
     (levelName) => {
       if (!levelName) return;
+      if (!window.confirm(`Delete "${levelName}"?`)) return;
       try {
         localStorage.removeItem(`${BREAKOUT_STORAGE_PREFIX}${levelName}`);
       } catch {
@@ -164,6 +185,49 @@ export default function BreakoutEditor({ onLoad }) {
     onLoad?.(grid, name);
   }, [grid, name, onLoad]);
 
+  const exportJson = useCallback(() => {
+    const payload = JSON.stringify(grid, null, 2);
+    setExportValue(payload);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(payload).catch(() => {
+        /* ignore */
+      });
+    }
+  }, [grid]);
+
+  const exportUrl = useCallback(() => {
+    try {
+      const encoded = btoa(JSON.stringify(grid));
+      const url = `${window.location.origin}${window.location.pathname}?level=${encoded}`;
+      setExportValue(url);
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).catch(() => {
+          /* ignore */
+        });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [grid]);
+
+  const importLayout = useCallback(() => {
+    if (!importValue.trim()) return;
+    try {
+      let payload = importValue.trim();
+      if (payload.includes('level=')) {
+        const url = new URL(payload, window.location.origin);
+        payload = url.searchParams.get('level') || payload;
+      }
+      const decoded = payload.startsWith('[')
+        ? JSON.parse(payload)
+        : JSON.parse(atob(payload));
+      const normalized = normalizeLayout(decoded);
+      setGrid(normalized);
+    } catch {
+      /* ignore */
+    }
+  }, [importValue]);
+
   const savedOptions = useMemo(
     () =>
       savedLevels.map((level) => (
@@ -177,32 +241,42 @@ export default function BreakoutEditor({ onLoad }) {
   return (
     <div className="text-white space-y-3">
       <div className="text-xs uppercase tracking-wide text-slate-400">
-        Brush
+        Brush (1-4)
       </div>
       <div className="flex flex-wrap gap-2">
         {BRUSHES.map((item) => (
           <button
             key={item.type}
             type="button"
-            aria-label={item.label}
+            aria-label={`${item.label} (${item.key})`}
             onClick={() => setBrush(item.type)}
-            className={`h-6 w-6 rounded ${
+            className={`flex items-center gap-2 rounded px-2 py-1 text-xs ${
               brush === item.type ? 'ring-2 ring-amber-400' : 'ring-1 ring-slate-600'
-            } ${
-              item.type === 0
-                ? 'bg-slate-900'
-                : item.type === 1
-                  ? 'bg-blue-500'
-                  : item.type === 2
-                    ? 'bg-emerald-400'
-                    : 'bg-rose-500'
             }`}
-          />
+          >
+            <span
+              className={`inline-block h-3 w-3 rounded ${
+                item.type === 0
+                  ? 'bg-slate-900'
+                  : item.type === 1
+                    ? 'bg-blue-500'
+                    : item.type === 2
+                      ? 'bg-emerald-400'
+                      : 'bg-rose-500'
+              }`}
+            />
+            {item.label}
+          </button>
         ))}
+      </div>
+      <div className="text-xs text-slate-400">
+        Legend: blue = normal, green = multi-ball, red = magnet.
       </div>
       <div
         className="grid gap-1 select-none"
         style={{ gridTemplateColumns: `repeat(${BREAKOUT_COLS}, 20px)` }}
+        role="grid"
+        aria-label="Breakout level editor grid"
       >
         {grid.map((row, r) =>
           row.map((cell, c) => (
@@ -227,6 +301,7 @@ export default function BreakoutEditor({ onLoad }) {
           className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-white"
           value={name}
           onChange={(e) => setName(e.target.value)}
+          aria-label="Level name"
         />
       </div>
       <div className="flex flex-wrap gap-2">
@@ -263,6 +338,7 @@ export default function BreakoutEditor({ onLoad }) {
             setSelectedSaved(e.target.value);
             loadLevel(e.target.value);
           }}
+          aria-label="Saved layouts"
         >
           <option value="">Select a saved layout</option>
           {savedOptions}
@@ -283,6 +359,50 @@ export default function BreakoutEditor({ onLoad }) {
             Delete
           </button>
         </div>
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs uppercase tracking-wide text-slate-400">
+          Import JSON or URL
+        </label>
+        <textarea
+          className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-white"
+          rows={3}
+          value={importValue}
+          onChange={(e) => setImportValue(e.target.value)}
+          placeholder="Paste JSON or share URL"
+          aria-label="Import layout"
+        />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={importLayout}
+            className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
+          >
+            Import
+          </button>
+          <button
+            type="button"
+            onClick={exportJson}
+            className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
+          >
+            Export JSON
+          </button>
+          <button
+            type="button"
+            onClick={exportUrl}
+            className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600"
+          >
+            Copy share URL
+          </button>
+        </div>
+        {exportValue ? (
+          <input
+            className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-white"
+            readOnly
+            value={exportValue}
+            aria-label="Exported layout"
+          />
+        ) : null}
       </div>
     </div>
   );
