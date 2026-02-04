@@ -22,6 +22,57 @@ const withAlpha = (hex: string, alpha: number) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
+const hashNoise = (x: number, y: number, seed: number) => {
+  const v = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+  return v - Math.floor(v);
+};
+
+const drawTextureDots = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  alpha: number,
+  density: number,
+  seed: number,
+) => {
+  ctx.save();
+  ctx.fillStyle = withAlpha(color, alpha);
+  const step = Math.max(2, Math.floor(8 / density));
+  for (let yy = y; yy < y + height; yy += step) {
+    for (let xx = x; xx < x + width; xx += step) {
+      if (hashNoise(xx, yy, seed) > 0.82) {
+        ctx.fillRect(xx, yy, 1.5, 1.5);
+      }
+    }
+  }
+  ctx.restore();
+};
+
+const drawDiagonalHatch = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: string,
+  alpha: number,
+  spacing = 10,
+) => {
+  ctx.save();
+  ctx.strokeStyle = withAlpha(color, alpha);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let i = -height; i < width; i += spacing) {
+    ctx.moveTo(x + i, y + height);
+    ctx.lineTo(x + i + height, y);
+  }
+  ctx.stroke();
+  ctx.restore();
+};
+
 export interface FroggerRenderState {
   frog: FrogPosition;
   cars: LaneState[];
@@ -46,6 +97,7 @@ export interface FroggerRenderOptions {
   status: string;
   timeLeft: number;
   gradientCache: Record<string, CanvasGradient>;
+  showPauseOverlay?: boolean;
 }
 
 export const renderFroggerFrame = (
@@ -54,7 +106,15 @@ export const renderFroggerFrame = (
   effects: FroggerRenderEffects,
   options: FroggerRenderOptions,
 ) => {
-  const { colors, reduceMotion, showHitboxes, paused, status, timeLeft } = options;
+  const {
+    colors,
+    reduceMotion,
+    showHitboxes,
+    paused,
+    status,
+    timeLeft,
+    showPauseOverlay = true,
+  } = options;
   const widthPx = GRID_WIDTH * CELL_SIZE;
   const heightPx = GRID_HEIGHT * CELL_SIZE;
   const phase = effects.ripple;
@@ -71,6 +131,7 @@ export const renderFroggerFrame = (
   const rippleColor = colors.ripple || waterHighlight;
   const grassBase = colors.grass || '#14532d';
   const grassHighlight = colors.grassHighlight || grassBase;
+  const grassGlow = colors.grassGlow || grassHighlight;
   const padHighlight = colors.padHighlight || grassHighlight;
   const padShadow = colors.padShadow || grassBase;
   const laneStripe = colors.laneStripe || '#cbd5f5';
@@ -78,6 +139,7 @@ export const renderFroggerFrame = (
   const roadDark = colors.roadDark || '#111827';
   const roadLight = colors.roadLight || roadDark;
   const hudAccent = colors.hudAccent || colors.frog || '#facc15';
+  const vignetteColor = colors.vignette || '#020617';
 
   ctx.clearRect(0, 0, widthPx, heightPx);
   ctx.fillStyle = roadDark;
@@ -102,6 +164,18 @@ export const renderFroggerFrame = (
       });
       ctx.fillStyle = gradient;
       ctx.fillRect(0, top, widthPx, CELL_SIZE);
+      ctx.fillStyle = withAlpha(grassGlow, 0.12 + sparkle * 0.08);
+      ctx.fillRect(0, top + CELL_SIZE * 0.18, widthPx, CELL_SIZE * 0.15);
+      drawDiagonalHatch(
+        ctx,
+        0,
+        top,
+        widthPx,
+        CELL_SIZE,
+        grassHighlight,
+        0.08,
+        12,
+      );
       ctx.fillStyle = withAlpha(hudAccent, 0.08 + effects.safeFlash * 0.1);
       ctx.fillRect(0, top, widthPx, 3);
       ctx.fillRect(0, top + CELL_SIZE - 3, widthPx, 3);
@@ -119,6 +193,10 @@ export const renderFroggerFrame = (
       });
       ctx.fillStyle = gradient;
       ctx.fillRect(0, top, widthPx, CELL_SIZE);
+      ctx.fillStyle = withAlpha(laneEdge, 0.25);
+      ctx.fillRect(0, top + CELL_SIZE * 0.2, widthPx, 1);
+      ctx.fillRect(0, top + CELL_SIZE * 0.8, widthPx, 1);
+      drawTextureDots(ctx, 0, top, widthPx, CELL_SIZE, laneEdge, 0.18, 0.6, y);
       ctx.fillStyle = withAlpha(laneStripe, 0.55 + sparkle * 0.25);
       ctx.fillRect(0, top + CELL_SIZE / 2 - 1, widthPx, 2);
       ctx.fillStyle = withAlpha(laneEdge, 0.35);
@@ -134,6 +212,20 @@ export const renderFroggerFrame = (
       });
       ctx.fillStyle = gradient;
       ctx.fillRect(0, top, widthPx, CELL_SIZE);
+      ctx.fillStyle = withAlpha(waterHighlight, 0.08 + sparkle * 0.06);
+      ctx.fillRect(0, top + CELL_SIZE * 0.15, widthPx, 1);
+      ctx.fillRect(0, top + CELL_SIZE * 0.78, widthPx, 1);
+      drawTextureDots(
+        ctx,
+        0,
+        top,
+        widthPx,
+        CELL_SIZE,
+        waterHighlight,
+        0.12,
+        0.5,
+        y + 12,
+      );
       if (!reduceMotion) {
         ctx.save();
         ctx.globalAlpha = 0.4;
@@ -175,6 +267,11 @@ export const renderFroggerFrame = (
     ctx.beginPath();
     ctx.arc(0, 0, CELL_SIZE * 0.45, 0, Math.PI * 2);
     ctx.fill();
+    ctx.strokeStyle = withAlpha(padHighlight, 0.35);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, CELL_SIZE * 0.3, 0, Math.PI * 2);
+    ctx.stroke();
     ctx.lineWidth = 2;
     ctx.strokeStyle = withAlpha(padShadow, 0.4);
     ctx.beginPath();
@@ -202,9 +299,15 @@ export const renderFroggerFrame = (
       gradient.addColorStop(1, logShadow);
       ctx.fillStyle = gradient;
       ctx.fillRect(x, y, width, CELL_SIZE);
+      drawDiagonalHatch(ctx, x, y + 2, width, CELL_SIZE - 4, logShadow, 0.08, 8);
       ctx.fillStyle = withAlpha(logShadow, 0.35);
       ctx.fillRect(x, y + CELL_SIZE * 0.3, width, 2);
       ctx.fillRect(x, y + CELL_SIZE * 0.7, width, 2);
+      ctx.fillStyle = withAlpha(logShadow, 0.35);
+      ctx.beginPath();
+      ctx.arc(x + 4, y + CELL_SIZE / 2, CELL_SIZE * 0.18, 0, Math.PI * 2);
+      ctx.arc(x + width - 4, y + CELL_SIZE / 2, CELL_SIZE * 0.18, 0, Math.PI * 2);
+      ctx.fill();
       const reflectionTop = y + CELL_SIZE;
       if (reflectionTop < heightPx) {
         const reflectionGradient = ctx.createLinearGradient(
@@ -238,6 +341,8 @@ export const renderFroggerFrame = (
       gradient.addColorStop(1, carShadow);
       ctx.fillStyle = gradient;
       ctx.fillRect(x, y, width, CELL_SIZE);
+      ctx.fillStyle = withAlpha('#ffffff', 0.08);
+      ctx.fillRect(x + 2, y + 2, width - 4, 3);
       ctx.fillStyle = withAlpha(colors.carAccent || carLight, 0.35 + sparkle * 0.2);
       ctx.fillRect(x + 4, y + CELL_SIZE * 0.25, width - 8, 3);
       ctx.save();
@@ -358,13 +463,30 @@ export const renderFroggerFrame = (
     ctx.fillRect(0, 0, widthPx, heightPx);
   }
 
-  if (paused || status) {
+  const vignette = ctx.createRadialGradient(
+    widthPx / 2,
+    heightPx / 2,
+    heightPx * 0.1,
+    widthPx / 2,
+    heightPx / 2,
+    heightPx * 0.75,
+  );
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(1, withAlpha(vignetteColor, 0.55));
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, widthPx, heightPx);
+
+  if (status || (paused && showPauseOverlay)) {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.fillRect(0, 0, widthPx, heightPx);
     ctx.fillStyle = '#fff';
     ctx.font = '20px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(paused ? 'Paused' : status, widthPx / 2, heightPx / 2);
+    ctx.fillText(
+      paused && showPauseOverlay ? 'Paused' : status,
+      widthPx / 2,
+      heightPx / 2,
+    );
   }
 
   if (timeLeft <= 10 && !paused) {

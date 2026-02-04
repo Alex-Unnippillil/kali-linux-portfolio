@@ -96,8 +96,17 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
       "Left/Right select column, Enter/Space drops. Click/tap any column to drop (or tap twice if Confirm move is enabled).",
   },
   frogger: {
-    objective: "Cross the road and river to reach the goal.",
-    controls: "Use the arrow keys to move the frog.",
+    objective: "Cross the road and river, then land on each glowing pad.",
+    controls:
+      "Use the arrow keys or WASD to hop. Space or P pauses, R restarts. Touch players can swipe or use the on-screen pad.",
+    actions: {
+      up: "ArrowUp / W",
+      down: "ArrowDown / S",
+      left: "ArrowLeft / A",
+      right: "ArrowRight / D",
+      pause: "Space / P",
+      restart: "R",
+    },
   },
   hangman: {
     objective: "Guess the word before the hangman is complete.",

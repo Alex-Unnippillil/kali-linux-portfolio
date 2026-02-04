@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { logEvent } from '../../../utils/analytics';
 import { vibrate } from '../Games/common/haptics';
 import {
@@ -9,7 +9,10 @@ import {
 } from '../../../apps/games/frogger/config';
 import type { SkinGroup, SkinName } from '../../../apps/games/frogger/config';
 import { getLevelConfig } from '../../../apps/games/frogger/levels';
+import GameLayout from '../GameLayout';
 import useCanvasResize from '../../../hooks/useCanvasResize';
+import usePersistentState from '../../../hooks/usePersistentState';
+import usePrefersReducedMotion from '../../../hooks/usePrefersReducedMotion';
 import {
   clampDelta,
   handlePads,
@@ -18,6 +21,7 @@ import {
   updateLogs,
 } from './engine';
 import { renderFroggerFrame } from './render';
+import { consumeGameKey, shouldHandleGameKey } from '../../../utils/gameInput';
 import {
   CELL_SIZE,
   FROG_HOP_DURATION,
@@ -62,13 +66,38 @@ const buildLaneState = (level: number, diff: Difficulty) => {
   };
 };
 
-const Frogger = () => {
+interface FroggerProps {
+  windowMeta?: {
+    isFocused?: boolean;
+  };
+}
+
+const isDifficulty = (value: unknown): value is Difficulty =>
+  value === 'easy' || value === 'normal' || value === 'hard';
+
+const isSkinGroup = (value: unknown): value is SkinGroup =>
+  value === 'vibrant' || value === 'accessible';
+
+const isSkinName = (value: unknown): value is SkinName =>
+  typeof value === 'string' && value in SKINS;
+
+const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
+
+const isVolume = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
+
+const isNonNegativeNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
+const Frogger = ({ windowMeta }: FroggerProps = {}) => {
+  const isFocused = windowMeta?.isFocused ?? true;
   const initialTime = getLevelTime('normal', 1);
   const initialLanes = buildLaneState(1, 'normal');
   const canvasRef = useCanvasResize(
     GRID_WIDTH * CELL_SIZE,
     GRID_HEIGHT * CELL_SIZE,
   );
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const frogRef = useRef<FrogPosition>({ ...initialFrog });
   const carsRef = useRef<LaneState[]>(initialLanes.cars);
@@ -79,28 +108,58 @@ const Frogger = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [level, setLevel] = useState(1);
-  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [difficulty, setDifficulty] = usePersistentState<Difficulty>(
+    'frogger:difficulty',
+    'normal',
+    isDifficulty,
+  );
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(paused);
-  const [sound, setSound] = useState(true);
-  const soundRef = useRef(sound);
-  const [highScore, setHighScore] = useState(0);
-  const [reduceMotion, setReduceMotion] = useState(false);
-  const reduceMotionRef = useRef(reduceMotion);
+  const [soundEnabled, setSoundEnabled] = usePersistentState<boolean>(
+    'frogger:sound',
+    true,
+    isBoolean,
+  );
+  const [soundVolume, setSoundVolume] = usePersistentState<number>(
+    'frogger:soundVolume',
+    0.6,
+    isVolume,
+  );
+  const soundRef = useRef(soundEnabled);
+  const volumeRef = useRef(soundVolume);
+  const [highScore, setHighScore] = usePersistentState<number>(
+    'frogger:highScore',
+    0,
+    isNonNegativeNumber,
+  );
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const reduceMotionRef = useRef(prefersReducedMotion);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const nextLife = useRef(500);
   const holdRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rippleRef = useRef(0);
   const splashesRef = useRef<FroggerSplash[]>([]);
-  const [slowTime, setSlowTime] = useState(false);
+  const [slowTime, setSlowTime] = usePersistentState<boolean>(
+    'frogger:slowTime',
+    false,
+    isBoolean,
+  );
   const slowTimeRef = useRef(slowTime);
-  const [colorMode, setColorMode] = useState<SkinGroup>(
+  const [colorMode, setColorMode] = usePersistentState<SkinGroup>(
+    'frogger:colorMode',
     DEFAULT_COLOR_MODE as SkinGroup,
+    isSkinGroup,
   );
-  const [skin, setSkin] = useState<SkinName>(() =>
-    getRandomSkin(DEFAULT_COLOR_MODE as SkinGroup),
+  const [skin, setSkin] = usePersistentState<SkinName>(
+    'frogger:skin',
+    () => getRandomSkin(DEFAULT_COLOR_MODE as SkinGroup),
+    isSkinName,
   );
-  const [showHitboxes, setShowHitboxes] = useState(false);
+  const [showHitboxes, setShowHitboxes] = usePersistentState<boolean>(
+    'frogger:hitboxes',
+    false,
+    isBoolean,
+  );
   const [timeLeft, setTimeLeft] = useState(initialTime);
   const [goals, setGoals] = useState(0);
   const deathStreakRef = useRef(0);
@@ -128,11 +187,14 @@ const Frogger = () => {
     pausedRef.current = paused;
   }, [paused]);
   useEffect(() => {
-    soundRef.current = sound;
-  }, [sound]);
+    soundRef.current = soundEnabled;
+  }, [soundEnabled]);
   useEffect(() => {
-    reduceMotionRef.current = reduceMotion;
-  }, [reduceMotion]);
+    volumeRef.current = soundVolume;
+  }, [soundVolume]);
+  useEffect(() => {
+    reduceMotionRef.current = prefersReducedMotion;
+  }, [prefersReducedMotion]);
   useEffect(() => {
     slowTimeRef.current = slowTime;
   }, [slowTime]);
@@ -157,30 +219,26 @@ const Frogger = () => {
     if (available && !available.includes(skin)) {
       setSkin(available[0]);
     }
-  }, [colorMode, skin]);
+  }, [colorMode, skin, setSkin]);
 
   useEffect(() => {
-    const saved = Number(localStorage.getItem('frogger-highscore') || 0);
-    setHighScore(saved);
-  }, []);
+    try {
+      const saved = Number(localStorage.getItem('frogger-highscore') || 0);
+      if (Number.isFinite(saved) && saved > highScore) {
+        setHighScore(saved);
+      }
+      if (saved > 0) {
+        localStorage.removeItem('frogger-highscore');
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [highScore, setHighScore]);
   useEffect(() => {
     if (score > highScore) {
       setHighScore(score);
-      try {
-        localStorage.setItem('frogger-highscore', String(score));
-      } catch {
-        /* ignore */
-      }
     }
-  }, [score, highScore]);
-
-  useEffect(() => {
-    const mql = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handler = () => setReduceMotion(mql.matches);
-    handler();
-    mql.addEventListener('change', handler);
-    return () => mql.removeEventListener('change', handler);
-  }, []);
+  }, [score, highScore, setHighScore]);
 
   const playTone = useCallback((freq: number, duration = 0.1) => {
     if (!soundRef.current) return;
@@ -196,7 +254,7 @@ const Frogger = () => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12 * volumeRef.current, ctx.currentTime);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
@@ -262,27 +320,37 @@ const Frogger = () => {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') moveFrog(-1, 0);
-      else if (e.key === 'ArrowRight') moveFrog(1, 0);
-      else if (e.key === 'ArrowUp') moveFrog(0, -1);
-      else if (e.key === 'ArrowDown') moveFrog(0, 1);
-      else if (e.key === 'p' || e.key === 'P') setPaused((p) => !p);
-      else if (e.key === 'm' || e.key === 'M') setSound((s) => !s);
-      else if (e.key === 't' || e.key === 'T') setSlowTime((s) => !s);
+      if (!shouldHandleGameKey(e, { isFocused })) return;
+      const key = e.key;
+      if (key === 'ArrowLeft' || key === 'a' || key === 'A') {
+        consumeGameKey(e);
+        moveFrog(-1, 0);
+      } else if (key === 'ArrowRight' || key === 'd' || key === 'D') {
+        consumeGameKey(e);
+        moveFrog(1, 0);
+      } else if (key === 'ArrowUp' || key === 'w' || key === 'W') {
+        consumeGameKey(e);
+        moveFrog(0, -1);
+      } else if (key === 'ArrowDown' || key === 's' || key === 'S') {
+        consumeGameKey(e);
+        moveFrog(0, 1);
+      }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [moveFrog]);
+  }, [isFocused, moveFrog]);
 
   useEffect(() => {
-    const container = document.getElementById('frogger-container');
+    const container = containerRef.current;
     let startX = 0;
     let startY = 0;
     const handleStart = (e: TouchEvent) => {
+      if (!isFocused) return;
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     };
     const handleEnd = (e: TouchEvent) => {
+      if (!isFocused) return;
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) > Math.abs(dy)) {
@@ -299,7 +367,7 @@ const Frogger = () => {
       container?.removeEventListener('touchstart', handleStart);
       container?.removeEventListener('touchend', handleEnd);
     };
-  }, [moveFrog]);
+  }, [isFocused, moveFrog]);
 
   useEffect(() => {
     logEvent({ category: 'Frogger', action: 'level_start', value: 1 });
@@ -331,7 +399,7 @@ const Frogger = () => {
         });
       }
     },
-    [alignFrogToStart, colorMode, difficulty, level, syncTimer],
+    [alignFrogToStart, colorMode, difficulty, level, setSkin, syncTimer],
   );
 
   const loseLife = useCallback(
@@ -486,6 +554,7 @@ const Frogger = () => {
           status: statusRef.current,
           timeLeft: timeRef.current,
           gradientCache: gradientCacheRef.current,
+          showPauseOverlay: false,
         },
       );
 
@@ -535,14 +604,17 @@ const Frogger = () => {
   const timerProgress = timerMax
     ? Math.max(0, Math.min(1, liveTime / timerMax))
     : 0;
-  const availableSkinList =
-    SKIN_GROUPS[colorMode] && SKIN_GROUPS[colorMode].length
-      ? SKIN_GROUPS[colorMode]
-      : Object.keys(SKINS);
+  const availableSkinList = useMemo(
+    () =>
+      SKIN_GROUPS[colorMode] && SKIN_GROUPS[colorMode].length
+        ? SKIN_GROUPS[colorMode]
+        : Object.keys(SKINS),
+    [colorMode],
+  );
   const displayDifficulty = `${difficulty.charAt(0).toUpperCase()}${difficulty.slice(1)}`;
   const displaySkin = `${skin.charAt(0).toUpperCase()}${skin.slice(1)}`;
-  const buttonClasses =
-    'px-3 py-1.5 rounded-lg border border-slate-600/60 bg-slate-800/70 text-sm font-medium shadow hover:bg-slate-700/70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-300 focus:ring-offset-slate-900 transition-colors';
+  const statusMessage =
+    status || (paused ? 'Paused' : 'Hop across the river and claim each glowing pad!');
   const selectClasses =
     'px-3 py-1.5 rounded-lg border border-slate-600/60 bg-slate-900/70 text-sm shadow focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-300 focus:ring-offset-slate-900';
 
@@ -568,218 +640,290 @@ const Frogger = () => {
     { label: 'Skin', value: displaySkin, color: accentColor },
   ];
 
-  return (
-    <div
-      id="frogger-container"
-      className="h-full w-full overflow-auto bg-ub-cool-grey text-white"
-    >
-      <div className="mx-auto flex h-full w-full max-w-4xl flex-col items-center gap-5 px-4 py-6">
-        <div className="w-full">
-          <div className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-black/50 shadow-2xl">
-            <canvas
-              ref={canvasRef}
-              width={GRID_WIDTH * CELL_SIZE}
-              height={GRID_HEIGHT * CELL_SIZE}
-              className="block h-full w-full"
-              role="img"
-              aria-label="Frogger playfield"
-            />
-            <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/40" />
-          </div>
+  const settingsPanel = (
+    <div className="space-y-4 text-sm text-slate-100">
+      <div className="space-y-2">
+        <div className="text-xs uppercase tracking-wide text-slate-300">
+          Difficulty
         </div>
-
-        <div className="w-full space-y-3 text-sm">
-          <div
-            className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-700/60 p-3 shadow-lg backdrop-blur sm:grid-cols-4"
-            style={{ background: hudBg }}
-          >
-            {primaryStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-lg border border-slate-600/40 bg-black/30 px-3 py-2 text-center shadow-sm"
-              >
-                <p
-                  className="text-[0.65rem] uppercase tracking-wide"
-                  style={{ color: labelColor }}
-                >
-                  {stat.label}
-                </p>
-                <p className="text-lg font-semibold" style={{ color: stat.color }}>
-                  {stat.value}
-                </p>
-                {stat.label === 'Timer' && (
-                  <div
-                    className="mt-1 h-1.5 w-full rounded-full bg-slate-700/60"
-                    aria-hidden="true"
-                  >
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        background: accentColor,
-                        width: `${Math.max(
-                          5,
-                          Math.min(100, (stat.progress ?? 0) * 100),
-                        )}%`,
-                      }}
-                    />
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div
-            className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-700/60 p-3 shadow-lg backdrop-blur sm:grid-cols-4"
-            style={{ background: hudBg }}
-          >
-            {secondaryStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-lg border border-slate-600/40 bg-black/30 px-3 py-2 text-center shadow-sm"
-              >
-                <p
-                  className="text-[0.65rem] uppercase tracking-wide"
-                  style={{ color: labelColor }}
-                >
-                  {stat.label}
-                </p>
-                <p className="text-lg font-semibold" style={{ color: stat.color }}>
-                  {stat.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="w-full rounded-2xl border border-slate-700/60 p-4 shadow-lg backdrop-blur"
-          style={{ background: hudBg, color: hudText }}
-        >
-          <div className="flex flex-wrap items-center justify-center gap-3">
+        <div className="flex gap-2">
+          {(['easy', 'normal', 'hard'] as Difficulty[]).map((mode) => (
             <button
+              key={mode}
               type="button"
-              onClick={() => setPaused((p) => !p)}
-              className={buttonClasses}
+              className={`rounded-md border px-3 py-1 ${
+                difficulty === mode
+                  ? 'border-white/80 text-white'
+                  : 'border-slate-500 text-slate-300'
+              }`}
+              onClick={() => {
+                setDifficulty(mode);
+                reset(true, mode);
+              }}
             >
-              {paused ? 'Resume' : 'Pause'}
+              {mode.charAt(0).toUpperCase() + mode.slice(1)}
             </button>
-            <button
-              type="button"
-              onClick={() => setSound((s) => !s)}
-              className={buttonClasses}
-            >
-              Sound: {sound ? 'On' : 'Off'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSlowTime((s) => !s)}
-              className={buttonClasses}
-            >
-              Time: {slowTime ? 'Slow' : 'Normal'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowHitboxes((h) => !h)}
-              className={buttonClasses}
-            >
-              Hitboxes: {showHitboxes ? 'On' : 'Off'}
-            </button>
-            <label
-              htmlFor="frogger-difficulty"
-              className="flex flex-col text-left text-xs uppercase tracking-wide"
-              style={{ color: labelColor }}
-            >
-              <span>Difficulty</span>
-              <select
-                id="frogger-difficulty"
-                className={`${selectClasses} mt-1`}
-                style={{ color: hudText }}
-                value={difficulty}
-                onChange={(e) => {
-                  const diff = e.target.value as Difficulty;
-                  setDifficulty(diff);
-                  reset(true, diff);
-                }}
-              >
-                <option value="easy">Easy</option>
-                <option value="normal">Normal</option>
-                <option value="hard">Hard</option>
-              </select>
-            </label>
-            <label
-              htmlFor="frogger-color-mode"
-              className="flex flex-col text-left text-xs uppercase tracking-wide"
-              style={{ color: labelColor }}
-            >
-              <span>Palette Mode</span>
-              <select
-                id="frogger-color-mode"
-                className={`${selectClasses} mt-1`}
-                style={{ color: hudText }}
-                value={colorMode}
-                onChange={(e) => {
-                  const mode = e.target.value as SkinGroup;
-                  setColorMode(mode);
-                }}
-              >
-                <option value="vibrant">Vibrant</option>
-                <option value="accessible">Accessible</option>
-              </select>
-            </label>
-            <label
-              htmlFor="frogger-skin"
-              className="flex flex-col text-left text-xs uppercase tracking-wide"
-              style={{ color: labelColor }}
-            >
-              <span>Palette</span>
-              <select
-                id="frogger-skin"
-                className={`${selectClasses} mt-1`}
-                style={{ color: hudText }}
-                value={skin}
-                onChange={(e) => setSkin(e.target.value as SkinName)}
-              >
-                {availableSkinList.map((s) => (
-                  <option key={s} value={s}>
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </div>
-
-        <div
-          className="w-full rounded-2xl border border-slate-700/60 px-4 py-3 text-center text-sm shadow-lg backdrop-blur"
-          role="status"
-          aria-live="polite"
-          style={{ background: hudBg, color: hudText }}
-        >
-          {status || 'Hop across the river and claim each glowing pad!'}
-        </div>
-
-        <div className="grid w-full grid-cols-3 gap-2 sm:hidden">
-          {mobileControls.map((control, index) =>
-            control ? (
-              <button
-                key={`${control.label}-${index}`}
-                className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/70 text-lg font-semibold shadow focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 focus:ring-offset-slate-900"
-                style={{ color: hudText }}
-                onTouchStart={() => startHold(control.dx, control.dy)}
-                onTouchEnd={endHold}
-                onMouseDown={() => startHold(control.dx, control.dy)}
-                onMouseUp={endHold}
-                onMouseLeave={endHold}
-              >
-                {control.label}
-              </button>
-            ) : (
-              <div key={`spacer-${index}`} className="h-14 w-14" />
-            ),
-          )}
+          ))}
         </div>
       </div>
+
+      <div className="space-y-2">
+        <div className="text-xs uppercase tracking-wide text-slate-300">
+          Palette
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label
+            htmlFor="frogger-color-mode"
+            className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-300"
+          >
+            Mode
+            <select
+              id="frogger-color-mode"
+              className={selectClasses}
+              value={colorMode}
+              onChange={(e) => {
+                const mode = e.target.value as SkinGroup;
+                setColorMode(mode);
+              }}
+            >
+              <option value="vibrant">Vibrant</option>
+              <option value="accessible">Accessible</option>
+            </select>
+          </label>
+          <label
+            htmlFor="frogger-skin"
+            className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-300"
+          >
+            Theme
+            <select
+              id="frogger-skin"
+              className={selectClasses}
+              value={skin}
+              onChange={(e) => setSkin(e.target.value as SkinName)}
+            >
+              {availableSkinList.map((s) => (
+                <option key={s} value={s}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-xs uppercase tracking-wide text-slate-300">Audio</div>
+        <button
+          type="button"
+          className={`rounded-md border px-3 py-1 ${
+            soundEnabled ? 'border-white/80 text-white' : 'border-slate-500 text-slate-300'
+          }`}
+          onClick={() => setSoundEnabled((s) => !s)}
+        >
+          Sound: {soundEnabled ? 'On' : 'Off'}
+        </button>
+        <label
+          htmlFor="frogger-volume"
+          className="flex flex-col gap-1 text-xs uppercase tracking-wide text-slate-300"
+        >
+          Volume
+          <input
+            id="frogger-volume"
+            type="range"
+            min={0}
+            max={100}
+            aria-label="Sound volume"
+            value={Math.round(soundVolume * 100)}
+            onChange={(e) => setSoundVolume(Number(e.target.value) / 100)}
+          />
+        </label>
+      </div>
+
+      <div className="space-y-2">
+        <div className="text-xs uppercase tracking-wide text-slate-300">
+          Accessibility
+        </div>
+        <button
+          type="button"
+          className={`rounded-md border px-3 py-1 ${
+            showHitboxes ? 'border-white/80 text-white' : 'border-slate-500 text-slate-300'
+          }`}
+          onClick={() => setShowHitboxes((h) => !h)}
+        >
+          Hitboxes: {showHitboxes ? 'On' : 'Off'}
+        </button>
+        <button
+          type="button"
+          className={`rounded-md border px-3 py-1 ${
+            slowTime ? 'border-white/80 text-white' : 'border-slate-500 text-slate-300'
+          }`}
+          onClick={() => setSlowTime((s) => !s)}
+        >
+          Time: {slowTime ? 'Slow' : 'Normal'}
+        </button>
+      </div>
+
+      <div className="border-t border-slate-700/80 pt-3">
+        <button
+          type="button"
+          className="rounded-md border border-slate-500 px-3 py-1 text-slate-200"
+          onClick={() => reset(true)}
+        >
+          New Game
+        </button>
+      </div>
     </div>
+  );
+
+  const pauseHotkeys = useMemo(() => ['p', 'space'], []);
+  const restartHotkeys = useMemo(() => ['r'], []);
+
+  return (
+    <GameLayout
+      gameId="frogger"
+      score={score}
+      highScore={highScore}
+      lives={lives}
+      stage={level}
+      onPauseChange={setPaused}
+      onRestart={() => reset(true)}
+      pauseHotkeys={pauseHotkeys}
+      restartHotkeys={restartHotkeys}
+      settingsPanel={settingsPanel}
+      isFocused={isFocused}
+    >
+      <div
+        ref={containerRef}
+        id="frogger-container"
+        className="h-full w-full overflow-auto bg-ub-cool-grey text-white"
+        style={{ touchAction: 'none' }}
+      >
+        <div className="mx-auto flex h-full w-full max-w-4xl flex-col items-center gap-5 px-4 py-6">
+          <div
+            className="w-full rounded-2xl border border-slate-700/70 px-4 py-3 text-sm shadow-lg backdrop-blur"
+            style={{ background: hudBg, color: hudText }}
+          >
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="text-lg font-semibold">Frogger</div>
+                <div className="text-xs text-slate-300">
+                  Hop to the pads, dodge traffic, and ride the logs safely.
+                </div>
+              </div>
+              <div className="text-xs text-slate-300">
+                Arrow keys or WASD · P/Space pause · R restart
+              </div>
+            </div>
+          </div>
+          <div className="w-full">
+            <div className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-black/50 shadow-2xl">
+              <canvas
+                ref={canvasRef}
+                width={GRID_WIDTH * CELL_SIZE}
+                height={GRID_HEIGHT * CELL_SIZE}
+                className="block h-full w-full touch-none"
+                role="img"
+                aria-label="Frogger playfield"
+              />
+              <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-black/40" />
+            </div>
+          </div>
+
+          <div className="w-full space-y-3 text-sm">
+            <div
+              className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-700/60 p-3 shadow-lg backdrop-blur sm:grid-cols-4"
+              style={{ background: hudBg }}
+            >
+              {primaryStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-lg border border-slate-600/40 bg-black/30 px-3 py-2 text-center shadow-sm"
+                >
+                  <p
+                    className="text-[0.65rem] uppercase tracking-wide"
+                    style={{ color: labelColor }}
+                  >
+                    {stat.label}
+                  </p>
+                  <p className="text-lg font-semibold" style={{ color: stat.color }}>
+                    {stat.value}
+                  </p>
+                  {stat.label === 'Timer' && (
+                    <div
+                      className="mt-1 h-1.5 w-full rounded-full bg-slate-700/60"
+                      aria-hidden="true"
+                    >
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          background: accentColor,
+                          width: `${Math.max(
+                            5,
+                            Math.min(100, (stat.progress ?? 0) * 100),
+                          )}%`,
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-700/60 p-3 shadow-lg backdrop-blur sm:grid-cols-4"
+              style={{ background: hudBg }}
+            >
+              {secondaryStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="rounded-lg border border-slate-600/40 bg-black/30 px-3 py-2 text-center shadow-sm"
+                >
+                  <p
+                    className="text-[0.65rem] uppercase tracking-wide"
+                    style={{ color: labelColor }}
+                  >
+                    {stat.label}
+                  </p>
+                  <p className="text-lg font-semibold" style={{ color: stat.color }}>
+                    {stat.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className="w-full rounded-2xl border border-slate-700/60 px-4 py-3 text-center text-sm shadow-lg backdrop-blur"
+            role="status"
+            aria-live="polite"
+            style={{ background: hudBg, color: hudText }}
+          >
+            {statusMessage}
+          </div>
+
+          <div className="grid w-full grid-cols-3 gap-2 sm:hidden">
+            {mobileControls.map((control, index) =>
+              control ? (
+                <button
+                  key={`${control.label}-${index}`}
+                  className="flex h-14 w-14 items-center justify-center rounded-xl border border-slate-700/60 bg-slate-800/70 text-lg font-semibold shadow focus:outline-none focus:ring-2 focus:ring-slate-300 focus:ring-offset-2 focus:ring-offset-slate-900"
+                  style={{ color: hudText }}
+                  onTouchStart={() => startHold(control.dx, control.dy)}
+                  onTouchEnd={endHold}
+                  onMouseDown={() => startHold(control.dx, control.dy)}
+                  onMouseUp={endHold}
+                  onMouseLeave={endHold}
+                >
+                  {control.label}
+                </button>
+              ) : (
+                <div key={`spacer-${index}`} className="h-14 w-14" />
+              ),
+            )}
+          </div>
+        </div>
+      </div>
+    </GameLayout>
   );
 };
 
