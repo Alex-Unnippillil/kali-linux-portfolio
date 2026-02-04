@@ -373,7 +373,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     void (async () => {
       const proceed = await ensureSaved();
       if (!proceed) return;
-      if (supported) {
+      if (!isFauxMode) {
         goBackNav();
         return;
       }
