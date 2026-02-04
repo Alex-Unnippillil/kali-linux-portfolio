@@ -110,23 +110,32 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
   const [remoteScores, setRemoteScores] = useState<
     { name: string; score: number }[]
   >([]);
+  const isDifficultyKey = (
+    value: unknown,
+  ): value is keyof typeof DIFFICULTY_PRESETS =>
+    typeof value === 'string' && value in DIFFICULTY_PRESETS;
   const [difficulty, setDifficulty] = usePersistentState(
     'pacman:difficulty',
     'classic',
-    (value) => typeof value === 'string' && value in DIFFICULTY_PRESETS,
+    isDifficultyKey,
   );
+  const isGhostSpeeds = (
+    value: unknown,
+  ): value is { scatter: number; chase: number } =>
+    !!value &&
+    typeof (value as { scatter?: unknown }).scatter === 'number' &&
+    typeof (value as { chase?: unknown }).chase === 'number';
   const [ghostSpeeds, setGhostSpeeds] = usePersistentState(
     'pacman:ghostSpeeds',
     DIFFICULTY_PRESETS.classic.ghostSpeeds,
-    (value) =>
-      value &&
-      typeof value.scatter === 'number' &&
-      typeof value.chase === 'number',
+    isGhostSpeeds,
   );
+  const isPositiveNumber = (value: unknown): value is number =>
+    typeof value === 'number' && value > 0;
   const [gameSpeed, setGameSpeed] = usePersistentState(
     'pacman:gameSpeed',
     1,
-    (value) => typeof value === 'number' && value > 0,
+    isPositiveNumber,
   );
   const [classicOnly, setClassicOnly] = usePersistentState(
     'pacman:classicOnly',
@@ -155,7 +164,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
   const accumulatorRef = useRef(0);
   const lastFrameRef = useRef(0);
   const directionRef = useRef<Direction | null>(null);
-  const optionsRef = useRef<EngineOptions>(options);
+  const optionsRef = useRef<EngineOptions | null>(null);
   const canvasRef = useCanvasResize(
     (customLevel ?? levels[activeLevelIndex] ?? DEFAULT_LEVEL).maze[0].length *
       TILE_SIZE,
@@ -236,7 +245,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
         setActiveLevelIndex(index);
       }
       stateRef.current = createInitialState(normalized, {
-        ...optionsRef.current,
+        ...(optionsRef.current ?? options),
         levelIndex: index,
       });
       accumulatorRef.current = 0;
@@ -440,15 +449,38 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       const height = state.height * TILE_SIZE;
       ctx.clearRect(0, 0, width, height);
 
-      ctx.fillStyle = '#070b1d';
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, '#050814');
+      bg.addColorStop(0.5, '#0a1330');
+      bg.addColorStop(1, '#04040a');
+      ctx.fillStyle = bg;
       ctx.fillRect(0, 0, width, height);
+
+      ctx.save();
+      ctx.globalAlpha = 0.12;
+      ctx.strokeStyle = '#1f2a44';
+      for (let x = 0; x <= width; x += TILE_SIZE) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= height; y += TILE_SIZE) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
 
       for (let y = 0; y < state.height; y += 1) {
         for (let x = 0; x < state.width; x += 1) {
           if (state.maze[y][x] === 1) {
-            ctx.fillStyle = '#102a5c';
-            ctx.strokeStyle = '#4dc0ff';
-            ctx.lineWidth = 1.5;
+            ctx.fillStyle = '#0f2555';
+            ctx.strokeStyle = '#5ee7ff';
+            ctx.lineWidth = 1.8;
+            ctx.shadowColor = 'rgba(94,231,255,0.55)';
+            ctx.shadowBlur = 8;
             const px = x * TILE_SIZE;
             const py = y * TILE_SIZE;
             const radius = 4;
@@ -475,8 +507,11 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
+            ctx.shadowBlur = 0;
           } else if (state.maze[y][x] === 2) {
             ctx.fillStyle = '#f8fafc';
+            ctx.shadowColor = 'rgba(248,250,252,0.8)';
+            ctx.shadowBlur = 6;
             ctx.beginPath();
             ctx.arc(
               x * TILE_SIZE + TILE_SIZE / 2,
@@ -486,11 +521,14 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
               Math.PI * 2,
             );
             ctx.fill();
+            ctx.shadowBlur = 0;
           } else if (state.maze[y][x] === 3) {
             const pulse = prefersReducedMotion
               ? 1
               : 1 + 0.2 * Math.sin(time * 4);
             ctx.fillStyle = '#fef9c3';
+            ctx.shadowColor = 'rgba(254,249,195,0.9)';
+            ctx.shadowBlur = 12;
             ctx.beginPath();
             ctx.arc(
               x * TILE_SIZE + TILE_SIZE / 2,
@@ -500,12 +538,15 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
               Math.PI * 2,
             );
             ctx.fill();
+            ctx.shadowBlur = 0;
           }
         }
       }
 
       if (state.fruit.active) {
         ctx.fillStyle = '#34d399';
+        ctx.shadowColor = 'rgba(52,211,153,0.6)';
+        ctx.shadowBlur = 10;
         ctx.beginPath();
         ctx.arc(
           state.fruit.x * TILE_SIZE + TILE_SIZE / 2,
@@ -515,6 +556,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
           Math.PI * 2,
         );
         ctx.fill();
+        ctx.shadowBlur = 0;
       }
 
       const pac = state.pac;
@@ -522,6 +564,8 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       const mouth = prefersReducedMotion
         ? 0.2
         : 0.2 + 0.2 * Math.sin(time * 8);
+      ctx.shadowColor = 'rgba(250,204,21,0.7)';
+      ctx.shadowBlur = 10;
       ctx.fillStyle = '#facc15';
       ctx.beginPath();
       ctx.moveTo(pac.x * TILE_SIZE, pac.y * TILE_SIZE);
@@ -534,6 +578,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       );
       ctx.closePath();
       ctx.fill();
+      ctx.shadowBlur = 0;
 
       state.ghosts.forEach((ghost) => {
         const baseX = ghost.x * TILE_SIZE;
@@ -543,6 +588,9 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
           state.frightenedTimer < 1.5 &&
           !prefersReducedMotion &&
           Math.floor(time * 6) % 2 === 0;
+        ctx.shadowColor =
+          state.frightenedTimer > 0 ? 'rgba(29,78,216,0.6)' : 'rgba(148,163,184,0.5)';
+        ctx.shadowBlur = 8;
         ctx.fillStyle =
           state.frightenedTimer > 0
             ? frightFlash
@@ -561,6 +609,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
         ctx.lineTo(baseX - TILE_SIZE / 2 + 2, baseY + TILE_SIZE / 2 - 2);
         ctx.closePath();
         ctx.fill();
+        ctx.shadowBlur = 0;
 
         const eyeOffsetX = 5;
         const eyeOffsetY = 3;
@@ -658,7 +707,9 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
         </label>
         <select
           value={difficulty}
-          onChange={(e) => setDifficulty(e.target.value)}
+          onChange={(e) =>
+            setDifficulty(e.target.value as keyof typeof DIFFICULTY_PRESETS)
+          }
           className="mt-1 w-full rounded bg-slate-800/80 px-2 py-1"
         >
           {Object.entries(DIFFICULTY_PRESETS).map(([key, preset]) => (
