@@ -449,6 +449,7 @@ export const tick = (state, input, dt = 16) => {
     type: 'hud',
     score: state.score,
     multiplier: state.multiplier,
+    multiplierTimer: state.multiplierTimer,
     lives: state.lives,
   });
 

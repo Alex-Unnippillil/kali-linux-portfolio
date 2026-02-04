@@ -83,6 +83,9 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
   ctx.save();
   ctx.translate(sx, sy);
   ctx.rotate(angle);
+  if (ship.hitCooldown > 0) {
+    ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(ship.hitCooldown * 0.2));
+  }
   ctx.strokeStyle = 'white';
   ctx.beginPath();
   ctx.moveTo(12, 0);
@@ -210,6 +213,7 @@ const Asteroids = () => {
   const [restartKey, setRestartKey] = useState(0);
   const [liveText, setLiveText] = useState('');
   const [selectingLevel, setSelectingLevel] = useState(true);
+  const [gameOver, setGameOver] = useState(false);
   const [startLevelNum, setStartLevelNum] = useState(1);
   const loopRef = useRef(null);
   const gameRef = useRef(null);
@@ -222,12 +226,14 @@ const Asteroids = () => {
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [multiplier, setMultiplier] = useState(1);
+  const [multiplierTimer, setMultiplierTimer] = useState(0);
   const highScoreRef = useRef(0);
   const lastScoreRef = useRef(0);
   const stageRef = useRef(stage);
   const scoreRef = useRef(score);
   const livesRef = useRef(lives);
   const multiplierRef = useRef(multiplier);
+  const multiplierTimerRef = useRef(multiplierTimer);
   const [saveData, setSaveData, saveReady] = useOPFS('asteroids-save.json', { upgrades: [], ghost: [] });
   const saveDataRef = useRef(saveData);
   const inventoryUseRef = useRef(null);
@@ -304,6 +310,9 @@ const Asteroids = () => {
     multiplierRef.current = multiplier;
   }, [multiplier]);
   useEffect(() => {
+    multiplierTimerRef.current = multiplierTimer;
+  }, [multiplierTimer]);
+  useEffect(() => {
     saveDataRef.current = saveData;
   }, [saveData]);
   useEffect(() => {
@@ -348,6 +357,8 @@ const Asteroids = () => {
     setScore(game.score);
     setLives(game.lives);
     setMultiplier(game.multiplier);
+    setMultiplierTimer(game.multiplierTimer);
+    setGameOver(false);
 
     const handleInventoryUse = (e) => {
       if (e.key >= '1' && e.key <= '9') {
@@ -393,9 +404,12 @@ const Asteroids = () => {
           if (scoreRef.current !== evt.score) setScore(evt.score);
           if (livesRef.current !== evt.lives) setLives(evt.lives);
           if (multiplierRef.current !== evt.multiplier) setMultiplier(evt.multiplier);
+          if (multiplierTimerRef.current !== evt.multiplierTimer)
+            setMultiplierTimer(evt.multiplierTimer);
         }
         if (evt.type === 'gameOver') {
           setLiveText(`Game over. Score ${evt.score}`);
+          setGameOver(true);
           const newHigh = Math.max(evt.score, highScoreRef.current);
           setHighScore(newHigh);
           setLastScore(evt.score);
@@ -440,7 +454,7 @@ const Asteroids = () => {
       particlesRef.current = next;
     };
 
-    const render = (alpha) => {
+  const render = (alpha) => {
       const shake = screenShake ? shakeRef.current : 0;
       ctx.save();
       if (shake > 0.1) {
@@ -486,6 +500,18 @@ const Asteroids = () => {
           }
         }
         updateParticles(dt / 16);
+        if (starsRef.current.length) {
+          const velX = gameRef.current.ship.velX || 0;
+          const velY = gameRef.current.ship.velY || 0;
+          starsRef.current.forEach((star) => {
+            star.x += velX * 0.05;
+            star.y += velY * 0.05;
+            if (star.x < 0) star.x += worldRef.current.w;
+            if (star.x > worldRef.current.w) star.x -= worldRef.current.w;
+            if (star.y < 0) star.y += worldRef.current.h;
+            if (star.y > worldRef.current.h) star.y -= worldRef.current.h;
+          });
+        }
         if (screenShake) {
           shakeRef.current = Math.max(0, shakeRef.current * Math.pow(SHAKE_DECAY, dt / 16));
         }
@@ -518,6 +544,7 @@ const Asteroids = () => {
     pausedRef.current = false;
     setPaused(false);
     setSelectingLevel(true);
+    setGameOver(false);
     setRestartKey((k) => k + 1);
   };
 
@@ -526,6 +553,21 @@ const Asteroids = () => {
     saveDataRef.current = cleared;
     setSaveData(cleared);
     restartGame();
+  };
+
+  const multiplierRatio = Math.min(1, multiplierTimer / 180);
+
+  const inventoryLabel = (type) => {
+    switch (type) {
+      case POWER_UPS.SHIELD:
+        return 'Shield';
+      case POWER_UPS.RAPID_FIRE:
+        return 'Rapid';
+      case POWER_UPS.EXTRA_LIFE:
+        return 'Life';
+      default:
+        return 'Power-up';
+    }
   };
 
   const settingsPanel = useMemo(
@@ -589,22 +631,31 @@ const Asteroids = () => {
       onRestart={restartGame}
     >
       {selectingLevel && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 text-white space-y-2 z-50">
-          <div>Select Starting Level</div>
-          {[1, 2, 3, 4, 5].map((lvl) => (
-            <button
-              key={lvl}
-              type="button"
-              onClick={() => {
-                setStartLevelNum(lvl);
-                setSelectingLevel(false);
-                setRestartKey((k) => k + 1);
-              }}
-              className="px-2 py-1 bg-gray-700 rounded"
-            >
-              Level {lvl}
-            </button>
-          ))}
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 text-white space-y-3 z-50">
+          <div className="text-2xl font-semibold tracking-wide">Asteroids</div>
+          <div className="text-sm text-slate-200">Select starting wave</div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {[1, 2, 3, 4, 5].map((lvl) => (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => {
+                  setStartLevelNum(lvl);
+                  setSelectingLevel(false);
+                  setGameOver(false);
+                  setRestartKey((k) => k + 1);
+                }}
+                className="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 focus:outline-none focus:ring"
+              >
+                Wave {lvl}
+              </button>
+            ))}
+          </div>
+          {lastScore > 0 && (
+            <div className="text-xs text-slate-300">
+              Last score: {lastScore} · Best: {highScore}
+            </div>
+          )}
         </div>
       )}
       <canvas
@@ -612,6 +663,75 @@ const Asteroids = () => {
         className="bg-black w-full h-full touch-none"
         aria-label="Asteroids game canvas"
       />
+      <div className="absolute bottom-2 left-2 z-30 flex flex-col gap-2">
+        <div className="rounded bg-slate-900/70 border border-slate-700/70 px-3 py-2 text-xs text-slate-200">
+          <div className="flex items-center justify-between gap-3">
+            <span>Multiplier</span>
+            <span className="font-semibold text-emerald-300">x{multiplier}</span>
+          </div>
+          <div className="mt-1 h-1.5 w-32 rounded bg-slate-800">
+            <div
+              className="h-full rounded bg-emerald-400 transition-[width]"
+              style={{ width: `${Math.max(6, multiplierRatio * 100)}%` }}
+            />
+          </div>
+        </div>
+        <div className="rounded bg-slate-900/70 border border-slate-700/70 px-3 py-2 text-xs text-slate-200">
+          <div className="mb-1 font-semibold">Inventory</div>
+          {inventory.length === 0 ? (
+            <div className="text-slate-400">Empty</div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {inventory.map((type, index) => (
+                <button
+                  key={`${type}-${index}`}
+                  type="button"
+                  onClick={() => {
+                    inventoryUseRef.current = index;
+                  }}
+                  className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 focus:outline-none focus:ring"
+                  aria-label={`Use ${inventoryLabel(type)} power-up in slot ${index + 1}`}
+                >
+                  {index + 1}: {inventoryLabel(type)}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      {gameOver && !selectingLevel && (
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/70">
+          <div className="rounded-lg border border-slate-700 bg-slate-900/95 p-6 text-center text-white shadow-xl max-w-sm">
+            <div className="text-xl font-semibold mb-2">Game Over</div>
+            <div className="text-sm text-slate-300 mb-4">
+              Score: <span className="font-semibold text-emerald-300">{lastScore}</span> · High:{' '}
+              <span className="font-semibold text-indigo-300">{highScore}</span>
+            </div>
+            <div className="flex gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectingLevel(false);
+                  setGameOver(false);
+                  setRestartKey((k) => k + 1);
+                }}
+                className="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 focus:outline-none focus:ring"
+              >
+                Restart
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectingLevel(true);
+                }}
+                className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring"
+              >
+                Change Wave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div aria-live="polite" className="sr-only">
         {liveText}
       </div>
