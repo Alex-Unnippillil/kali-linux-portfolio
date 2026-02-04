@@ -41,7 +41,10 @@ const computeTargetScore = (level: number): number => 750 + (Math.max(1, level) 
 
 const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
 
-type BoosterState = typeof initialBoosters;
+type BoosterState = {
+  shuffle: number;
+  colorBomb: number;
+};
 
 interface ComboBanner {
   id: string;
