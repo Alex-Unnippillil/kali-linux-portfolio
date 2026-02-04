@@ -129,6 +129,7 @@ type BoardGridProps = {
   onPlacementClick?: (x: number, y: number) => void;
   placementCursor?: number | null;
   showPlacementCursor?: boolean;
+  showCoordinates?: boolean;
 };
 
 const BoardGrid = ({
@@ -154,119 +155,146 @@ const BoardGrid = ({
   onPlacementClick,
   placementCursor,
   showPlacementCursor = false,
+  showCoordinates = true,
 }: BoardGridProps) => {
   const heatArr = heatmap ?? [];
   const maxHeat = heatArr.length ? Math.max(...heatArr) : 0;
+  const letters = Array.from({ length: BOARD_SIZE }, (_, i) => String.fromCharCode(65 + i));
 
   return (
     <div className="battle-card">
       <div className="board-surface relative border border-cyan-500/20 bg-gradient-to-br from-slate-950/95 via-slate-900/80 to-slate-950/95 p-4">
         <div className="sr-only" aria-live="polite">{label}</div>
-        <div
-          className="grid relative"
-          style={{
-            gridTemplateColumns: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
-            gridTemplateRows: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
-            background: 'linear-gradient(135deg, rgba(15,118,110,0.35), rgba(14,116,144,0.25))',
-          }}
-          onMouseMove={(event) => {
-            if (!onPlacementHover) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            const offsetX = event.clientX - rect.left;
-            const offsetY = event.clientY - rect.top;
-            const x = Math.floor(offsetX / cellSize);
-            const y = Math.floor(offsetY / cellSize);
-            if (x < 0 || y < 0 || x >= BOARD_SIZE || y >= BOARD_SIZE) {
-              onPlacementLeave?.();
-              return;
-            }
-            onPlacementHover(x, y);
-          }}
-          onMouseLeave={onPlacementLeave}
-        >
-          {board.map((cell, idx) => {
-            const heatVal = heatArr[idx];
-            const norm = maxHeat ? heatVal / maxHeat : 0;
-            const heatColor =
-              showHeatmap && heatVal
-                ? heatmapTone === 'warm'
-                  ? `rgba(251,191,36,${norm * 0.7})`
-                  : `rgba(56,189,248,${norm * 0.6})`
-                : 'transparent';
-            const selectedMark = isEnemy && selectedTargets.includes(idx);
-            const hint = preview?.cells?.includes(idx);
-            const hintValid = hint && preview?.valid;
-            const isSunk = sunkCells?.has(idx);
-            const isLastShot = lastShots.includes(idx);
-            const isPlacementCursor = showPlacementCursor && placementCursor === idx;
-            const effectList = effects?.get(idx) ?? [];
-            return (
+        <div className="flex items-start gap-2">
+          {showCoordinates ? (
+            <div className="flex flex-col gap-[2px] pt-[30px] text-[10px] font-semibold uppercase text-cyan-200/70">
+              {Array.from({ length: BOARD_SIZE }, (_, idx) => (
+                <div key={idx} style={{ height: cellSize }} className="flex items-center justify-center">
+                  {idx + 1}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          <div>
+            {showCoordinates ? (
               <div
-                key={idx}
-                className="relative border border-ub-dark-grey/60"
-                style={{ width: cellSize, height: cellSize }}
+                className="grid gap-[2px] pb-2 text-[10px] font-semibold uppercase text-cyan-200/70"
+                style={{ gridTemplateColumns: `repeat(${BOARD_SIZE}, ${cellSize}px)` }}
               >
-                {isEnemy && onTargetSelect && !['hit', 'miss'].includes(cell ?? '') ? (
-                  <button
-                    type="button"
-                    className="h-full w-full"
-                    onClick={() => onTargetSelect(idx)}
-                    aria-label={`Select target at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
-                    aria-pressed={selectedMark}
-                  />
-                ) : null}
-                {!isEnemy && onPlacementClick ? (
-                  <button
-                    type="button"
-                    className="absolute inset-0"
-                    onClick={() => onPlacementClick(idx % BOARD_SIZE, Math.floor(idx / BOARD_SIZE))}
-                    aria-label={`Place ship at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
-                  />
-                ) : null}
-                {cell === 'hit' && !hideInfo && <HitMarker colorblind={colorblind} reduced={reducedMotion} />}
-                {cell === 'miss' && !hideInfo && <MissMarker colorblind={colorblind} reduced={reducedMotion} />}
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{ background: heatColor, zIndex: 0 }}
-                  aria-hidden="true"
-                />
-                {hint && (
-                  <div
-                    className={`pointer-events-none absolute inset-0 ${
-                      hintValid ? 'bg-emerald-400/35' : 'bg-rose-500/35'
-                    }`}
-                    style={{ transition: 'opacity 0.2s ease' }}
-                  />
-                )}
-                {selectedMark && (
-                  <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-yellow-300/90 bg-yellow-200/30" />
-                )}
-                {isLastShot && (
-                  <div className="pointer-events-none absolute inset-0 rounded-md border border-white/50 shadow-[0_0_12px_rgba(255,255,255,0.35)]" />
-                )}
-                {cell === 'hit' && isSunk && (
-                  <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-amber-300/80 bg-amber-200/10" />
-                )}
-                {hideInfo && (
-                  <div className="absolute inset-0 bg-slate-900" aria-hidden="true" />
-                )}
-                {isEnemy && cursorIndex === idx && (
-                  <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-cyan-300/80" />
-                )}
-                {isPlacementCursor && (
-                  <div className="pointer-events-none absolute inset-0 rounded-md border border-emerald-200/70 shadow-[0_0_10px_rgba(16,185,129,0.45)]" />
-                )}
-                {effectList.map((effect) => (
-                  <ShotEffect
-                    key={effect.id}
-                    outcome={effect.outcome}
-                    colorblind={colorblind}
-                    reduced={reducedMotion}
-                  />
+                {letters.map((letter) => (
+                  <div key={letter} className="text-center">
+                    {letter}
+                  </div>
                 ))}
               </div>
-            );
-          })}
+            ) : null}
+            <div
+              className="grid relative"
+              style={{
+                gridTemplateColumns: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
+                gridTemplateRows: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
+                background: 'linear-gradient(135deg, rgba(15,118,110,0.35), rgba(14,116,144,0.25))',
+              }}
+              onMouseMove={(event) => {
+                if (!onPlacementHover) return;
+                const rect = event.currentTarget.getBoundingClientRect();
+                const offsetX = event.clientX - rect.left;
+                const offsetY = event.clientY - rect.top;
+                const x = Math.floor(offsetX / cellSize);
+                const y = Math.floor(offsetY / cellSize);
+                if (x < 0 || y < 0 || x >= BOARD_SIZE || y >= BOARD_SIZE) {
+                  onPlacementLeave?.();
+                  return;
+                }
+                onPlacementHover(x, y);
+              }}
+              onMouseLeave={onPlacementLeave}
+            >
+              {board.map((cell, idx) => {
+                const heatVal = heatArr[idx];
+                const norm = maxHeat ? heatVal / maxHeat : 0;
+                const heatColor =
+                  showHeatmap && heatVal
+                    ? heatmapTone === 'warm'
+                      ? `rgba(251,191,36,${norm * 0.7})`
+                      : `rgba(56,189,248,${norm * 0.6})`
+                    : 'transparent';
+                const selectedMark = isEnemy && selectedTargets.includes(idx);
+                const hint = preview?.cells?.includes(idx);
+                const hintValid = hint && preview?.valid;
+                const isSunk = sunkCells?.has(idx);
+                const isLastShot = lastShots.includes(idx);
+                const isPlacementCursor = showPlacementCursor && placementCursor === idx;
+                const effectList = effects?.get(idx) ?? [];
+                return (
+                  <div
+                    key={idx}
+                    className="relative border border-ub-dark-grey/60"
+                    style={{ width: cellSize, height: cellSize }}
+                  >
+                    {isEnemy && onTargetSelect && !['hit', 'miss'].includes(cell ?? '') ? (
+                      <button
+                        type="button"
+                        className="h-full w-full"
+                        onClick={() => onTargetSelect(idx)}
+                        aria-label={`Select target at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                        aria-pressed={selectedMark}
+                      />
+                    ) : null}
+                    {!isEnemy && onPlacementClick ? (
+                      <button
+                        type="button"
+                        className="absolute inset-0"
+                        onClick={() => onPlacementClick(idx % BOARD_SIZE, Math.floor(idx / BOARD_SIZE))}
+                        aria-label={`Place ship at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                      />
+                    ) : null}
+                    {cell === 'hit' && !hideInfo && <HitMarker colorblind={colorblind} reduced={reducedMotion} />}
+                    {cell === 'miss' && !hideInfo && <MissMarker colorblind={colorblind} reduced={reducedMotion} />}
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{ background: heatColor, zIndex: 0 }}
+                      aria-hidden="true"
+                    />
+                    {hint && (
+                      <div
+                        className={`pointer-events-none absolute inset-0 ${
+                          hintValid ? 'bg-emerald-400/35' : 'bg-rose-500/35'
+                        }`}
+                        style={{ transition: 'opacity 0.2s ease' }}
+                      />
+                    )}
+                    {selectedMark && (
+                      <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-yellow-300/90 bg-yellow-200/30" />
+                    )}
+                    {isLastShot && (
+                      <div className="pointer-events-none absolute inset-0 rounded-md border border-white/50 shadow-[0_0_12px_rgba(255,255,255,0.35)]" />
+                    )}
+                    {cell === 'hit' && isSunk && (
+                      <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-amber-300/80 bg-amber-200/10" />
+                    )}
+                    {hideInfo && (
+                      <div className="absolute inset-0 bg-slate-900" aria-hidden="true" />
+                    )}
+                    {isEnemy && cursorIndex === idx && (
+                      <div className="pointer-events-none absolute inset-0 rounded-md border-2 border-cyan-300/80" />
+                    )}
+                    {isPlacementCursor && (
+                      <div className="pointer-events-none absolute inset-0 rounded-md border border-emerald-200/70 shadow-[0_0_10px_rgba(16,185,129,0.45)]" />
+                    )}
+                    {effectList.map((effect) => (
+                      <ShotEffect
+                        key={effect.id}
+                        outcome={effect.outcome}
+                        colorblind={colorblind}
+                        reduced={reducedMotion}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
     </div>

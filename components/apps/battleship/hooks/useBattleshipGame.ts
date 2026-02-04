@@ -784,6 +784,26 @@ export const useBattleshipGame = () => {
     };
   }, [stats]);
 
+  const fleetStatus = useMemo(() => {
+    const player = activePlayerState;
+    return player.ships.map((ship) => ({
+      id: ship.id,
+      name: ship.name,
+      len: ship.len,
+      sunk: player.sunkIds.has(ship.id),
+    }));
+  }, [activePlayerState]);
+
+  const opponentFleetStatus = useMemo(() => {
+    const player = opponentState;
+    return player.ships.map((ship) => ({
+      id: ship.id,
+      name: ship.name,
+      len: ship.len,
+      sunk: player.sunkIds.has(ship.id),
+    }));
+  }, [opponentState]);
+
   return {
     settings: {
       difficulty,
@@ -836,6 +856,8 @@ export const useBattleshipGame = () => {
     activeShotLimit,
     placementShipsReady,
     helpStats,
+    fleetStatus,
+    opponentFleetStatus,
     setSelectedShipId,
     setActiveShipId,
     setDragHint,

@@ -139,6 +139,8 @@ const BattleshipApp = () => {
     activeShotLimit,
     placementShipsReady,
     helpStats,
+    fleetStatus,
+    opponentFleetStatus,
     setSelectedShipId,
     setActiveShipId,
     setHoverPreview,
@@ -164,6 +166,21 @@ const BattleshipApp = () => {
   } = useBattleshipGame();
 
   const isHotseat = settings.mode === 'hotseat';
+  const turnLabel = isHotseat ? `Player ${activePlayer + 1}` : 'Commander';
+  const playerFleetRemaining = fleetStatus.filter((ship) => !ship.sunk).length;
+  const opponentFleetRemaining = opponentFleetStatus.filter((ship) => !ship.sunk).length;
+  const letters = Array.from({ length: BOARD_SIZE }, (_, idx) => String.fromCharCode(65 + idx));
+  const toCoord = (idx: number) => {
+    const x = idx % BOARD_SIZE;
+    const y = Math.floor(idx / BOARD_SIZE);
+    return `${letters[x]}${y + 1}`;
+  };
+  const formatShots = (shots: number[], board: Array<'ship' | 'hit' | 'miss' | null>) =>
+    shots.map((idx) => ({
+      idx,
+      coord: toCoord(idx),
+      outcome: board[idx] === 'hit' ? 'Hit' : 'Miss',
+    }));
 
   useGameControls(
     ({ x, y }: { x: number; y: number }) => {
@@ -407,6 +424,102 @@ const BattleshipApp = () => {
         )}
         {phase !== 'placement' && (
           <div className="flex flex-col items-center gap-6">
+            <div className="w-full max-w-5xl rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-4 text-xs text-white/80">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-cyan-200/80">Turn</p>
+                  <p className="text-sm font-semibold text-white">{turnLabel}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-white/60">Your fleet</p>
+                    <p className="text-sm font-semibold text-white">{playerFleetRemaining} ships remaining</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wide text-white/60">Enemy fleet</p>
+                    <p className="text-sm font-semibold text-white">{opponentFleetRemaining} ships remaining</p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-200/80">Your ships</p>
+                  <ul className="mt-1 flex flex-wrap gap-2">
+                    {fleetStatus.map((ship) => (
+                      <li
+                        key={ship.id}
+                        className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+                          ship.sunk ? 'bg-rose-500/30 text-rose-100 line-through' : 'bg-emerald-500/20 text-emerald-200'
+                        }`}
+                      >
+                        {ship.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-200/80">Enemy ships</p>
+                  <ul className="mt-1 flex flex-wrap gap-2">
+                    {opponentFleetStatus.map((ship) => (
+                      <li
+                        key={ship.id}
+                        className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+                          ship.sunk ? 'bg-amber-500/30 text-amber-100' : 'bg-white/10 text-white/70'
+                        }`}
+                      >
+                        {ship.sunk ? `${ship.name} sunk` : `${ship.name} unknown`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-200/80">Your last salvo</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {opponentState.lastShots.length ? (
+                      formatShots(opponentState.lastShots, opponentState.board).map((shot) => (
+                        <span
+                          key={`shot-${shot.idx}`}
+                          className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+                            shot.outcome === 'Hit'
+                              ? 'bg-rose-500/30 text-rose-100'
+                              : 'bg-sky-500/20 text-sky-100'
+                          }`}
+                        >
+                          {shot.coord} {shot.outcome}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-white/60">No shots yet.</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-200/80">
+                    Incoming fire
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {activePlayerState.lastShots.length ? (
+                      formatShots(activePlayerState.lastShots, activePlayerState.board).map((shot) => (
+                        <span
+                          key={`incoming-${shot.idx}`}
+                          className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+                            shot.outcome === 'Hit'
+                              ? 'bg-amber-500/30 text-amber-100'
+                              : 'bg-white/10 text-white/70'
+                          }`}
+                        >
+                          {shot.coord} {shot.outcome}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-white/60">No shots yet.</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
             <div className="flex flex-col gap-6 lg:flex-row">
               <div className="rounded-[1.5rem] border border-cyan-500/30 bg-slate-950/70 p-4 shadow-[0_20px_45px_rgba(0,0,0,0.45)]">
                 <div className="mb-3 flex items-center justify-between text-xs uppercase tracking-wide text-cyan-200/80">
