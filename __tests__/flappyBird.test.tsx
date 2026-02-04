@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import FlappyBird from '../components/apps/flappy-bird';
 
 beforeAll(() => {
@@ -32,5 +32,21 @@ describe('FlappyBird', () => {
     expect(screen.getByLabelText('Difficulty')).toBeInTheDocument();
     expect(screen.getByLabelText('Practice mode')).toBeInTheDocument();
     expect(screen.getByLabelText('Ghost run')).toBeInTheDocument();
+  });
+
+  it('toggles the settings panel from the toolbar', async () => {
+    render(<FlappyBird />);
+    fireEvent.click(screen.getByText('Start'));
+    const settingsButton = await screen.findByRole('button', { name: 'Settings' });
+    fireEvent.click(settingsButton);
+    expect(await screen.findByText('Controls')).toBeInTheDocument();
+  });
+
+  it('pauses via the toolbar hotkey', async () => {
+    render(<FlappyBird />);
+    fireEvent.click(screen.getByText('Start'));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Resume')).toBeInTheDocument();
   });
 });

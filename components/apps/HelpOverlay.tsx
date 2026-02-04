@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import InputRemap from "./Games/common/input-remap/InputRemap";
+import { formatGameKey } from "../../utils/gameInput";
 import useInputMapping from "./Games/common/input-remap/useInputMapping";
 
 interface HelpOverlayProps {
@@ -189,9 +190,13 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "flappy-bird": {
     objective:
-      "Fly through gaps between pipes. Practice gates, slow-motion, easy mode, and skins available.",
+      "Fly through gaps between pipes. Practice mode, skins, ghost runs, and reduced motion are available from Settings.",
     controls:
-      "Space/click to flap. P: practice, G: easy gravity, M: reduced motion, O: pipe skin, H: hitbox preview, R: replay, Shift+R: best run.",
+      "Click/tap the play area to flap. Pause from the toolbar or with the mapped Pause key. Press R on the game-over screen to replay your last run.",
+    actions: {
+      flap: "Space",
+      pause: "Escape",
+    },
   },
   "candy-crush": {
     objective: "Match three candies to clear them.",
@@ -268,10 +273,15 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
           <>
             <p>
               <strong>Controls:</strong>{" "}
-              {Object.entries(mapping)
-                .map(([a, k]) => `${a}: ${k}`)
+            {Object.entries(mapping)
+                .map(([a, k]) => `${a}: ${formatGameKey(k)}`)
                 .join(", ")}
             </p>
+            {info.controls && (
+              <p className="mt-2 text-sm text-white/80">
+                {info.controls}
+              </p>
+            )}
             <div className="mt-2">
               <InputRemap
                 mapping={mapping}
