@@ -502,7 +502,7 @@ interface CandyGridProps {
   containerRef: React.RefObject<HTMLDivElement>;
   gridCellRefs: React.MutableRefObject<Array<HTMLButtonElement | null>>;
   onFocusCell: (index: number) => void;
-  onDragStart: (index: number, event: React.DragEvent<HTMLButtonElement>) => void;
+  onDragStartCapture: (index: number, event: React.DragEvent<HTMLButtonElement>) => void;
   onDrop: (index: number) => void;
   onDragEnd: () => void;
   onPointerDown: (index: number, event: React.PointerEvent<HTMLButtonElement>) => void;
@@ -529,7 +529,7 @@ const CandyGrid = React.memo(
     containerRef,
     gridCellRefs,
     onFocusCell,
-    onDragStart,
+    onDragStartCapture,
     onDrop,
     onDragEnd,
     onPointerDown,
@@ -577,7 +577,7 @@ const CandyGrid = React.memo(
                     draggable={!isInteractionDisabled}
                     disabled={isInteractionDisabled}
                     onFocus={() => onFocusCell(index)}
-                    onDragStart={(event) => onDragStart(index, event)}
+                    onDragStartCapture={(event) => onDragStartCapture(index, event)}
                     onDragOver={(event) => event.preventDefault()}
                     onDrop={(event) => {
                       event.preventDefault();
@@ -1479,7 +1479,7 @@ const CandyCrush = () => {
           containerRef={gridContainerRef}
           gridCellRefs={gridCellRefs}
           onFocusCell={setActiveIndex}
-          onDragStart={handleDragStart}
+          onDragStartCapture={handleDragStart}
           onDrop={handleDrop}
           onDragEnd={handleDragEnd}
           onPointerDown={handlePointerDown}
