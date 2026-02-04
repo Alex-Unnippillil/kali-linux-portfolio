@@ -16,10 +16,12 @@ async function man(args: string, ctx: CommandContext) {
   const loaders: Record<string, () => Promise<string>> = {
     alias: () => fetch(new URL('../man/alias.txt', import.meta.url)).then((r) => r.text()),
     cat: () => fetch(new URL('../man/cat.txt', import.meta.url)).then((r) => r.text()),
+    cp: () => fetch(new URL('../man/cp.txt', import.meta.url)).then((r) => r.text()),
     grep: () => fetch(new URL('../man/grep.txt', import.meta.url)).then((r) => r.text()),
     history: () => fetch(new URL('../man/history.txt', import.meta.url)).then((r) => r.text()),
     jq: () => fetch(new URL('../man/jq.txt', import.meta.url)).then((r) => r.text()),
     man: () => fetch(new URL('../man/man.txt', import.meta.url)).then((r) => r.text()),
+    mv: () => fetch(new URL('../man/mv.txt', import.meta.url)).then((r) => r.text()),
     open: () => fetch(new URL('../man/open.txt', import.meta.url)).then((r) => r.text()),
     projects: () => fetch(new URL('../man/projects.txt', import.meta.url)).then((r) => r.text()),
     rm: () => fetch(new URL('../man/rm.txt', import.meta.url)).then((r) => r.text()),
@@ -133,6 +135,49 @@ const touch: CommandHandler = async (args, ctx) => {
   const success = await ctx.fs.writeFile(resolved, ''); // Create empty file
   if (!success) {
     ctx.writeLine(`touch: cannot create file '${target}'`);
+  }
+};
+
+const cp: CommandHandler = async (args, ctx) => {
+  const [source, destination] = args.split(/\s+/).filter(Boolean);
+  if (!source || !destination) {
+    ctx.writeLine('usage: cp <source> <destination>');
+    return;
+  }
+  const sourcePath = ctx.fs.resolvePath(ctx.cwd, source);
+  const destinationPath = ctx.fs.resolvePath(ctx.cwd, destination);
+  const contents = await ctx.fs.readFile(sourcePath);
+  if (contents === null) {
+    ctx.writeLine(`cp: cannot stat '${source}': No such file`);
+    return;
+  }
+  const success = await ctx.fs.writeFile(destinationPath, contents);
+  if (!success) {
+    ctx.writeLine(`cp: cannot copy to '${destination}'`);
+  }
+};
+
+const mv: CommandHandler = async (args, ctx) => {
+  const [source, destination] = args.split(/\s+/).filter(Boolean);
+  if (!source || !destination) {
+    ctx.writeLine('usage: mv <source> <destination>');
+    return;
+  }
+  const sourcePath = ctx.fs.resolvePath(ctx.cwd, source);
+  const destinationPath = ctx.fs.resolvePath(ctx.cwd, destination);
+  const contents = await ctx.fs.readFile(sourcePath);
+  if (contents === null) {
+    ctx.writeLine(`mv: cannot stat '${source}': No such file`);
+    return;
+  }
+  const written = await ctx.fs.writeFile(destinationPath, contents);
+  if (!written) {
+    ctx.writeLine(`mv: cannot move to '${destination}'`);
+    return;
+  }
+  const removed = await ctx.fs.deleteEntry(sourcePath);
+  if (!removed) {
+    ctx.writeLine(`mv: warning: failed to remove '${source}' after copy`);
   }
 };
 
@@ -279,6 +324,8 @@ const registerAll = () => {
     { name: 'pwd', description: 'Print working directory.', handler: pwd },
     { name: 'mkdir', description: 'Create a directory.', handler: mkdir },
     { name: 'touch', description: 'Create a file.', handler: touch },
+    { name: 'cp', description: 'Copy a file.', usage: 'cp <source> <destination>', handler: cp },
+    { name: 'mv', description: 'Move or rename a file.', usage: 'mv <source> <destination>', handler: mv },
     { name: 'cat', description: 'Print a file.', usage: 'cat <file>', handler: cat },
     { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
     { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
