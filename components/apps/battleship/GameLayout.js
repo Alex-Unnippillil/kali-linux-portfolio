@@ -1,4 +1,5 @@
 import React from 'react';
+import ShipPalette from './components/ShipPalette';
 
 const toastAccent = {
   info: 'from-cyan-500/90 via-sky-500/70 to-blue-500/60 border-cyan-300/70',
@@ -6,22 +7,6 @@ const toastAccent = {
   warning: 'from-amber-500/90 via-orange-500/70 to-yellow-500/60 border-amber-300/70',
   error: 'from-rose-600/90 via-red-600/80 to-orange-600/60 border-rose-300/70',
 };
-
-const Tooltip = ({ id, text, children }) => (
-  <span className="relative inline-flex items-center group focus-within:z-10">
-    {React.cloneElement(children, {
-      ...children.props,
-      'aria-describedby': id,
-    })}
-    <span
-      role="tooltip"
-      id={id}
-      className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/90 px-2 py-1 text-xs opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100"
-    >
-      {text}
-    </span>
-  </span>
-);
 
 const StatPill = ({ label, value }) => (
   <div className="flex flex-col rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs uppercase tracking-wide">
@@ -34,10 +19,14 @@ const GameLayout = ({
   children,
   difficulty,
   onDifficultyChange,
+  mode,
+  onModeChange,
   onRestart,
   stats,
-  showHeatmap,
-  onToggleHeatmap,
+  showGuessHeat,
+  onToggleGuessHeat,
+  showAiHeat,
+  onToggleAiHeat,
   salvo,
   onSalvoChange,
   fog,
@@ -54,6 +43,8 @@ const GameLayout = ({
   selectedShipId,
   phase,
   battleLog,
+  onResetStats,
+  helpStats,
 }) => {
   const toastClass = toast ? toastAccent[toast.type] ?? toastAccent.info : '';
 
@@ -85,15 +76,27 @@ const GameLayout = ({
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="grid w-full gap-3 sm:grid-cols-2 lg:w-2/3">
             <label className="flex flex-col rounded-xl border border-white/10 bg-white/5 p-3 text-xs uppercase tracking-wide text-white/70">
+              <span className="mb-1">Game Mode</span>
+              <select
+                className="rounded-lg border border-white/20 bg-slate-950/80 px-3 py-2 text-base font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+                value={mode}
+                onChange={(e) => onModeChange(e.target.value)}
+              >
+                <option value="ai">Vs AI</option>
+                <option value="hotseat">Local two-player (hotseat)</option>
+              </select>
+            </label>
+            <label className="flex flex-col rounded-xl border border-white/10 bg-white/5 p-3 text-xs uppercase tracking-wide text-white/70">
               <span className="mb-1">Difficulty</span>
               <select
                 className="rounded-lg border border-white/20 bg-slate-950/80 px-3 py-2 text-base font-semibold text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
                 value={difficulty}
                 onChange={(e) => onDifficultyChange(e.target.value)}
+                disabled={mode !== 'ai'}
               >
-                <option value="easy">Easy — Classic Salvo</option>
-                <option value="medium">Medium — Tactical Salvo</option>
-                <option value="hard">Hard — Monte Carlo</option>
+                <option value="easy">Easy — Patrol AI</option>
+                <option value="medium">Medium — Tactical AI</option>
+                <option value="hard">Hard — Monte Carlo AI</option>
               </select>
             </label>
             <div className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
@@ -107,9 +110,10 @@ const GameLayout = ({
               <button
                 type="button"
                 className="flex-1 rounded-lg border border-cyan-400/60 bg-slate-950/70 px-3 py-2 text-sm font-semibold uppercase tracking-wide text-cyan-200 transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-                onClick={onToggleHeatmap}
+                onClick={() => onToggleGuessHeat(!showGuessHeat)}
+                disabled={mode !== 'ai'}
               >
-                {showHeatmap ? 'Hide Heatmap' : 'Show Heatmap'}
+                {showGuessHeat ? 'Hide Targeting Heatmap' : 'Show Targeting Heatmap'}
               </button>
             </div>
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-3 text-sm">
@@ -124,6 +128,20 @@ const GameLayout = ({
                 />
                 <label htmlFor="battleship-salvo" className="cursor-pointer text-sm text-white/80">
                   Salvo Mode
+                </label>
+              </div>
+              <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/60 px-3 py-2">
+                <input
+                  id="battleship-heat-ai"
+                  type="checkbox"
+                  className="h-4 w-4 accent-cyan-400"
+                  checked={showAiHeat}
+                  onChange={(e) => onToggleAiHeat(e.target.checked)}
+                  aria-label="Toggle enemy prediction heatmap"
+                  disabled={mode !== 'ai'}
+                />
+                <label htmlFor="battleship-heat-ai" className="cursor-pointer text-sm text-white/80">
+                  Enemy prediction heatmap (cheat)
                 </label>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/60 px-3 py-2">
@@ -149,7 +167,7 @@ const GameLayout = ({
                   aria-label="Toggle fog of war"
                 />
                 <label htmlFor="battleship-fog" className="cursor-pointer text-sm text-white/80">
-                  Fog of War
+                  Hide my fleet during battle
                 </label>
               </div>
               <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-slate-950/60 px-3 py-2">
@@ -172,11 +190,14 @@ const GameLayout = ({
             <div className="flex flex-wrap gap-2">
               <StatPill label="Wins" value={stats?.wins ?? 0} />
               <StatPill label="Losses" value={stats?.losses ?? 0} />
+              <StatPill label="Shots" value={stats?.shotsFired ?? 0} />
+              <StatPill label="Hit rate" value={`${helpStats?.hitRate ?? 0}%`} />
+              <StatPill label="Avg turns" value={helpStats?.avgTurns ?? 0} />
               <StatPill label="Phase" value={phase === 'placement' ? 'Deployment' : phase === 'battle' ? 'Engagement' : 'Debrief'} />
             </div>
             {battleLog ? (
               <p className="text-xs text-white/70">
-                Last result: <span className="font-semibold text-white">{battleLog.lastResult ? battleLog.lastResult === 'victory' ? 'Victory' : 'Defeat' : '—'}</span>
+                Last result: <span className="font-semibold text-white">{battleLog.lastResult ? battleLog.lastResult : '—'}</span>
                 {battleLog.lastPlayed ? (
                   <span className="ml-1 text-white/60">
                     ({new Date(battleLog.lastPlayed).toLocaleString()})
@@ -184,61 +205,38 @@ const GameLayout = ({
                 ) : null}
               </p>
             ) : null}
-            {battleLog ? (
-              <p className="text-xs text-white/70">
-                Current streak: <span className="font-semibold text-white">{battleLog.streak}</span>{' '}
-                · Best: <span className="font-semibold text-white">{battleLog.bestStreak}</span>
-              </p>
-            ) : null}
+            <p className="text-xs text-white/70">
+              Current streak: <span className="font-semibold text-white">{stats?.currentStreak ?? 0}</span>{' '}
+              · Best: <span className="font-semibold text-white">{stats?.bestStreak ?? 0}</span>
+            </p>
+            <div className="flex items-center gap-2 text-xs text-white/70">
+              <span>Hotseat wins:</span>
+              <span className="font-semibold text-white">P1 {stats?.player1Wins ?? 0}</span>
+              <span className="font-semibold text-white">P2 {stats?.player2Wins ?? 0}</span>
+            </div>
+            <button
+              type="button"
+              className="rounded-lg border border-rose-300/40 bg-rose-500/10 px-3 py-1 text-xs uppercase tracking-wide text-rose-100 transition hover:bg-rose-500/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300"
+              onClick={onResetStats}
+            >
+              Reset stats
+            </button>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-cyan-400/20 bg-slate-950/60 p-4">
-          <p className="mb-3 text-xs uppercase tracking-wide text-cyan-200/80">Ship Inventory</p>
-          <ul className="grid gap-3 md:grid-cols-2">
-            {ships?.map((ship) => {
-              const placed = Array.isArray(ship.cells) && ship.cells.length === ship.len;
-              const isSelected = selectedShipId === ship.id;
-              return (
-                <li key={ship.id}>
-                  <div
-                    className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-3 transition ${
-                      isSelected
-                        ? 'border-cyan-400/70 bg-cyan-500/20 shadow-[0_12px_24px_rgba(0,180,255,0.25)]'
-                        : 'border-white/10 bg-white/5 hover:border-cyan-400/40 hover:bg-cyan-500/10'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      className="flex flex-1 flex-col items-start text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
-                      onClick={() => onSelectShip(ship.id)}
-                    >
-                      <span className="text-sm font-semibold text-white">{ship.name}</span>
-                      <span className="text-xs uppercase tracking-wide text-white/60">Length {ship.len}</span>
-                      <span
-                        className={`mt-1 inline-flex items-center rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                          placed
-                            ? 'bg-emerald-500/20 text-emerald-200'
-                            : 'bg-amber-500/20 text-amber-200'
-                        }`}
-                      >
-                        {placed ? 'Deployed' : 'Awaiting orders'}
-                      </span>
-                    </button>
-                    <Tooltip id={`rotate-${ship.id}`} text="Rotate ship">
-                      <button
-                        type="button"
-                        className="rounded-lg border border-white/20 bg-slate-950/80 px-2 py-1 text-xs uppercase tracking-wide text-white/70 transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 disabled:cursor-not-allowed disabled:opacity-40"
-                        onClick={() => onRotateShip(ship.id)}
-                        disabled={!placed}
-                      >
-                        Rotate
-                      </button>
-                    </Tooltip>
-                  </div>
-                </li>
-              );
-            })}
+        <ShipPalette
+          ships={ships}
+          selectedShipId={selectedShipId}
+          onSelectShip={onSelectShip}
+          onRotateShip={onRotateShip}
+        />
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-xs text-white/70">
+          <p className="mb-2 text-xs uppercase tracking-wide text-cyan-200/80">Controls</p>
+          <ul className="space-y-1">
+            <li><strong>Keyboard:</strong> arrows move cursor, Enter selects/place, R rotates, F fires, Esc clears selection.</li>
+            <li><strong>Touch:</strong> tap ship to select, tap grid to place/target, use Rotate and Fire buttons.</li>
+            <li><strong>Mouse:</strong> drag ships to place, click cells to target.</li>
           </ul>
         </div>
       </section>
@@ -262,6 +260,14 @@ const GameLayout = ({
         .battle-card:focus-within .board-surface {
           transform: rotateX(0deg) rotateY(0deg) translateY(-8px);
           box-shadow: 0 45px 80px rgba(0, 200, 255, 0.25);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .battle-card .board-surface {
+            transform: none !important;
+            transition: none !important;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+          }
         }
       `}</style>
     </div>

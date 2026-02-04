@@ -1,4 +1,4 @@
-import { Shoe, BlackjackGame, basicStrategy } from '../components/apps/blackjack/engine';
+import { Shoe, BlackjackGame, basicStrategy, calculateBustProbability } from '../components/apps/blackjack/engine';
 
 const card = (v: string) => ({ suit: '\u2660', value: v });
 
@@ -118,6 +118,14 @@ describe('Basic strategy', () => {
   });
 });
 
+describe('Bust probability', () => {
+  test('ace adjusts to avoid busting', () => {
+    const hand = [card('A'), card('9')];
+    const composition = { '2': 4 };
+    expect(calculateBustProbability(hand, composition)).toBe(0);
+  });
+});
+
 describe('Bankroll integrity', () => {
   test('blackjack pays 3:2', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
@@ -139,6 +147,14 @@ describe('Bankroll integrity', () => {
 });
 
 describe('Split rules', () => {
+  test('split fails when bankroll is insufficient', () => {
+    const game = new BlackjackGame({ decks: 1, bankroll: 150 });
+    const deck = [card('8'), card('8'), card('6'), card('10'), card('3'), card('2')];
+    game.startRound(100, deck);
+    expect(() => game.split()).toThrow('Not enough bankroll');
+    expect(game.bankroll).toBe(50);
+  });
+
   test('cannot split different ranks', () => {
     const game = new BlackjackGame({ decks: 1, bankroll: 1000 });
     const deck = [card('8'), card('9'), card('5'), card('7')];

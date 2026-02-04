@@ -67,29 +67,48 @@ describe('WeatherWidget', () => {
     globalThis.caches = originalCaches;
   });
 
-  it('renders demo data when network is disabled', () => {
+  it('renders demo data when network is disabled', async () => {
     renderWithSettings(<WeatherWidget />, { allowNetwork: false });
-    const summary = screen.getByRole('group', {
-      name: 'Current conditions for London, United Kingdom',
+    await waitFor(() => {
+      const summary = screen.getByRole('group', {
+        name: 'Current conditions for London, United Kingdom',
+      });
+      expect(
+        screen.getByRole('heading', { name: 'London, United Kingdom' }),
+      ).toBeInTheDocument();
+      expect(within(summary).getByText('15°C')).toBeInTheDocument();
+      expect(
+        screen.getByText(/Network access is disabled in Settings/i),
+      ).toBeInTheDocument();
     });
-    expect(
-      screen.getByRole('heading', { name: 'London, United Kingdom' }),
-    ).toBeInTheDocument();
-    expect(within(summary).getByText('15°C')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Network access is disabled in Settings/i),
-    ).toBeInTheDocument();
   });
 
-  it('allows switching between Celsius and Fahrenheit', () => {
+  it('avoids network calls when network access is disabled', async () => {
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({}),
+    } as Response);
+
+    renderWithSettings(<WeatherWidget />, { allowNetwork: false });
+
+    fireEvent.submit(screen.getByRole('button', { name: 'Update' }).closest('form')!);
+
+    await waitFor(() => {
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+  });
+
+  it('allows switching between Celsius and Fahrenheit', async () => {
     renderWithSettings(<WeatherWidget />, { allowNetwork: false });
     fireEvent.change(screen.getByLabelText('Units'), {
       target: { value: 'imperial' },
     });
-    const summary = screen.getByRole('group', {
-      name: 'Current conditions for London, United Kingdom',
+    await waitFor(() => {
+      const summary = screen.getByRole('group', {
+        name: 'Current conditions for London, United Kingdom',
+      });
+      expect(within(summary).getByText('59°F')).toBeInTheDocument();
     });
-    expect(within(summary).getByText('59°F')).toBeInTheDocument();
   });
 
   it('fetches live data when network access is enabled', async () => {
@@ -106,6 +125,9 @@ describe('WeatherWidget', () => {
         if (url.startsWith('https://geocoding-api.open-meteo.com')) {
           return Promise.resolve({
             ok: true,
+            clone() {
+              return this as Response;
+            },
             json: async () => ({
               results: [
                 {
@@ -172,6 +194,37 @@ describe('WeatherWidget', () => {
     expect(
       screen.queryByText(/Network access is disabled in Settings/i),
     ).not.toBeInTheDocument();
+
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
+  it('shows an error when the city is not found', async () => {
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockImplementation((input: RequestInfo | URL) => {
+        const url = typeof input === 'string' ? input : input.toString();
+        if (url.startsWith('https://geocoding-api.open-meteo.com')) {
+          return Promise.resolve({
+            ok: true,
+            clone() {
+              return this as Response;
+            },
+            json: async () => ({ results: [] }),
+          } as Response);
+        }
+        return Promise.reject(new Error(`Unexpected fetch: ${url}`));
+      });
+
+    renderWithSettings(<WeatherWidget />, { allowNetwork: true });
+
+    fireEvent.change(screen.getByLabelText('Search city'), {
+      target: { value: 'Nowhere' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/City not found/i)).toBeInTheDocument();
+    });
 
     expect(fetchMock).toHaveBeenCalled();
   });

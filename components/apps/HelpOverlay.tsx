@@ -27,7 +27,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   asteroids: {
     objective: "Destroy asteroids without crashing your ship.",
-    controls: "Arrow keys to rotate and thrust, space to fire.",
+    controls:
+      "Arrow keys to rotate and thrust, Space to fire, H for hyperspace. Use 1-9 to trigger inventory power-ups. Touch: left side drag for thrust/turn, top-right fires, bottom-right hyperspace.",
     actions: {
       left: "ArrowLeft",
       right: "ArrowRight",
@@ -91,7 +92,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "connect-four": {
     objective: "Get four of your discs in a row.",
-    controls: "Left/Right select column, Space drops, or click a column.",
+    controls:
+      "Left/Right select column, Enter/Space drops. Click/tap any column to drop (or tap twice if Confirm move is enabled).",
   },
   frogger: {
     objective: "Cross the road and river to reach the goal.",
@@ -113,7 +115,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   pacman: {
     objective: "Eat all pellets while avoiding ghosts.",
-    controls: "Use the arrow keys to move.",
+    controls:
+      "Arrow keys, swipe, or gamepad to move. Space starts. Escape pauses.",
   },
   platformer: {
     objective: "Reach the end of the level.",

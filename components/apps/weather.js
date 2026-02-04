@@ -42,6 +42,41 @@ const WeatherApp = dynamic(() => import('../../apps/weather'), {
  * defines a function for building the request URL. Results are cached using
  * the Cache Storage API so subsequent calls can be served while offline.
  */
+const CACHE_NAME = 'weather-data';
+const META_PREFIX = 'weather-cache-meta:';
+
+export class WeatherFetchError extends Error {
+  constructor(type, message, info) {
+    super(message);
+    this.name = 'WeatherFetchError';
+    this.type = type;
+    this.info = info;
+  }
+}
+
+const toMetaKey = (url) => `${META_PREFIX}${url}`;
+
+const readMetaTimestamp = (url) => {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const value = localStorage.getItem(toMetaKey(url));
+    if (!value) return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeMetaTimestamp = (url, timestamp) => {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(toMetaKey(url), String(timestamp));
+  } catch {
+    // ignore storage issues
+  }
+};
+
 export async function fetchWeather(provider, opts = {}) {
   const providers = {
     openWeather: ({ city, apiKey }) =>
@@ -74,50 +109,163 @@ export async function fetchWeather(provider, opts = {}) {
       }
       return `https://api.open-meteo.com/v1/forecast?${params.toString()}`;
     },
+    openMeteoGeo: ({
+      name,
+      count = 6,
+      language = 'en',
+      format = 'json',
+    }) => {
+      const params = new URLSearchParams({
+        name: name ?? '',
+        count: String(count),
+        language,
+        format,
+      });
+      return `https://geocoding-api.open-meteo.com/v1/search?${params.toString()}`;
+    },
   };
 
   const buildUrl = providers[provider];
-  if (!buildUrl) throw new Error(`Unsupported weather provider: ${provider}`);
+  if (!buildUrl) {
+    throw new WeatherFetchError(
+      'unsupported',
+      `Unsupported weather provider: ${provider}`,
+    );
+  }
+
+  const {
+    strategy = 'network-first',
+    ttl = 10 * 60 * 1000,
+    allowNetwork = true,
+    signal,
+    revalidate = false,
+  } = opts;
 
   const url = buildUrl(opts);
 
   const canUseCache =
     typeof globalThis !== 'undefined' && 'caches' in globalThis;
+  const isOffline =
+    typeof navigator !== 'undefined' && navigator.onLine === false;
 
-  let cached;
-  if (canUseCache) {
+  const readCache = async () => {
+    if (!canUseCache) return null;
     try {
-      const cache = await caches.open('weather-data');
-      cached = await cache.match(url);
-    } catch {
-      cached = undefined;
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(url);
+      if (!cached) return null;
+      const data = await cached.json();
+      const timestamp = readMetaTimestamp(url);
+      const stale =
+        typeof timestamp === 'number' ? Date.now() - timestamp > ttl : true;
+      return { data, timestamp, stale };
+    } catch (error) {
+      throw new WeatherFetchError(
+        'parsing',
+        'Unable to read cached weather data.',
+        { error },
+      );
     }
+  };
+
+  const writeCache = async (response, timestamp) => {
+    if (!canUseCache) return;
+    try {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(url, response.clone());
+      writeMetaTimestamp(url, timestamp);
+    } catch {
+      // Ignore cache errors
+    }
+  };
+
+  const fetchFromNetwork = async () => {
+    if (!allowNetwork) {
+      throw new WeatherFetchError(
+        'network-disabled',
+        'Network access is disabled.',
+      );
+    }
+    if (isOffline) {
+      throw new WeatherFetchError('offline', 'You appear to be offline.');
+    }
+    const res = await fetch(url, { signal });
+    if (!res.ok) {
+      throw new WeatherFetchError(
+        'http',
+        `Failed to fetch weather (${res.status})`,
+        { status: res.status },
+      );
+    }
+    const cloned = res.clone();
+    let data;
+    try {
+      data = await res.json();
+    } catch (error) {
+      throw new WeatherFetchError(
+        'parsing',
+        'Unable to parse weather response.',
+        { error },
+      );
+    }
+    const timestamp = Date.now();
+    await writeCache(cloned, timestamp);
+    return {
+      data,
+      meta: {
+        source: 'network',
+        cached: false,
+        stale: false,
+        timestamp,
+      },
+    };
+  };
+
+  const cached = await readCache().catch((error) => {
+    if (error instanceof WeatherFetchError) return null;
+    return null;
+  });
+
+  const cachePayload = cached
+    ? {
+        data: cached.data,
+        meta: {
+          source: 'cache',
+          cached: true,
+          stale: cached.stale,
+          timestamp: cached.timestamp ?? undefined,
+        },
+      }
+    : null;
+
+  const effectiveStrategy =
+    allowNetwork || strategy === 'cache-only' ? strategy : 'cache-only';
+
+  if (effectiveStrategy === 'cache-only') {
+    if (cachePayload) return cachePayload;
+    throw new WeatherFetchError(
+      allowNetwork ? 'offline' : 'network-disabled',
+      allowNetwork
+        ? 'You appear to be offline.'
+        : 'Network access is disabled.',
+    );
+  }
+
+  if (effectiveStrategy === 'cache-first') {
+    if (cachePayload) {
+      if (revalidate && allowNetwork && !isOffline) {
+        const revalidatePromise = fetchFromNetwork().catch(() => null);
+        return { ...cachePayload, revalidate: revalidatePromise };
+      }
+      return cachePayload;
+    }
+    return fetchFromNetwork();
   }
 
   try {
-    const res = await fetch(url, { signal: opts.signal });
-    if (!res.ok) {
-      throw new Error('Failed to fetch weather');
-    }
-
-    if (canUseCache) {
-      try {
-        const cache = await caches.open('weather-data');
-        await cache.put(url, res.clone());
-      } catch {
-        // Ignore cache errors
-      }
-    }
-
-    return await res.json();
+    return await fetchFromNetwork();
   } catch (error) {
-    if (cached) {
-      try {
-        return await cached.json();
-      } catch {
-        // fall through to throw original error
-      }
-    }
+    if (cachePayload) return cachePayload;
     throw error;
   }
 }
