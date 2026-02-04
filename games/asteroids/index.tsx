@@ -1,5 +1,6 @@
 "use client";
 
+// Legacy implementation; not used by the app registry.
 import React, { useEffect, useRef, useState, useCallback } from "react";
 
 // Basic entity types
@@ -268,7 +269,11 @@ const AsteroidsGame: React.FC = () => {
 
   return (
     <div className="relative w-full h-full bg-black" data-testid="asteroids-game">
-      <canvas ref={canvasRef} className="w-full h-full" />
+      <canvas
+        ref={canvasRef}
+        className="w-full h-full"
+        aria-label="Legacy Asteroids game canvas"
+      />
       <div className="pointer-events-none absolute inset-0 select-none">
         <div className="absolute top-2 left-2 flex gap-1">
           {Array.from({ length: lives }).map((_, i) => (
@@ -313,4 +318,3 @@ const AsteroidsGame: React.FC = () => {
 };
 
 export default AsteroidsGame;
-

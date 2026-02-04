@@ -145,31 +145,67 @@ const getValidLocations = (board: Board): number[] => {
   return locations;
 };
 
+const orderColumns = (cols: number[]): number[] => {
+  const center = Math.floor(COLS / 2);
+  return [...cols].sort(
+    (a, b) => Math.abs(a - center) - Math.abs(b - center) || a - b,
+  );
+};
+
+const hashBoard = (board: Board): string =>
+  board
+    .map((row) =>
+      row
+        .map((cell) => {
+          if (cell === 'red') return 'r';
+          if (cell === 'yellow') return 'y';
+          return '_';
+        })
+        .join(''),
+    )
+    .join('|');
+
 export const minimax = (
   board: Board,
   depth: number,
   alpha: number,
   beta: number,
   maximizing: boolean,
+  table: Map<string, { depth: number; score: number; column?: number }> = new Map(),
 ): { column?: number; score: number } => {
+  const key = `${maximizing ? 'M' : 'm'}:${depth}:${hashBoard(board)}`;
+  const cached = table.get(key);
+  if (cached && cached.depth >= depth) {
+    return { column: cached.column, score: cached.score };
+  }
+
   const validLocations = getValidLocations(board);
   const isTerminal =
     checkWinner(board, 'red') ||
     checkWinner(board, 'yellow') ||
     validLocations.length === 0;
   if (depth === 0 || isTerminal) {
-    if (checkWinner(board, 'red')) return { score: 1000000 };
-    if (checkWinner(board, 'yellow')) return { score: -1000000 };
-    return { score: scorePosition(board, 'red') };
+    let score = scorePosition(board, 'red');
+    if (checkWinner(board, 'red')) score = 1000000;
+    if (checkWinner(board, 'yellow')) score = -1000000;
+    table.set(key, { depth, score });
+    return { score };
   }
   if (maximizing) {
     let value = -Infinity;
     let column = validLocations[0];
-    for (const col of validLocations) {
+    for (const col of orderColumns(validLocations)) {
       const row = getValidRow(board, col);
       const newBoard = board.map((r) => [...r]);
       newBoard[row][col] = 'red';
-      const score = minimax(newBoard, depth - 1, alpha, beta, false).score;
+      const score = minimax(
+        newBoard,
+        depth - 1,
+        alpha,
+        beta,
+        false,
+        table,
+      ).score;
       if (score > value) {
         value = score;
         column = col;
@@ -177,15 +213,24 @@ export const minimax = (
       alpha = Math.max(alpha, value);
       if (alpha >= beta) break;
     }
-    return { column, score: value };
+    const result = { column, score: value };
+    table.set(key, { depth, score: value, column });
+    return result;
   }
   let value = Infinity;
   let column = validLocations[0];
-  for (const col of validLocations) {
+  for (const col of orderColumns(validLocations)) {
     const row = getValidRow(board, col);
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = 'yellow';
-    const score = minimax(newBoard, depth - 1, alpha, beta, true).score;
+    const score = minimax(
+      newBoard,
+      depth - 1,
+      alpha,
+      beta,
+      true,
+      table,
+    ).score;
     if (score < value) {
       value = score;
       column = col;
@@ -193,7 +238,9 @@ export const minimax = (
     beta = Math.min(beta, value);
     if (alpha >= beta) break;
   }
-  return { column, score: value };
+  const result = { column, score: value };
+  table.set(key, { depth, score: value, column });
+  return result;
 };
 
 export const getBestMove = (
@@ -201,15 +248,23 @@ export const getBestMove = (
   depth: number,
   player: 'red' | 'yellow',
 ): { column: number; scores: (number | null)[] } => {
-  const valid = getValidLocations(board);
+  const valid = orderColumns(getValidLocations(board));
   const scores: (number | null)[] = Array(COLS).fill(null);
   let bestColumn = valid[0] ?? 0;
   let bestScore = player === 'red' ? -Infinity : Infinity;
+  const table = new Map<string, { depth: number; score: number; column?: number }>();
   for (const col of valid) {
     const row = getValidRow(board, col);
     const newBoard = board.map((r) => [...r]);
     newBoard[row][col] = player;
-    const score = minimax(newBoard, depth - 1, -Infinity, Infinity, player === 'yellow').score;
+    const score = minimax(
+      newBoard,
+      depth - 1,
+      -Infinity,
+      Infinity,
+      player === 'yellow',
+      table,
+    ).score;
     scores[col] = score;
     if (player === 'red') {
       if (score > bestScore) {

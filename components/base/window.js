@@ -596,6 +596,17 @@ export class Window extends Component {
                     }
                 }
             }
+            if ((x === null || y === null) && typeof node.getBoundingClientRect === 'function') {
+                const rect = node.getBoundingClientRect();
+                if (rect) {
+                    if (x === null && Number.isFinite(rect.left)) {
+                        x = rect.left;
+                    }
+                    if (y === null && Number.isFinite(rect.top)) {
+                        y = rect.top;
+                    }
+                }
+            }
         }
 
         if (x === null || y === null) {
@@ -1894,18 +1905,14 @@ export class Window extends Component {
                 e.stopPropagation();
                 const node = this.getWindowNode();
                 if (node) {
-                    const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(node.style.transform);
-                    const fallbackPosition = this.state.position;
-                    let x = match ? parseFloat(match[1]) : (fallbackPosition?.x ?? 0);
-                    let y = match ? parseFloat(match[2]) : (fallbackPosition?.y ?? 0);
-                    x += dx;
-                    y += dy;
-                    node.style.transform = `translate(${x}px, ${y}px)`;
-                    this.updateTransformVariables(node, x, y);
-                    this.updatePositionState(x, y);
+                    const fallbackPosition = this.state.position || { x: 0, y: 0 };
+                    const baseX = Number.isFinite(fallbackPosition.x) ? fallbackPosition.x : 0;
+                    const baseY = Number.isFinite(fallbackPosition.y) ? fallbackPosition.y : 0;
+                    const x = baseX + dx;
+                    const y = baseY + dy;
+                    this.setWinowsPosition({ x, y });
                     const rect = this.readNodeRect(node);
                     this.checkSnapPreview(node, rect);
-                    this.setWinowsPosition({ x, y });
                 }
             }
         }
