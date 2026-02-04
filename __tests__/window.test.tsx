@@ -66,6 +66,7 @@ const setVisualViewport = (width?: number, height?: number, offsetLeft = 0, offs
 };
 
 beforeEach(() => {
+  localStorage.clear();
   setViewport(1440, 900);
   measureSafeAreaInsetMock.mockReturnValue(0);
   measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING);
