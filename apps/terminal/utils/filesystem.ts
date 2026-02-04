@@ -255,7 +255,7 @@ export class FauxFileSystem implements TerminalFileSystem {
             if (!current || current.type !== 'folder') {
                 return { node: null, parent: null, name: segment };
             }
-            const children = Array.isArray(current.children) ? current.children : [];
+            const children: FauxFileNode[] = Array.isArray(current.children) ? current.children : [];
             const next = children.find(
                 (child) => child?.name?.toLowerCase() === segment.toLowerCase(),
             );
@@ -305,9 +305,9 @@ export class FauxFileSystem implements TerminalFileSystem {
     async readDirectory(path: string): Promise<FileEntry[] | null> {
         const entry = this.findEntry(path);
         if (!entry.node || entry.node.type !== 'folder') return null;
-        const entries = Array.isArray(entry.node.children) ? entry.node.children : [];
+        const entries: FauxFileNode[] = Array.isArray(entry.node.children) ? entry.node.children : [];
         return entries
-            .map((child) => ({
+            .map<FileEntry>((child) => ({
                 name: child.name,
                 kind: child.type === 'folder' ? 'directory' : 'file',
             }))

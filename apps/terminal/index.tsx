@@ -75,6 +75,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const settingsButtonRef = useRef<HTMLButtonElement>(null);
+  const settingsPanelRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const searchAddonRef = useRef<{
     findNext: (term: string, options?: { incremental?: boolean; caseSensitive?: boolean }) => boolean;
   } | null>(null);
@@ -669,6 +672,35 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     }
   }, [tab?.active, isReady]);
 
+  useEffect(() => {
+    if (!settingsOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (settingsPanelRef.current?.contains(target)) return;
+      if (settingsButtonRef.current?.contains(target)) return;
+      setSettingsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKey);
+    searchInputRef.current?.focus();
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [searchOpen]);
+
   useImperativeHandle(ref, () => ({
     runCommand: async (command: string) => {
       if (!sessionRef.current) return;
@@ -707,11 +739,19 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
             onClick={() => setSettingsOpen((open) => !open)}
             className="p-1.5 hover:bg-[#333] rounded transition-colors text-gray-400 hover:text-white"
             title="Terminal settings"
+            aria-haspopup="dialog"
+            aria-expanded={settingsOpen}
+            ref={settingsButtonRef}
           >
             <SettingsIcon />
           </button>
           {settingsOpen && (
-            <div className="absolute right-0 top-10 z-20 w-64 rounded border border-[#333] bg-[#111] p-3 text-xs text-gray-200 shadow-lg">
+            <div
+              ref={settingsPanelRef}
+              className="absolute right-0 top-10 z-20 w-64 rounded border border-[#333] bg-[#111] p-3 text-xs text-gray-200 shadow-lg"
+              role="dialog"
+              aria-label="Terminal settings"
+            >
               <div className="flex items-center justify-between py-1">
                 <span>Safe Mode</span>
                 <button
@@ -779,6 +819,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
           <div className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded border border-[#333] bg-[#111] px-3 py-2 text-xs text-gray-200 shadow-lg">
             <input
               aria-label="Search scrollback"
+              ref={searchInputRef}
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               onKeyDown={(event) => {
