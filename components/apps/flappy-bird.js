@@ -58,6 +58,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
   const milestoneTimeoutRef = useRef(null);
   const gamepadRef = useRef({ fire: false, up: false });
   const readySeedRef = useRef(null);
+  const scoreFlashTimeoutRef = useRef(null);
 
   const [birdSkin, setBirdSkin] = useState(() =>
     readNumber(STORAGE_KEYS.birdSkin, 0, { min: 0 }),
@@ -83,6 +84,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
   const [layoutPaused, setLayoutPaused] = useState(false);
   const [focusPaused, setFocusPaused] = useState(false);
   const [score, setScore] = useState(0);
+  const [scoreFlash, setScoreFlash] = useState(false);
   const [bestScore, setBestScore] = useState(0);
   const [bestOverall, setBestOverall] = useState(0);
   const [leaderboard, setLeaderboard] = useState([]);
@@ -246,6 +248,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
     engineRef.current.setReplay(null);
     lastRunRef.current = null;
     setScore(0);
+    setScoreFlash(false);
     setMilestoneMessage(null);
     if (milestoneTimeoutRef.current) {
       clearTimeout(milestoneTimeoutRef.current);
@@ -307,6 +310,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
     engineRef.current.start(lastRun.seed);
     engineRef.current.setReplay(lastRun.flaps || []);
     setScore(0);
+    setScoreFlash(false);
     setMilestoneMessage(null);
     if (milestoneTimeoutRef.current) {
       clearTimeout(milestoneTimeoutRef.current);
@@ -438,6 +442,11 @@ const FlappyBird = ({ windowMeta } = {}) => {
         if (result?.scored) {
           setScore(engine.state.score);
           announce(`Score: ${engine.state.score}`);
+          setScoreFlash(true);
+          if (scoreFlashTimeoutRef.current) clearTimeout(scoreFlashTimeoutRef.current);
+          scoreFlashTimeoutRef.current = setTimeout(() => {
+            setScoreFlash(false);
+          }, 300);
         }
         if (result?.milestone) {
           const message = `Milestone! ${result.milestone} points`;
@@ -537,6 +546,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
 
   useEffect(() => () => {
     if (milestoneTimeoutRef.current) clearTimeout(milestoneTimeoutRef.current);
+    if (scoreFlashTimeoutRef.current) clearTimeout(scoreFlashTimeoutRef.current);
   }, []);
 
   const settingsPanel = (
@@ -695,7 +705,11 @@ const FlappyBird = ({ windowMeta } = {}) => {
           </div>
         )}
         {gameState === 'running' && (
-          <div className="pointer-events-none absolute left-1/2 top-6 z-30 -translate-x-1/2 text-5xl font-bold tracking-widest text-white drop-shadow-lg">
+          <div
+            className={`pointer-events-none absolute left-1/2 top-6 z-30 -translate-x-1/2 text-5xl font-bold tracking-widest text-white drop-shadow-lg transition-transform duration-150 ${
+              scoreFlash ? 'scale-110' : 'scale-100'
+            }`}
+          >
             {score}
           </div>
         )}

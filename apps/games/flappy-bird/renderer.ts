@@ -476,9 +476,13 @@ export function createFlappyRenderer(width: number, height: number): FlappyRende
       const frames = options.birdFrames[options.birdSkinIndex % options.birdFrames.length] || [];
       const frameIndex = frames.length ? Math.floor(state.frame / 6) % frames.length : 0;
       const img = frames[frameIndex];
+      const readyBob =
+        state.status === 'ready'
+          ? Math.sin(renderState.frame / 12) * (options.reducedMotion ? 0.5 : 2)
+          : 0;
       ctx.save();
-      ctx.translate(state.bird.x, state.bird.y);
-      ctx.rotate(state.birdAngle);
+      ctx.translate(state.bird.x, state.bird.y + readyBob);
+      ctx.rotate(state.status === 'ready' ? 0 : state.birdAngle);
       if (img && img.complete) {
         ctx.drawImage(img, -12, -10, 24, 20);
       } else {

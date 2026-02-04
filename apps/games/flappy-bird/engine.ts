@@ -29,6 +29,7 @@ export interface FlappyPipe {
   baseBottom: number;
   amplitude: number;
   phase: number;
+  passed: boolean;
 }
 
 export interface BirdState {
@@ -156,6 +157,7 @@ export function createFlappyEngine({
       baseBottom: topBase + gap,
       amplitude,
       phase,
+      passed: false,
     });
   };
 
@@ -288,10 +290,11 @@ export function createFlappyEngine({
         triggerCrash();
         return { crash: true };
       }
-      if (pipe.x + PIPE_WIDTH < 0) {
+      if (!pipe.passed && pipe.x + PIPE_WIDTH < state.bird.x - 10) {
+        pipe.passed = true;
         passed += 1;
-        state.pipes.splice(i, 1);
       }
+      if (pipe.x + PIPE_WIDTH < 0) state.pipes.splice(i, 1);
     }
 
     if (passed) {

@@ -13,6 +13,7 @@ describe('flappy bird engine', () => {
         baseBottom: 40,
         amplitude: 0,
         phase: 0,
+        passed: false,
       },
     ];
     engine.state.bird.y = 5;
@@ -30,11 +31,12 @@ describe('flappy bird engine', () => {
     engine.start(99);
     engine.state.pipes = [
       {
-        x: -PIPE_WIDTH - 2,
+        x: engine.state.bird.x - PIPE_WIDTH - 20,
         baseTop: 40,
         baseBottom: 140,
         amplitude: 0,
         phase: 0,
+        passed: false,
       },
     ];
 
@@ -42,7 +44,7 @@ describe('flappy bird engine', () => {
 
     expect(result?.scored).toBe(1);
     expect(engine.state.score).toBe(1);
-    expect(engine.state.pipes.length).toBe(0);
+    expect(engine.state.pipes[0]?.passed).toBe(true);
   });
 
   test('uses deterministic pipes for a fixed seed', () => {
