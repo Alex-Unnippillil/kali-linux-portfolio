@@ -82,6 +82,19 @@ export const handValue = (hand) => {
   return total;
 };
 
+export const calculateBustProbability = (handCards, composition) => {
+  if (!handCards || !composition) return 0;
+  const counts = Object.entries(composition);
+  const totalCards = counts.reduce((sum, [, count]) => sum + count, 0);
+  if (totalCards === 0) return 0;
+  const bustCards = counts.reduce((sum, [value, count]) => {
+    if (count <= 0) return sum;
+    const wouldBust = handValue([...handCards, { value, suit: '♠' }]) > 21;
+    return sum + (wouldBust ? count : 0);
+  }, 0);
+  return bustCards / totalCards;
+};
+
 export const isSoft = (hand) => {
   let total = 0;
   let aces = 0;
@@ -314,4 +327,3 @@ export class BlackjackGame {
     });
   }
 }
-
