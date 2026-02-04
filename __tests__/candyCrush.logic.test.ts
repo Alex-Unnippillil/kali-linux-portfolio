@@ -1,6 +1,7 @@
 import {
   GEM_IDS,
   createBoard,
+  computeCellSize,
   detonateColorBomb,
   findMatches,
   resolveBoard,
@@ -127,5 +128,10 @@ describe('candy crush logic helpers', () => {
     expect(first).toBeGreaterThan(0);
     expect(second).toBe(first * 2);
   });
-});
 
+  test('computeCellSize clamps values for board sizing', () => {
+    expect(computeCellSize(300, 300, 8, 8, 34, 56)).toBe(34);
+    expect(computeCellSize(900, 900, 8, 8, 34, 56)).toBe(56);
+    expect(computeCellSize(600, 600, 8, 8, 34, 56)).toBeGreaterThanOrEqual(34);
+  });
+});

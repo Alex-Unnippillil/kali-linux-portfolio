@@ -14,6 +14,7 @@ import {
   GEM_IDS,
   type GemId,
   type CandyCell,
+  computeCellSize,
   createPlayableBoard,
   detonateColorBomb,
   findFirstPossibleMove,
@@ -286,11 +287,43 @@ interface HudPanelProps {
   scoreProgress: number;
   movesProgress: number;
   reducedMotion: boolean;
+  showCoachmark: boolean;
+  onDismissCoachmark: () => void;
 }
 
 const HudPanel = React.memo(
-  ({ statusLabel, statusTheme, stats, message, lastCascade, scoreProgress, movesProgress, reducedMotion }: HudPanelProps) => (
+  ({
+    statusLabel,
+    statusTheme,
+    stats,
+    message,
+    lastCascade,
+    scoreProgress,
+    movesProgress,
+    reducedMotion,
+    showCoachmark,
+    onDismissCoachmark,
+  }: HudPanelProps) => (
     <>
+      {showCoachmark && (
+        <div className="rounded-2xl border border-cyan-400/40 bg-slate-950/70 p-4 text-sm text-cyan-100 shadow-[0_0_24px_rgba(14,165,233,0.25)]">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.32em] text-cyan-300/80">Quick start</div>
+              <p className="mt-2 text-sm text-cyan-100/90">
+                Swipe, drag, or tap to swap gems. Build streaks, then use H for a hint or 1/2 for boosters when you get stuck.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onDismissCoachmark}
+              className="rounded-full border border-cyan-400/40 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-cyan-100 transition hover:border-cyan-200/70"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold uppercase tracking-[0.35em] text-cyan-200 sm:text-xl">Kali Crush</h2>
@@ -736,6 +769,11 @@ const CandyCrush = () => {
     false,
     isBoolean,
   );
+  const [showCoachmark, setShowCoachmark] = usePersistentState(
+    'candy-crush:coachmark-v1',
+    true,
+    isBoolean,
+  );
   const dragSource = useRef<number | null>(null);
   const cascadeSource = useRef<'auto' | 'player'>('auto');
   const started = useRef(false);
@@ -842,10 +880,14 @@ const CandyCrush = () => {
       if (!entry) return;
       const { width, height } = entry.contentRect;
       const padding = 32;
-      const available = Math.min(width, height) - padding * 2;
-      if (available <= 0) return;
-      const raw = Math.floor((available - gridGap * (BOARD_WIDTH - 1)) / BOARD_WIDTH);
-      const next = Math.max(MIN_CELL_SIZE, Math.min(MAX_CELL_SIZE, raw));
+      const next = computeCellSize(
+        Math.max(0, width - padding * 2),
+        Math.max(0, height - padding * 2),
+        BOARD_WIDTH,
+        gridGap,
+        MIN_CELL_SIZE,
+        MAX_CELL_SIZE,
+      );
       setCellSize((prev) => (prev === next ? prev : next));
     });
 
@@ -1405,6 +1447,8 @@ const CandyCrush = () => {
             scoreProgress={scoreProgress}
             movesProgress={movesProgress}
             reducedMotion={Boolean(reducedMotion)}
+            showCoachmark={showCoachmark}
+            onDismissCoachmark={() => setShowCoachmark(false)}
           />
           <BoostersBar
             boosters={boosters}
