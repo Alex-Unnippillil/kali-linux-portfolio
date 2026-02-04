@@ -30,8 +30,10 @@ export interface City {
   countryCode?: string;
   timezone?: string;
   lastReading?: WeatherReading;
+  lastReadingStale?: boolean;
   forecast?: ForecastDay[];
   hourly?: HourlySnapshot;
+  hourlyStale?: boolean;
   lastError?: string;
 }
 
@@ -77,8 +79,10 @@ const isCity = (v: any): v is City =>
   (v.countryCode === undefined || typeof v.countryCode === 'string') &&
   (v.timezone === undefined || typeof v.timezone === 'string') &&
   (v.lastReading === undefined || isWeatherReading(v.lastReading)) &&
+  (v.lastReadingStale === undefined || typeof v.lastReadingStale === 'boolean') &&
   (v.forecast === undefined || isForecastArray(v.forecast)) &&
   (v.hourly === undefined || isHourlySnapshot(v.hourly)) &&
+  (v.hourlyStale === undefined || typeof v.hourlyStale === 'boolean') &&
   (v.lastError === undefined || typeof v.lastError === 'string');
 
 const isCityArray = (v: unknown): v is City[] => Array.isArray(v) && v.every(isCity);
