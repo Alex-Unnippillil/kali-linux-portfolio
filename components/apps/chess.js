@@ -212,6 +212,9 @@ const ChessGame = () => {
   const [showHints, setShowHints] = useState(storedSettings.showHints ?? false);
   const [mateSquares, setMateSquares] = useState([]);
   const [showArrows, setShowArrows] = useState(storedSettings.showArrows ?? true);
+  const [showCoordinates, setShowCoordinates] = useState(
+    storedSettings.showCoordinates ?? true,
+  );
   const [orientation, setOrientation] = useState(
     storedSettings.orientation ?? "white",
   );
@@ -661,6 +664,7 @@ const ChessGame = () => {
           sound,
           showHints,
           showArrows,
+          showCoordinates,
           pieceSet,
           orientation,
         },
@@ -681,6 +685,7 @@ const ChessGame = () => {
     pieceSet,
     playerSide,
     showArrows,
+    showCoordinates,
     showHints,
     sound,
   ]);
@@ -836,7 +841,14 @@ const ChessGame = () => {
     }
 
     if (game.isDraw()) {
-      setStatus(modeRef.current === "puzzle" ? "Puzzle drawn." : "Draw.");
+      let drawReason = "Draw.";
+      if (game.isStalemate?.()) drawReason = "Draw by stalemate.";
+      else if (game.isThreefoldRepetition?.())
+        drawReason = "Draw by threefold repetition.";
+      else if (game.isInsufficientMaterial?.())
+        drawReason = "Draw by insufficient material.";
+      else if (game.isDraw?.()) drawReason = "Draw.";
+      setStatus(modeRef.current === "puzzle" ? "Puzzle drawn." : drawReason);
       setGameOver(true);
       pausedRef.current = true;
       setPaused(true);
@@ -1394,6 +1406,7 @@ const ChessGame = () => {
   const togglePieces = () =>
     setPieceSet((p) => (p === "sprites" ? "unicode" : "sprites"));
   const toggleArrows = () => setShowArrows((s) => !s);
+  const toggleCoordinates = () => setShowCoordinates((s) => !s);
   const flipBoard = () => {
     setHoverSquare(null);
     setOrientation((o) => (o === "white" ? "black" : "white"));
@@ -1709,6 +1722,25 @@ const ChessGame = () => {
         }
       }
 
+      if (showCoordinates) {
+        ctx.font = `${Math.max(10, sq * 0.18)}px "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = "rgba(255,255,255,0.65)";
+        for (let f = 0; f < 8; f++) {
+          const file = orientation === "white" ? files[f] : files[7 - f];
+          const x = f * sq + 6;
+          ctx.fillText(file, x, size - 6);
+        }
+        ctx.textAlign = "right";
+        ctx.textBaseline = "top";
+        for (let r = 0; r < 8; r++) {
+          const rank = orientation === "white" ? r + 1 : 8 - r;
+          const y = (7 - r) * sq + 6;
+          ctx.fillText(String(rank), size - 6, y);
+        }
+      }
+
       if (showArrows) {
         trailsRef.current = trailsRef.current.filter((t) => now - t.t < 1000);
         for (const t of trailsRef.current) {
@@ -1797,6 +1829,7 @@ const ChessGame = () => {
     hoverSquare,
     mateSquares,
     moves,
+    orientation,
     pieceSet,
     promotionPrompt,
     reduceMotion,
@@ -1804,6 +1837,7 @@ const ChessGame = () => {
     selected,
     showArrows,
     spritesReady,
+    showCoordinates,
   ]);
 
   useEffect(() => {
@@ -1816,11 +1850,13 @@ const ChessGame = () => {
     hoverSquare,
     mateSquares,
     moves,
+    orientation,
     pieceSet,
     reduceMotion,
     requestRender,
     selected,
     showArrows,
+    showCoordinates,
     spritesReady,
   ]);
 
@@ -2517,6 +2553,13 @@ const ChessGame = () => {
                 </button>
                 <button className={buttonClass} onClick={toggleHints} type="button">
                   {showHints ? "Hide Mate-in-1" : "Show Mate-in-1"}
+                </button>
+                <button
+                  className={buttonClass}
+                  onClick={toggleCoordinates}
+                  type="button"
+                >
+                  {showCoordinates ? "Hide Coordinates" : "Show Coordinates"}
                 </button>
               </div>
             </section>
