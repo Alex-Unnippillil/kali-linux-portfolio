@@ -811,6 +811,7 @@ const Pacman = ({ windowMeta } = {}) => {
           type="text"
           placeholder="Search level..."
           className="w-full px-2 py-1 text-black"
+          aria-label="Search levels"
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -861,6 +862,8 @@ const Pacman = ({ windowMeta } = {}) => {
           ref={canvasRef}
           width={WIDTH}
           height={HEIGHT}
+          role="img"
+          aria-label="Pacman board"
           className="bg-black"
           style={{ width: WIDTH * scale, height: HEIGHT * scale, imageRendering: 'pixelated' }}
         />
