@@ -193,9 +193,9 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
       "Space/click to flap. P: practice, G: easy gravity, M: reduced motion, O: pipe skin, H: hitbox preview, R: replay, Shift+R: best run.",
   },
   "candy-crush": {
-    objective: "Match three candies to clear them.",
+    objective: "Match three gems to clear them.",
     controls:
-      "Swap adjacent candies by dragging or clicking. Use the overlay to pause or mute, and the booster buttons to shuffle or detonate color bombs.",
+      "Swap adjacent gems by dragging or clicking. Use the overlay to pause or mute, H for hint, 1 for Shuffle, and 2 for Color Bomb.",
   },
   gomoku: {
     objective: "Get five stones in a row before your opponent.",

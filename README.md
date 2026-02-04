@@ -255,7 +255,7 @@ Most games are implemented using **React state** for logic and HTML/CSS/Canvas f
 | **Battleship** | React | Grid-based strategy. Implements "AI" opponent with localized state for board tracking. |
 | **Blackjack** | React | Card game logic using a shuffled deck array state. |
 | **Breakout** | Canvas | Brick breaker. Physics-based collision detection on a canvas. |
-| **Candy Crush** | React/Grid | Match-3 logic. Handles complex grid state updates and animations for matches/cascades. |
+| **Kali Crush** | React/Grid | Match-3 logic. Handles complex grid state updates and animations for matches/cascades. |
 | **Car Racer** | Canvas | Top-down racing game. Scroller implementation. |
 | **Checkers** | React | Classic board game. Enforces move validation and capture logic. |
 | **Chess** | **WASM + Canvas** | Uses `chess.js` for rule validation and a WebAssembly-based Stockfish engine for AI. Renders via HTML/SVG. |
