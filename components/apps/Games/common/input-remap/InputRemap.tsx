@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatGameKey } from '../../../../../utils/gameInput';
 
 interface Props {
   mapping: Record<string, string>;
@@ -34,7 +35,7 @@ const InputRemap: React.FC<Props> = ({ mapping, setKey, actions }) => {
             onClick={() => capture(action)}
             className="px-2 py-1 bg-gray-700 rounded focus:outline-none focus:ring"
           >
-            {waiting === action ? 'Press key...' : mapping[action]}
+            {waiting === action ? 'Press key...' : formatGameKey(mapping[action])}
           </button>
         </div>
       ))}

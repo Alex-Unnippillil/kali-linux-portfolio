@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TILE_SIZE, cameraDefaults, parseLevel, step } from '../../games/platformer/logic';
 import useIsTouchDevice from '../../hooks/useIsTouchDevice';
 import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
@@ -224,9 +224,9 @@ export default function PlatformerApp({ windowMeta } = {}) {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('resize', handleResize);
     };
-  }, [resizeCanvas, isFocused]);
+  }, [draw, isFocused, resizeCanvas, restartLevel, snapshot, syncUi, togglePause]);
 
-  const snapshot = (state) => ({
+  const snapshot = useCallback((state) => ({
     player: { ...state.player },
     camera: { ...state.camera },
     level: state.level,
@@ -235,37 +235,9 @@ export default function PlatformerApp({ windowMeta } = {}) {
     status: state.status,
     time: state.time,
     shake: { ...state.shake },
-  });
+  }), []);
 
-  const draw = (ctx, alpha) => {
-    const current = sessionRef.current.state;
-    const previous = prevSnapshotRef.current || current;
-    const interp = (a, b) => a + (b - a) * alpha;
-    const playerX = interp(previous.player.x, current.player.x);
-    const playerY = interp(previous.player.y, current.player.y);
-    const camX = interp(previous.camera.x, current.camera.x);
-    const camY = interp(previous.camera.y, current.camera.y);
-    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
-    const scale = dpr * RENDER_SCALE;
-    const shakeMag = reduceMotionRef.current ? 0 : current.shake.magnitude * (current.shake.time > 0 ? current.shake.time / 0.2 : 0);
-    const shakeX = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
-    const shakeY = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
-
-    ctx.save();
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.fillStyle = '#0c0f17';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    ctx.translate(-camX + ctx.canvas.width / (2 * scale), -camY + ctx.canvas.height / (2 * scale));
-    ctx.translate(shakeX, shakeY);
-
-    drawBackdrop(ctx, current.level);
-    drawTiles(ctx, current.level);
-    drawPlatforms(ctx, current.level.platforms);
-    drawPlayer(ctx, playerX, playerY, current.player.facing);
-    ctx.restore();
-  };
-
-  const drawBackdrop = (ctx, level) => {
+  const drawBackdrop = useCallback((ctx, level) => {
     ctx.save();
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, level.width * TILE_SIZE, level.height * TILE_SIZE);
@@ -283,9 +255,9 @@ export default function PlatformerApp({ windowMeta } = {}) {
       ctx.stroke();
     }
     ctx.restore();
-  };
+  }, []);
 
-  const drawTiles = (ctx, level) => {
+  const drawTiles = useCallback((ctx, level) => {
     for (let y = 0; y < level.height; y += 1) {
       for (let x = 0; x < level.width; x += 1) {
         const tile = level.tiles[y][x];
@@ -313,26 +285,54 @@ export default function PlatformerApp({ windowMeta } = {}) {
         }
       }
     }
-  };
+  }, []);
 
-  const drawPlatforms = (ctx, platforms) => {
+  const drawPlatforms = useCallback((ctx, platforms) => {
     ctx.fillStyle = '#6b7280';
     platforms.forEach((p) => {
       ctx.fillRect(p.x, p.y, p.width, p.height);
       ctx.strokeStyle = '#111827';
       ctx.strokeRect(p.x, p.y, p.width, p.height);
     });
-  };
+  }, []);
 
-  const drawPlayer = (ctx, x, y, facing) => {
+  const drawPlayer = useCallback((ctx, x, y, facing) => {
     ctx.fillStyle = '#e5e7eb';
     ctx.fillRect(x, y, PLAYER_SIZE.w, PLAYER_SIZE.h);
     ctx.fillStyle = '#111827';
     const eyeX = facing === 1 ? x + PLAYER_SIZE.w - 6 : x + 2;
     ctx.fillRect(eyeX, y + 8, 4, 4);
-  };
+  }, []);
 
-  const syncUi = (timeMs) => {
+  const draw = useCallback((ctx, alpha) => {
+    const current = sessionRef.current.state;
+    const previous = prevSnapshotRef.current || current;
+    const interp = (a, b) => a + (b - a) * alpha;
+    const playerX = interp(previous.player.x, current.player.x);
+    const playerY = interp(previous.player.y, current.player.y);
+    const camX = interp(previous.camera.x, current.camera.x);
+    const camY = interp(previous.camera.y, current.camera.y);
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+    const scale = dpr * RENDER_SCALE;
+    const shakeMag = reduceMotionRef.current ? 0 : current.shake.magnitude * (current.shake.time > 0 ? current.shake.time / 0.2 : 0);
+    const shakeX = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
+    const shakeY = shakeMag ? (Math.random() - 0.5) * shakeMag : 0;
+
+    ctx.save();
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.fillStyle = '#0c0f17';
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    ctx.translate(-camX + ctx.canvas.width / (2 * scale), -camY + ctx.canvas.height / (2 * scale));
+    ctx.translate(shakeX, shakeY);
+
+    drawBackdrop(ctx, current.level);
+    drawTiles(ctx, current.level);
+    drawPlatforms(ctx, current.level.platforms);
+    drawPlayer(ctx, playerX, playerY, current.player.facing);
+    ctx.restore();
+  }, [drawBackdrop, drawPlatforms, drawPlayer, drawTiles]);
+
+  const syncUi = useCallback((timeMs) => {
     if (timeMs - uiUpdateRef.current < 120) return;
     const { state } = sessionRef.current;
     setUi({
@@ -344,9 +344,9 @@ export default function PlatformerApp({ windowMeta } = {}) {
       paused: pausedRef.current,
     });
     uiUpdateRef.current = timeMs;
-  };
+  }, []);
 
-  const restartLevel = () => {
+  const restartLevel = useCallback(() => {
     const currentLevel = sessionRef.current.levelIndex;
     const fresh = createInitialState(currentLevel);
     fresh.state.deaths = sessionRef.current.state.deaths;
@@ -354,7 +354,7 @@ export default function PlatformerApp({ windowMeta } = {}) {
     accumulatorRef.current = 0;
     lastTimeRef.current = 0;
     resizeCanvas();
-  };
+  }, [resizeCanvas]);
 
   const nextLevel = () => {
     const nextIndex = Math.min(sessionRef.current.levelIndex + 1, LEVELS.length - 1);
@@ -367,10 +367,10 @@ export default function PlatformerApp({ windowMeta } = {}) {
     resizeCanvas();
   };
 
-  const togglePause = () => {
+  const togglePause = useCallback(() => {
     pausedRef.current = !pausedRef.current;
     setUi((prev) => ({ ...prev, paused: pausedRef.current }));
-  };
+  }, []);
 
   useEffect(() => {
     if (!isFocused && !pausedRef.current) {
@@ -442,6 +442,8 @@ export default function PlatformerApp({ windowMeta } = {}) {
             ref={canvasRef}
             className="w-full h-full rounded select-none"
             style={{ imageRendering: 'pixelated' }}
+            role="img"
+            aria-label="Platformer playfield"
             onPointerDown={isTouch ? handleJumpTap : undefined}
             onPointerUp={isTouch ? handleJumpRelease : undefined}
             onPointerCancel={isTouch ? handleJumpRelease : undefined}

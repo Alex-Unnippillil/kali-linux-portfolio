@@ -8,7 +8,7 @@ import useGameControls from './useGameControls';
 import useOPFS from '../../hooks/useOPFS';
 
 const DEFAULT_MAP = {
-  up: 'ArrowUp',
+  thrust: 'ArrowUp',
   left: 'ArrowLeft',
   right: 'ArrowRight',
   fire: ' ',
@@ -75,6 +75,24 @@ const renderGame = (ctx, game, alpha, worldW, worldH) => {
     drawCircle(ctx, x, y, b.r, 'red', true);
   });
 
+  if (game.ghostShip) {
+    const x = interpolate(game.ghostShip.px ?? game.ghostShip.x, game.ghostShip.x, alpha);
+    const y = interpolate(game.ghostShip.py ?? game.ghostShip.y, game.ghostShip.y, alpha);
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(game.ghostShip.angle);
+    ctx.strokeStyle = 'rgba(125, 211, 252, 0.6)';
+    ctx.setLineDash([4, 6]);
+    ctx.beginPath();
+    ctx.moveTo(12, 0);
+    ctx.lineTo(-12, -8);
+    ctx.lineTo(-12, 8);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+    ctx.setLineDash([]);
+  }
+
   game.powerUps.forEach((p) => {
     const x = interpolate(p.px ?? p.x, p.x, alpha);
     const y = interpolate(p.py ?? p.y, p.y, alpha);
@@ -108,11 +126,6 @@ const renderGame = (ctx, game, alpha, worldW, worldH) => {
   }
   ctx.restore();
 
-  ctx.fillStyle = 'white';
-  ctx.font = '16px monospace';
-  ctx.fillText(`Score: ${game.score} x${game.multiplier}`, 10, 20);
-  ctx.fillText(`Lives: ${game.lives}`, 10, 40);
-
   game.inventory.forEach((type, i) => {
     ctx.beginPath();
     ctx.strokeStyle =
@@ -134,7 +147,7 @@ const renderGame = (ctx, game, alpha, worldW, worldH) => {
 
 const Asteroids = () => {
   const canvasRef = useRef(null);
-  const controlsRef = useRef(useGameControls(canvasRef));
+  const controlsRef = useRef(useGameControls(canvasRef, 'asteroids'));
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [restartKey, setRestartKey] = useState(0);
@@ -148,8 +161,16 @@ const Asteroids = () => {
   const [inventory, setInventory] = useState([]);
   const [highScore, setHighScore] = useState(0);
   const [lastScore, setLastScore] = useState(0);
+  const [stage, setStage] = useState(startLevelNum);
+  const [score, setScore] = useState(0);
+  const [lives, setLives] = useState(3);
+  const [multiplier, setMultiplier] = useState(1);
   const highScoreRef = useRef(0);
   const lastScoreRef = useRef(0);
+  const stageRef = useRef(stage);
+  const scoreRef = useRef(score);
+  const livesRef = useRef(lives);
+  const multiplierRef = useRef(multiplier);
   const [saveData, setSaveData, saveReady] = useOPFS('asteroids-save.json', { upgrades: [], ghost: [] });
   const saveDataRef = useRef(saveData);
   const inventoryUseRef = useRef(null);
@@ -169,6 +190,18 @@ const Asteroids = () => {
   useEffect(() => {
     lastScoreRef.current = lastScore;
   }, [lastScore]);
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+  useEffect(() => {
+    livesRef.current = lives;
+  }, [lives]);
+  useEffect(() => {
+    multiplierRef.current = multiplier;
+  }, [multiplier]);
   useEffect(() => {
     saveDataRef.current = saveData;
   }, [saveData]);
@@ -194,10 +227,19 @@ const Asteroids = () => {
     resize();
     window.addEventListener('resize', resize);
 
-    const game = createGame({ worldW: worldRef.current.w, worldH: worldRef.current.h, startLevel: startLevelNum, saveData: saveDataRef.current });
+    const game = createGame({
+      worldW: worldRef.current.w,
+      worldH: worldRef.current.h,
+      startLevel: startLevelNum,
+      saveData: saveDataRef.current,
+    });
     gameRef.current = game;
     inventoryRef.current = [];
     setInventory([]);
+    setStage(game.level);
+    setScore(game.score);
+    setLives(game.lives);
+    setMultiplier(game.multiplier);
 
     const handleInventoryUse = (e) => {
       if (e.key >= '1' && e.key <= '9') {
@@ -209,8 +251,22 @@ const Asteroids = () => {
     const processEvents = () => {
       game.events.forEach((evt) => {
         if (evt.type === 'inventory') setInventory(evt.inventory);
-        if (evt.type === 'hud') setLiveText(`Score ${evt.score} x${evt.multiplier} Lives ${evt.lives}`);
+        if (evt.type === 'banner') setLiveText(evt.text);
+        if (evt.type === 'level') {
+          if (stageRef.current !== evt.level) setStage(evt.level);
+          setLiveText(`Wave ${evt.level}`);
+        }
+        if (evt.type === 'lives') {
+          if (livesRef.current !== evt.lives) setLives(evt.lives);
+          setLiveText(`Lives ${evt.lives}`);
+        }
+        if (evt.type === 'hud') {
+          if (scoreRef.current !== evt.score) setScore(evt.score);
+          if (livesRef.current !== evt.lives) setLives(evt.lives);
+          if (multiplierRef.current !== evt.multiplier) setMultiplier(evt.multiplier);
+        }
         if (evt.type === 'gameOver') {
+          setLiveText(`Game over. Score ${evt.score}`);
           const newHigh = Math.max(evt.score, highScoreRef.current);
           setHighScore(newHigh);
           setLastScore(evt.score);
@@ -235,8 +291,10 @@ const Asteroids = () => {
         if (pausedRef.current) return;
         const { keys, joystick, fire, hyperspace } = controlsRef.current;
         const map = getMapping('asteroids', DEFAULT_MAP);
-        const turn = (keys[map.left] ? -1 : 0) + (keys[map.right] ? 1 : 0) + (joystick.active ? joystick.x : 0);
-        const thrust = (keys[map.up] ? 1 : 0) + (joystick.active ? -joystick.y : 0);
+        const turn =
+          (keys[map.left] ? -1 : 0) + (keys[map.right] ? 1 : 0) + (joystick.active ? joystick.x : 0);
+        const thrust =
+          (keys[map.thrust] ? 1 : 0) + (joystick.active ? -joystick.y : 0);
         const input = {
           turn,
           thrust,
@@ -281,6 +339,10 @@ const Asteroids = () => {
   return (
     <GameLayout
       gameId="asteroids"
+      stage={stage}
+      lives={lives}
+      score={score}
+      highScore={highScore}
       paused={paused}
       onPauseChange={(p) => {
         pausedRef.current = p;
@@ -311,7 +373,11 @@ const Asteroids = () => {
           ))}
         </div>
       )}
-      <canvas ref={canvasRef} className="bg-black w-full h-full touch-none" />
+      <canvas
+        ref={canvasRef}
+        className="bg-black w-full h-full touch-none"
+        aria-label="Asteroids game canvas"
+      />
       <div aria-live="polite" className="sr-only">
         {liveText}
       </div>

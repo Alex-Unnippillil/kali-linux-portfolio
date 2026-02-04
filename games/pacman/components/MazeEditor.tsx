@@ -20,10 +20,28 @@ const tileOptions = [
   { value: 3, label: 'Energizer' },
 ];
 
-const MazeEditor: React.FC = () => {
+interface MazeEditorProps {
+  onPlay?: (maze: number[][]) => void;
+}
+
+const isValidMaze = (value: unknown): value is number[][] => {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  const width = Array.isArray(value[0]) ? value[0].length : 0;
+  if (!width) return false;
+  return value.every(
+    (row) =>
+      Array.isArray(row) &&
+      row.length === width &&
+      row.every((cell) => [0, 1, 2, 3].includes(cell)),
+  );
+};
+
+const MazeEditor: React.FC<MazeEditorProps> = ({ onPlay }) => {
   const [maze, setMaze] = useState<Maze>(() => defaultMaze.map((r) => r.slice()));
   const [paint, setPaint] = useState<number>(1);
   const [saved, setSaved] = useState<string[]>([]);
+  const [jsonText, setJsonText] = useState('');
+  const [importName, setImportName] = useState('Imported');
 
   useEffect(() => {
     const names: string[] = [];
@@ -67,6 +85,24 @@ const MazeEditor: React.FC = () => {
 
   const resetMaze = () => setMaze(defaultMaze.map((r) => r.slice()));
 
+  const exportMaze = () => {
+    setJsonText(JSON.stringify(maze, null, 2));
+  };
+
+  const importMaze = () => {
+    if (!jsonText) return;
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (!isValidMaze(parsed)) return;
+      setMaze(parsed);
+      const name = importName?.trim() || `Imported-${Date.now()}`;
+      window.localStorage.setItem(`pacmanMaze:${name}`, JSON.stringify(parsed));
+      setSaved((s) => (s.includes(name) ? s : [...s, name].sort()));
+    } catch {
+      // ignore invalid JSON
+    }
+  };
+
   return (
     <div>
       <div className="mb-2 space-x-2">
@@ -105,6 +141,9 @@ const MazeEditor: React.FC = () => {
         <button onClick={saveMaze} className="px-2 py-1 border">
           Save Maze
         </button>
+        <button onClick={exportMaze} className="px-2 py-1 border">
+          Export JSON
+        </button>
         <select
           aria-label="Load maze"
           onChange={(e) => loadMaze(e.target.value)}
@@ -121,10 +160,35 @@ const MazeEditor: React.FC = () => {
         <button onClick={resetMaze} className="px-2 py-1 border">
           Reset
         </button>
+        {onPlay && (
+          <button onClick={() => onPlay(maze)} className="px-2 py-1 border">
+            Play This Maze
+          </button>
+        )}
+      </div>
+      <div className="mt-3 space-y-2">
+        <label className="block text-sm">
+          Import name
+          <input
+            type="text"
+            aria-label="Import name"
+            value={importName}
+            onChange={(e) => setImportName(e.target.value)}
+            className="ml-2 border px-2 py-1 text-sm"
+          />
+        </label>
+        <textarea
+          aria-label="Maze JSON"
+          value={jsonText}
+          onChange={(e) => setJsonText(e.target.value)}
+          className="w-full h-32 border px-2 py-1 text-xs font-mono"
+        />
+        <button onClick={importMaze} className="px-2 py-1 border">
+          Import JSON
+        </button>
       </div>
     </div>
   );
 };
 
 export default MazeEditor;
-

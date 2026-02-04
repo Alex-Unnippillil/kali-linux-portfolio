@@ -20,3 +20,16 @@ export const consumeGameKey = (event) => {
 };
 
 export const isTextInputEventTarget = isTextInput;
+
+export const formatGameKey = (key) => {
+  if (!key) return '';
+  if (key === ' ') return 'Space';
+  const lower = key.toLowerCase();
+  if (lower === 'escape') return 'Esc';
+  if (lower === 'arrowup') return 'ArrowUp';
+  if (lower === 'arrowdown') return 'ArrowDown';
+  if (lower === 'arrowleft') return 'ArrowLeft';
+  if (lower === 'arrowright') return 'ArrowRight';
+  if (key.length === 1) return key.toUpperCase();
+  return key;
+};

@@ -918,7 +918,7 @@ const Tetris = ({ windowMeta } = {}) => {
         softDropRef.current = false;
       }
     },
-    [actionFromKey, showSettings],
+    [actionFromKey, isFocused, showSettings],
   );
 
   const handleTouchAction = useCallback(
@@ -1378,7 +1378,7 @@ const Tetris = ({ windowMeta } = {}) => {
     };
     animationRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [clearAnimation, draw, gameOver, moveDown, paused, dropInterval, mode]);
+  }, [canvasRef, clearAnimation, draw, gameOver, moveDown, paused, dropInterval, mode]);
 
   const cellPreview = (p) => (
     p.shape.map((row, r) =>

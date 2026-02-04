@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'child_process';
+import fs from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -72,6 +73,9 @@ const collectChangedFiles = () => {
 
   return Array.from(files).filter((file) => {
     if (file.split(path.sep).includes('node_modules')) {
+      return false;
+    }
+    if (!fs.existsSync(file)) {
       return false;
     }
     const ext = path.extname(file);
