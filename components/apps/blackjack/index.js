@@ -229,6 +229,11 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     });
   }
   const [bet, setBet] = useState(0);
+  const [lastBet, setLastBet] = usePersistentState(
+    'blackjack-last-bet',
+    0,
+    (v) => typeof v === 'number' && v >= 0,
+  );
   const [handCount, setHandCount] = useState(1);
   const [message, setMessage] = useState('');
   const [dealerHand, setDealerHand] = useState([]);
@@ -271,6 +276,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
   const reservedBet = playerHands.length === 0 ? bet * handCount : 0;
   const availableBankroll = Math.max(0, bankroll - reservedBet);
   const totalBankroll = bankroll + inPlay;
+  const maxBet = Math.floor(bankroll / handCount);
 
   const update = useCallback(() => {
     setDealerHand([...gameRef.current.dealerHand]);
@@ -382,6 +388,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       const preset = presetDeckRef.current;
       presetDeckRef.current = null;
       gameRef.current.startRound(bet, preset, handCount);
+      setLastBet(bet);
       logEvent({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
       setMessage('');
       setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
@@ -398,7 +405,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     } catch (e) {
       setMessage(e.message);
     }
-  }, [bet, handCount, paused, playSound, triggerHaptics, update]);
+  }, [bet, handCount, paused, playSound, setLastBet, triggerHaptics, update]);
 
   const act = useCallback(
     (type) => {
@@ -551,27 +558,32 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     const soft = isSoft(hand.cards);
     const label = hideFirst ? '?' : soft ? `Soft ${total}` : `${total}`;
     return (
-    <div
-      className="relative flex flex-wrap items-center gap-2 sm:gap-3"
-      title={showProb ? `Bust chance: ${(bustProb * 100).toFixed(1)}%` : undefined}
-    >
-      {hand.cards.map((card, idx) => (
-        <Card
-          key={idx}
-          card={card}
-          faceDown={hideFirst && idx === 1 && playerHands.length > 0 && current < playerHands.length}
-          peeking={peeking && idx === 1}
-        />
-      ))}
-      <div className="min-w-[2rem] rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-2 py-1 text-center text-sm sm:text-base text-kali-text">
-        {label}
-      </div>
-      {overlay && (
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 text-xs font-semibold text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
-          {overlay.toUpperCase()}
+      <div
+        className="relative flex flex-wrap items-center gap-2 sm:gap-3"
+        title={showProb ? `Bust chance: ${(bustProb * 100).toFixed(1)}%` : undefined}
+      >
+        {hand.cards.map((card, idx) => (
+          <Card
+            key={idx}
+            card={card}
+            faceDown={hideFirst && idx === 1 && playerHands.length > 0 && current < playerHands.length}
+            peeking={peeking && idx === 1}
+          />
+        ))}
+        <div className="min-w-[2rem] rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-2 py-1 text-center text-sm sm:text-base text-kali-text">
+          {label}
         </div>
-      )}
-    </div>
+        {hideFirst && (
+          <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-muted)_70%,transparent)] px-2 py-1 text-[0.65rem] uppercase tracking-wide text-kali-muted">
+            Hole card hidden
+          </div>
+        )}
+        {overlay && (
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-2 text-xs font-semibold text-[color:var(--kali-control)] shadow-[0_6px_20px_rgba(9,15,23,0.55)]">
+            {overlay.toUpperCase()}
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -589,6 +601,16 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
   }, [current, playerHands.length, showInsurance]);
 
   const displayMessage = message || statusMessage;
+
+  const roundSummary = useMemo(() => {
+    if (current < playerHands.length || history.length === 0) return '';
+    const latest = history[history.length - 1];
+    if (!latest) return '';
+    const results = latest.playerHands
+      .map((hand, index) => `P${index + 1} ${hand.result.toUpperCase()}`)
+      .join(' · ');
+    return `Results: ${results}`;
+  }, [current, history, playerHands.length]);
 
   const outcomeLabel = useCallback((hand) => {
     if (hand.surrendered) return 'Surrender';
@@ -888,19 +910,20 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                 </span>
                 <BetChips amount={bet} />
               </div>
+              <div className="text-xs text-kali-muted">Max per hand: {maxBet}</div>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {CHIP_VALUES.map((v) => (
                   <button
                     key={v}
                     type="button"
                     className={`chip transition ${CHIP_COLORS[v]} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-                      bet + v > bankroll / handCount
+                      bet + v > maxBet
                         ? 'cursor-not-allowed opacity-40'
                         : 'hover:scale-105 hover:bg-kali-primary hover:text-kali-inverse hover:shadow-[0_0_18px_rgba(15,148,210,0.45)]'
                     }`}
-                    onClick={() => bet + v <= bankroll / handCount && setBet(bet + v)}
+                    onClick={() => bet + v <= maxBet && setBet(bet + v)}
                     aria-label={`Add ${v} chip`}
-                    disabled={bet + v > bankroll / handCount}
+                    disabled={bet + v > maxBet}
                   >
                     {v}
                   </button>
@@ -912,6 +935,24 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                 >
                   Clear
                 </button>
+                <button
+                  type="button"
+                  className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm font-medium`}
+                  onClick={() => setBet(maxBet)}
+                  disabled={maxBet === 0}
+                >
+                  Max
+                </button>
+                {lastBet > 0 && (
+                  <button
+                    type="button"
+                    className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm font-medium`}
+                    onClick={() => setBet(Math.min(lastBet, maxBet))}
+                    disabled={maxBet === 0}
+                  >
+                    Repeat {lastBet}
+                  </button>
+                )}
                 <label
                   htmlFor="hand-count"
                   className="flex items-center gap-2 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-2 py-1 text-xs sm:text-sm text-kali-text"
@@ -1032,6 +1073,11 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
           <div className="mt-2 text-center text-base sm:text-lg" aria-live="polite" role="status">
             {displayMessage}
           </div>
+          {roundSummary && (
+            <div className="text-center text-xs uppercase tracking-wide text-kali-control">
+              {roundSummary}
+            </div>
+          )}
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 rounded border border-[color:color-mix(in_srgb,var(--kali-control)_35%,var(--kali-border))] bg-[var(--kali-control-overlay)] px-4 py-2 text-sm sm:text-base text-kali-text">
             <span>Wins: {stats.wins}</span>
             <span>Losses: {stats.losses}</span>
