@@ -57,6 +57,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
   const lastRunRef = useRef(null);
   const milestoneTimeoutRef = useRef(null);
   const gamepadRef = useRef({ fire: false, up: false });
+  const readySeedRef = useRef(null);
 
   const [birdSkin, setBirdSkin] = useState(() =>
     readNumber(STORAGE_KEYS.birdSkin, 0, { min: 0 }),
@@ -237,9 +238,11 @@ const FlappyBird = ({ windowMeta } = {}) => {
     );
   }, [canvasRef]);
 
-  const startGame = useCallback(() => {
+  const enterReady = useCallback(() => {
     if (!engineRef.current) return;
-    engineRef.current.start();
+    const seed = Date.now();
+    readySeedRef.current = seed;
+    engineRef.current.reset(seed);
     engineRef.current.setReplay(null);
     lastRunRef.current = null;
     setScore(0);
@@ -247,6 +250,18 @@ const FlappyBird = ({ windowMeta } = {}) => {
     if (milestoneTimeoutRef.current) {
       clearTimeout(milestoneTimeoutRef.current);
     }
+    setGameState('ready');
+    frameAccumulatorRef.current = 0;
+    rendererRef.current?.reset(seed, settingsRef.current.reducedMotion);
+    announce('Get ready. Press Space, tap, or click to flap.');
+    focusCanvas();
+  }, [announce, focusCanvas]);
+
+  const startGame = useCallback(() => {
+    if (!engineRef.current) return;
+    const seed = readySeedRef.current ?? Date.now();
+    readySeedRef.current = null;
+    engineRef.current.start(seed);
     setGameState('running');
     frameAccumulatorRef.current = 0;
     rendererRef.current?.reset(engineRef.current.state.seed, settingsRef.current.reducedMotion);
@@ -255,8 +270,8 @@ const FlappyBird = ({ windowMeta } = {}) => {
   }, [announce, focusCanvas]);
 
   const restartGame = useCallback(() => {
-    startGame();
-  }, [startGame]);
+    enterReady();
+  }, [enterReady]);
 
   const returnToMenu = useCallback(() => {
     setGameState('menu');
@@ -328,16 +343,20 @@ const FlappyBird = ({ windowMeta } = {}) => {
   const handleFlapAction = useCallback(() => {
     if (!isWindowFocused || assetsBlocked) return;
     if (gameState === 'menu') {
+      enterReady();
+      return;
+    }
+    if (gameState === 'ready') {
       startGame();
       return;
     }
     if (gameState === 'gameover') {
-      restartGame();
+      enterReady();
       return;
     }
     if (isPaused) return;
     engineRef.current?.flap();
-  }, [assetsBlocked, gameState, isPaused, isWindowFocused, restartGame, startGame]);
+  }, [assetsBlocked, enterReady, gameState, isPaused, isWindowFocused, startGame]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -466,6 +485,29 @@ const FlappyBird = ({ windowMeta } = {}) => {
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
   }, [gameState, shouldRunLoop, stepFrame]);
+
+  useEffect(() => {
+    if (gameState === 'running') return;
+    if (!isWindowFocused || isPaused || assetsBlocked) return;
+    const renderer = rendererRef.current;
+    const ctx = ctxRef.current;
+    const renderOptions = renderOptionsRef.current;
+    const engine = engineRef.current;
+    if (!renderer || !ctx || !renderOptions || !engine) return;
+    let raf;
+    let last = performance.now();
+    const loop = (now) => {
+      const delta = now - last;
+      if (delta >= 1000 / 30) {
+        renderer.update(settingsRef.current.reducedMotion);
+        renderer.render(ctx, engine.state, renderOptions);
+        last = now;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [assetsBlocked, gameState, isPaused, isWindowFocused]);
 
   useEffect(() => {
     if (gameState !== 'running' || shouldRunLoop) return;
@@ -627,6 +669,14 @@ const FlappyBird = ({ windowMeta } = {}) => {
     </div>
   );
 
+  const medal = (() => {
+    if (score >= 40) return { label: 'Platinum', color: 'from-slate-200 to-slate-400' };
+    if (score >= 30) return { label: 'Gold', color: 'from-yellow-300 to-amber-500' };
+    if (score >= 20) return { label: 'Silver', color: 'from-slate-200 to-slate-500' };
+    if (score >= 10) return { label: 'Bronze', color: 'from-amber-400 to-orange-600' };
+    return null;
+  })();
+
   return (
     <GameLayout
       gameId="flappy-bird"
@@ -642,6 +692,11 @@ const FlappyBird = ({ windowMeta } = {}) => {
         {milestoneMessage && (
           <div className="pointer-events-none absolute left-1/2 top-8 z-30 -translate-x-1/2 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold uppercase tracking-widest text-yellow-200 shadow-lg backdrop-blur transition-opacity duration-300">
             {milestoneMessage}
+          </div>
+        )}
+        {gameState === 'running' && (
+          <div className="pointer-events-none absolute left-1/2 top-6 z-30 -translate-x-1/2 text-5xl font-bold tracking-widest text-white drop-shadow-lg">
+            {score}
           </div>
         )}
         <canvas
@@ -737,7 +792,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
             <button
               type="button"
               className="w-40 rounded-full bg-sky-500 px-6 py-3 text-sm font-semibold uppercase tracking-widest text-white shadow-lg transition hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-300"
-              onClick={startGame}
+              onClick={enterReady}
               disabled={!isTestEnv && assetsLoading}
             >
               Start
@@ -745,15 +800,53 @@ const FlappyBird = ({ windowMeta } = {}) => {
           </div>
         )}
 
+        {gameState === 'ready' && (
+          <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/40 p-6 text-white">
+            <div className="flex max-w-md flex-col items-center gap-4 text-center">
+              <div className="text-4xl font-bold uppercase tracking-[0.3em] drop-shadow-lg">
+                Get Ready
+              </div>
+              <div className="rounded-lg bg-white/10 px-6 py-4 text-sm uppercase tracking-widest text-white/80 shadow-lg backdrop-blur">
+                {isTouch ? 'Tap to flap' : 'Press Space or click to flap'}
+              </div>
+              <div className="text-xs uppercase tracking-widest text-white/70">
+                Gamepad: Press A or push up
+              </div>
+            </div>
+          </div>
+        )}
+
         {gameState === 'gameover' && (
           <div className="absolute inset-0 z-40 flex flex-col items-center justify-center space-y-6 bg-black/75 p-6 text-white">
-            <div className="w-full max-w-md rounded-lg bg-white/10 p-6 text-center shadow-xl backdrop-blur">
-              <h3 className="text-3xl font-semibold">Game Over</h3>
-              <p className="mt-4 text-lg">Final score: {score}</p>
-              <p className="text-sm text-white/70">Best this mode: {bestScore}</p>
-              <p className="text-sm text-white/60">Global best: {bestOverall}</p>
+            <div className="w-full max-w-md rounded-xl bg-white/10 p-6 text-center shadow-xl backdrop-blur">
+              <h3 className="text-3xl font-semibold uppercase tracking-widest">Game Over</h3>
+              <div className="mt-6 rounded-lg bg-black/40 p-4 text-left text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="uppercase tracking-widest text-white/70">Score</span>
+                  <span className="text-2xl font-bold text-white">{score}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="uppercase tracking-widest text-white/60">Best</span>
+                  <span className="text-lg font-semibold text-white/90">{bestScore}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="uppercase tracking-widest text-white/40">Global</span>
+                  <span className="text-sm text-white/70">{bestOverall}</span>
+                </div>
+                {medal && (
+                  <div className="mt-4 flex items-center gap-3">
+                    <span
+                      className={`h-10 w-10 rounded-full bg-gradient-to-br ${medal.color} shadow-inner`}
+                      aria-hidden="true"
+                    />
+                    <span className="text-xs uppercase tracking-widest text-white/70">
+                      {medal.label} Medal
+                    </span>
+                  </div>
+                )}
+              </div>
               {lastRunRef.current && (
-                <p className="mt-2 text-xs text-white/60">
+                <p className="mt-4 text-xs text-white/60">
                   Press R to replay your last run.
                 </p>
               )}
@@ -762,7 +855,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
               <button
                 type="button"
                 className="rounded-full bg-sky-500 px-5 py-2 text-sm font-semibold uppercase tracking-widest text-white shadow hover:bg-sky-400 focus:outline-none focus:ring-4 focus:ring-sky-300"
-                onClick={restartGame}
+                onClick={enterReady}
               >
                 Play Again
               </button>
