@@ -34,12 +34,16 @@ export default function handler(
 
   if (req.method === 'POST') {
     const { name, score } = req.body || {};
-    if (typeof name !== 'string' || typeof score !== 'number') {
+    if (typeof score !== 'number') {
       res.status(400).json(readBoard());
       return;
     }
+    const safeName =
+      typeof name === 'string'
+        ? name.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, 20) || 'Player'
+        : 'Player';
     const board = readBoard();
-    board.push({ name: name.slice(0, 20), score });
+    board.push({ name: safeName, score });
     board.sort((a, b) => b.score - a.score);
     const trimmed = board.slice(0, MAX_ENTRIES);
     writeBoard(trimmed);

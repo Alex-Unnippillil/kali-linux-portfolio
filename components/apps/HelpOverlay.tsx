@@ -112,7 +112,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   pacman: {
     objective: "Eat all pellets while avoiding ghosts.",
-    controls: "Use the arrow keys to move.",
+    controls:
+      "Arrow keys, swipe, or gamepad to move. Space starts. Escape pauses.",
   },
   platformer: {
     objective: "Reach the end of the level.",
