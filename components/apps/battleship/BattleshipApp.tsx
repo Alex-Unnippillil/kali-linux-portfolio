@@ -169,6 +169,18 @@ const BattleshipApp = () => {
   const turnLabel = isHotseat ? `Player ${activePlayer + 1}` : 'Commander';
   const playerFleetRemaining = fleetStatus.filter((ship) => !ship.sunk).length;
   const opponentFleetRemaining = opponentFleetStatus.filter((ship) => !ship.sunk).length;
+  const letters = Array.from({ length: BOARD_SIZE }, (_, idx) => String.fromCharCode(65 + idx));
+  const toCoord = (idx: number) => {
+    const x = idx % BOARD_SIZE;
+    const y = Math.floor(idx / BOARD_SIZE);
+    return `${letters[x]}${y + 1}`;
+  };
+  const formatShots = (shots: number[], board: Array<'ship' | 'hit' | 'miss' | null>) =>
+    shots.map((idx) => ({
+      idx,
+      coord: toCoord(idx),
+      outcome: board[idx] === 'hit' ? 'Hit' : 'Miss',
+    }));
 
   useGameControls(
     ({ x, y }: { x: number; y: number }) => {
@@ -459,6 +471,52 @@ const BattleshipApp = () => {
                       </li>
                     ))}
                   </ul>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-200/80">Your last salvo</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {opponentState.lastShots.length ? (
+                      formatShots(opponentState.lastShots, opponentState.board).map((shot) => (
+                        <span
+                          key={`shot-${shot.idx}`}
+                          className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+                            shot.outcome === 'Hit'
+                              ? 'bg-rose-500/30 text-rose-100'
+                              : 'bg-sky-500/20 text-sky-100'
+                          }`}
+                        >
+                          {shot.coord} {shot.outcome}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-white/60">No shots yet.</span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-cyan-200/80">
+                    Incoming fire
+                  </p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {activePlayerState.lastShots.length ? (
+                      formatShots(activePlayerState.lastShots, activePlayerState.board).map((shot) => (
+                        <span
+                          key={`incoming-${shot.idx}`}
+                          className={`rounded-full px-2 py-1 text-[10px] uppercase tracking-wide ${
+                            shot.outcome === 'Hit'
+                              ? 'bg-amber-500/30 text-amber-100'
+                              : 'bg-white/10 text-white/70'
+                          }`}
+                        >
+                          {shot.coord} {shot.outcome}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-white/60">No shots yet.</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
