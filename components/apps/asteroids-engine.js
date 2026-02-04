@@ -15,6 +15,8 @@ const COLLISION_COOLDOWN = 60;
 const MULTIPLIER_TIMEOUT = 180;
 const MAX_MULTIPLIER = 5;
 const SHIELD_DURATION = 600;
+export const SAFE_SPAWN_RADIUS = 120;
+const MAX_UFO_BULLETS = 6;
 
 const makeRng = (seed) => {
   rngApi.reset(seed);
@@ -69,7 +71,9 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
     runSeed: seed,
   };
 
-  state.ghostShip = state.ghostData.length ? { ...state.ghostData[0] } : null;
+  state.ghostShip = state.ghostData.length
+    ? { ...state.ghostData[0], px: state.ghostData[0].x, py: state.ghostData[0].y }
+    : null;
 
   const startLevelFn = () => {
     rng.reset(defaultRunSeed(state.level, state.runSeed));
@@ -90,14 +94,26 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
   };
 
   const spawnAsteroids = (gameState, count, speed) => {
+    const { ship } = gameState;
     for (let i = 0; i < count; i += 1) {
       const angle = gameState.rng.random() * Math.PI * 2;
       const r = 15 + gameState.rng.random() * 25;
+      let x = gameState.rng.random() * gameState.worldW;
+      let y = gameState.rng.random() * gameState.worldH;
+      let attempts = 0;
+      while (
+        attempts < 25 &&
+        Math.hypot(x - ship.x, y - ship.y) < SAFE_SPAWN_RADIUS + r
+      ) {
+        x = gameState.rng.random() * gameState.worldW;
+        y = gameState.rng.random() * gameState.worldH;
+        attempts += 1;
+      }
       gameState.asteroids.push({
-        x: gameState.rng.random() * gameState.worldW,
-        y: gameState.rng.random() * gameState.worldH,
-        px: 0,
-        py: 0,
+        x,
+        y,
+        px: x,
+        py: y,
         dx: Math.cos(angle) * speed,
         dy: Math.sin(angle) * speed,
         r,
@@ -186,7 +202,7 @@ const destroyShip = (state) => {
     ship.angle = 0;
   }
   ship.hitCooldown = COLLISION_COOLDOWN;
-  if (state.lives < 0) {
+  if (state.lives <= 0) {
     state.events.push({
       type: 'gameOver',
       score: state.score,
@@ -235,6 +251,8 @@ const updateUfoBullets = (state, dtScale) => {
 const handleGhostPlayback = (state) => {
   if (state.ghostShip && state.ghostIndex < state.ghostData.length) {
     const g = state.ghostData[state.ghostIndex];
+    state.ghostShip.px = state.ghostShip.x;
+    state.ghostShip.py = state.ghostShip.y;
     state.ghostShip.x = g.x;
     state.ghostShip.y = g.y;
     state.ghostShip.angle = g.angle;
@@ -313,16 +331,18 @@ const handleUfoLogic = (state, dtScale) => {
     ufo.cooldown -= 1 * dtScale;
     if (ufo.cooldown <= 0) {
       const angle = Math.atan2(ship.y - ufo.y, ship.x - ufo.x);
-      state.ufoBullets.push({
-        x: ufo.x,
-        y: ufo.y,
-        px: ufo.x,
-        py: ufo.y,
-        dx: Math.cos(angle) * 3,
-        dy: Math.sin(angle) * 3,
-        r: 2,
-        life: 120,
-      });
+      if (state.ufoBullets.length < MAX_UFO_BULLETS) {
+        state.ufoBullets.push({
+          x: ufo.x,
+          y: ufo.y,
+          px: ufo.x,
+          py: ufo.y,
+          dx: Math.cos(angle) * 3,
+          dy: Math.sin(angle) * 3,
+          r: 2,
+          life: 120,
+        });
+      }
       ufo.cooldown = 90;
     }
     if (ufo.x < -50 || ufo.x > state.worldW + 50) ufo.active = false;
