@@ -48,6 +48,8 @@ const spritePaths = {
   "-6": "/pieces/bK.svg",
 };
 
+const boardTexturePath = "/chess/board-texture.svg";
+
 const pieceValues = {
   [PAWN]: 100,
   [KNIGHT]: 320,
@@ -152,7 +154,13 @@ const ChessGame = () => {
   const engineWorkerRef = useRef(null);
   const renderStateRef = useRef({ raf: null, needsRender: false });
   const renderFrameRef = useRef(null);
-  const boardCacheRef = useRef({ canvas: null, size: 0, dpr: 1 });
+  const boardCacheRef = useRef({
+    canvas: null,
+    size: 0,
+    dpr: 1,
+    textureReady: false,
+  });
+  const boardTextureRef = useRef(null);
   const squareSizeRef = useRef(SIZE / 8);
   const dprRef = useRef(1);
   const modeRef = useRef("play");
@@ -209,6 +217,7 @@ const ChessGame = () => {
   );
   const [pieceSet, setPieceSet] = useState(storedSettings.pieceSet ?? "sprites");
   const [spritesReady, setSpritesReady] = useState(false);
+  const [boardTextureReady, setBoardTextureReady] = useState(false);
   const [sanLog, setSanLog] = useState([]);
   const [analysisMoves, setAnalysisMoves] = useState([]);
   const [analysisPending, setAnalysisPending] = useState(false);
@@ -510,6 +519,16 @@ const ChessGame = () => {
 
     spritesRef.current = imgs;
   }, []);
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = img.onerror = () => {
+      setBoardTextureReady(true);
+      requestRender();
+    };
+    img.src = boardTexturePath;
+    boardTextureRef.current = img;
+  }, [requestRender]);
 
   useEffect(() => {
     if (!boardWrapperRef.current || typeof ResizeObserver === "undefined")
@@ -1540,7 +1559,12 @@ const ChessGame = () => {
 
       const cache = boardCacheRef.current;
       const dpr = dprRef.current;
-      if (!cache.canvas || cache.size !== size || cache.dpr !== dpr) {
+      if (
+        !cache.canvas ||
+        cache.size !== size ||
+        cache.dpr !== dpr ||
+        cache.textureReady !== boardTextureReady
+      ) {
         const baseCanvas = cache.canvas ?? document.createElement("canvas");
         baseCanvas.width = Math.round(size * dpr);
         baseCanvas.height = Math.round(size * dpr);
@@ -1572,10 +1596,17 @@ const ChessGame = () => {
               baseCtx.fillRect(x, y, sq, sq);
             }
           }
+          if (boardTextureReady && boardTextureRef.current) {
+            baseCtx.save();
+            baseCtx.globalAlpha = 0.25;
+            baseCtx.drawImage(boardTextureRef.current, 0, 0, size, size);
+            baseCtx.restore();
+          }
         }
         cache.canvas = baseCanvas;
         cache.size = size;
         cache.dpr = dpr;
+        cache.textureReady = boardTextureReady;
       }
 
       ctx.clearRect(0, 0, size, size);
@@ -1760,6 +1791,7 @@ const ChessGame = () => {
     };
   }, [
     boardPixelSize,
+    boardTextureReady,
     checkSquare,
     cursor,
     hoverSquare,
@@ -1778,6 +1810,7 @@ const ChessGame = () => {
     requestRender();
   }, [
     boardPixelSize,
+    boardTextureReady,
     checkSquare,
     cursor,
     hoverSquare,

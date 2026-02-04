@@ -17,7 +17,7 @@ type SuggestResponse = {
   message?: string;
 };
 
-const ctx: DedicatedWorkerGlobalScope = self as DedicatedWorkerGlobalScope;
+const ctx = self;
 
 ctx.addEventListener("message", (event: MessageEvent<SuggestRequest>) => {
   const payload = event.data;
