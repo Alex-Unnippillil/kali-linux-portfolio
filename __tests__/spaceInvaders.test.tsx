@@ -12,8 +12,6 @@ describe('SpaceInvaders', () => {
       fillRect: jest.fn(),
       clearRect: jest.fn(),
       strokeRect: jest.fn(),
-      setTransform: jest.fn(),
-      createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
       fillStyle: '',
       strokeStyle: '',
     }));

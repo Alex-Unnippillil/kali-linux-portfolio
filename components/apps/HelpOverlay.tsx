@@ -184,15 +184,7 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   "space-invaders": {
     objective: "Defeat the alien waves.",
-    controls:
-      "Arrow keys or A/D to move, Space/Enter to fire. P or Escape pauses, R restarts.",
-    actions: {
-      left: "ArrowLeft / A",
-      right: "ArrowRight / D",
-      fire: "Space / Enter",
-      pause: "P / Escape",
-      restart: "R",
-    },
+    controls: "Arrow keys move, space to shoot.",
   },
   sudoku: {
     objective: "Fill the grid so each row, column, and box has 1-9.",
