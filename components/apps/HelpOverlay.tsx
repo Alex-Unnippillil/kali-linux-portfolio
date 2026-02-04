@@ -26,7 +26,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   asteroids: {
     objective: "Destroy asteroids without crashing your ship.",
-    controls: "Arrow keys to rotate and thrust, space to fire.",
+    controls:
+      "Arrow keys to rotate and thrust, Space to fire, H for hyperspace. Use 1-9 to trigger inventory power-ups. Touch: left side drag for thrust/turn, top-right fires, bottom-right hyperspace.",
     actions: {
       left: "ArrowLeft",
       right: "ArrowRight",
