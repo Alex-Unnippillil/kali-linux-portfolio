@@ -73,7 +73,6 @@ export async function saveFileDialog(options = {}) {
 }
 
 export default function FileExplorer({ context, initialPath, path: pathProp } = {}) {
-  const [supported, setSupported] = useState(true);
   const [currentFile, setCurrentFile] = useState(null);
   const [content, setContent] = useState('');
   const [savedContent, setSavedContent] = useState('');
@@ -87,6 +86,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const [fauxFiles, setFauxFiles] = useState([]);
   const [fauxBreadcrumbs, setFauxBreadcrumbs] = useState([]);
   const [dragState, setDragState] = useState(null);
+  const [searchStatus, setSearchStatus] = useState('idle');
+  const [searchProgress, setSearchProgress] = useState({ scanned: 0, skipped: 0 });
   const workerRef = useRef(null);
 
   const hasWorker = typeof Worker !== 'undefined';
@@ -98,6 +99,16 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     writeFile: opfsWrite,
     deleteFile: opfsDelete,
   } = useOPFS();
+
+  const canUseDirectoryHandles =
+    typeof FileSystemDirectoryHandle !== 'undefined' &&
+    (typeof FileSystemDirectoryHandle.prototype.entries === 'function' ||
+      typeof FileSystemDirectoryHandle.prototype.values === 'function');
+  const canPickExternalFolder =
+    typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function';
+  const canUseFileSystem = opfsSupported || canUseDirectoryHandles;
+  const isFauxMode = !canUseFileSystem;
+  const canOpenExternal = canPickExternalFolder && canUseDirectoryHandles;
   const {
     currentDirectory: dirHandle,
     directories: dirs,
@@ -113,17 +124,11 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setLocationError,
   } = useFileSystemNavigator();
   const [unsavedDir, setUnsavedDir] = useState(null);
-  const isFauxMode = !supported;
 
   const hasUnsavedChanges = useMemo(
     () => currentFile && content !== savedContent,
     [content, currentFile, savedContent],
   );
-
-  useEffect(() => {
-    const ok = !!window.showDirectoryPicker;
-    setSupported(ok);
-  }, []);
 
   useEffect(() => {
     if (!opfsSupported || !root) return;
@@ -161,7 +166,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   }, []);
 
   useEffect(() => {
-    if (supported) return;
+    if (!isFauxMode) return;
     const tree = loadFauxFileSystem();
     const requested =
       (context?.initialPath ?? context?.path ?? initialPath ?? pathProp) || '';
@@ -171,7 +176,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     setFauxTree(tree);
     setFauxPathIds(pathIds);
     syncFauxDirectory(tree, pathIds);
-  }, [supported, context, initialPath, pathProp, syncFauxDirectory]);
+  }, [isFauxMode, context, initialPath, pathProp, syncFauxDirectory]);
 
   const saveBuffer = async (name, data) => {
     if (unsavedDir) await opfsWrite(name, data, unsavedDir);
@@ -187,6 +192,10 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   };
 
   const openFolder = async () => {
+    if (!canOpenExternal) {
+      setLocationError('This browser cannot open external folders. Use the built-in workspace instead.');
+      return;
+    }
     const proceed = await ensureSaved();
     if (!proceed) return;
     try {
@@ -196,7 +205,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         setLocationError('Permission denied while opening folder. Please allow access in the browser prompt.');
         return;
       }
-      await openHandle(handle, { recordRecent: true });
+      await openHandle(handle, { recordRecent: true, setAsRoot: true });
     } catch (error) {
       const message =
         error?.name === 'NotAllowedError'
@@ -215,7 +224,7 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         setLocationError('Permission denied for this recent location. Please re-authorize access.');
         return;
       }
-      await openHandle(entry.handle, { breadcrumbName: entry.name });
+      await openHandle(entry.handle, { breadcrumbName: entry.name, setAsRoot: true });
     } catch (error) {
       setLocationError(
         error?.name === 'NotAllowedError'
@@ -409,6 +418,8 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
   const runSearch = () => {
     if (isFauxMode) {
       if (!fauxTree) return;
+      setSearchStatus('done');
+      setSearchProgress({ scanned: 0, skipped: 0 });
       const matches = searchFiles(fauxTree, query);
       setResults(
         matches.map((match) => ({
@@ -421,21 +432,45 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
       return;
     }
     if (!dirHandle || !hasWorker) return;
+    setSearchStatus('searching');
+    setSearchProgress({ scanned: 0, skipped: 0 });
     setResults([]);
     if (workerRef.current) workerRef.current.terminate();
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       workerRef.current = new Worker(new URL('./find.worker.js', import.meta.url));
       workerRef.current.onmessage = (e) => {
-        const { file, line, text, done } = e.data;
-        if (done) {
+        const payload = e.data;
+        if (!payload) return;
+        if (payload.type === 'result') {
+          setResults((r) => [...r, { file: payload.file, line: payload.line, text: payload.text }]);
+        }
+        if (payload.type === 'progress') {
+          setSearchProgress({ scanned: payload.scanned ?? 0, skipped: payload.skipped ?? 0 });
+        }
+        if (payload.type === 'done') {
+          setSearchProgress({ scanned: payload.scanned ?? 0, skipped: payload.skipped ?? 0 });
+          setSearchStatus(payload.cancelled ? 'idle' : 'done');
           workerRef.current?.terminate();
           workerRef.current = null;
-        } else {
-          setResults((r) => [...r, { file, line, text }]);
         }
       };
-      workerRef.current.postMessage({ directoryHandle: dirHandle, query });
+      workerRef.current.postMessage({
+        directoryHandle: dirHandle,
+        query,
+        options: {
+          caseSensitive: false,
+          allowLargeFiles: false,
+          maxFileSizeBytes: 1024 * 1024,
+          skipBinary: true,
+        },
+      });
     }
+  };
+
+  const stopSearch = () => {
+    if (!workerRef.current) return;
+    workerRef.current.postMessage({ type: 'cancel' });
+    setSearchStatus('cancelling');
   };
 
   useEffect(() => () => workerRef.current?.terminate(), []);
@@ -472,14 +507,21 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white text-sm">
       <div className="flex items-center space-x-2 p-2 bg-ub-warm-grey bg-opacity-40">
         <button
-          onClick={supported ? openFolder : () => {
-            if (!fauxTree) return;
-            setFauxPathIds(['root']);
-            syncFauxDirectory(fauxTree, ['root']);
-          }}
-          className="px-2 py-1 bg-black bg-opacity-50 rounded"
+          onClick={isFauxMode
+            ? () => {
+                if (!fauxTree) return;
+                setFauxPathIds(['root']);
+                syncFauxDirectory(fauxTree, ['root']);
+              }
+            : openFolder}
+          className={`px-2 py-1 rounded ${
+            isFauxMode || canOpenExternal
+              ? 'bg-black bg-opacity-50'
+              : 'bg-black bg-opacity-30 cursor-not-allowed'
+          }`}
+          disabled={!isFauxMode && !canOpenExternal}
         >
-          {supported ? 'Open Folder' : 'Go Home'}
+          {isFauxMode ? 'Go Home' : 'Open Folder'}
         </button>
         {activeBreadcrumbs.length > 1 && (
           <button onClick={goBack} className="px-2 py-1 bg-black bg-opacity-50 rounded">
@@ -506,6 +548,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
         )}
         {isFauxMode && (
           <div className="text-xs text-sky-200">Demo file system</div>
+        )}
+        {!isFauxMode && opfsSupported && (
+          <div className="text-xs text-sky-200">Workspace mode</div>
         )}
         {currentFile && (
           <div className="flex items-center space-x-2 ml-auto">
@@ -541,9 +586,9 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
                 Recents are available in real file mode.
               </div>
             )
-            : recent.map((r, i) => (
+            : recent.map((r) => (
                 <div
-                  key={i}
+                  key={r.id}
                   className="px-2 cursor-pointer hover:bg-black hover:bg-opacity-30"
                   onClick={() => openRecent(r)}
                 >
@@ -649,6 +694,20 @@ export default function FileExplorer({ context, initialPath, path: pathProp } = 
             <button onClick={runSearch} className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded">
               Search
             </button>
+            {searchStatus === 'searching' && (
+              <button
+                onClick={stopSearch}
+                className="ml-2 px-2 py-1 bg-black bg-opacity-50 rounded"
+              >
+                Stop
+              </button>
+            )}
+            {searchStatus !== 'idle' && (
+              <span className="ml-3 text-xs text-slate-300">
+                {searchStatus === 'cancelling' ? 'Stopping…' : 'Scanned'} {searchProgress.scanned}{' '}
+                files{searchProgress.skipped ? `, skipped ${searchProgress.skipped}` : ''}
+              </span>
+            )}
             <div className="max-h-40 overflow-auto mt-2">
               {results.map((r, i) => (
                 <div key={i}>
