@@ -106,7 +106,7 @@ All arcade-style and puzzle titles share the same readiness gap: implement canva
 | connect-four | Connect Four | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | hangman | Hangman | Core maintainers | **In progress** – add word list, timer, difficulty | Word list data |
 | frogger | Frogger | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
-| flappy-bird | Flappy Bird | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
+| flappy-bird | Flappy Bird | Core maintainers | **Ready** – shared game scaffolding, input remap, and ghost persistence aligned | Game engine |
 | 2048 | 2048 | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
 | snake | Snake | Core maintainers | **Ready** – shared canvas loop, pause/reset/audio toggles, and persistent high score shipped | Game engine |
 | memory | Memory | Core maintainers | **Needs polish** – align with shared game scaffolding | Game engine |
