@@ -22,7 +22,7 @@ export default function Forecast({ days }: { days: ForecastDay[] }) {
           </div>
           <WeatherIcon
             code={d.condition}
-            className="h-10 w-10 text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)]"
+            className="h-10 w-10"
           />
           <div className="text-sm font-medium text-[color:var(--kali-text)]">
             {Math.round(d.temp)}°
@@ -32,4 +32,3 @@ export default function Forecast({ days }: { days: ForecastDay[] }) {
     </div>
   );
 }
-
