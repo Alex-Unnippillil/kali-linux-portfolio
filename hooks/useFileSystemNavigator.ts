@@ -33,6 +33,10 @@ interface DirectoryHandleWithEntries extends FileSystemDirectoryHandle {
   entries: () => AsyncIterableIterator<[string, FileSystemHandle]>;
 }
 
+interface DirectoryHandleWithValues extends FileSystemDirectoryHandle {
+  values: () => AsyncIterableIterator<FileSystemHandle>;
+}
+
 function isDirectoryHandle(
   handle: FileSystemHandle,
 ): handle is FileSystemDirectoryHandle {
@@ -47,6 +51,12 @@ function hasEntries(
   handle: FileSystemDirectoryHandle,
 ): handle is DirectoryHandleWithEntries {
   return typeof (handle as DirectoryHandleWithEntries).entries === 'function';
+}
+
+function hasValues(
+  handle: FileSystemDirectoryHandle,
+): handle is DirectoryHandleWithValues {
+  return typeof (handle as DirectoryHandleWithValues).values === 'function';
 }
 
 interface UseFileSystemNavigatorReturn {
@@ -70,15 +80,25 @@ async function iterateEntries(handle: FileSystemDirectoryHandle) {
   const files: FileEntry[] = [];
 
   if (!handle || !hasEntries(handle)) {
-    return { directories, files };
-  }
-
-  for await (const [name, entry] of handle.entries()) {
-    if (!entry) continue;
-    if (isDirectoryHandle(entry)) {
-      directories.push({ name, handle: entry });
-    } else if (isFileHandle(entry)) {
-      files.push({ name, handle: entry });
+    if (!handle || !hasValues(handle)) {
+      return { directories, files };
+    }
+    for await (const entry of handle.values()) {
+      if (!entry) continue;
+      if (isDirectoryHandle(entry)) {
+        directories.push({ name: entry.name, handle: entry });
+      } else if (isFileHandle(entry)) {
+        files.push({ name: entry.name, handle: entry });
+      }
+    }
+  } else {
+    for await (const [name, entry] of handle.entries()) {
+      if (!entry) continue;
+      if (isDirectoryHandle(entry)) {
+        directories.push({ name, handle: entry });
+      } else if (isFileHandle(entry)) {
+        files.push({ name, handle: entry });
+      }
     }
   }
 
@@ -204,12 +224,18 @@ export default function useFileSystemNavigator(): UseFileSystemNavigatorReturn {
           .map((segment) => segment.trim())
           .filter(Boolean);
         for (const segment of segments) {
-          current = await current.getDirectoryHandle(segment, { create: true });
+          current = await current.getDirectoryHandle(segment, { create: false });
           crumbs.push({ name: segment, handle: current });
         }
         await syncDirectory(current, { breadcrumbs: crumbs });
-      } catch {
-        setLocationError(`Unable to open ${path}`);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.name === 'NotFoundError'
+              ? `Path not found: ${path}`
+              : error.message
+            : `Unable to open ${path}`;
+        setLocationError(message);
       }
     },
     [root, syncDirectory],

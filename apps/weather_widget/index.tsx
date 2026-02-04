@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import WeatherIcon from '../weather/components/WeatherIcon';
-import { fetchWeather } from '../../components/apps/weather';
+import { fetchWeather, WeatherFetchError } from '../../components/apps/weather';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { useSettings } from '../../hooks/useSettings';
 import demoCity from './demoCity.json';
@@ -32,12 +32,23 @@ type WeatherSnapshot = {
   conditionText: string;
   sunrise: string | null;
   sunset: string | null;
+  humidity: number | null;
+  precipitationChance: number | null;
+  windSpeedKph: number | null;
   forecast: ForecastEntry[];
+  updatedAt: number | null;
+  stale: boolean;
 };
 
 type FetchOptions = {
   persistQuery?: boolean;
   storeAsLast?: boolean;
+};
+
+type WeatherResponse = {
+  data: any;
+  meta?: { stale?: boolean; timestamp?: number };
+  revalidate?: Promise<{ data: any; meta?: { stale?: boolean; timestamp?: number } } | null>;
 };
 
 interface DemoCityData {
@@ -94,7 +105,12 @@ const FALLBACK_SNAPSHOT: WeatherSnapshot = {
   conditionText: describeWeatherCode(DEMO_CITY.conditionCode),
   sunrise: DEMO_CITY.sunrise ?? null,
   sunset: DEMO_CITY.sunset ?? null,
+  humidity: null,
+  precipitationChance: null,
+  windSpeedKph: null,
   forecast: DEMO_CITY.forecast.map((entry) => ({ ...entry })),
+  updatedAt: null,
+  stale: false,
 };
 
 const MAX_SAVED_CITIES = 8;
@@ -110,6 +126,10 @@ function convertTemperature(tempC: number, unit: Unit) {
   return unit === 'metric' ? tempC : tempC * 1.8 + 32;
 }
 
+function convertWindSpeed(speedKph: number, unit: Unit) {
+  return unit === 'metric' ? speedKph : speedKph * 0.621371;
+}
+
 function formatTime(value: string | null) {
   if (!value) return '—';
   const date = new Date(value);
@@ -117,7 +137,11 @@ function formatTime(value: string | null) {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function normalizeOpenMeteo(data: any, label: string): WeatherSnapshot {
+function normalizeOpenMeteo(
+  data: any,
+  label: string,
+  meta: { updatedAt: number | null; stale: boolean },
+): WeatherSnapshot {
   const current = data?.current_weather ?? {};
   const hourlyTimes: string[] = Array.isArray(data?.hourly?.time)
     ? data.hourly.time
@@ -127,14 +151,32 @@ function normalizeOpenMeteo(data: any, label: string): WeatherSnapshot {
   )
     ? data.hourly.apparent_temperature
     : [];
+  const hourlyHumidity: number[] = Array.isArray(
+    data?.hourly?.relative_humidity_2m,
+  )
+    ? data.hourly.relative_humidity_2m
+    : [];
+  const hourlyPrecip: number[] = Array.isArray(
+    data?.hourly?.precipitation_probability,
+  )
+    ? data.hourly.precipitation_probability
+    : [];
   let feelsLike =
     typeof current.temperature === 'number'
       ? current.temperature
       : FALLBACK_SNAPSHOT.temperatureC;
+  let humidity: number | null = null;
+  let precipitationChance: number | null = null;
   if (typeof current.time === 'string') {
     const idx = hourlyTimes.indexOf(current.time);
     if (idx >= 0 && typeof hourlyApparent[idx] === 'number') {
       feelsLike = hourlyApparent[idx];
+    }
+    if (idx >= 0 && typeof hourlyHumidity[idx] === 'number') {
+      humidity = hourlyHumidity[idx];
+    }
+    if (idx >= 0 && typeof hourlyPrecip[idx] === 'number') {
+      precipitationChance = hourlyPrecip[idx];
     }
   }
 
@@ -168,6 +210,8 @@ function normalizeOpenMeteo(data: any, label: string): WeatherSnapshot {
     typeof current.temperature === 'number'
       ? current.temperature
       : FALLBACK_SNAPSHOT.temperatureC;
+  const windSpeedKph =
+    typeof current.windspeed === 'number' ? current.windspeed : null;
 
   const forecast =
     forecastEntries.length > 0
@@ -182,7 +226,12 @@ function normalizeOpenMeteo(data: any, label: string): WeatherSnapshot {
     conditionText: describeWeatherCode(conditionCode),
     sunrise: sunrise ?? FALLBACK_SNAPSHOT.sunrise,
     sunset: sunset ?? FALLBACK_SNAPSHOT.sunset,
+    humidity,
+    precipitationChance,
+    windSpeedKph,
     forecast,
+    updatedAt: meta.updatedAt,
+    stale: meta.stale,
   };
 }
 
@@ -195,9 +244,13 @@ export default function WeatherWidget() {
   const [snapshot, setSnapshot] = useState<WeatherSnapshot>(FALLBACK_SNAPSHOT);
   const [status, setStatus] = useState<'idle' | 'loading'>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  const [offline, setOffline] = useState(
+    typeof navigator !== 'undefined' ? !navigator.onLine : false,
+  );
   const hydrated = useRef(false);
   const initialCityRef = useRef<string | null>(FALLBACK_SNAPSHOT.cityLabel);
   const prevAllowNetwork = useRef<boolean>(allowNetwork);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (!safeLocalStorage) {
@@ -248,36 +301,58 @@ export default function WeatherWidget() {
     hydrated.current = true;
   }, []);
 
+  useEffect(() => {
+    const onOnline = () => setOffline(false);
+    const onOffline = () => setOffline(true);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   const fetchCity = useCallback(
     async (cityName: string, options: FetchOptions = {}) => {
       const trimmed = cityName.trim();
       if (!trimmed) return;
 
-      if (!allowNetwork) {
-        setStatus('idle');
-        setMessage(
-          'Network access is disabled in Settings. Showing demo data.',
-        );
-        setSnapshot(FALLBACK_SNAPSHOT);
-        return;
-      }
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
       setStatus('loading');
       setMessage(null);
 
       try {
-        const geoResponse = await fetch(
-          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-            trimmed,
-          )}&count=1&language=en&format=json`,
-        );
-        if (!geoResponse.ok) {
-          throw new Error('Failed to resolve city coordinates');
-        }
-        const geoJson = await geoResponse.json();
+        const strategy = allowNetwork
+          ? offline
+            ? 'cache-first'
+            : 'cache-first'
+          : 'cache-only';
+        const shouldRevalidate = allowNetwork && !offline;
+
+        const geoResponse = (await fetchWeather('openMeteoGeo', {
+          name: trimmed,
+          count: 1,
+          language: 'en',
+          format: 'json',
+          strategy,
+          allowNetwork,
+          signal: controller.signal,
+          revalidate: shouldRevalidate,
+        })) as WeatherResponse;
+        if (abortRef.current !== controller) return;
+        const geoJson = geoResponse?.data ?? geoResponse;
         const result = geoJson?.results?.[0];
         if (!result) {
-          throw new Error('City not found');
+          throw new WeatherFetchError('not-found', 'City not found');
         }
 
         const labelParts = [result.name, result.admin1, result.country_code]
@@ -286,14 +361,55 @@ export default function WeatherWidget() {
           .filter(Boolean);
         const label = labelParts.join(', ');
 
-        const weatherData = await fetchWeather('openMeteo', {
+        const weatherResponse = (await fetchWeather('openMeteo', {
           lat: result.latitude,
           lon: result.longitude,
           timezone: result.timezone || 'auto',
-        });
+          hourly:
+            'apparent_temperature,relative_humidity_2m,precipitation_probability',
+          daily:
+            'weathercode,temperature_2m_max,temperature_2m_min,sunrise,sunset',
+          forecast_days: 5,
+          strategy,
+          allowNetwork,
+          signal: controller.signal,
+          revalidate: shouldRevalidate,
+        })) as WeatherResponse;
+        if (abortRef.current !== controller) return;
 
-        const nextSnapshot = normalizeOpenMeteo(weatherData, label);
+        const weatherData = weatherResponse?.data ?? weatherResponse;
+        const nextSnapshot = normalizeOpenMeteo(weatherData, label, {
+          updatedAt: weatherResponse?.meta?.timestamp ?? null,
+          stale: Boolean(weatherResponse?.meta?.stale),
+        });
         setSnapshot(nextSnapshot);
+
+        const statusMessage = !allowNetwork
+          ? 'Network access is disabled in Settings. Showing cached data when available.'
+          : offline
+            ? 'You are offline. Showing cached data when available.'
+            : weatherResponse?.meta?.stale
+              ? 'Showing cached data while refreshing.'
+              : null;
+        setMessage(statusMessage);
+
+        if (weatherResponse?.revalidate) {
+          weatherResponse.revalidate.then((next: WeatherResponse | null) => {
+            if (!next || abortRef.current !== controller) return;
+            const revalidated = normalizeOpenMeteo(next.data, label, {
+              updatedAt: next.meta?.timestamp ?? null,
+              stale: Boolean(next.meta?.stale),
+            });
+            setSnapshot(revalidated);
+            setMessage(
+              !allowNetwork
+                ? 'Network access is disabled in Settings. Showing cached data when available.'
+                : offline
+                  ? 'You are offline. Showing cached data when available.'
+                  : null,
+            );
+          });
+        }
 
         if (options.persistQuery !== false) {
           setCityQuery(label);
@@ -335,16 +451,32 @@ export default function WeatherWidget() {
           return current;
         });
       } catch (error) {
-        console.error('Weather widget fetch failed', error);
+        if (controller.signal.aborted) return;
+        if (error instanceof WeatherFetchError) {
+          if (error.type === 'not-found') {
+            setMessage('City not found. Try a nearby region or country.');
+          } else if (error.type === 'network-disabled') {
+            setMessage(
+              'Network access is disabled in Settings. Showing demo data.',
+            );
+          } else if (error.type === 'offline') {
+            setMessage('You are offline. Showing demo data.');
+          } else {
+            setMessage(
+              'Unable to fetch live weather data. Showing the demo city instead.',
+            );
+          }
+        } else {
+          setMessage(
+            'Unable to fetch live weather data. Showing the demo city instead.',
+          );
+        }
         setSnapshot(FALLBACK_SNAPSHOT);
-        setMessage(
-          'Unable to fetch live weather data. Showing the demo city instead.',
-        );
       } finally {
         setStatus('idle');
       }
     },
-    [allowNetwork],
+    [allowNetwork, offline],
   );
 
   useEffect(() => {
@@ -353,14 +485,15 @@ export default function WeatherWidget() {
     if (!allowNetwork) {
       setStatus('idle');
       setMessage(
-        'Network access is disabled in Settings. Showing demo data.',
+        'Network access is disabled in Settings. Showing cached data when available.',
       );
-      setSnapshot(FALLBACK_SNAPSHOT);
+    } else if (offline) {
+      setMessage('You are offline. Showing cached data when available.');
     } else {
       setMessage(null);
     }
 
-    if (allowNetwork && initialCityRef.current) {
+    if (initialCityRef.current) {
       const initialCity = initialCityRef.current;
       initialCityRef.current = null;
       fetchCity(initialCity, { persistQuery: true, storeAsLast: true });
@@ -374,7 +507,7 @@ export default function WeatherWidget() {
     }
 
     prevAllowNetwork.current = allowNetwork;
-  }, [allowNetwork, cityQuery, pinnedCity, fetchCity]);
+  }, [allowNetwork, offline, cityQuery, pinnedCity, fetchCity]);
 
   useEffect(() => {
     if (!safeLocalStorage) return;
@@ -441,6 +574,25 @@ export default function WeatherWidget() {
   const unitSymbol = unit === 'metric' ? 'C' : 'F';
   const temperature = Math.round(convertTemperature(snapshot.temperatureC, unit));
   const feelsLike = Math.round(convertTemperature(snapshot.feelsLikeC, unit));
+  const windSpeed =
+    snapshot.windSpeedKph === null
+      ? '—'
+      : `${Math.round(convertWindSpeed(snapshot.windSpeedKph, unit))} ${
+          unit === 'metric' ? 'km/h' : 'mph'
+        }`;
+  const humidity =
+    snapshot.humidity === null ? '—' : `${Math.round(snapshot.humidity)}%`;
+  const precipitation =
+    snapshot.precipitationChance === null
+      ? '—'
+      : `${Math.round(snapshot.precipitationChance)}%`;
+  const updatedLabel =
+    snapshot.updatedAt && !Number.isNaN(new Date(snapshot.updatedAt).getTime())
+      ? new Date(snapshot.updatedAt).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null;
 
   const rootClass = [
     'weather-widget',
@@ -493,7 +645,7 @@ export default function WeatherWidget() {
           <button
             type="button"
             onClick={refresh}
-            disabled={status === 'loading' || !allowNetwork}
+            disabled={status === 'loading'}
           >
             Refresh
           </button>
@@ -525,11 +677,18 @@ export default function WeatherWidget() {
       >
         <div className="weather-widget__header">
           <h2 className="weather-widget__city">{snapshot.cityLabel}</h2>
-          {status === 'loading' && (
-            <span className="weather-widget__loading" role="status">
-              Loading…
-            </span>
-          )}
+          <div className="weather-widget__status">
+            {updatedLabel && (
+              <span className="weather-widget__updated">
+                {snapshot.stale ? 'Cached' : 'Updated'} {updatedLabel}
+              </span>
+            )}
+            {status === 'loading' && (
+              <span className="weather-widget__loading" role="status">
+                Loading…
+              </span>
+            )}
+          </div>
         </div>
         <div className="weather-widget__summary-grid">
           <div className="weather-widget__summary">
@@ -549,7 +708,7 @@ export default function WeatherWidget() {
           </div>
           <dl
             className="weather-widget__metrics"
-            aria-label="Sunrise and sunset times"
+            aria-label="Weather metrics"
           >
             <div className="weather-widget__metric">
               <dt>
@@ -574,6 +733,33 @@ export default function WeatherWidget() {
                 <span>Sunset</span>
               </dt>
               <dd>{formatTime(snapshot.sunset)}</dd>
+            </div>
+            <div className="weather-widget__metric">
+              <dt>
+                <span className="weather-widget__metric-icon" aria-hidden="true">
+                  💨
+                </span>
+                <span>Wind</span>
+              </dt>
+              <dd>{windSpeed}</dd>
+            </div>
+            <div className="weather-widget__metric">
+              <dt>
+                <span className="weather-widget__metric-icon" aria-hidden="true">
+                  💧
+                </span>
+                <span>Humidity</span>
+              </dt>
+              <dd>{humidity}</dd>
+            </div>
+            <div className="weather-widget__metric">
+              <dt>
+                <span className="weather-widget__metric-icon" aria-hidden="true">
+                  ☔
+                </span>
+                <span>Precip</span>
+              </dt>
+              <dd>{precipitation}</dd>
             </div>
           </dl>
         </div>
