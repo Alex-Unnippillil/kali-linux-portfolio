@@ -158,7 +158,7 @@ The project uses a hybrid persistence strategy to ensure data survives updates w
 The terminal is a robust application built on `xterm.js`:
 -   **Web Workers**: Heavy commands (like hash cracking simulations) run in a dedicated worker (`workers/terminal-worker.ts`) to prevent UI blocking.
 -   **Session Manager**: `utils/sessionManager.ts` handles command parsing, history traversal, and simulating a shell environment.
--   **Safe Mode**: A "Safe Mode" toggle prevents the execution of simulated "dangerous" commands (like `rm -rf /`) unless explicitly disabled by the user.
+-   **Simulation Guardrails**: Network and privileged operations are always simulated; destructive filesystem targets remain protected.
 
 #### 🎨 Theming & Tailwind
 Styles are defined in `tailwind.config.js` and extend the standard palette with Kali Linux specific colors:

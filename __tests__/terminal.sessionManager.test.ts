@@ -18,7 +18,6 @@ const buildContext = (): CommandContext => ({
   setCwd: jest.fn(),
   history: [],
   aliases: {},
-  safeMode: true,
   setAlias: jest.fn(),
   runWorker: async () => {},
   clear: jest.fn(),
@@ -63,9 +62,11 @@ describe('sessionManager', () => {
     expect(writes.join('')).toContain('cat README.md');
   });
 
-  it('blocks risky commands in safe mode', async () => {
+  it('routes piped commands to the worker', async () => {
     const ctx = buildContext();
     const writes: string[] = [];
+    const runWorker = jest.fn(async () => {});
+    ctx.runWorker = runWorker;
     const manager = createSessionManager({
       getRegistry: () => ({}),
       context: ctx,
@@ -74,7 +75,23 @@ describe('sessionManager', () => {
       writeLine: (text) => writes.push(text + '\n'),
     });
 
-    await manager.runCommand('curl https://example.com');
-    expect(writes.join('')).toContain('Safe mode');
+    await manager.runCommand('cat README.md | grep Welcome');
+    expect(runWorker).toHaveBeenCalledWith('cat README.md | grep Welcome');
+  });
+
+  it('edits text in the middle of the line', () => {
+    const ctx = buildContext();
+    const manager = createSessionManager({
+      getRegistry: () => ({}),
+      context: ctx,
+      prompt: jest.fn(),
+      write: jest.fn(),
+      writeLine: jest.fn(),
+    });
+
+    manager.handleInput('abc');
+    manager.handleInput('\x1b[D');
+    manager.handleInput('X');
+    expect(manager.getBuffer()).toBe('abXc');
   });
 });
