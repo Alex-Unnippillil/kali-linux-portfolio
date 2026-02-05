@@ -18,6 +18,7 @@ import {
   createInitialState,
   stepSnake,
 } from '../../apps/snake';
+import rng from '../../apps/games/rng';
 
 const CELL_SIZE = 16; // pixels
 const DEFAULT_SPEED = 120; // ms per move
@@ -131,23 +132,36 @@ const Snake = ({ windowMeta } = {}) => {
     (v) => Array.isArray(v),
   );
   const [obstaclesEnabled, setObstaclesEnabled] = usePersistentState(
-    'snake_obstacles_enabled',
+    'snake:obstaclesEnabled',
     true,
     (v) => typeof v === 'boolean',
   );
-  const buildInitialState = useCallback(
-    () =>
-      createInitialState({
-        obstacles:
-          obstaclesEnabled && obstaclePack.length ? obstaclePack : [],
-        obstacleCount:
-          obstaclesEnabled && !obstaclePack.length ? 5 : 0,
-      }),
-    [obstaclePack, obstaclesEnabled],
+  const makeSeed = useCallback(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    [],
   );
+  const buildInitialState = useCallback(
+    (seed, settings = {}) => {
+      const nextSeed = seed || makeSeed();
+      rng.reset(nextSeed);
+      const obstaclesActive =
+        settings.obstaclesEnabled ?? obstaclesEnabled;
+      const obstacleSource = settings.obstaclePack ?? obstaclePack;
+      return createInitialState({
+        obstacles:
+          obstaclesActive && obstacleSource.length ? obstacleSource : [],
+        obstacleCount:
+          obstaclesActive && !obstacleSource.length ? 5 : 0,
+        random: rng.random,
+      });
+    },
+    [obstaclePack, obstaclesEnabled, makeSeed],
+  );
+  const seedRef = useRef('');
   const initialStateRef = useRef(null);
   if (!initialStateRef.current) {
-    initialStateRef.current = buildInitialState();
+    seedRef.current = makeSeed();
+    initialStateRef.current = buildInitialState(seedRef.current);
   }
   const snakeRef = useRef(
     initialStateRef.current.snake.map((seg) => ({ ...seg, scale: 1 })),
@@ -167,27 +181,27 @@ const Snake = ({ windowMeta } = {}) => {
 
   const [running, setRunning] = useState(true);
   const [wrap, setWrap] = usePersistentState(
-    'snake_wrap',
+    'snake:wrap',
     false,
     (v) => typeof v === 'boolean',
   );
   const [skinId, setSkinId] = usePersistentState(
-    'snake_skin',
+    'snake:skin',
     'classic',
     (v) => typeof v === 'string' && Object.prototype.hasOwnProperty.call(SKINS, v),
   );
   const [colorblindMode, setColorblindMode] = usePersistentState(
-    'snake_colorblind_mode',
+    'snake:colorblind',
     false,
     (v) => typeof v === 'boolean',
   );
   const [sound, setSound] = usePersistentState(
-    'snake_sound',
+    'snake:sound',
     true,
     (v) => typeof v === 'boolean',
   );
   const [baseSpeed, setBaseSpeed] = usePersistentState(
-    'snake_base_speed',
+    'snake:baseSpeed',
     DEFAULT_SPEED,
     (v) => typeof v === 'number',
   );
@@ -196,7 +210,7 @@ const Snake = ({ windowMeta } = {}) => {
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
-    'snake_highscore',
+    'snake:highScore',
     0,
     (v) => typeof v === 'number',
   );
@@ -209,16 +223,21 @@ const Snake = ({ windowMeta } = {}) => {
   } = useSaveSlots('snake-replay');
   const [selectedReplay, setSelectedReplay] = useState('');
   const [showTouchControls, setShowTouchControls] = usePersistentState(
-    'snake_touch_controls',
+    'snake:touchControls',
     isTouch,
     (v) => typeof v === 'boolean',
   );
   const playingRef = useRef(false);
   const focusPausedRef = useRef(false);
-  const playbackRef = useRef([]);
-  const playbackIndexRef = useRef(0);
-  const recordingRef = useRef([]);
+  const replayModeRef = useRef('inputs');
+  const legacyPlaybackRef = useRef([]);
+  const legacyPlaybackIndexRef = useRef(0);
+  const replayInputsRef = useRef([]);
+  const replayIndexRef = useRef(0);
+  const inputLogRef = useRef([]);
+  const stepCountRef = useRef(0);
   const [milestoneFlash, setMilestoneFlash] = useState(false);
+  const [reducedMotionPaused, setReducedMotionPaused] = useState(false);
 
   const skinConfig = useMemo(() => {
     const base = SKINS[skinId] || SKINS.classic;
@@ -297,26 +316,91 @@ const Snake = ({ windowMeta } = {}) => {
     scoreRef.current = score;
   }, [score]);
 
-  useEffect(() => {
-    recordingRef.current = [
-      {
-        snake: snakeRef.current.map((s) => ({
-          x: s.x,
-          y: s.y,
-          scale: s.scale,
-        })),
-        food: { ...foodRef.current },
-        obstacles: obstaclesRef.current.map((o) => ({ ...o })),
-        score: 0,
-      },
-    ];
-  }, []);
-
   useEffect(() => () => {
     if (milestoneTimeoutRef.current) {
       clearTimeout(milestoneTimeoutRef.current);
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const migrations = [
+      {
+        oldKey: 'snake_wrap',
+        newKey: 'snake:wrap',
+        setter: setWrap,
+        validator: (v) => typeof v === 'boolean',
+      },
+      {
+        oldKey: 'snake_skin',
+        newKey: 'snake:skin',
+        setter: setSkinId,
+        validator: (v) =>
+          typeof v === 'string' &&
+          Object.prototype.hasOwnProperty.call(SKINS, v),
+      },
+      {
+        oldKey: 'snake_colorblind_mode',
+        newKey: 'snake:colorblind',
+        setter: setColorblindMode,
+        validator: (v) => typeof v === 'boolean',
+      },
+      {
+        oldKey: 'snake_sound',
+        newKey: 'snake:sound',
+        setter: setSound,
+        validator: (v) => typeof v === 'boolean',
+      },
+      {
+        oldKey: 'snake_base_speed',
+        newKey: 'snake:baseSpeed',
+        setter: setBaseSpeed,
+        validator: (v) => typeof v === 'number',
+      },
+      {
+        oldKey: 'snake_highscore',
+        newKey: 'snake:highScore',
+        setter: setHighScore,
+        validator: (v) => typeof v === 'number',
+      },
+      {
+        oldKey: 'snake_touch_controls',
+        newKey: 'snake:touchControls',
+        setter: setShowTouchControls,
+        validator: (v) => typeof v === 'boolean',
+      },
+      {
+        oldKey: 'snake_obstacles_enabled',
+        newKey: 'snake:obstaclesEnabled',
+        setter: setObstaclesEnabled,
+        validator: (v) => typeof v === 'boolean',
+      },
+    ];
+    migrations.forEach(({ oldKey, newKey, setter, validator }) => {
+      try {
+        const existing = window.localStorage.getItem(newKey);
+        if (existing !== null) return;
+        const legacy = window.localStorage.getItem(oldKey);
+        if (legacy === null) return;
+        const parsed = JSON.parse(legacy);
+        if (validator && !validator(parsed)) return;
+        window.localStorage.setItem(newKey, JSON.stringify(parsed));
+        setter(parsed);
+        window.localStorage.removeItem(oldKey);
+      } catch {
+        // ignore migration errors
+      }
+    });
+  }, [
+    setWrap,
+    setSkinId,
+    setColorblindMode,
+    setSound,
+    setBaseSpeed,
+    setHighScore,
+    setShowTouchControls,
+    setObstaclesEnabled,
+  ]);
 
   useEffect(() => {
     if (!prefersReducedMotion) return;
@@ -327,6 +411,24 @@ const Snake = ({ windowMeta } = {}) => {
       milestoneTimeoutRef.current = null;
     }
   }, [prefersReducedMotion]);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setReducedMotionPaused(true);
+      if (runningRef.current) {
+        runningRef.current = false;
+        setRunning(false);
+      }
+      return;
+    }
+    if (reducedMotionPaused) {
+      setReducedMotionPaused(false);
+      if (!gameOver && !won && isFocused) {
+        runningRef.current = true;
+        setRunning(true);
+      }
+    }
+  }, [prefersReducedMotion, reducedMotionPaused, gameOver, won, isFocused]);
 
   /**
    * Play a short tone if sound is enabled.
@@ -553,9 +655,9 @@ const Snake = ({ windowMeta } = {}) => {
 
   /** Advance the game state by one step. */
   const advanceGame = useCallback(() => {
-    if (playingRef.current) {
-      const frames = playbackRef.current;
-      const idx = playbackIndexRef.current;
+    if (playingRef.current && replayModeRef.current === 'frames') {
+      const frames = legacyPlaybackRef.current;
+      const idx = legacyPlaybackIndexRef.current;
       if (!frames || idx >= frames.length) {
         playingRef.current = false;
         runningRef.current = false;
@@ -563,7 +665,7 @@ const Snake = ({ windowMeta } = {}) => {
         return;
       }
       const frame = frames[idx];
-      playbackIndexRef.current += 1;
+      legacyPlaybackIndexRef.current += 1;
       snakeRef.current = frame.snake.map((s) => ({ ...s }));
       foodRef.current = { ...frame.food };
       obstaclesRef.current = frame.obstacles.map((o) => ({ ...o }));
@@ -571,6 +673,16 @@ const Snake = ({ windowMeta } = {}) => {
       scoreRef.current = frameScore;
       setScore(frameScore);
       return;
+    }
+    if (playingRef.current) {
+      const inputs = replayInputsRef.current;
+      while (
+        replayIndexRef.current < inputs.length &&
+        inputs[replayIndexRef.current].stepIndex === stepCountRef.current
+      ) {
+        moveQueueRef.current.push(inputs[replayIndexRef.current].dir);
+        replayIndexRef.current += 1;
+      }
     }
 
     if (moveQueueRef.current.length) {
@@ -591,7 +703,7 @@ const Snake = ({ windowMeta } = {}) => {
         obstacles: obstaclesRef.current.map((o) => ({ x: o.x, y: o.y })),
       },
       dirRef.current,
-      { wrap, gridSize: GRID_SIZE },
+      { wrap, gridSize: GRID_SIZE, random: rng.random },
     );
 
     if (result.collision !== 'none') {
@@ -600,6 +712,7 @@ const Snake = ({ windowMeta } = {}) => {
       setWon(false);
       runningRef.current = false;
       setRunning(false);
+      playingRef.current = false;
       beep(120);
       return;
     }
@@ -627,18 +740,10 @@ const Snake = ({ windowMeta } = {}) => {
       }
     }
 
-    recordingRef.current.push({
-      snake: snakeRef.current.map((seg) => ({
-        x: seg.x,
-        y: seg.y,
-        scale: seg.scale,
-      })),
-      food: { ...foodRef.current },
-      obstacles: obstaclesRef.current.map((o) => ({ ...o })),
-      score: scoreRef.current,
-    });
+    stepCountRef.current += 1;
 
     if (result.won) {
+      playingRef.current = false;
       setWon(true);
       setGameOver(false);
       runningRef.current = false;
@@ -687,12 +792,18 @@ const Snake = ({ windowMeta } = {}) => {
       setRunning(false);
       return;
     }
-    if (isFocused && focusPausedRef.current && !gameOver && !won) {
+    if (
+      isFocused &&
+      focusPausedRef.current &&
+      !gameOver &&
+      !won &&
+      !reducedMotionPaused
+    ) {
       focusPausedRef.current = false;
       runningRef.current = true;
       setRunning(true);
     }
-  }, [isFocused, running, gameOver, won]);
+  }, [isFocused, running, gameOver, won, reducedMotionPaused]);
 
   useGameLoop(tick, running);
 
@@ -704,6 +815,10 @@ const Snake = ({ windowMeta } = {}) => {
       if (curr.x + x === 0 && curr.y + y === 0) return;
       if (queue.length >= MAX_QUEUE) return;
       queue.push({ x, y });
+      inputLogRef.current.push({
+        stepIndex: stepCountRef.current,
+        dir: { x, y },
+      });
     },
     [gameOver, won],
   );
@@ -711,6 +826,7 @@ const Snake = ({ windowMeta } = {}) => {
   useGameControls(enqueueDirection, 'snake', {
     preventDefault: true,
     isFocused,
+    targetRef: canvasRef,
   });
 
   useEffect(() => {
@@ -726,67 +842,103 @@ const Snake = ({ windowMeta } = {}) => {
   useEffect(() => {
     if (!gameOver && !won) return;
     if (playingRef.current) return;
-    if (recordingRef.current.length) {
+    if (inputLogRef.current.length || stepCountRef.current > 0) {
       const name = `replay-${Date.now()}`;
-      saveReplay(name, { frames: recordingRef.current, wrap });
+      saveReplay(name, {
+        seed: seedRef.current,
+        settings: {
+          wrap,
+          obstaclesEnabled,
+          obstaclePack,
+          baseSpeed,
+          skinId,
+        },
+        inputs: inputLogRef.current,
+      });
     }
-  }, [gameOver, won, saveReplay, wrap]);
+  }, [gameOver, won, saveReplay, wrap, obstaclesEnabled, obstaclePack, baseSpeed, skinId]);
 
   /** Reset the game to its initial state. */
   const reset = useCallback(() => {
-    const base = buildInitialState();
+    const nextSeed = makeSeed();
+    seedRef.current = nextSeed;
+    const base = buildInitialState(nextSeed);
     snakeRef.current = base.snake.map((seg) => ({ ...seg, scale: 1 }));
     foodRef.current = { ...base.food };
     obstaclesRef.current = base.obstacles.map((o) => ({ ...o }));
     dirRef.current = { x: 1, y: 0 };
     moveQueueRef.current = [];
     playingRef.current = false;
-    playbackRef.current = [];
-    playbackIndexRef.current = 0;
+    replayModeRef.current = 'inputs';
+    legacyPlaybackRef.current = [];
+    legacyPlaybackIndexRef.current = 0;
+    replayInputsRef.current = [];
+    replayIndexRef.current = 0;
+    inputLogRef.current = [];
+    stepCountRef.current = 0;
     accumulatorRef.current = 0;
-    runningRef.current = true;
+    const shouldRun = !prefersReducedMotion && isFocused;
+    runningRef.current = shouldRun;
     setScore(0);
     scoreRef.current = 0;
     setGameOver(false);
     setWon(false);
-    setRunning(true);
+    setRunning(shouldRun);
     setSpeed(baseSpeed);
     speedRef.current = baseSpeed;
     particlesRef.current = [];
     setMilestoneFlash(false);
+    setReducedMotionPaused(prefersReducedMotion);
     if (milestoneTimeoutRef.current) {
       clearTimeout(milestoneTimeoutRef.current);
       milestoneTimeoutRef.current = null;
     }
-    recordingRef.current = [
-      {
-        snake: snakeRef.current.map((s) => ({
-          x: s.x,
-          y: s.y,
-          scale: s.scale,
-        })),
-        food: { ...foodRef.current },
-        obstacles: obstaclesRef.current.map((o) => ({ ...o })),
-        score: 0,
-      },
-    ];
     draw();
-  }, [baseSpeed, buildInitialState, draw]);
+  }, [baseSpeed, buildInitialState, draw, isFocused, makeSeed, prefersReducedMotion]);
 
   const startReplay = useCallback(
     (name) => {
       const data = loadReplay(name);
       if (!data) return;
-      playbackRef.current = data.frames || [];
-      playbackIndexRef.current = 0;
+      const hasLegacyFrames = Array.isArray(data.frames) && data.frames.length > 0;
+      replayModeRef.current = hasLegacyFrames ? 'frames' : 'inputs';
+      legacyPlaybackRef.current = hasLegacyFrames ? data.frames : [];
+      legacyPlaybackIndexRef.current = 0;
+      replayInputsRef.current = data.inputs || [];
+      replayIndexRef.current = 0;
+      stepCountRef.current = 0;
+      inputLogRef.current = [];
       playingRef.current = true;
-      setWrap(data.wrap ?? false);
-      setRunning(true);
-      runningRef.current = true;
+      const settings = data.settings || {};
+      if (settings.wrap !== undefined) setWrap(settings.wrap);
+      if (settings.obstaclesEnabled !== undefined) {
+        setObstaclesEnabled(settings.obstaclesEnabled);
+      }
+      if (settings.baseSpeed !== undefined) {
+        setBaseSpeed(settings.baseSpeed);
+        setSpeed(settings.baseSpeed);
+        speedRef.current = settings.baseSpeed;
+      } else {
+        setSpeed(baseSpeed);
+        speedRef.current = baseSpeed;
+      }
+      if (settings.skinId !== undefined) setSkinId(settings.skinId);
+      const replaySeed = data.seed || makeSeed();
+      seedRef.current = replaySeed;
+      const base = buildInitialState(replaySeed, settings);
+      snakeRef.current = base.snake.map((seg) => ({ ...seg, scale: 1 }));
+      obstaclesRef.current = base.obstacles.map((o) => ({ ...o }));
+      foodRef.current = { ...base.food };
+      dirRef.current = { x: 1, y: 0 };
+      moveQueueRef.current = [];
+      accumulatorRef.current = 0;
+      const shouldRun = !prefersReducedMotion && isFocused;
+      setReducedMotionPaused(prefersReducedMotion);
+      setRunning(shouldRun);
+      runningRef.current = shouldRun;
       setGameOver(false);
       setWon(false);
-      accumulatorRef.current = 0;
-      if (data.frames?.length) {
+      if (hasLegacyFrames) {
         const first = data.frames[0];
         snakeRef.current = first.snake.map((s) => ({ ...s }));
         obstaclesRef.current = first.obstacles.map((o) => ({ ...o }));
@@ -794,9 +946,24 @@ const Snake = ({ windowMeta } = {}) => {
         const frameScore = first.score ?? 0;
         scoreRef.current = frameScore;
         setScore(frameScore);
+      } else {
+        scoreRef.current = 0;
+        setScore(0);
       }
     },
-    [loadReplay, setWrap],
+    [
+      baseSpeed,
+      buildInitialState,
+      isFocused,
+      loadReplay,
+      makeSeed,
+      prefersReducedMotion,
+      setBaseSpeed,
+      setObstaclesEnabled,
+      setSkinId,
+      setSpeed,
+      setWrap,
+    ],
   );
 
   const handlePauseChange = useCallback(
@@ -806,12 +973,15 @@ const Snake = ({ windowMeta } = {}) => {
         setRunning(false);
         return;
       }
+      if (reducedMotionPaused) {
+        return;
+      }
       if (playingRef.current || (!gameOver && !won)) {
         runningRef.current = true;
         setRunning(true);
       }
     },
-    [gameOver, won],
+    [gameOver, won, reducedMotionPaused],
   );
 
   const handleBaseSpeedChange = useCallback(
@@ -1002,6 +1172,30 @@ const Snake = ({ windowMeta } = {}) => {
             aria-label="Snake game board"
             aria-describedby="snake-instructions"
           />
+          {reducedMotionPaused && !gameOver && !won && (
+            <div
+              className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-center px-4"
+              role="status"
+              aria-live="polite"
+            >
+              <div className="text-lg font-semibold text-slate-100">
+                Reduced motion is enabled. Press Resume to play.
+              </div>
+              <button
+                type="button"
+                className="px-4 py-1.5 bg-emerald-500/90 text-slate-900 font-semibold rounded shadow-sm transition hover:bg-emerald-400 focus:outline-none focus:ring"
+                onClick={() => {
+                  setReducedMotionPaused(false);
+                  if (!gameOver && !won && isFocused) {
+                    runningRef.current = true;
+                    setRunning(true);
+                  }
+                }}
+              >
+                Resume
+              </button>
+            </div>
+          )}
           {gameOver && (
             <div
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-center px-4"
