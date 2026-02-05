@@ -8,7 +8,7 @@ export interface Cascade {
 
 export interface CandyCell {
   id: string;
-  gem: string;
+  gem: GemId;
 }
 
 export interface ResolveResult {
