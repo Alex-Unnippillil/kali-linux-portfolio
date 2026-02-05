@@ -1,13 +1,17 @@
 const plugin = require('tailwindcss/plugin');
 
+const withAlpha = (cssVar) => `rgb(var(${cssVar}) / <alpha-value>)`;
+
 module.exports = {
   darkMode: 'class',
-  mode: 'jit',
   content: [
-    './pages/**/*.{js,ts,jsx,tsx}',
-    './components/**/*.{js,ts,jsx,tsx}',
-    './apps/**/*.{js,ts,jsx,tsx}',
-    './hooks/**/*.{js,ts,jsx,tsx}',
+    './pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './apps/**/*.{js,ts,jsx,tsx,mdx}',
+    './hooks/**/*.{js,ts,jsx,tsx,mdx}',
+    './utils/**/*.{js,ts,jsx,tsx,mdx}',
+    './scripts/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
@@ -37,40 +41,44 @@ module.exports = {
         'ub-border-orange': 'var(--color-ub-border-orange)',
         'ub-dark-grey': 'var(--color-ub-dark-grey)',
         kali: {
-          background: 'var(--color-bg)',
-          text: 'var(--color-text)',
-          primary: 'var(--color-primary)',
-          secondary: 'var(--color-secondary)',
-          accent: 'var(--color-accent)',
-          success: 'var(--color-success)',
-          error: 'var(--color-error)',
-          muted: 'var(--color-muted)',
+          background: withAlpha('--color-bg-rgb'),
+          text: withAlpha('--color-text-rgb'),
+          primary: withAlpha('--color-primary-rgb'),
+          secondary: withAlpha('--color-secondary-rgb'),
+          accent: withAlpha('--color-accent-rgb'),
+          success: withAlpha('--color-success-rgb'),
+          danger: withAlpha('--color-error-rgb'),
+          error: withAlpha('--color-error-rgb'),
+          muted: withAlpha('--color-muted-rgb'),
           surface: {
-            DEFAULT: 'var(--color-surface)',
-            muted: 'var(--color-surface-muted)',
-            raised: 'var(--color-surface-raised)',
+            DEFAULT: withAlpha('--color-surface-rgb'),
+            muted: withAlpha('--color-surface-muted-rgb'),
+            raised: withAlpha('--color-surface-raised-rgb'),
           },
-          inverse: 'var(--color-inverse)',
-          border: 'var(--color-border)',
-          terminal: 'var(--color-terminal)',
-          dark: 'var(--color-dark)',
-          focus: 'var(--color-focus-ring)',
-          selection: 'var(--color-selection)',
-          control: 'var(--color-control-accent)',
-          backdrop: 'var(--kali-bg)',
-          'panel-dark': 'var(--kali-panel)',
+          inverse: withAlpha('--color-inverse-rgb'),
+          border: withAlpha('--color-border-rgb'),
+          terminal: withAlpha('--color-terminal-rgb'),
+          dark: withAlpha('--color-dark-rgb'),
+          focus: withAlpha('--color-focus-ring-rgb'),
+          selection: withAlpha('--color-selection-rgb'),
+          control: withAlpha('--color-control-accent-rgb'),
+          backdrop: withAlpha('--kali-bg-rgb'),
+          panel: withAlpha('--kali-panel-rgb'),
+          'panel-dark': withAlpha('--kali-panel-rgb'),
           'panel-light':
             'color-mix(in srgb, var(--kali-panel) 55%, rgba(255,255,255,0.18))',
-          error: 'var(--game-color-danger)',
-          overlay: 'var(--color-overlay-strong)',
-          'overlay-soft': 'var(--color-overlay-soft)',
-          info: 'var(--color-info)',
+          overlay: withAlpha('--color-overlay-strong-rgb'),
+          'overlay-soft': withAlpha('--color-overlay-soft-rgb'),
+          info: withAlpha('--color-info-rgb'),
           severity: {
-            low: 'var(--color-severity-low)',
-            medium: 'var(--color-severity-medium)',
-            high: 'var(--color-severity-high)',
-            critical: 'var(--color-severity-critical)',
+            low: withAlpha('--color-severity-low-rgb'),
+            medium: withAlpha('--color-severity-medium-rgb'),
+            high: withAlpha('--color-severity-high-rgb'),
+            critical: withAlpha('--color-severity-critical-rgb'),
           },
+        },
+        game: {
+          danger: withAlpha('--game-danger-rgb'),
         },
       },
       boxShadow: {
@@ -110,8 +118,8 @@ module.exports = {
       },
       keyframes: {
         glow: {
-          '0%, 100%': { boxShadow: '0 0 0px theme("colors.amber.400")' },
-          '50%': { boxShadow: '0 0 8px theme("colors.amber.400")' },
+          '0%, 100%': { boxShadow: '0 0 0px rgb(var(--color-accent-rgb) / 0)' },
+          '50%': { boxShadow: '0 0 10px rgb(var(--color-accent-rgb) / 0.65)' },
         },
         flourish: {
           '0%': { transform: 'scale(0.8) rotate(0deg)', opacity: '0' },
@@ -119,12 +127,18 @@ module.exports = {
           '100%': { transform: 'scale(1) rotate(360deg)', opacity: '1' },
         },
         mine: {
-          '0%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
+          '0%': {
+            transform: 'translate(0,0) scale(1)',
+            backgroundColor: 'rgb(var(--game-danger-rgb) / 1)',
+          },
           '50%': {
             transform: 'translate(-1px,1px) scale(1.1)',
-            backgroundColor: 'theme("colors.red.700")',
+            backgroundColor: 'rgb(var(--game-danger-rgb) / 0.85)',
           },
-          '100%': { transform: 'translate(0,0) scale(1)', backgroundColor: 'theme("colors.red.500")' },
+          '100%': {
+            transform: 'translate(0,0) scale(1)',
+            backgroundColor: 'rgb(var(--game-danger-rgb) / 1)',
+          },
         },
       },
       animation: {
