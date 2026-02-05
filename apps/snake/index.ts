@@ -24,6 +24,7 @@ export interface StepResult {
 export interface SnakeOptions {
   wrap: boolean;
   gridSize: number;
+  random?: () => number;
   randomFood?: typeof randomFood;
   randomObstacle?: typeof randomObstacle | null;
 }
@@ -43,19 +44,20 @@ const listFreeCells = (occupied: Set<string>, gridSize: number): Point[] => {
   return free;
 };
 
-const pickRandom = (cells: Point[]): Point =>
-  cells[Math.floor(Math.random() * cells.length)] ?? { ...NO_CELL };
+const pickRandom = (cells: Point[], rand: () => number = Math.random): Point =>
+  cells[Math.floor(rand() * cells.length)] ?? { ...NO_CELL };
 
 export const randomFood = (
   snake: Point[],
   obstacles: Point[] = [],
   gridSize = GRID_SIZE,
+  rand: () => number = Math.random,
 ): Point => {
   const occupied = new Set<string>();
   snake.forEach((p) => occupied.add(key(p)));
   obstacles.forEach((p) => occupied.add(key(p)));
   const free = listFreeCells(occupied, gridSize);
-  return free.length ? pickRandom(free) : { ...NO_CELL };
+  return free.length ? pickRandom(free, rand) : { ...NO_CELL };
 };
 
 export const randomObstacle = (
@@ -63,13 +65,14 @@ export const randomObstacle = (
   food: Point,
   obstacles: Point[] = [],
   gridSize = GRID_SIZE,
+  rand: () => number = Math.random,
 ): Point => {
   const occupied = new Set<string>();
   snake.forEach((p) => occupied.add(key(p)));
   obstacles.forEach((p) => occupied.add(key(p)));
   if (!isNoCell(food)) occupied.add(key(food));
   const free = listFreeCells(occupied, gridSize);
-  return free.length ? pickRandom(free) : { ...NO_CELL };
+  return free.length ? pickRandom(free, rand) : { ...NO_CELL };
 };
 
 const generateObstacles = (params: {
@@ -79,6 +82,7 @@ const generateObstacles = (params: {
   count: number;
   gridSize: number;
   generator: typeof randomObstacle;
+  random?: () => number;
 }): Point[] => {
   const obstacles: Point[] = [];
 
@@ -94,6 +98,7 @@ const generateObstacles = (params: {
       params.food,
       obstacles,
       params.gridSize,
+      params.random,
     );
     if (isNoCell(next)) break;
     obstacles.push(next);
@@ -108,6 +113,7 @@ export const createInitialState = (params?: {
   food?: Point;
   obstacles?: Point[];
   obstacleCount?: number;
+  random?: () => number;
   randomFood?: typeof randomFood;
   randomObstacle?: typeof randomObstacle;
 }): SnakeState => {
@@ -123,8 +129,13 @@ export const createInitialState = (params?: {
   const food =
     params?.food ??
     (params?.randomFood
-      ? params.randomFood(snake, params?.obstacles ?? [], gridSize)
-      : randomFood(snake, params?.obstacles ?? [], gridSize));
+      ? params.randomFood(
+        snake,
+        params?.obstacles ?? [],
+        gridSize,
+        params?.random,
+      )
+      : randomFood(snake, params?.obstacles ?? [], gridSize, params?.random));
 
   const obstacleCount =
     params?.obstacleCount ??
@@ -138,6 +149,7 @@ export const createInitialState = (params?: {
     count: obstacleCount,
     gridSize,
     generator: obstacleGenerator,
+    random: params?.random,
   });
 
   return { snake, food, obstacles };
@@ -182,8 +194,12 @@ export const stepSnake = (
 
   const grew = newHeadX === food.x && newHeadY === food.y;
 
-  for (let i = 0; i < snake.length; i += 1) {
-    if (snake[i].x === newHeadX && snake[i].y === newHeadY) {
+  const collisionSegments = grew ? snake : snake.slice(0, -1);
+  for (let i = 0; i < collisionSegments.length; i += 1) {
+    if (
+      collisionSegments[i].x === newHeadX &&
+      collisionSegments[i].y === newHeadY
+    ) {
       return { state, grew: false, collision: 'self', won: false };
     }
   }
@@ -198,8 +214,9 @@ export const stepSnake = (
   if (!grew) newSnake.pop();
 
   const randomFoodFn = options.randomFood ?? randomFood;
+  const randomFn = options.random ?? Math.random;
   const nextFood = grew
-    ? randomFoodFn(newSnake, obstacleSnapshot, gridSize)
+    ? randomFoodFn(newSnake, obstacleSnapshot, gridSize, randomFn)
     : food;
 
   let won = false;
@@ -215,6 +232,7 @@ export const stepSnake = (
         nextFood,
         obstacleSnapshot,
         gridSize,
+        randomFn,
       );
       if (!isNoCell(nextObs)) nextObstacles.push(nextObs);
     }
