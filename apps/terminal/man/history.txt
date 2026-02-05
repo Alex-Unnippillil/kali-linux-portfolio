@@ -1,2 +1,4 @@
 history
 Display the list of previously entered commands.
+Use Ctrl+R for reverse search through history.
+When persistence is enabled, history and transcript restore together after refresh.

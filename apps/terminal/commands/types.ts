@@ -1,10 +1,10 @@
-import { VirtualFileSystem } from '../utils/filesystem';
+import type { TerminalFileSystem } from '../utils/filesystem';
 
 export interface CommandContext {
   writeLine: (text: string) => void;
   /** @deprecated use fs instead */
   files: Record<string, string>;
-  fs: VirtualFileSystem;
+  fs: TerminalFileSystem;
   cwd: string;
   setCwd: (path: string) => void;
   history: string[];

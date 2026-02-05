@@ -1,10 +1,49 @@
 
+import { loadFauxFileSystem, saveFauxFileSystem } from '../../../services/fileExplorer/fauxFileSystem';
+
 export interface FileEntry {
     name: string;
     kind: 'file' | 'directory';
 }
 
-export class VirtualFileSystem {
+export interface TerminalFileSystem {
+    resolvePath(cwd: string, target: string): string;
+    getHandle(
+        path: string,
+        create?: 'file' | 'directory' | false
+    ): Promise<{ kind: 'file' | 'directory' } | null>;
+    readDirectory(path: string): Promise<FileEntry[] | null>;
+    readFile(path: string): Promise<string | null>;
+    writeFile(path: string, content: string): Promise<boolean>;
+    createDirectory(path: string): Promise<boolean>;
+    deleteEntry(path: string): Promise<boolean>;
+    exists(path: string): Promise<boolean>;
+}
+
+const resolvePath = (cwd: string, target: string, homePath = '/home'): string => {
+    if (!target) return cwd;
+
+    if (target === '~') return homePath;
+    if (target.startsWith('~/')) return homePath + target.slice(1);
+
+    const path = target.startsWith('/') ? target : `${cwd === '/' ? '' : cwd}/${target}`;
+
+    const parts = path.split('/').filter(Boolean);
+    const stack: string[] = [];
+
+    for (const part of parts) {
+        if (part === '.') continue;
+        if (part === '..') {
+            stack.pop();
+        } else {
+            stack.push(part);
+        }
+    }
+
+    return '/' + stack.join('/');
+};
+
+export class VirtualFileSystem implements TerminalFileSystem {
     private root: FileSystemDirectoryHandle | null = null;
 
     constructor(root: FileSystemDirectoryHandle | null) {
@@ -15,32 +54,8 @@ export class VirtualFileSystem {
         this.root = root;
     }
 
-    // Resolve simplified path (no . or .. support for simplification to keep it robust enough for demo)
-    // Actually we need basic .. support for 'cd ..'
     resolvePath(cwd: string, target: string): string {
-        if (!target) return cwd;
-
-        // Handle home tilde
-        if (target === '~') return '/home';
-        if (target.startsWith('~/')) return '/home' + target.slice(1);
-
-        // Absolute
-        let path = target.startsWith('/') ? target : `${cwd === '/' ? '' : cwd}/${target}`;
-
-        // Normalize
-        const parts = path.split('/').filter(Boolean);
-        const stack: string[] = [];
-
-        for (const part of parts) {
-            if (part === '.') continue;
-            if (part === '..') {
-                stack.pop();
-            } else {
-                stack.push(part);
-            }
-        }
-
-        return '/' + stack.join('/');
+        return resolvePath(cwd, target);
     }
 
     async getHandle(
@@ -185,5 +200,180 @@ export class VirtualFileSystem {
     async exists(path: string): Promise<boolean> {
         const handle = await this.getHandle(path);
         return !!handle;
+    }
+}
+
+interface FauxFileNode {
+    id: string;
+    name: string;
+    type: 'folder' | 'file';
+    content?: string;
+    url?: string;
+    children?: FauxFileNode[];
+}
+
+const createNodeId = () => `terminal-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+export class FauxFileSystem implements TerminalFileSystem {
+    private root: FauxFileNode | null = null;
+    private homePath = '/';
+
+    constructor(homePath = '/') {
+        this.homePath = homePath;
+    }
+
+    resolvePath(cwd: string, target: string): string {
+        return resolvePath(cwd, target, this.homePath);
+    }
+
+    private loadTree() {
+        this.root = loadFauxFileSystem() as FauxFileNode;
+        return this.root;
+    }
+
+    private persistTree(tree: FauxFileNode) {
+        saveFauxFileSystem(tree);
+        this.root = tree;
+    }
+
+    private getRoot(): FauxFileNode {
+        return this.root ?? this.loadTree();
+    }
+
+    private findEntry(
+        path: string,
+    ): { node: FauxFileNode | null; parent: FauxFileNode | null; name: string } {
+        const root = this.getRoot();
+        const parts = path.split('/').filter(Boolean);
+        if (parts.length === 0) {
+            return { node: root, parent: null, name: '/' };
+        }
+        let current: FauxFileNode | null = root;
+        let parent: FauxFileNode | null = null;
+        for (let i = 0; i < parts.length; i += 1) {
+            const segment = parts[i];
+            if (!current || current.type !== 'folder') {
+                return { node: null, parent: null, name: segment };
+            }
+            const children: FauxFileNode[] = Array.isArray(current.children) ? current.children : [];
+            const next = children.find(
+                (child) => child?.name?.toLowerCase() === segment.toLowerCase(),
+            );
+            if (!next) {
+                return { node: null, parent: current, name: segment };
+            }
+            parent = current;
+            current = next;
+        }
+        return { node: current, parent, name: current?.name ?? '' };
+    }
+
+    async getHandle(
+        path: string,
+        create: 'file' | 'directory' | false = false
+    ): Promise<{ kind: 'file' | 'directory' } | null> {
+        const entry = this.findEntry(path);
+        if (entry.node) {
+            return { kind: entry.node.type === 'folder' ? 'directory' : 'file' };
+        }
+
+        if (!create || !entry.parent) return null;
+
+        if (create === 'directory') {
+            const folder: FauxFileNode = {
+                id: createNodeId(),
+                name: entry.name,
+                type: 'folder',
+                children: [],
+            };
+            entry.parent.children = [...(entry.parent.children ?? []), folder];
+            this.persistTree(this.getRoot());
+            return { kind: 'directory' };
+        }
+
+        const file: FauxFileNode = {
+            id: createNodeId(),
+            name: entry.name,
+            type: 'file',
+            content: '',
+        };
+        entry.parent.children = [...(entry.parent.children ?? []), file];
+        this.persistTree(this.getRoot());
+        return { kind: 'file' };
+    }
+
+    async readDirectory(path: string): Promise<FileEntry[] | null> {
+        const entry = this.findEntry(path);
+        if (!entry.node || entry.node.type !== 'folder') return null;
+        const entries: FauxFileNode[] = Array.isArray(entry.node.children) ? entry.node.children : [];
+        return entries
+            .map<FileEntry>((child) => ({
+                name: child.name,
+                kind: child.type === 'folder' ? 'directory' : 'file',
+            }))
+            .sort((a, b) => {
+                if (a.kind === b.kind) return a.name.localeCompare(b.name);
+                return a.kind === 'directory' ? -1 : 1;
+            });
+    }
+
+    async readFile(path: string): Promise<string | null> {
+        const entry = this.findEntry(path);
+        if (!entry.node || entry.node.type !== 'file') return null;
+        if (typeof entry.node.content === 'string') return entry.node.content;
+        if (entry.node.url) {
+            return `File available at ${entry.node.url}`;
+        }
+        return '';
+    }
+
+    async writeFile(path: string, content: string): Promise<boolean> {
+        const entry = this.findEntry(path);
+        if (entry.node && entry.node.type === 'file') {
+            entry.node.content = content;
+            this.persistTree(this.getRoot());
+            return true;
+        }
+
+        if (!entry.parent || entry.parent.type !== 'folder') return false;
+        const file: FauxFileNode = {
+            id: createNodeId(),
+            name: entry.name,
+            type: 'file',
+            content,
+        };
+        entry.parent.children = [...(entry.parent.children ?? []), file];
+        this.persistTree(this.getRoot());
+        return true;
+    }
+
+    async createDirectory(path: string): Promise<boolean> {
+        const entry = this.findEntry(path);
+        if (entry.node) return false;
+        if (!entry.parent || entry.parent.type !== 'folder') return false;
+        const folder: FauxFileNode = {
+            id: createNodeId(),
+            name: entry.name,
+            type: 'folder',
+            children: [],
+        };
+        entry.parent.children = [...(entry.parent.children ?? []), folder];
+        this.persistTree(this.getRoot());
+        return true;
+    }
+
+    async deleteEntry(path: string): Promise<boolean> {
+        const entry = this.findEntry(path);
+        if (!entry.parent || !entry.parent.children) return false;
+        const next = entry.parent.children.filter((child) => child.name !== entry.name);
+        if (next.length === entry.parent.children.length) return false;
+        entry.parent.children = next;
+        this.persistTree(this.getRoot());
+        return true;
+    }
+
+    async exists(path: string): Promise<boolean> {
+        const entry = this.findEntry(path);
+        return !!entry.node;
     }
 }
