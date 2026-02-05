@@ -16,8 +16,15 @@ const RangeUpgradeTree = ({ tower }: RangeUpgradeTreeProps) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const w = canvas.width;
-    const h = canvas.height;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = rect.width || canvas.width;
+    const h = rect.height || canvas.height;
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
 
     const ranges = Array.from(
@@ -58,7 +65,7 @@ const RangeUpgradeTree = ({ tower }: RangeUpgradeTreeProps) => {
       ref={canvasRef}
       width={80}
       height={80}
-      className="bg-ub-dark-grey"
+      className="bg-[color:var(--kali-panel)]"
       role="img"
       aria-label="Range upgrade tree"
     />
