@@ -340,7 +340,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     let contextMenuHandler: ((event: MouseEvent) => void) | null = null;
     let focusHandler: (() => void) | null = null;
     let keyStopHandler: ((event: KeyboardEvent) => void) | null = null;
-    let keyCaptureHandler: ((event: KeyboardEvent) => void) | null = null;
     let inputElement: HTMLTextAreaElement | null = null;
 
     const init = async () => {
@@ -482,7 +481,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
         term.focus();
       };
       keyStopHandler = (event: KeyboardEvent) => event.stopPropagation();
-      keyCaptureHandler = (event: KeyboardEvent) => event.stopPropagation();
       inputElement = (term as { textarea?: HTMLTextAreaElement }).textarea ?? null;
 
       contextMenuHandler = (event: MouseEvent) => {
@@ -495,9 +493,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
       containerEl.addEventListener('contextmenu', contextMenuHandler);
       containerEl.addEventListener('pointerdown', focusHandler, true);
       term.element?.addEventListener('keydown', keyStopHandler);
-      inputElement?.addEventListener('keydown', keyCaptureHandler, true);
-      inputElement?.addEventListener('keypress', keyCaptureHandler, true);
-      inputElement?.addEventListener('keyup', keyCaptureHandler, true);
 
       // Handle Resize
       resizeHandler = () => fit.fit();
@@ -576,11 +571,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
       }
       if (keyStopHandler && terminalInstance?.element) {
         terminalInstance.element.removeEventListener('keydown', keyStopHandler);
-      }
-      if (keyCaptureHandler && inputElement) {
-        inputElement.removeEventListener('keydown', keyCaptureHandler, true);
-        inputElement.removeEventListener('keypress', keyCaptureHandler, true);
-        inputElement.removeEventListener('keyup', keyCaptureHandler, true);
       }
       workerRunner.dispose();
       termRef.current = null;
