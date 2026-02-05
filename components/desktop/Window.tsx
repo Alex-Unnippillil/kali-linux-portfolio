@@ -54,7 +54,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       id,
       focus: focusProp,
       isFocused,
-      zIndex: _ignoredZIndex,
+      zIndex: zIndexProp,
       ...rest
     } = props;
     const innerRef = useRef<BaseWindowInstance>(null);
@@ -66,6 +66,7 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       getZIndex,
     } = useDesktopZIndex();
     const windowId = id ?? null;
+    const shouldUseZIndexManager = typeof zIndexProp !== "number";
 
     const assignRef = useCallback(
       (instance: BaseWindowInstance) => {
@@ -131,23 +132,25 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
     }, [props.initialX, props.initialY, props.onPositionChange]);
 
     useEffect(() => {
-      if (!windowId) return;
+      if (!windowId || !shouldUseZIndexManager) return;
       registerWindow(windowId);
       return () => {
         unregisterWindow(windowId);
       };
-    }, [windowId, registerWindow, unregisterWindow]);
+    }, [windowId, registerWindow, unregisterWindow, shouldUseZIndexManager]);
 
     useEffect(() => {
-      if (!windowId || !isFocused) return;
+      if (!windowId || !isFocused || !shouldUseZIndexManager) return;
       focusZIndex(windowId);
-    }, [windowId, isFocused, focusZIndex]);
+    }, [windowId, isFocused, focusZIndex, shouldUseZIndexManager]);
 
     const handleFocus = useCallback(
       (targetId?: string | null) => {
         const resolvedId = targetId ?? windowId;
         if (resolvedId) {
-          focusZIndex(resolvedId);
+          if (shouldUseZIndexManager) {
+            focusZIndex(resolvedId);
+          }
           if (typeof focusProp === "function") {
             focusProp(resolvedId);
           }
@@ -158,7 +161,11 @@ const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
       [focusProp, focusZIndex, windowId],
     );
 
-    const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
+    const computedZIndex = typeof zIndexProp === "number"
+      ? zIndexProp
+      : windowId
+        ? getZIndex(windowId)
+        : baseZIndex;
 
     useEffect(() => {
       if (typeof window === "undefined") return undefined;

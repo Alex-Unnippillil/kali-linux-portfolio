@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Component } from 'react';
+import React, { useEffect, useMemo, useReducer, useRef } from 'react';
 import BootingScreen from './screen/booting_screen';
 import Desktop from './screen/desktop';
 import LockScreen from './screen/lock_screen';
@@ -11,238 +11,362 @@ import { safeLocalStorage } from '../utils/safeStorage';
 import NotificationCenter from './common/NotificationCenter';
 import SystemNotifications from './common/SystemNotifications';
 
-export default class Ubuntu extends Component {
-        constructor() {
-                super();
-                this.state = {
-                        screen_locked: false,
-                        bg_image_name: 'wall-2',
-                        booting_screen: true,
-                        shutDownScreen: false
-                };
-                this.bootScreenLoadHandler = null;
-                this.bootScreenLoadEvent = null;
-                this.bootScreenLoadTarget = null;
-                this.bootSequenceTimeoutId = null;
-        }
+const STORAGE_KEY = 'desktop-preferences-v1';
+const STORAGE_VERSION = 1;
 
-        componentDidMount() {
-                this.getLocalData();
-        }
+const PHASES = {
+  BOOTING: 'booting',
+  LOCKED: 'locked',
+  DESKTOP: 'desktop',
+};
 
-        componentWillUnmount() {
-                this.detachBootScreenLoadHandler();
-        }
+const resolveStorage = () => {
+  if (safeLocalStorage) return safeLocalStorage;
+  if (typeof localStorage !== 'undefined') return localStorage;
+  return null;
+};
 
-        detachBootScreenLoadHandler = () => {
-                if (typeof window === 'undefined') return;
+const validatePreferences = (payload) => {
+  if (!payload || typeof payload !== 'object') return null;
+  if (payload.version !== STORAGE_VERSION) return null;
+  const next = {
+    version: STORAGE_VERSION,
+    wallpaper: typeof payload.wallpaper === 'string' ? payload.wallpaper : 'wall-2',
+    theme: typeof payload.theme === 'string' ? payload.theme : 'default',
+    dockPosition: typeof payload.dockPosition === 'string' ? payload.dockPosition : 'bottom',
+    reducedMotion: typeof payload.reducedMotion === 'boolean' ? payload.reducedMotion : false,
+    screenLocked: typeof payload.screenLocked === 'boolean' ? payload.screenLocked : false,
+    lastUnlockAt: typeof payload.lastUnlockAt === 'number' ? payload.lastUnlockAt : null,
+    shutDown: typeof payload.shutDown === 'boolean' ? payload.shutDown : false,
+  };
+  return next;
+};
 
-                if (this.bootScreenLoadHandler) {
-                        const target = this.bootScreenLoadTarget || window;
-                        const eventType = this.bootScreenLoadEvent || 'load';
-                        target.removeEventListener(eventType, this.bootScreenLoadHandler);
-                        this.bootScreenLoadHandler = null;
-                        this.bootScreenLoadEvent = null;
-                        this.bootScreenLoadTarget = null;
-                }
+const loadLegacyPreferences = () => {
+  const storage = resolveStorage();
+  if (!storage) return null;
+  const wallpaper = storage.getItem('bg-image') || undefined;
+  const lockedValue = storage.getItem('screen-locked');
+  const shutDownValue = storage.getItem('shut-down');
+  if (!wallpaper && lockedValue == null && shutDownValue == null) return null;
+  return {
+    version: STORAGE_VERSION,
+    wallpaper: wallpaper || 'wall-2',
+    theme: 'default',
+    dockPosition: 'bottom',
+    reducedMotion: false,
+    screenLocked: lockedValue === 'true',
+    lastUnlockAt: null,
+    shutDown: shutDownValue === 'true',
+  };
+};
 
-                if (this.bootSequenceTimeoutId) {
-                        window.clearTimeout(this.bootSequenceTimeoutId);
-                        this.bootSequenceTimeoutId = null;
-                }
-        };
+const loadPreferences = () => {
+  const storage = resolveStorage();
+  if (!storage) return null;
+  try {
+    const stored = storage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const validated = validatePreferences(parsed);
+      if (validated) return validated;
+    }
+  } catch (error) {
+    // ignore parse errors
+  }
+  return loadLegacyPreferences();
+};
 
-        hideBootScreen = () => {
-                this.setState({ booting_screen: false });
-        };
+const persistPreferences = (prefs) => {
+  const storage = resolveStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+  } catch (error) {
+    // ignore storage errors
+  }
+};
 
-        waitForBootSequence = () => {
-                if (typeof window === 'undefined' || typeof document === 'undefined') return;
+const buildInitialState = () => {
+  const stored = loadPreferences();
+  const skipBoot = process.env.NEXT_PUBLIC_SKIP_BOOT === 'true';
+  const hasBootedBefore = typeof safeLocalStorage?.getItem('booting_screen') !== 'undefined'
+    ? safeLocalStorage?.getItem('booting_screen') !== null
+    : false;
+  const shouldBoot = !skipBoot && !hasBootedBefore;
+  const prefs = stored || {
+    version: STORAGE_VERSION,
+    wallpaper: 'wall-2',
+    theme: 'default',
+    dockPosition: 'bottom',
+    reducedMotion: false,
+    screenLocked: false,
+    lastUnlockAt: null,
+    shutDown: false,
+  };
 
-                const isTestEnv = typeof jest !== 'undefined';
-                const MIN_BOOT_DELAY = isTestEnv ? 0 : 350;
-                const MAX_BOOT_DELAY = isTestEnv ? 0 : 1200;
-                const hasPerformanceNow = typeof performance !== 'undefined' && typeof performance.now === 'function';
-                const bootStartTime = hasPerformanceNow ? performance.now() : null;
+  const phase = prefs.shutDown
+    ? PHASES.BOOTING
+    : prefs.screenLocked
+      ? PHASES.LOCKED
+      : shouldBoot
+        ? PHASES.BOOTING
+        : PHASES.DESKTOP;
 
-                const finalizeBoot = () => {
-                        this.hideBootScreen();
-                        this.detachBootScreenLoadHandler();
-                };
+  return {
+    phase,
+    boot: {
+      showBoot: shouldBoot,
+      skipBoot,
+      progress: 0,
+    },
+    auth: {
+      screenLocked: prefs.screenLocked,
+      lastUnlockAt: prefs.lastUnlockAt,
+      user: {
+        name: 'Alex',
+      },
+    },
+    desktop: {
+      wallpaper: prefs.wallpaper,
+      theme: prefs.theme,
+      dockPosition: prefs.dockPosition,
+      reducedMotion: prefs.reducedMotion,
+    },
+    shutDown: prefs.shutDown,
+  };
+};
 
-                const scheduleFinalize = () => {
-                        if (typeof window === 'undefined' || this.state.booting_screen === false) return;
-                        if (isTestEnv) {
-                                finalizeBoot();
-                                return;
-                        }
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'BOOT_COMPLETE': {
+      const nextPhase = state.auth.screenLocked ? PHASES.LOCKED : PHASES.DESKTOP;
+      return {
+        ...state,
+        phase: nextPhase,
+        boot: {
+          ...state.boot,
+          showBoot: false,
+          progress: 100,
+        },
+      };
+    }
+    case 'LOCK': {
+      return {
+        ...state,
+        phase: PHASES.LOCKED,
+        auth: {
+          ...state.auth,
+          screenLocked: true,
+        },
+      };
+    }
+    case 'UNLOCK': {
+      return {
+        ...state,
+        phase: PHASES.DESKTOP,
+        auth: {
+          ...state.auth,
+          screenLocked: false,
+          lastUnlockAt: action.timestamp ?? Date.now(),
+        },
+      };
+    }
+    case 'SET_WALLPAPER': {
+      return {
+        ...state,
+        desktop: {
+          ...state.desktop,
+          wallpaper: action.wallpaper,
+        },
+      };
+    }
+    case 'SHUTDOWN': {
+      return {
+        ...state,
+        shutDown: true,
+        phase: PHASES.BOOTING,
+        boot: {
+          ...state.boot,
+          showBoot: true,
+          progress: 0,
+        },
+      };
+    }
+    case 'TURN_ON': {
+      return {
+        ...state,
+        shutDown: false,
+        phase: PHASES.BOOTING,
+        boot: {
+          ...state.boot,
+          showBoot: true,
+          progress: 0,
+        },
+      };
+    }
+    default:
+      return state;
+  }
+};
 
-                        const run = () => {
-                                if (typeof window === 'undefined') return;
-                                if (isTestEnv) {
-                                        finalizeBoot();
-                                        return;
-                                }
-                                const schedule =
-                                        typeof window.requestAnimationFrame === 'function'
-                                                ? window.requestAnimationFrame.bind(window)
-                                                : (cb) => window.setTimeout(cb, 0);
-                                schedule(finalizeBoot);
-                        };
+export default function Ubuntu() {
+  const [state, dispatch] = useReducer(reducer, undefined, buildInitialState);
+  const bootTimerRef = useRef(null);
 
-                        if (isTestEnv) {
-                                finalizeBoot();
-                                return;
-                        }
-                        if (bootStartTime !== null) {
-                                const elapsed = performance.now() - bootStartTime;
-                                const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
-                                if (remaining > 0 && !isTestEnv) {
-                                        window.setTimeout(run, remaining);
-                                        return;
-                                }
-                        } else if (MIN_BOOT_DELAY > 0 && !isTestEnv) {
-                                window.setTimeout(run, MIN_BOOT_DELAY);
-                                return;
-                        }
+  const prefsSnapshot = useMemo(
+    () => ({
+      version: STORAGE_VERSION,
+      wallpaper: state.desktop.wallpaper,
+      theme: state.desktop.theme,
+      dockPosition: state.desktop.dockPosition,
+      reducedMotion: state.desktop.reducedMotion,
+      screenLocked: state.auth.screenLocked,
+      lastUnlockAt: state.auth.lastUnlockAt,
+      shutDown: state.shutDown,
+    }),
+    [state.desktop, state.auth, state.shutDown],
+  );
 
-                        run();
-                };
+  useEffect(() => {
+    persistPreferences(prefsSnapshot);
+  }, [prefsSnapshot]);
 
-                this.detachBootScreenLoadHandler();
+  useEffect(() => {
+    if (typeof safeLocalStorage?.setItem === 'function') {
+      safeLocalStorage.setItem('booting_screen', false);
+    }
+  }, []);
 
-                const finalizeAndClearTimers = () => {
-                        if (this.bootSequenceTimeoutId) {
-                                window.clearTimeout(this.bootSequenceTimeoutId);
-                                this.bootSequenceTimeoutId = null;
-                        }
-                        scheduleFinalize();
-                };
+  useEffect(() => {
+    if (state.phase !== PHASES.BOOTING) {
+      return undefined;
+    }
 
-                if (document.readyState === 'complete') {
-                        scheduleFinalize();
-                        return;
-                }
+    if (state.boot.skipBoot) {
+      dispatch({ type: 'BOOT_COMPLETE' });
+      return undefined;
+    }
 
-                this.bootScreenLoadHandler = () => {
-                        finalizeAndClearTimers();
-                };
-                this.bootScreenLoadEvent = 'load';
-                this.bootScreenLoadTarget = window;
-                window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
 
-                this.bootSequenceTimeoutId = window.setTimeout(() => {
-                        scheduleFinalize();
-                }, MAX_BOOT_DELAY);
-        };
+    const isTestEnv = typeof jest !== 'undefined';
+    const MIN_BOOT_DELAY = isTestEnv ? 0 : 350;
+    const MAX_BOOT_DELAY = isTestEnv ? 0 : 1200;
 
-        getLocalData = () => {
-                // Get Previously selected Background Image
-                let bg_image_name = safeLocalStorage?.getItem('bg-image');
-                if (bg_image_name !== null && bg_image_name !== undefined) {
-                        this.setState({ bg_image_name });
-                }
+    const finalizeBoot = () => {
+      dispatch({ type: 'BOOT_COMPLETE' });
+      if (bootTimerRef.current) {
+        window.clearTimeout(bootTimerRef.current);
+        bootTimerRef.current = null;
+      }
+    };
 
-                let booting_screen = safeLocalStorage?.getItem('booting_screen');
-                if (booting_screen !== null && booting_screen !== undefined) {
-                        // user has visited site before
-                        this.setState({ booting_screen: false });
-                } else {
-                        // user is visiting site for the first time
-                        safeLocalStorage?.setItem('booting_screen', false);
-                        this.waitForBootSequence();
-                }
+    const startTime = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    const scheduleFinalize = () => {
+      if (isTestEnv) {
+        finalizeBoot();
+        return;
+      }
+      const elapsed = (typeof performance !== 'undefined' && performance.now)
+        ? performance.now() - startTime
+        : Date.now() - startTime;
+      const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
+      if (remaining > 0) {
+        bootTimerRef.current = window.setTimeout(finalizeBoot, remaining);
+      } else {
+        finalizeBoot();
+      }
+    };
 
-                // get shutdown state
-                let shut_down = safeLocalStorage?.getItem('shut-down');
-                if (shut_down !== null && shut_down !== undefined && shut_down === 'true') this.shutDown();
-                else {
-                        // Get previous lock screen state
-                        let screen_locked = safeLocalStorage?.getItem('screen-locked');
-                        if (screen_locked !== null && screen_locked !== undefined) {
-                                this.setState({ screen_locked: screen_locked === 'true' ? true : false });
-                        }
-                }
-        };
+    const handleLoad = () => scheduleFinalize();
 
-        lockScreen = () => {
-                logPageView('/lock-screen', 'Lock Screen');
-                logEvent({
-                        category: 'Screen Change',
-                        action: 'Set Screen to Locked'
-                });
+    if (document.readyState === 'complete' || isTestEnv) {
+      scheduleFinalize();
+    } else {
+      window.addEventListener('load', handleLoad, { once: true });
+      bootTimerRef.current = window.setTimeout(scheduleFinalize, MAX_BOOT_DELAY);
+    }
 
-                const statusBar = document.getElementById('status-bar');
-                // Consider using a React ref if the status bar element lives within this component tree
-                statusBar?.blur();
-                const finalizeLock = () => {
-                        this.setState({ screen_locked: true });
-                };
-                if (typeof jest !== 'undefined') {
-                        finalizeLock();
-                } else {
-                        setTimeout(finalizeLock, 100); // waiting for all windows to close (transition-duration)
-                }
-                safeLocalStorage?.setItem('screen-locked', true);
-        };
+    return () => {
+      window.removeEventListener('load', handleLoad);
+      if (bootTimerRef.current) {
+        window.clearTimeout(bootTimerRef.current);
+        bootTimerRef.current = null;
+      }
+    };
+  }, [state.phase, state.boot.skipBoot]);
 
-        unLockScreen = () => {
-                logPageView('/desktop', 'Custom Title');
+  const lockScreen = () => {
+    logPageView('/lock-screen', 'Lock Screen');
+    logEvent({
+      category: 'Screen Change',
+      action: 'Set Screen to Locked',
+    });
+    const statusBar = document.getElementById('status-bar');
+    statusBar?.blur();
+    if (typeof jest !== 'undefined') {
+      dispatch({ type: 'LOCK' });
+    } else {
+      window.setTimeout(() => dispatch({ type: 'LOCK' }), 100);
+    }
+  };
 
-                window.removeEventListener('click', this.unLockScreen);
-                window.removeEventListener('keypress', this.unLockScreen);
+  const unLockScreen = () => {
+    logPageView('/desktop', 'Custom Title');
+    dispatch({ type: 'UNLOCK', timestamp: Date.now() });
+  };
 
-                this.setState({ screen_locked: false });
-                safeLocalStorage?.setItem('screen-locked', false);
-        };
+  const changeBackgroundImage = (imgName) => {
+    dispatch({ type: 'SET_WALLPAPER', wallpaper: imgName });
+  };
 
-        changeBackgroundImage = (img_name) => {
-                this.setState({ bg_image_name: img_name });
-                safeLocalStorage?.setItem('bg-image', img_name);
-        };
+  const shutDown = () => {
+    logPageView('/switch-off', 'Custom Title');
+    logEvent({
+      category: 'Screen Change',
+      action: 'Switched off the Ubuntu',
+    });
+    const statusBar = document.getElementById('status-bar');
+    statusBar?.blur();
+    dispatch({ type: 'SHUTDOWN' });
+  };
 
-        shutDown = () => {
-                logPageView('/switch-off', 'Custom Title');
+  const turnOn = () => {
+    logPageView('/desktop', 'Custom Title');
+    dispatch({ type: 'TURN_ON' });
+  };
 
-                logEvent({
-                        category: 'Screen Change',
-                        action: 'Switched off the Ubuntu'
-                });
+  const isLocked = state.phase === PHASES.LOCKED;
+  const isBooting = state.phase === PHASES.BOOTING && state.boot.showBoot;
 
-                const statusBar = document.getElementById('status-bar');
-                // Consider using a React ref if the status bar element lives within this component tree
-                statusBar?.blur();
-                this.setState({ shutDownScreen: true });
-                safeLocalStorage?.setItem('shut-down', true);
-        };
-
-        turnOn = () => {
-                logPageView('/desktop', 'Custom Title');
-
-                this.setState({ shutDownScreen: false, booting_screen: true }, this.waitForBootSequence);
-                safeLocalStorage?.setItem('shut-down', false);
-        };
-
-        render() {
-                return (
-                        <Layout id="monitor-screen">
-                                <NotificationCenter>
-                                        <SystemNotifications />
-                                        <LockScreen
-                                                isLocked={this.state.screen_locked}
-                                                bgImgName={this.state.bg_image_name}
-                                                unLockScreen={this.unLockScreen}
-                                        />
-                                        <BootingScreen
-                                                visible={this.state.booting_screen}
-                                                isShutDown={this.state.shutDownScreen}
-                                                turnOn={this.turnOn}
-                                                disableMessageSequence={typeof jest !== 'undefined'}
-                                        />
-                                        <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-                                        <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
-                                </NotificationCenter>
-                        </Layout>
-                );
-        }
+  return (
+    <Layout id="monitor-screen">
+      <NotificationCenter>
+        <SystemNotifications />
+        <LockScreen
+          isLocked={isLocked}
+          bgImgName={state.desktop.wallpaper}
+          unLockScreen={unLockScreen}
+        />
+        <BootingScreen
+          visible={isBooting}
+          isShutDown={state.shutDown}
+          turnOn={turnOn}
+          disableMessageSequence={typeof jest !== 'undefined'}
+        />
+        {state.phase === PHASES.DESKTOP && (
+          <>
+            <Navbar lockScreen={lockScreen} shutDown={shutDown} />
+            <Desktop
+              bg_image_name={state.desktop.wallpaper}
+              changeBackgroundImage={changeBackgroundImage}
+            />
+          </>
+        )}
+      </NotificationCenter>
+    </Layout>
+  );
 }

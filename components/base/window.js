@@ -21,6 +21,7 @@ const EDGE_THRESHOLD_RATIO = 0.05;
 const SNAP_COMMIT_THRESHOLD_MIN = 24;
 const SNAP_COMMIT_THRESHOLD_MAX = 96;
 const SNAP_COMMIT_THRESHOLD_RATIO = 0.02;
+const SNAP_HYSTERESIS_MS = 90;
 const DRAG_BOUNDS_PADDING = 96;
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -272,6 +273,9 @@ export class Window extends Component {
         this._positionSyncFrame = null;
         this._isUnmounted = false;
         this._hasRestoredLayout = false;
+        this._snapCandidate = null;
+        this._snapCandidateAt = null;
+        this._snapCandidatePreview = null;
     }
 
     notifySizeChange = () => {
@@ -1249,17 +1253,33 @@ export class Window extends Component {
         const horizontalThreshold = computeEdgeThreshold(viewportWidth);
         const verticalThreshold = computeEdgeThreshold(viewportHeight);
         const resolvedCandidate = this.resolveSnapCandidate(rect, horizontalThreshold, verticalThreshold);
-        if (resolvedCandidate) {
-            const { position, preview } = resolvedCandidate;
-            const samePosition = this.state.snapPosition === position;
+        const now = typeof performance !== 'undefined' && typeof performance.now === 'function'
+            ? performance.now()
+            : Date.now();
+        const candidateKey = resolvedCandidate ? resolvedCandidate.position : null;
+        const candidatePreview = resolvedCandidate ? resolvedCandidate.preview : null;
+
+        if (candidateKey !== this._snapCandidate) {
+            this._snapCandidate = candidateKey;
+            this._snapCandidatePreview = candidatePreview;
+            this._snapCandidateAt = now;
+        }
+
+        const elapsed = this._snapCandidateAt ? now - this._snapCandidateAt : SNAP_HYSTERESIS_MS;
+        if (elapsed < SNAP_HYSTERESIS_MS) {
+            return;
+        }
+
+        if (candidateKey && candidatePreview) {
+            const samePosition = this.state.snapPosition === candidateKey;
             const samePreview =
                 this.state.snapPreview &&
-                this.state.snapPreview.left === preview.left &&
-                this.state.snapPreview.top === preview.top &&
-                this.state.snapPreview.width === preview.width &&
-                this.state.snapPreview.height === preview.height;
+                this.state.snapPreview.left === candidatePreview.left &&
+                this.state.snapPreview.top === candidatePreview.top &&
+                this.state.snapPreview.width === candidatePreview.width &&
+                this.state.snapPreview.height === candidatePreview.height;
             if (!samePosition || !samePreview) {
-                this.setState({ snapPreview: preview, snapPosition: position });
+                this.setState({ snapPreview: candidatePreview, snapPosition: candidateKey });
             }
         } else if (this.state.snapPreview) {
             this.setState({ snapPreview: null, snapPosition: null });
@@ -1379,6 +1399,13 @@ export class Window extends Component {
         if (e?.cancelable && (e.type === 'touchstart' || e.pointerType === 'touch')) {
             e.preventDefault();
         }
+        if (typeof e?.currentTarget?.setPointerCapture === 'function' && typeof e?.pointerId === 'number') {
+            try {
+                e.currentTarget.setPointerCapture(e.pointerId);
+            } catch (error) {
+                // Ignore pointer capture failures in unsupported environments.
+            }
+        }
         this.changeCursorToMove();
         const node = this.resolveDragNode(data);
         const coordinates = this.resolveDragCoordinates(data, node);
@@ -1387,9 +1414,16 @@ export class Window extends Component {
         this.updatePositionState(resisted.x, resisted.y);
     }
 
-    handleStop = () => {
+    handleStop = (event) => {
         this.flushPendingDragUpdate();
         this.changeCursorToDefault();
+        if (typeof event?.currentTarget?.releasePointerCapture === 'function' && typeof event?.pointerId === 'number') {
+            try {
+                event.currentTarget.releasePointerCapture(event.pointerId);
+            } catch (error) {
+                // Ignore pointer capture errors
+            }
+        }
         const node = this.getWindowNode();
         if (node && typeof node.getBoundingClientRect === 'function') {
             const rect = node.getBoundingClientRect();
@@ -1926,6 +1960,10 @@ export class Window extends Component {
 
     handleKeyDown = (e) => {
         if (e.key === 'Escape') {
+            if (this.state.snapPreview || this.state.snapPosition) {
+                this.setState({ snapPreview: null, snapPosition: null });
+                return;
+            }
             this.closeWindow();
         } else if (e.key === 'Tab') {
             this.focusWindow();
@@ -2111,7 +2149,7 @@ export class Window extends Component {
                         data-window-state={windowState}
                         aria-hidden={this.props.minimized ? true : false}
                         aria-label={this.props.title}
-                        tabIndex={0}
+                        tabIndex={this.props.minimized ? -1 : 0}
                         onKeyDown={this.handleKeyDown}
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}

@@ -108,6 +108,31 @@ const withCategoryDefaults = (app) => {
   };
 };
 
+const withWindowDefaults = (app) => {
+  const preferredWidth = typeof app.preferredSize?.w === 'number'
+    ? app.preferredSize.w
+    : (typeof app.defaultWidth === 'number' ? app.defaultWidth : 70);
+  const preferredHeight = typeof app.preferredSize?.h === 'number'
+    ? app.preferredSize.h
+    : (typeof app.defaultHeight === 'number' ? app.defaultHeight : 70);
+  const minWidth = typeof app.minSize?.w === 'number'
+    ? app.minSize.w
+    : (typeof app.minWidth === 'number' ? app.minWidth : 25);
+  const minHeight = typeof app.minSize?.h === 'number'
+    ? app.minSize.h
+    : (typeof app.minHeight === 'number' ? app.minHeight : 25);
+
+  return {
+    ...app,
+    preferredSize: app.preferredSize || { w: preferredWidth, h: preferredHeight },
+    minSize: app.minSize || { w: minWidth, h: minHeight },
+    startMaximizedOnMobile: typeof app.startMaximizedOnMobile === 'boolean'
+      ? app.startMaximizedOnMobile
+      : true,
+    resizable: typeof app.resizable === 'boolean' ? app.resizable : true,
+  };
+};
+
 // Dynamic applications and games
 const TerminalApp = createDynamicApp(() => import('./components/apps/terminal'), 'Terminal');
 // VSCode app uses a Stack iframe, so no editor dependencies are required
@@ -408,7 +433,7 @@ const utilityList = [
   },
 ];
 
-export const utilities = utilityList.map((app) => withCategoryDefaults(app));
+export const utilities = utilityList.map((app) => withCategoryDefaults(withWindowDefaults(app)));
 
 // Default window sizing for games to prevent oversized frames
 export const gameDefaults = {
@@ -736,7 +761,7 @@ const gameList = [
 ];
 
 export const games = gameList.map((game) =>
-  withCategoryDefaults({ ...gameDefaults, ...game, category: 'games' })
+  withCategoryDefaults(withWindowDefaults({ ...gameDefaults, ...game, category: 'games' }))
 );
 
 const folderApps = DEFAULT_DESKTOP_FOLDERS.map((folder) => ({
@@ -1357,6 +1382,6 @@ const apps = [
   ...utilities,
   // Games are included so they appear alongside apps
   ...games,
-].map((app) => withCategoryDefaults(app));
+].map((app) => withCategoryDefaults(withWindowDefaults(app)));
 
 export default apps;
