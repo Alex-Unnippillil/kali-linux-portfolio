@@ -127,11 +127,15 @@ export function createSessionManager({
   const autocomplete = () => {
     const registry = currentConfig.getRegistry();
     const entries = Object.values(registry);
+    if (cursorPos !== buffer.length) {
+      return;
+    }
     const matches = entries.filter((c) => c.name.startsWith(buffer));
     if (matches.length === 1) {
       const completion = matches[0].name.slice(buffer.length);
       if (completion) currentConfig.write(completion);
       buffer = matches[0].name;
+      cursorPos = buffer.length;
     } else if (matches.length > 1) {
       currentConfig.write('\r\n');
       matches
