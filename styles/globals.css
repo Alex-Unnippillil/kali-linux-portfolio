@@ -2,37 +2,77 @@
 
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
-  /* Base colors */
-  --color-bg: #0b121a; /* kali background */
-  --color-text: #f5faff; /* text on dark backgrounds */
-  /* Brand accents */
-  --color-primary: #0f94d2; /* kali blue accent */
-  --color-secondary: #111b24; /* complementary dark */
-  --color-accent: #0f94d2; /* accent matches primary */
-  --color-error: #ff4d6d; /* alert and error states */
+  /* Base colors (RGB tokens for opacity-safe Tailwind utilities) */
+  --color-bg-rgb: 11 18 26;
+  --color-text-rgb: 245 250 255;
+  --color-primary-rgb: 15 148 210;
+  --color-secondary-rgb: 17 27 36;
+  --color-accent-rgb: 15 148 210;
+  --color-error-rgb: 255 77 109;
+  --color-muted-rgb: 26 37 51;
+  --color-surface-rgb: 17 27 36;
+  --color-surface-muted-rgb: 17 27 36;
+  --color-surface-raised-rgb: 17 26 35;
+  --color-inverse-rgb: 0 0 0;
+  --color-border-rgb: 15 148 210;
+  --color-terminal-rgb: 69 255 154;
+  --color-success-rgb: 69 255 154;
+  --color-warning-rgb: 245 183 77;
+  --color-danger-rgb: 248 114 114;
+  --color-dark-rgb: 9 18 28;
+  --color-focus-ring-rgb: 15 148 210;
+  --color-selection-rgb: 15 148 210;
+  --color-control-accent-rgb: 15 148 210;
+  --color-info-rgb: 56 189 248;
+  --color-severity-low-rgb: 22 163 74;
+  --color-severity-medium-rgb: 202 138 4;
+  --color-severity-high-rgb: 234 88 12;
+  --color-severity-critical-rgb: 239 68 68;
+  --color-overlay-strong-rgb: 9 15 23;
+  --color-overlay-soft-rgb: 9 15 23;
+  --kali-panel-rgb: 17 27 36;
+  --kali-bg-rgb: 9 15 23;
+  --game-danger-rgb: 185 28 28;
+  --color-border-alpha: 0.18;
+  --color-surface-muted-alpha: 0.82;
+  --color-surface-raised-alpha: 1;
+  --color-overlay-strong-alpha: 0.82;
+  --color-overlay-soft-alpha: 0.65;
+  --kali-panel-alpha: 0.92;
+  --kali-bg-alpha: 0.9;
+
+  /* Existing tokens computed from RGB values */
+  --color-bg: rgb(var(--color-bg-rgb)); /* kali background */
+  --color-text: rgb(var(--color-text-rgb)); /* text on dark backgrounds */
+  --color-primary: rgb(var(--color-primary-rgb)); /* kali blue accent */
+  --color-secondary: rgb(var(--color-secondary-rgb)); /* complementary dark */
+  --color-accent: rgb(var(--color-accent-rgb)); /* accent matches primary */
+  --color-error: rgb(var(--color-error-rgb)); /* alert and error states */
   --kali-blue: var(--color-primary);
-  /* Utility colors */
-  --color-muted: #1a2533; /* muted surfaces */
-  --color-surface: #111b24; /* panel surfaces */
-  --color-inverse: #000000; /* inverse of text */
-  --color-border: var(--kali-border); /* subtle borders */
-  --color-terminal: var(--kali-terminal-green); /* terminal green */
-  --color-success: var(--color-terminal);
-  --color-warning: #f5b74d;
-  --color-danger: #f87272;
-  --color-dark: #09121c; /* card back */
-  --color-focus-ring: var(--color-accent);
-  --color-selection: var(--color-accent);
-  --color-control-accent: var(--color-accent);
-  --color-surface-muted: color-mix(in srgb, var(--color-surface) 82%, transparent 18%);
-  --color-surface-raised: color-mix(in srgb, var(--color-surface) 94%, var(--color-bg) 6%);
-  --color-overlay-strong: color-mix(in srgb, var(--kali-bg) 82%, transparent 18%);
-  --color-overlay-soft: color-mix(in srgb, var(--kali-bg) 65%, transparent 35%);
-  --color-info: #38bdf8;
-  --color-severity-low: #16a34a;
-  --color-severity-medium: #ca8a04;
-  --color-severity-high: #ea580c;
-  --color-severity-critical: #ef4444;
+  --color-muted: rgb(var(--color-muted-rgb)); /* muted surfaces */
+  --color-surface: rgb(var(--color-surface-rgb)); /* panel surfaces */
+  --color-inverse: rgb(var(--color-inverse-rgb)); /* inverse of text */
+  --color-border: rgb(var(--color-border-rgb) / var(--color-border-alpha)); /* subtle borders */
+  --kali-border: var(--color-border);
+  --color-terminal: rgb(var(--color-terminal-rgb)); /* terminal green */
+  --color-success: rgb(var(--color-success-rgb));
+  --color-warning: rgb(var(--color-warning-rgb));
+  --color-danger: rgb(var(--color-danger-rgb));
+  --color-dark: rgb(var(--color-dark-rgb)); /* card back */
+  --color-focus-ring: rgb(var(--color-focus-ring-rgb));
+  --color-selection: rgb(var(--color-selection-rgb));
+  --color-control-accent: rgb(var(--color-control-accent-rgb));
+  --color-surface-muted: rgb(var(--color-surface-muted-rgb) / var(--color-surface-muted-alpha));
+  --color-surface-raised: rgb(var(--color-surface-raised-rgb) / var(--color-surface-raised-alpha));
+  --color-overlay-strong: rgb(var(--color-overlay-strong-rgb) / var(--color-overlay-strong-alpha));
+  --color-overlay-soft: rgb(var(--color-overlay-soft-rgb) / var(--color-overlay-soft-alpha));
+  --color-info: rgb(var(--color-info-rgb));
+  --color-severity-low: rgb(var(--color-severity-low-rgb));
+  --color-severity-medium: rgb(var(--color-severity-medium-rgb));
+  --color-severity-high: rgb(var(--color-severity-high-rgb));
+  --color-severity-critical: rgb(var(--color-severity-critical-rgb));
+  --kali-panel: rgb(var(--kali-panel-rgb) / var(--kali-panel-alpha));
+  --kali-bg: rgb(var(--kali-bg-rgb) / var(--kali-bg-alpha));
   --kali-text: var(--color-text);
   --kali-text-muted: color-mix(in srgb, var(--color-text) 82%, var(--color-bg) 18%);
   --kali-text-subtle: color-mix(in srgb, var(--color-text) 68%, var(--color-bg) 32%);
@@ -67,77 +107,107 @@ body::after {
 
 /* Dark theme */
 html[data-theme='dark'] {
-  --color-bg: #000000;
-  --color-text: #e5e5e5;
-  --color-primary: #1e88e5;
-  --color-secondary: #121212;
-  --color-accent: #bb86fc;
-  --color-error: #ff6b6b;
-  --color-muted: #1f1f1f;
-  --color-surface: #121212;
-  --color-surface-muted: color-mix(in srgb, var(--color-surface) 84%, transparent 16%);
-  --color-surface-raised: color-mix(in srgb, var(--color-surface) 92%, var(--color-bg) 8%);
-  --color-inverse: #ffffff;
-  --color-border: #333333;
-  --color-terminal: #00ff00;
-  --color-dark: #0a0a0a;
-  --color-overlay-strong: rgba(0, 0, 0, 0.8);
-  --color-overlay-soft: rgba(0, 0, 0, 0.55);
-  --color-info: #38bdf8;
-  --color-severity-low: #22c55e;
-  --color-severity-medium: #eab308;
-  --color-severity-high: #f97316;
-  --color-severity-critical: #f87171;
+  --color-bg-rgb: 0 0 0;
+  --color-text-rgb: 229 229 229;
+  --color-primary-rgb: 30 136 229;
+  --color-secondary-rgb: 18 18 18;
+  --color-accent-rgb: 187 134 252;
+  --color-error-rgb: 255 107 107;
+  --color-muted-rgb: 31 31 31;
+  --color-surface-rgb: 18 18 18;
+  --color-surface-muted-rgb: 18 18 18;
+  --color-surface-raised-rgb: 17 17 17;
+  --color-inverse-rgb: 255 255 255;
+  --color-border-rgb: 51 51 51;
+  --color-terminal-rgb: 0 255 0;
+  --color-success-rgb: 0 255 0;
+  --color-dark-rgb: 10 10 10;
+  --color-focus-ring-rgb: 187 134 252;
+  --color-selection-rgb: 187 134 252;
+  --color-control-accent-rgb: 187 134 252;
+  --color-info-rgb: 56 189 248;
+  --color-severity-low-rgb: 34 197 94;
+  --color-severity-medium-rgb: 234 179 8;
+  --color-severity-high-rgb: 249 115 22;
+  --color-severity-critical-rgb: 248 113 113;
+  --color-overlay-strong-rgb: 0 0 0;
+  --color-overlay-soft-rgb: 0 0 0;
+  --color-border-alpha: 1;
+  --color-surface-muted-alpha: 0.84;
+  --color-overlay-strong-alpha: 0.8;
+  --color-overlay-soft-alpha: 0.55;
+  --kali-panel-rgb: 18 18 18;
+  --kali-bg-rgb: 0 0 0;
 }
 
 /* Neon theme */
 html[data-theme='neon'] {
-  --color-bg: #000000;
-  --color-text: #ffffff;
-  --color-primary: #39ff14;
-  --color-secondary: #1a1a1a;
-  --color-accent: #ff00ff;
-  --color-error: #ff5cf4;
-  --color-muted: #222222;
-  --color-surface: #111111;
-  --color-surface-muted: color-mix(in srgb, var(--color-surface) 75%, transparent 25%);
-  --color-surface-raised: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg) 12%);
-  --color-inverse: #ffffff;
-  --color-border: #333333;
-  --color-terminal: #39ff14;
-  --color-dark: #000000;
-  --color-overlay-strong: rgba(0, 0, 0, 0.85);
-  --color-overlay-soft: rgba(0, 0, 0, 0.6);
-  --color-info: #38bdf8;
-  --color-severity-low: #16a34a;
-  --color-severity-medium: #ca8a04;
-  --color-severity-high: #ea580c;
-  --color-severity-critical: #ef4444;
+  --color-bg-rgb: 0 0 0;
+  --color-text-rgb: 255 255 255;
+  --color-primary-rgb: 57 255 20;
+  --color-secondary-rgb: 26 26 26;
+  --color-accent-rgb: 255 0 255;
+  --color-error-rgb: 255 92 244;
+  --color-muted-rgb: 34 34 34;
+  --color-surface-rgb: 17 17 17;
+  --color-surface-muted-rgb: 17 17 17;
+  --color-surface-raised-rgb: 15 15 15;
+  --color-inverse-rgb: 255 255 255;
+  --color-border-rgb: 51 51 51;
+  --color-terminal-rgb: 57 255 20;
+  --color-success-rgb: 57 255 20;
+  --color-dark-rgb: 0 0 0;
+  --color-focus-ring-rgb: 255 0 255;
+  --color-selection-rgb: 255 0 255;
+  --color-control-accent-rgb: 255 0 255;
+  --color-info-rgb: 56 189 248;
+  --color-severity-low-rgb: 22 163 74;
+  --color-severity-medium-rgb: 202 138 4;
+  --color-severity-high-rgb: 234 88 12;
+  --color-severity-critical-rgb: 239 68 68;
+  --color-overlay-strong-rgb: 0 0 0;
+  --color-overlay-soft-rgb: 0 0 0;
+  --color-border-alpha: 1;
+  --color-surface-muted-alpha: 0.75;
+  --color-overlay-strong-alpha: 0.85;
+  --color-overlay-soft-alpha: 0.6;
+  --kali-panel-rgb: 17 17 17;
+  --kali-bg-rgb: 0 0 0;
 }
 
 /* Matrix theme */
 html[data-theme='matrix'] {
-  --color-bg: #000000;
-  --color-text: #00ff00;
-  --color-primary: #00ff00;
-  --color-secondary: #001100;
-  --color-accent: #00ff00;
-  --color-error: #ff4d4d;
-  --color-muted: #003300;
-  --color-surface: #001100;
-  --color-surface-muted: color-mix(in srgb, var(--color-surface) 70%, transparent 30%);
-  --color-surface-raised: color-mix(in srgb, var(--color-surface) 88%, var(--color-bg) 12%);
-  --color-inverse: #ffffff;
-  --color-border: #003300;
-  --color-terminal: #00ff00;
-  --color-dark: #000000;
-  --color-overlay-strong: rgba(0, 0, 0, 0.85);
-  --color-overlay-soft: rgba(0, 0, 0, 0.6);
-  --color-info: #38bdf8;
-  --color-severity-low: #16a34a;
-  --color-severity-medium: #ca8a04;
-  --color-severity-high: #ea580c;
-  --color-severity-critical: #ef4444;
+  --color-bg-rgb: 0 0 0;
+  --color-text-rgb: 0 255 0;
+  --color-primary-rgb: 0 255 0;
+  --color-secondary-rgb: 0 17 0;
+  --color-accent-rgb: 0 255 0;
+  --color-error-rgb: 255 77 77;
+  --color-muted-rgb: 0 51 0;
+  --color-surface-rgb: 0 17 0;
+  --color-surface-muted-rgb: 0 17 0;
+  --color-surface-raised-rgb: 0 15 0;
+  --color-inverse-rgb: 255 255 255;
+  --color-border-rgb: 0 51 0;
+  --color-terminal-rgb: 0 255 0;
+  --color-success-rgb: 0 255 0;
+  --color-dark-rgb: 0 0 0;
+  --color-focus-ring-rgb: 0 255 0;
+  --color-selection-rgb: 0 255 0;
+  --color-control-accent-rgb: 0 255 0;
+  --color-info-rgb: 56 189 248;
+  --color-severity-low-rgb: 22 163 74;
+  --color-severity-medium-rgb: 202 138 4;
+  --color-severity-high-rgb: 234 88 12;
+  --color-severity-critical-rgb: 239 68 68;
+  --color-overlay-strong-rgb: 0 0 0;
+  --color-overlay-soft-rgb: 0 0 0;
+  --color-border-alpha: 1;
+  --color-surface-muted-alpha: 0.7;
+  --color-overlay-strong-alpha: 0.85;
+  --color-overlay-soft-alpha: 0.6;
+  --kali-panel-rgb: 0 17 0;
+  --kali-bg-rgb: 0 0 0;
 
 }
 
