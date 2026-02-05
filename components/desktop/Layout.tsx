@@ -1,6 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 import { DesktopZIndexProvider } from "./zIndexManager";
+import { SnapOverlayProvider } from "./SnapOverlay";
 
 type LayoutProps = React.HTMLAttributes<HTMLDivElement>;
 
@@ -8,16 +9,17 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
   ({ className, children, ...props }, ref) => {
     return (
       <DesktopZIndexProvider>
-        <div
-          ref={ref}
-          className={clsx(
-            "desktop-shell isolate relative h-screen w-full overflow-hidden bg-transparent text-white antialiased",
-            className,
-          )}
-          {...props}
-        >
-          {children}
-          <style jsx>{`
+        <SnapOverlayProvider>
+          <div
+            ref={ref}
+            className={clsx(
+              "desktop-shell isolate relative h-screen w-full overflow-hidden bg-transparent text-white antialiased",
+              className,
+            )}
+            {...props}
+          >
+            {children}
+            <style jsx>{`
           :global(:root) {
             --safe-area-top: env(safe-area-inset-top, 0px);
             --safe-area-right: env(safe-area-inset-right, 0px);
@@ -127,7 +129,8 @@ const Layout = React.forwardRef<HTMLDivElement, LayoutProps>(
             }
           }
           `}</style>
-        </div>
+          </div>
+        </SnapOverlayProvider>
       </DesktopZIndexProvider>
     );
   },
