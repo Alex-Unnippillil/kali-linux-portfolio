@@ -1,0 +1,2 @@
+cp <source> <destination>
+Copy a file within the terminal's virtual filesystem.

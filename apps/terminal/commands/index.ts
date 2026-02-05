@@ -16,13 +16,16 @@ async function man(args: string, ctx: CommandContext) {
   const loaders: Record<string, () => Promise<string>> = {
     alias: () => fetch(new URL('../man/alias.txt', import.meta.url)).then((r) => r.text()),
     cat: () => fetch(new URL('../man/cat.txt', import.meta.url)).then((r) => r.text()),
+    cp: () => fetch(new URL('../man/cp.txt', import.meta.url)).then((r) => r.text()),
     grep: () => fetch(new URL('../man/grep.txt', import.meta.url)).then((r) => r.text()),
     history: () => fetch(new URL('../man/history.txt', import.meta.url)).then((r) => r.text()),
     jq: () => fetch(new URL('../man/jq.txt', import.meta.url)).then((r) => r.text()),
     man: () => fetch(new URL('../man/man.txt', import.meta.url)).then((r) => r.text()),
+    mv: () => fetch(new URL('../man/mv.txt', import.meta.url)).then((r) => r.text()),
     open: () => fetch(new URL('../man/open.txt', import.meta.url)).then((r) => r.text()),
     projects: () => fetch(new URL('../man/projects.txt', import.meta.url)).then((r) => r.text()),
     rm: () => fetch(new URL('../man/rm.txt', import.meta.url)).then((r) => r.text()),
+    security: () => fetch(new URL('../man/security.txt', import.meta.url)).then((r) => r.text()),
     ssh: () => fetch(new URL('../man/ssh.txt', import.meta.url)).then((r) => r.text()),
     sudo: () => fetch(new URL('../man/sudo.txt', import.meta.url)).then((r) => r.text()),
     whoami: () => fetch(new URL('../man/whoami.txt', import.meta.url)).then((r) => r.text()),
@@ -71,6 +74,10 @@ const help: CommandHandler = (args, ctx) => {
     const line = `${padded}${description}`;
     ctx.writeLine(line.slice(0, termWidth));
   }
+  ctx.writeLine(
+    `Safe mode is ${ctx.safeMode ? 'ON' : 'OFF'} — simulated network commands are ${ctx.safeMode ? 'blocked' : 'available'}.`,
+  );
+  ctx.writeLine('Tip: toggle Safe Mode from the toolbar if you need simulated networking.');
   ctx.writeLine(
     'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
   );
@@ -129,6 +136,49 @@ const touch: CommandHandler = async (args, ctx) => {
   const success = await ctx.fs.writeFile(resolved, ''); // Create empty file
   if (!success) {
     ctx.writeLine(`touch: cannot create file '${target}'`);
+  }
+};
+
+const cp: CommandHandler = async (args, ctx) => {
+  const [source, destination] = args.split(/\s+/).filter(Boolean);
+  if (!source || !destination) {
+    ctx.writeLine('usage: cp <source> <destination>');
+    return;
+  }
+  const sourcePath = ctx.fs.resolvePath(ctx.cwd, source);
+  const destinationPath = ctx.fs.resolvePath(ctx.cwd, destination);
+  const contents = await ctx.fs.readFile(sourcePath);
+  if (contents === null) {
+    ctx.writeLine(`cp: cannot stat '${source}': No such file`);
+    return;
+  }
+  const success = await ctx.fs.writeFile(destinationPath, contents);
+  if (!success) {
+    ctx.writeLine(`cp: cannot copy to '${destination}'`);
+  }
+};
+
+const mv: CommandHandler = async (args, ctx) => {
+  const [source, destination] = args.split(/\s+/).filter(Boolean);
+  if (!source || !destination) {
+    ctx.writeLine('usage: mv <source> <destination>');
+    return;
+  }
+  const sourcePath = ctx.fs.resolvePath(ctx.cwd, source);
+  const destinationPath = ctx.fs.resolvePath(ctx.cwd, destination);
+  const contents = await ctx.fs.readFile(sourcePath);
+  if (contents === null) {
+    ctx.writeLine(`mv: cannot stat '${source}': No such file`);
+    return;
+  }
+  const written = await ctx.fs.writeFile(destinationPath, contents);
+  if (!written) {
+    ctx.writeLine(`mv: cannot move to '${destination}'`);
+    return;
+  }
+  const removed = await ctx.fs.deleteEntry(sourcePath);
+  if (!removed) {
+    ctx.writeLine(`mv: warning: failed to remove '${source}' after copy`);
   }
 };
 
@@ -231,7 +281,7 @@ const sudo: CommandHandler = async (args, ctx) => {
 
   ctx.writeLine(
     ctx.safeMode
-      ? `sudo: "${commandLine}" skipped (safe mode is enabled).`
+      ? `Safe mode: "${commandLine}" blocked. Toggle Safe Mode to run simulated privileged commands.`
       : `sudo: simulated privilege escalation for "${commandLine}".`,
   );
 };
@@ -260,6 +310,11 @@ const about: CommandHandler = (_args, ctx) => {
   ctx.writeLine('This terminal is powered by xterm.js');
 };
 
+const security: CommandHandler = async (_args, ctx) => {
+  const response = await fetch(new URL('../man/security.txt', import.meta.url));
+  ctx.writeLine(await response.text());
+};
+
 const date: CommandHandler = (_args, ctx) => {
   ctx.writeLine(new Date().toString());
 };
@@ -275,6 +330,8 @@ const registerAll = () => {
     { name: 'pwd', description: 'Print working directory.', handler: pwd },
     { name: 'mkdir', description: 'Create a directory.', handler: mkdir },
     { name: 'touch', description: 'Create a file.', handler: touch },
+    { name: 'cp', description: 'Copy a file.', usage: 'cp <source> <destination>', handler: cp },
+    { name: 'mv', description: 'Move or rename a file.', usage: 'mv <source> <destination>', handler: mv },
     { name: 'cat', description: 'Print a file.', usage: 'cat <file>', handler: cat },
     { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
     { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
@@ -290,6 +347,7 @@ const registerAll = () => {
     { name: 'sudo', description: 'Execute a command with elevated privileges.', usage: 'sudo <command>', handler: sudo },
     { name: 'rm', description: 'Remove a file or directory.', usage: 'rm <path>', handler: rm },
     { name: 'about', description: 'Show information about this terminal.', handler: about },
+    { name: 'security', description: 'Explain the terminal simulation model.', handler: security },
     { name: 'date', description: 'Print the current date.', handler: date },
     { name: 'grep', description: 'Search through text.', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
     { name: 'jq', description: 'Filter JSON input.', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },

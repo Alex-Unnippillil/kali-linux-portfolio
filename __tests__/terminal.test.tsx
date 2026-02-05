@@ -32,6 +32,13 @@ jest.mock(
   }),
   { virtual: true }
 );
+jest.mock(
+  '@xterm/addon-web-links',
+  () => ({
+    WebLinksAddon: jest.fn().mockImplementation(() => ({})),
+  }),
+  { virtual: true }
+);
 jest.mock('@xterm/xterm/css/xterm.css', () => ({}), { virtual: true });
 
 import React, { createRef, act } from 'react';
@@ -54,7 +61,7 @@ describe('Terminal component', () => {
     await act(async () => {
       await ref.current.runCommand('help');
     });
-    expect(ref.current.getContent()).toContain('help');
+    expect(ref.current.getTranscript()).toContain('Available commands');
   });
 
   it('invokes openApp for open command', async () => {
@@ -74,11 +81,11 @@ describe('Terminal component', () => {
     await act(async () => {
       await ref.current.runCommand('ls');
     });
-    expect(ref.current.getContent()).toContain('README.md');
+    expect(ref.current.getTranscript()).toContain('Desktop');
     await act(async () => {
-      await ref.current.runCommand('cat README.md');
+      await ref.current.runCommand('cat Desktop/Welcome.txt');
     });
-    expect(ref.current.getContent()).toContain('Welcome to the web terminal.');
+    expect(ref.current.getTranscript()).toContain('Welcome to your Kali-style desktop');
   });
 
   it('clears history and prints about/date messages', async () => {
@@ -89,15 +96,15 @@ describe('Terminal component', () => {
     await act(async () => {
       await ref.current.runCommand('about');
     });
-    expect(ref.current.getContent()).toContain('powered by xterm.js');
+    expect(ref.current.getTranscript()).toContain('powered by xterm.js');
     await act(async () => {
       await ref.current.runCommand('date');
     });
-    expect(ref.current.getContent()).toContain('Jan 01 2023');
+    expect(ref.current.getTranscript()).toContain('Jan 01 2023');
     await act(async () => {
       await ref.current.runCommand('clear');
     });
-    expect(ref.current.getContent()).toBe('');
+    expect(ref.current.getTranscript()).toBe('');
     jest.useRealTimers();
   });
 
@@ -108,15 +115,15 @@ describe('Terminal component', () => {
     await act(async () => {
       await ref.current.runCommand('projects');
     });
-    expect(ref.current.getContent()).toContain('Projects catalog');
+    expect(ref.current.getTranscript()).toContain('Projects catalog');
     await act(async () => {
       await ref.current.runCommand('ssh demo@kali');
     });
-    expect(ref.current.getContent()).toContain('Connection closed (simulation).');
+    expect(ref.current.getTranscript()).toContain('Connection closed (simulation).');
     await act(async () => {
       await ref.current.runCommand('sudo rm -rf /');
     });
-    expect(ref.current.getContent()).toContain('refusing to delete /');
+    expect(ref.current.getTranscript()).toContain('refusing to delete /');
   });
 
   it('supports tab management shortcuts', async () => {
