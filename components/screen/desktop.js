@@ -32,6 +32,7 @@ import { buildPinnedAppsPayload } from '../../utils/taskbarPayload';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { createWindowManagerState, windowManagerReducer } from '../desktop/windowManager';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -314,6 +315,25 @@ export class Desktop extends Component {
             initialAppClosed.about = true;
         }
 
+        const initialWindowManager = createWindowManagerState();
+        apps.forEach((app) => {
+            if (initialAppClosed[app.id] === false) {
+                const defaultWidth = typeof app.defaultWidth === 'number' ? app.defaultWidth : 60;
+                const defaultHeight = typeof app.defaultHeight === 'number' ? app.defaultHeight : 70;
+                initialWindowManager.windows[app.id] = {
+                    id: app.id,
+                    appKey: app.id,
+                    title: app.title || app.id,
+                    state: 'normal',
+                    bounds: { x: 0, y: 0, w: defaultWidth, h: defaultHeight },
+                    restoreBounds: null,
+                    snapRegion: null,
+                };
+                initialWindowManager.order.push(app.id);
+                initialWindowManager.activeId = app.id;
+            }
+        });
+
         const initialWindowSizes = {};
         const storedFolderContents = {};
 
@@ -360,6 +380,7 @@ export class Desktop extends Component {
             appBadges: {},
             taskbarOrder: [],
             mounted: false,
+            windowManager: initialWindowManager,
         };
 
         const cleanAppClosed = {};
@@ -457,6 +478,13 @@ export class Desktop extends Component {
         window_positions: {},
         window_sizes: {},
     });
+
+    applyWindowManagerAction = (action) => {
+        if (!action) return;
+        this.setState((prev) => ({
+            windowManager: windowManagerReducer(prev.windowManager, action),
+        }));
+    };
 
     cloneWorkspaceState = (state) => ({
         focused_windows: { ...state.focused_windows },
@@ -4642,8 +4670,10 @@ export class Desktop extends Component {
     };
 
     openWindowSwitcher = () => {
-        const stack = this.getActiveStack();
-        const availableIds = stack.filter((id) => (
+        const order = this.state.windowManager?.order?.length
+            ? this.state.windowManager.order
+            : this.getActiveStack().slice().reverse();
+        const availableIds = order.filter((id) => (
             this.state.closed_windows[id] === false && !this.state.minimized_windows[id]
         ));
 
@@ -5040,11 +5070,14 @@ export class Desktop extends Component {
     renderWindows = () => {
         const { closed_windows = {}, minimized_windows = {}, focused_windows = {} } = this.state;
         const safeTopOffset = measureWindowTopOffset();
-        const stack = this.getActiveStack();
+        const stack = this.state.windowManager?.order?.length
+            ? this.state.windowManager.order
+            : this.getActiveStack().slice().reverse();
         const orderedIds = [];
+        const minimizedIds = [];
         const seen = new Set();
 
-        stack.slice().reverse().forEach((id) => {
+        stack.forEach((id) => {
             if (closed_windows[id] === false && !seen.has(id)) {
                 orderedIds.push(id);
                 seen.add(id);
@@ -5053,7 +5086,11 @@ export class Desktop extends Component {
 
         apps.forEach((app) => {
             if (closed_windows[app.id] === false && !seen.has(app.id)) {
-                orderedIds.push(app.id);
+                if (minimized_windows[app.id]) {
+                    minimizedIds.push(app.id);
+                } else {
+                    orderedIds.push(app.id);
+                }
                 seen.add(app.id);
             }
         });
@@ -5063,14 +5100,24 @@ export class Desktop extends Component {
         const appMap = new Map(apps.map((app) => [app.id, app]));
         const snapGrid = this.getSnapGrid();
 
-        return orderedIds.map((id, index) => {
+        const activeId = this.state.windowManager?.activeId;
+        const baseZIndex = 300;
+
+        const orderedWindowIds = [...minimizedIds, ...orderedIds];
+
+        return orderedWindowIds.map((id, index) => {
             const app = appMap.get(id);
             if (!app) return null;
             const pos = this.state.window_positions[id];
             const persistedSizes = this.state.window_sizes?.[id] || this.loadWindowSizes()?.[id];
             const size = persistedSizes;
-            const defaultWidth = size && typeof size.width === 'number' ? size.width : app.defaultWidth;
-            const defaultHeight = size && typeof size.height === 'number' ? size.height : app.defaultHeight;
+            const preferredSize = app.preferredSize || {};
+            const defaultWidth = size && typeof size.width === 'number'
+                ? size.width
+                : (typeof preferredSize.w === 'number' ? preferredSize.w : app.defaultWidth);
+            const defaultHeight = size && typeof size.height === 'number'
+                ? size.height
+                : (typeof preferredSize.h === 'number' ? preferredSize.h : app.defaultHeight);
             const props = {
                 title: app.title,
                 id: app.id,
@@ -5079,11 +5126,13 @@ export class Desktop extends Component {
                 closed: this.closeApp,
                 openApp: this.openApp,
                 focus: this.focus,
-                isFocused: focused_windows[id],
+                isFocused: typeof activeId === 'string' ? activeId === id : focused_windows[id],
                 hasMinimised: this.hasMinimised,
                 minimized: minimized_windows[id],
                 resizable: app.resizable,
                 allowMaximize: app.allowMaximize,
+                minWidth: app.minSize?.w,
+                minHeight: app.minSize?.h,
                 defaultWidth,
                 defaultHeight,
                 responsiveWidth: app.responsiveWidth,
@@ -5095,6 +5144,7 @@ export class Desktop extends Component {
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
+                zIndex: baseZIndex + index,
             };
 
             return <Window key={id} {...props} />;
@@ -5252,6 +5302,9 @@ export class Desktop extends Component {
         const safeTopOffset = measureWindowTopOffset();
         const nextX = snapValue(x, gridX);
         const nextY = clampWindowTopPosition(snapValue(y, gridY), safeTopOffset);
+        if (!this.isOverlayId(id)) {
+            this.applyWindowManagerAction({ type: 'MOVE', id, bounds: { x: nextX, y: nextY } });
+        }
         this.setWorkspaceState(prev => ({
             window_positions: { ...prev.window_positions, [id]: { x: nextX, y: nextY } }
         }), () => {
@@ -5269,6 +5322,9 @@ export class Desktop extends Component {
         }
         const safeWidth = Math.max(0, Math.round(normalizedWidth));
         const safeHeight = Math.max(0, Math.round(normalizedHeight));
+        if (!this.isOverlayId(id)) {
+            this.applyWindowManagerAction({ type: 'RESIZE', id, bounds: { w: safeWidth, h: safeHeight } });
+        }
         this.setWorkspaceState((prev) => {
             const nextSizes = { ...(prev.window_sizes || {}) };
             nextSizes[id] = { width: safeWidth, height: safeHeight };
@@ -5318,6 +5374,7 @@ export class Desktop extends Component {
             this.minimizeOverlay(objId);
             return;
         }
+        this.applyWindowManagerAction({ type: 'MINIMIZE', id: objId });
         this.setState((prev) => {
             const minimized_windows = { ...prev.minimized_windows, [objId]: true };
             const focused_windows = { ...prev.focused_windows, [objId]: false };
@@ -5423,6 +5480,7 @@ export class Desktop extends Component {
             this.openOverlay(objId);
             return;
         }
+        const appMeta = this.getAppById(objId);
         const baseContext = params && typeof params === 'object'
             ? {
                 ...params,
@@ -5460,6 +5518,7 @@ export class Desktop extends Component {
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                 let minimized_windows = this.state.minimized_windows;
                 minimized_windows[objId] = false;
+                this.applyWindowManagerAction({ type: 'FOCUS', id: objId });
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
 
             }
@@ -5472,6 +5531,7 @@ export class Desktop extends Component {
                     r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
                     let minimized_windows = this.state.minimized_windows;
                     minimized_windows[objId] = false;
+                    this.applyWindowManagerAction({ type: 'FOCUS', id: objId });
                     this.setState({ minimized_windows: minimized_windows }, this.saveSession);
                 } else {
                     this.focus(objId);
@@ -5518,6 +5578,11 @@ export class Desktop extends Component {
                 const closed_windows = { ...this.state.closed_windows, [objId]: false }; // openes app's window
                 const favourite_apps = { ...this.state.favourite_apps, [objId]: true }; // adds opened app to sideBar
                 const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                this.applyWindowManagerAction({
+                    type: 'OPEN',
+                    appKey: objId,
+                    payload: { title: appMeta?.title || objId },
+                });
                 this.setWorkspaceState({ closed_windows, minimized_windows }, () => {
                     const nextState = { closed_windows, favourite_apps, minimized_windows };
                     if (context) {
@@ -5543,6 +5608,7 @@ export class Desktop extends Component {
             this.closeOverlay(objId);
             return;
         }
+        this.applyWindowManagerAction({ type: 'CLOSE', id: objId });
 
         if (process.env.NODE_ENV === 'test') {
             this.setWorkspaceState((prevState) => {
@@ -5694,6 +5760,9 @@ export class Desktop extends Component {
 
     focus = (objId) => {
         this.promoteWindowInStack(objId);
+        if (!this.isOverlayId(objId)) {
+            this.applyWindowManagerAction({ type: 'FOCUS', id: objId });
+        }
         this.setState((prev) => {
             const nextFocused = { ...prev.focused_windows };
             Object.keys(nextFocused).forEach((key) => {
