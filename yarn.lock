@@ -3869,6 +3869,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@xterm/addon-web-links@npm:^0.10.0":
+  version: 0.10.0
+  resolution: "@xterm/addon-web-links@npm:0.10.0"
+  peerDependencies:
+    "@xterm/xterm": ^5.0.0
+  checksum: 10c0/a6620b9eb6f69d3cdae6d0ac22db8d36901d722d4269618b525f4128c8c1fd3fd305ab58acf2a73ade5f0f3d35048caf7d7a0017e2fbb9c47c86419a1694c4ba
+  languageName: node
+  linkType: hard
+
 "@xterm/xterm@npm:^5.5.0":
   version: 5.5.0
   resolution: "@xterm/xterm@npm:5.5.0"
@@ -12521,6 +12530,7 @@ __metadata:
     "@vercel/speed-insights": "npm:^1.2.0"
     "@xterm/addon-fit": "npm:^0.10.0"
     "@xterm/addon-search": "npm:^0.15.0"
+    "@xterm/addon-web-links": "npm:^0.10.0"
     "@xterm/xterm": "npm:^5.5.0"
     aframe: "npm:^1.5.0"
     autoprefixer: "npm:^10.4.13"

@@ -1,2 +1,2 @@
 sudo <command>
-Pretend to run a command with elevated privileges. Dangerous operations stay blocked.
+Pretend to run a command with elevated privileges. Dangerous operations stay blocked in Safe Mode.

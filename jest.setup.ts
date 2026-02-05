@@ -203,13 +203,21 @@ jest.mock(
   '@xterm/xterm',
   () => ({
     Terminal: class {
+      options = { scrollback: 0 };
+      element = document.createElement('div');
+      textarea = document.createElement('textarea');
       loadAddon() {}
       write() {}
       writeln() {}
       open() {}
+      focus() {}
+      selectAll() {}
+      getSelection() { return ''; }
+      attachCustomKeyEventHandler() {}
       dispose() {}
       onKey() {}
       onData() {}
+      clear() {}
       get buffer() {
         return { active: { getLine: () => ({ translateToString: () => '' }) } };
       }
@@ -238,8 +246,17 @@ jest.mock(
     SearchAddon: class {
       activate() {}
       dispose() {}
+      findNext() { return true; }
     },
 
+  }),
+  { virtual: true }
+);
+
+jest.mock(
+  '@xterm/addon-web-links',
+  () => ({
+    WebLinksAddon: class {},
   }),
   { virtual: true }
 );

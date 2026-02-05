@@ -9,10 +9,11 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
 
   const createTab = (): TabDefinition => {
     const id = Date.now().toString();
+    const label = `Session ${countRef.current++}`;
     return {
       id,
-      title: `Session ${countRef.current++}`,
-      content: <Terminal openApp={openApp} />,
+      title: label,
+      content: <Terminal openApp={openApp} sessionName={label} />,
     };
   };
 
