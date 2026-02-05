@@ -5812,6 +5812,23 @@ export class Desktop extends Component {
         }
     };
 
+    prepareForShellTransition = (nextSession) => {
+        this.hideAllContextMenu();
+        this.closeAllAppsOverlay();
+        this.closeCommandPalette();
+        this.closeWindowSwitcher();
+        this.closeOverlay(SHORTCUT_OVERLAY_ID);
+        this.setState({ draggingIconId: null });
+        this.iconDragState = null;
+        if (nextSession === 'shutdown' || nextSession === 'locked') {
+            this.setState((state) => ({
+                overlayWindows: createOverlayStateMap(),
+                focused_windows: {},
+                minimized_windows: state.minimized_windows,
+            }));
+        }
+    };
+
     renderNameBar = () => {
         const handleSubmit = (event) => {
             event.preventDefault();
@@ -5880,6 +5897,7 @@ export class Desktop extends Component {
             '--desktop-accent': accentColor,
             '--desktop-wallpaper': wallpaperCss,
             '--desktop-overlay': overlayValue,
+            pointerEvents: this.props.isInputFrozen ? 'none' : 'auto',
         };
         const overlayWindows = this.state.overlayWindows || {};
         const launcherOverlay = overlayWindows.launcher || { open: false, minimized: false, maximized: false, transitionState: 'exited' };
@@ -6055,13 +6073,14 @@ export class Desktop extends Component {
     }
 }
 
-export default function DesktopWithSnap(props) {
+const DesktopWithSnap = React.forwardRef(function DesktopWithSnap(props, ref) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
     return (
         <Desktop
             {...props}
+            ref={ref}
             snapEnabled={snapEnabled}
             snapGrid={snapGrid}
             density={density}
@@ -6070,4 +6089,8 @@ export default function DesktopWithSnap(props) {
             desktopTheme={desktopTheme}
         />
     );
-}
+});
+
+DesktopWithSnap.displayName = 'DesktopWithSnap';
+
+export default DesktopWithSnap;
