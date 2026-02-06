@@ -21,7 +21,12 @@ const defaultMap = {
 };
 
 const useGameControls = (arg, gameId = 'default', options = {}) => {
-  const { enabled = true, preventDefault = false, isFocused = true } = options || {};
+  const {
+    enabled = true,
+    preventDefault = false,
+    isFocused = true,
+    targetRef = null,
+  } = options || {};
   const onDirection = typeof arg === 'function' ? arg : null;
   const canvasRef = typeof arg === 'function' ? null : arg;
   const stateRef = useRef({
@@ -75,15 +80,20 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
   // touch swipe controls for directional games
   useEffect(() => {
     if (!onDirection || !enabled || !isFocused) return undefined;
+    const target = targetRef?.current || window;
+    if (!target) return undefined;
     let startX = 0;
     let startY = 0;
+    const listenerOptions = preventDefault ? { passive: false } : undefined;
 
     const start = (e) => {
+      if (preventDefault && e.cancelable) e.preventDefault();
       startX = e.touches[0].clientX;
       startY = e.touches[0].clientY;
     };
 
     const end = (e) => {
+      if (preventDefault && e.cancelable) e.preventDefault();
       const dx = e.changedTouches[0].clientX - startX;
       const dy = e.changedTouches[0].clientY - startY;
       if (Math.abs(dx) > Math.abs(dy)) {
@@ -95,13 +105,13 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       }
     };
 
-    window.addEventListener('touchstart', start);
-    window.addEventListener('touchend', end);
+    target.addEventListener('touchstart', start, listenerOptions);
+    target.addEventListener('touchend', end, listenerOptions);
     return () => {
-      window.removeEventListener('touchstart', start);
-      window.removeEventListener('touchend', end);
+      target.removeEventListener('touchstart', start, listenerOptions);
+      target.removeEventListener('touchend', end, listenerOptions);
     };
-  }, [onDirection, enabled, isFocused]);
+  }, [onDirection, enabled, isFocused, targetRef, preventDefault]);
 
   // gamepad controls for directional games
   useEffect(() => {

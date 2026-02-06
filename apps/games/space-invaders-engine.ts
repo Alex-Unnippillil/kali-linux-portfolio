@@ -96,6 +96,7 @@ export interface InputState {
 export interface StepOptions {
   paused?: boolean;
   difficulty?: number;
+  allowPowerUps?: boolean;
 }
 
 export interface StepEvent {

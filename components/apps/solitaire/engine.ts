@@ -16,6 +16,12 @@ export type GameState = {
   redeals: number; // remaining times waste can be recycled into stock
 };
 
+export type DragPayload = {
+  source: 'tableau' | 'waste';
+  pile: number;
+  index: number;
+};
+
 export const suits: Suit[] = ['♠', '♥', '♦', '♣'];
 const colors: Record<Suit, 'red' | 'black'> = {
   '♠': 'black',
@@ -115,10 +121,64 @@ export const drawFromStock = (state: GameState): GameState => {
   return { ...state, stock: remaining, waste: [...state.waste, ...drawn] };
 };
 
-const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
+export const isValidTableauRun = (cards: Card[]): boolean => {
+  if (!cards.length) return false;
+  if (!cards.every((card) => card.faceUp)) return false;
+  for (let i = 0; i < cards.length - 1; i += 1) {
+    const current = cards[i];
+    const next = cards[i + 1];
+    if (current.value !== next.value + 1) return false;
+    if (current.color === next.color) return false;
+  }
+  return true;
+};
+
+export const canPlaceOnTableau = (card: Card, dest: Card[]): boolean => {
   if (dest.length === 0) return card.value === 13;
   const top = dest[dest.length - 1];
   return top.faceUp && top.color !== card.color && top.value === card.value + 1;
+};
+
+export const canDropOnTableau = (
+  state: GameState,
+  drag: DragPayload,
+  destIndex: number,
+): boolean => {
+  if (drag.source === 'tableau') {
+    if (drag.pile === destIndex) return false;
+    const pile = state.tableau[drag.pile];
+    if (!pile || drag.index < 0 || drag.index >= pile.length) return false;
+    const moving = pile.slice(drag.index);
+    if (!isValidTableauRun(moving)) return false;
+    return canPlaceOnTableau(moving[0], state.tableau[destIndex]);
+  }
+  const card = state.waste[state.waste.length - 1];
+  if (!card) return false;
+  return canPlaceOnTableau(card, state.tableau[destIndex]);
+};
+
+export const canDropOnFoundation = (
+  state: GameState,
+  drag: DragPayload,
+  foundationIndex: number,
+): boolean => {
+  if (drag.source === 'tableau') {
+    const pile = state.tableau[drag.pile];
+    if (!pile || drag.index < 0 || drag.index >= pile.length) return false;
+    if (drag.index !== pile.length - 1) return false;
+    const card = pile[pile.length - 1];
+    if (!card || !card.faceUp) return false;
+    if (suits.indexOf(card.suit) !== foundationIndex) return false;
+    const dest = state.foundations[foundationIndex];
+    if (dest.length === 0) return card.value === 1;
+    return dest[dest.length - 1].value + 1 === card.value;
+  }
+  const card = state.waste[state.waste.length - 1];
+  if (!card) return false;
+  if (suits.indexOf(card.suit) !== foundationIndex) return false;
+  const dest = state.foundations[foundationIndex];
+  if (dest.length === 0) return card.value === 1;
+  return dest[dest.length - 1].value + 1 === card.value;
 };
 
 export const moveWasteToTableau = (state: GameState, destIndex: number): GameState => {
@@ -140,7 +200,7 @@ export const moveTableauToTableau = (
 ): GameState => {
   const pile = state.tableau[from];
   const moving = pile.slice(cardIndex);
-  if (moving.length === 0 || !moving[0].faceUp) return state;
+  if (!isValidTableauRun(moving)) return state;
   if (!canPlaceOnTableau(moving[0], state.tableau[to])) return state;
   const newTableau = state.tableau.map((p, i) => {
     if (i === from) {
@@ -289,6 +349,20 @@ export const findHint = (
       if (i === j) continue;
       if (canPlaceOnTableau(top, state.tableau[j])) {
         return { source: 'tableau', pile: i, index: pile.length - 1 };
+      }
+    }
+  }
+  for (let i = 0; i < state.tableau.length; i += 1) {
+    const pile = state.tableau[i];
+    if (!pile.length) continue;
+    for (let index = 0; index < pile.length; index += 1) {
+      const moving = pile.slice(index);
+      if (!isValidTableauRun(moving)) continue;
+      for (let j = 0; j < state.tableau.length; j += 1) {
+        if (i === j) continue;
+        if (canPlaceOnTableau(moving[0], state.tableau[j])) {
+          return { source: 'tableau', pile: i, index };
+        }
       }
     }
   }

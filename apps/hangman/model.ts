@@ -57,6 +57,11 @@ const LETTER_RE = /^[a-z]$/;
 const SAFE_WORD_RE = /^[a-z -]+$/;
 
 const DEFAULT_DIFFICULTY: DifficultyId = 'standard';
+const DIFFICULTY_LENGTHS: Record<DifficultyId, [number, number]> = {
+  casual: [3, 6],
+  standard: [5, 9],
+  hard: [8, 14],
+};
 
 export const DIFFICULTY_PRESETS: Record<DifficultyId, DifficultyPreset> = {
   casual: {
@@ -112,6 +117,8 @@ const normalizeWord = (word: string): string =>
   word.trim().toLowerCase().replace(/\s+/g, ' ');
 
 const clampScore = (value: number): number => Math.max(0, value);
+const wordLetterCount = (value: string): number =>
+  value.replace(/[^a-z]/g, '').length;
 
 export const createEmptyState = (
   difficulty: DifficultyId = DEFAULT_DIFFICULTY,
@@ -214,6 +221,14 @@ export const newGame = ({
   let chosenWord = word ? normalizeWord(word) : '';
   let nextRngState = rngState;
   if (!chosenWord) {
+    const [minLength, maxLength] =
+      DIFFICULTY_LENGTHS[preset.id] || DIFFICULTY_LENGTHS.standard;
+    const filtered = dictionary.filter((entry) => {
+      if (typeof entry !== 'string') return false;
+      const length = wordLetterCount(entry);
+      return length >= minLength && length <= maxLength;
+    });
+    const wordPool = filtered.length ? filtered : dictionary;
     if (!dictionary.length) {
       return {
         ...createEmptyState(preset.id),
@@ -221,7 +236,7 @@ export const newGame = ({
       };
     }
     const [roll, updatedState] = nextRng(rngState);
-    const pick = dictionary[Math.floor(roll * dictionary.length)];
+    const pick = wordPool[Math.floor(roll * wordPool.length)];
     chosenWord = normalizeWord(String(pick || ''));
     nextRngState = updatedState;
   }

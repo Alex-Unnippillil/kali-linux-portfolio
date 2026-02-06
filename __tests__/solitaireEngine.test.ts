@@ -79,6 +79,26 @@ describe('Solitaire engine', () => {
     expect(result.tableau[1].length).toBe(1);
   });
 
+  test('moveTableauToTableau rejects invalid runs', () => {
+    const state = emptyState();
+    state.tableau[0] = [card('♠', 8, true), card('♣', 7, true), card('♣', 6, true)];
+    state.tableau[1] = [card('♥', 9, true)];
+    const result = moveTableauToTableau(state, 0, 0, 1);
+    expect(result.tableau[0].length).toBe(3);
+    expect(result.tableau[1].length).toBe(1);
+  });
+
+  test('moveTableauToTableau allows valid runs', () => {
+    const state = emptyState();
+    state.tableau[0] = [card('♠', 7, true), card('♥', 6, true), card('♣', 5, true)];
+    state.tableau[1] = [card('♥', 8, true)];
+    const result = moveTableauToTableau(state, 0, 0, 1);
+    expect(result.tableau[0].length).toBe(0);
+    expect(result.tableau[1].length).toBe(4);
+    expect(result.tableau[1][1]).toEqual(card('♠', 7, true));
+    expect(result.tableau[1][3]).toEqual(card('♣', 5, true));
+  });
+
   test('moveWasteToTableau enforces rules', () => {
     const state = emptyState();
     state.waste = [card('♠', 5, true)];
