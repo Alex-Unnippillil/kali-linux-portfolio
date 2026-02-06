@@ -83,7 +83,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             (this.state.active_screen === section.id
               ? ' bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95'
               : ' hover:bg-gray-50 hover:bg-opacity-5 ') +
-            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5'
+            ' w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-2 focus:outline-none duration-100 my-2 flex justify-start items-center pl-2 md:pl-4'
           }
         >
           <Image
@@ -94,7 +94,7 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
             height={16}
             sizes="16px"
           />
-          <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
+          <span className=" ml-2 text-gray-50 ">{section.label}</span>
         </div>
       ))}
     </>
@@ -147,15 +147,15 @@ class AboutAlex extends Component<unknown, { screen: React.ReactNode; active_scr
         </div>
         <div
           onClick={this.showNavBar}
-          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1"
+          className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-2 left-2 space-y-2"
         >
           <div className=" w-3.5 border-t border-white" />
-          <div className=" w-3.5 border-t border-white" style={{ marginTop: '2pt', marginBottom: '2pt' }} />
+          <div className=" w-3.5 border-t border-white" />
           <div className=" w-3.5 border-t border-white" />
           <div
             className={
               (this.state.navbar ? ' visible animateShow z-30 ' : ' invisible ') +
-              ' md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20'
+              ' md:hidden text-xs absolute bg-ub-cool-grey py-2 px-2 rounded-sm top-full mt-2 left-0 shadow border-black border border-opacity-20'
             }
             role="tablist"
             aria-orientation="vertical"
@@ -186,7 +186,7 @@ export { default as SafetyNote } from './SafetyNote';
 function About() {
   return (
     <>
-      <div className="w-20 md:w-28 my-4 full">
+      <div className="w-20 md:w-28 mt-4 md:mt-8">
         <Image
           className="w-full rounded border border-gray-600"
           src="/images/logos/bitmoji.png"
@@ -197,19 +197,19 @@ function About() {
           priority
         />
       </div>
-      <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-        <div>
+      <div className="mt-4 md:mt-8 text-lg md:text-2xl text-center px-2 space-y-2">
+        <p>
           My name is <span className="font-bold">Alex Unnippillil</span>,{' '}
-        </div>
-        <div className="font-normal ml-1">
+        </p>
+        <p className="font-normal">
           I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span>
-        </div>
+        </p>
       </div>
-      <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
+      <div className="mt-6 md:mt-10 relative bg-white w-32 md:w-48 h-0.5">
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0" />
         <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0" />
       </div>
-      <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
+      <ul className="mt-6 md:mt-10 leading-relaxed tracking-tight text-sm md:text-base w-5/6 md:w-3/4 space-y-4 emoji-list">
         <li className="list-pc">
           I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly
           evolving world of tech. I completed four years of a{' '}
@@ -232,14 +232,14 @@ function About() {
           </a>
           .
         </li>
-        <li className="mt-3 list-building">
+        <li className="list-building">
           If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{' '}
           <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">
             alex.unnippillil@hotmail.com
           </a>
           .
         </li>
-        <li className="mt-3 list-time">
+        <li className="list-time">
           When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{' '}
           <a
             className=" underline cursor-pointer"
@@ -260,7 +260,9 @@ function About() {
             </a>
           .
         </li>
-        <li className="mt-3 list-star">I also have interests in deep learning, software development, and animation.</li>
+        <li className="list-star">
+          I also have interests in deep learning, software development, and animation.
+        </li>
       </ul>
       <WorkerStatus />
       <SafetyNote />
@@ -293,13 +295,13 @@ function WorkerStatus() {
   }, []);
 
   return (
-    <section aria-labelledby="app-status-heading" className="mt-8 w-5/6 md:w-3/4">
+    <section aria-labelledby="app-status-heading" className="mt-8 w-5/6 md:w-3/4 space-y-4">
       <h2 id="app-status-heading" className="text-lg font-bold text-center">
         Worker App Availability
       </h2>
-      <ul role="list" className="mt-2">
+      <ul role="list" className="space-y-2">
         {workerApps.map((app) => (
-          <li key={app.id} className="flex justify-between items-center py-1 border-b border-gray-600">
+          <li key={app.id} className="flex justify-between items-center py-2 border-b border-gray-600">
             <span className="capitalize">{app.label}</span>
             <span aria-live="polite">{status[app.id] || 'Checking...'}</span>
           </li>
@@ -311,13 +313,13 @@ function WorkerStatus() {
 
 function Timeline() {
   return (
-    <div className="w-5/6 md:w-1/2 mt-8">
+    <div className="w-5/6 md:w-1/2 mt-8 space-y-4">
       <ScrollableTimeline />
       <div className="no-print mt-4 text-right">
         <a
           href="/assets/timeline.pdf"
           download
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+          className="inline-block px-3 py-2 rounded bg-ub-gedit-light text-sm"
         >
           Download Timeline PDF
         </a>
@@ -329,31 +331,31 @@ function Timeline() {
 function Education() {
   return (
     <>
-      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
+      <div className=" font-medium relative text-2xl mt-4 md:mt-8 mb-4">
         Education
         <div className="absolute pt-px bg-white mt-px top-full w-full">
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
         </div>
       </div>
-      <ul className=" w-10/12  mt-4 ml-4 px-0 md:px-1">
-        <li className="list-disc mt-5">
+      <ul className=" w-10/12 mt-6 ml-4 px-0 md:px-1 space-y-6">
+        <li className="list-disc space-y-2">
           <div className=" text-lg md:text-xl text-left font-bold leading-tight">Ontario Tech University</div>
-          <div className=" text-sm text-gray-400 mt-0.5">2020 - 2024</div>
+          <div className=" text-sm text-gray-400 mt-2">2020 - 2024</div>
           <div className=" text-sm md:text-base">Networking and Information Technology Security</div>
-          <div className="text-sm text-gray-300 font-bold mt-1"> </div>
+          <div className="text-sm text-gray-300 font-bold mt-2"> </div>
         </li>
-        <li className="list-disc mt-5">
+        <li className="list-disc space-y-2">
           <div className=" text-lg md:text-xl text-left font-bold leading-tight">Ontario Tech University</div>
-          <div className=" text-sm text-gray-400 mt-0.5">2012 - 2016</div>
+          <div className=" text-sm text-gray-400 mt-2">2012 - 2016</div>
           <div className=" text-sm md:text-base">Nuclear Engineering</div>
-          <div className="text-sm text-gray-300 font-bold mt-1" />
+          <div className="text-sm text-gray-300 font-bold mt-2" />
         </li>
-        <li className="list-disc mt-5">
+        <li className="list-disc space-y-2">
           <div className=" text-lg md:text-xl text-left font-bold leading-tight">St. John Paul II Catholic Secondary School</div>
-          <div className=" text-sm text-gray-400 mt-0.5">2008 - 2012</div>
+          <div className=" text-sm text-gray-400 mt-2">2008 - 2012</div>
           <div className=" text-sm md:text-base"> </div>
-          <div className="text-sm text-gray-300 font-bold mt-1"> </div>
+          <div className="text-sm text-gray-300 font-bold mt-2"> </div>
         </li>
       </ul>
     </>
@@ -365,21 +367,21 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
   const [selected, setSelected] = React.useState<any>(null);
   const filteredBadges = badges.filter((b) => b.alt.toLowerCase().includes(filter.toLowerCase()));
   return (
-    <div className="px-2 w-full">
+    <div className="w-full px-2 space-y-4">
       <div className="text-sm text-center md:text-base font-bold">{title}</div>
       <input
         type="text"
         placeholder="Filter..."
-        className="mt-2 w-full px-2 py-1 rounded text-black"
+        className="w-full px-3 py-2 rounded text-black"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         aria-label={`Filter ${title} badges`}
       />
-      <div className="flex flex-wrap justify-center items-start w-full mt-2">
+      <div className="flex flex-wrap justify-center items-start w-full gap-2">
         {filteredBadges.map((badge) => (
           <img
             key={badge.alt}
-            className="m-1 cursor-pointer"
+            className="cursor-pointer"
             src={badge.src}
             alt={badge.alt}
             title={badge.description}
@@ -389,10 +391,10 @@ const SkillSection = ({ title, badges }: { title: string; badges: { src: string;
       </div>
       {selected && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" onClick={() => setSelected(null)}>
-          <div className="bg-ub-cool-grey p-4 rounded max-w-xs" onClick={(e) => e.stopPropagation()}>
-            <div className="font-bold mb-2 text-center">{selected.alt}</div>
+          <div className="bg-ub-cool-grey p-6 rounded max-w-xs space-y-4" onClick={(e) => e.stopPropagation()}>
+            <div className="font-bold text-center">{selected.alt}</div>
             <p className="text-sm text-center">{selected.description}</p>
-            <button className="mt-2 px-2 py-1 bg-ubt-blue rounded" onClick={() => setSelected(null)}>
+            <button className="w-full px-3 py-2 bg-ubt-blue rounded" onClick={() => setSelected(null)}>
               Close
             </button>
           </div>
@@ -406,25 +408,23 @@ function Skills({ skills }: { skills: any }) {
   const { networkingSecurity, softwaresOperating, languagesTools, frameworksLibraries } = skills;
   return (
     <>
-      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
+      <div className=" font-medium relative text-2xl mt-4 md:mt-8 mb-4">
         Technical Skills
         <div className="absolute pt-px bg-white mt-px top-full w-full">
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full" />
         </div>
       </div>
-      <ul className=" tracking-tight text-sm md:text-base w-10/12 emoji-list">
-        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-          <div>
-            I&apos;ve learned a variety of programming languages and frameworks while{' '}
-            <strong className="text-ubt-gedit-blue">specializing in network security</strong>
-          </div>
+      <ul className=" tracking-tight text-sm md:text-base w-10/12 space-y-4 emoji-list">
+        <li className=" list-arrow leading-relaxed">
+          I&apos;ve learned a variety of programming languages and frameworks while{' '}
+          <strong className="text-ubt-gedit-blue">specializing in network security</strong>
         </li>
-        <li className=" list-arrow text-sm md:text-base mt-4 leading-tight tracking-tight">
-          <div>Below are some skills I&apos;ve learned over the years</div>
+        <li className=" list-arrow leading-relaxed">
+          Below are some skills I&apos;ve learned over the years
         </li>
       </ul>
-      <div className="w-full md:w-10/12 grid grid-cols-1 md:grid-cols-2 mt-4 gap-4">
+      <div className="w-full md:w-10/12 grid grid-cols-1 md:grid-cols-2 mt-6 gap-6">
         <SkillSection title="Networking & Security" badges={networkingSecurity} />
         <SkillSection title="Softwares & Operating Systems" badges={softwaresOperating} />
         <SkillSection title="Languages & Tools" badges={languagesTools} />
@@ -457,7 +457,7 @@ function Projects({ projects }: { projects: any[] }) {
 
   return (
     <>
-      <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
+      <div className=" font-medium relative text-2xl mt-4 md:mt-8 mb-4">
         Projects
         <div className="absolute pt-px bg-white mt-px top-full w-full">
           <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full" />
@@ -469,24 +469,24 @@ function Projects({ projects }: { projects: any[] }) {
         const projectName = projectNameFromLink[projectNameFromLink.length - 1];
         return (
           <div key={project.link} className="flex w-full flex-col px-4">
-            <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
-              <div className="flex flex-wrap justify-between items-center">
-                <div className="flex justify-center items-center">
-                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">
+            <div className="w-full p-4 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5 space-y-4">
+              <div className="flex flex-wrap justify-between items-center gap-4">
+                <div className="flex flex-wrap justify-center items-center gap-2">
+                  <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg">
                     {project.name.toLowerCase()}
                   </a>
                   <GitHubStars user="alex-unnippillil" repo={projectName} />
                 </div>
                 <div className="text-gray-300 font-light text-sm">{project.date}</div>
               </div>
-              <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
+              <ul className=" tracking-normal leading-relaxed text-sm font-light ml-4 space-y-2">
                 {project.description.map((desc: string) => (
-                  <li key={desc} className="list-disc mt-1 text-gray-100">
+                  <li key={desc} className="list-disc text-gray-100">
                     {desc}
                   </li>
                 ))}
               </ul>
-              <div className="flex flex-wrap items-start justify-start text-xs py-2">
+              <div className="flex flex-wrap items-start justify-start text-xs gap-2">
                 {project.domains
                   ? project.domains.map((domain: string) => {
                       const borderColorClass = `border-${tag_colors[domain]}`;
@@ -497,7 +497,7 @@ function Projects({ projects }: { projects: any[] }) {
                           href={project.link}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}
+                          className={`px-2 py-1 w-max border ${borderColorClass} ${textColorClass} rounded-full`}
                         >
                           {domain}
                         </a>
@@ -536,19 +536,19 @@ function Resume() {
 
   return (
     <div className="h-full w-full flex flex-col">
-      <div className="p-2 text-right no-print space-x-2">
+      <div className="p-4 text-right no-print space-x-4">
         <a
           href="/assets/Alex-Unnippillil-Resume.pdf"
           download
           onClick={handleDownload}
-          className="px-2 py-1 rounded bg-ub-gedit-light text-sm"
+          className="inline-block px-3 py-2 rounded bg-ub-gedit-light text-sm"
         >
           Download
         </a>
-        <a href="/assets/alex-unnippillil.vcf" download className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
+        <a href="/assets/alex-unnippillil.vcf" download className="inline-block px-3 py-2 rounded bg-ub-gedit-light text-sm">
           vCard
         </a>
-        <button onClick={shareContact} className="px-2 py-1 rounded bg-ub-gedit-light text-sm">
+        <button onClick={shareContact} className="inline-block px-3 py-2 rounded bg-ub-gedit-light text-sm">
           Share contact
         </button>
       </div>
