@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
+import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 import { LEVEL_PACKS, LevelPack, parseLevels } from './levels';
 import {
   loadLevel,
@@ -15,6 +16,7 @@ import {
   findMinPushes,
   findSolution,
   wouldDeadlock,
+  isDeadlockPosition,
   Position,
   DirectionKey,
 } from './engine';
@@ -84,10 +86,111 @@ const LevelThumb: React.FC<{ level: string[] }> = ({ level }) => {
 
 interface SokobanProps {
   getDailySeed?: () => Promise<string>;
+  windowMeta?: { isFocused?: boolean };
 }
 
-const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
+type ProgressEntry = {
+  player: Position;
+  boxes: string[];
+  moves: number;
+  pushes: number;
+};
+
+type StoredProgress = {
+  player: Position;
+  boxes: string[];
+  moves: number;
+  pushes: number;
+  history: ProgressEntry[];
+  future: ProgressEntry[];
+};
+
+const progressKey = (pack: number, level: number) => `sokoban-progress-${pack}-${level}`;
+
+const isProgressEntry = (value: unknown): value is ProgressEntry => {
+  if (!value || typeof value !== 'object') return false;
+  const entry = value as ProgressEntry;
+  return (
+    entry.player !== undefined &&
+    typeof entry.player.x === 'number' &&
+    typeof entry.player.y === 'number' &&
+    Array.isArray(entry.boxes) &&
+    entry.boxes.every((b) => typeof b === 'string') &&
+    typeof entry.moves === 'number' &&
+    typeof entry.pushes === 'number'
+  );
+};
+
+const isValidProgress = (value: unknown): value is StoredProgress => {
+  if (!value || typeof value !== 'object') return false;
+  const data = value as StoredProgress;
+  return (
+    data.player !== undefined &&
+    typeof data.player.x === 'number' &&
+    typeof data.player.y === 'number' &&
+    Array.isArray(data.boxes) &&
+    data.boxes.every((b) => typeof b === 'string') &&
+    typeof data.moves === 'number' &&
+    typeof data.pushes === 'number' &&
+    Array.isArray(data.history) &&
+    data.history.every(isProgressEntry) &&
+    Array.isArray(data.future) &&
+    data.future.every(isProgressEntry)
+  );
+};
+
+const serializeProgress = (state: State): StoredProgress => ({
+  player: state.player,
+  boxes: Array.from(state.boxes),
+  moves: state.moves,
+  pushes: state.pushes,
+  history: state.history.map((entry) => ({
+    player: entry.player,
+    boxes: entry.boxes,
+    moves: entry.moves,
+    pushes: entry.pushes,
+  })),
+  future: state.future.map((entry) => ({
+    player: entry.player,
+    boxes: entry.boxes,
+    moves: entry.moves,
+    pushes: entry.pushes,
+  })),
+});
+
+const restoreProgress = (base: State, data: StoredProgress): State => {
+  const restored: State = {
+    ...base,
+    player: { ...data.player },
+    boxes: new Set(data.boxes),
+    moves: data.moves,
+    pushes: data.pushes,
+    history: data.history.map((entry) => ({
+      player: { ...entry.player },
+      boxes: [...entry.boxes],
+      moves: entry.moves,
+      pushes: entry.pushes,
+    })),
+    future: data.future.map((entry) => ({
+      player: { ...entry.player },
+      boxes: [...entry.boxes],
+      moves: entry.moves,
+      pushes: entry.pushes,
+    })),
+    deadlocks: new Set(),
+  };
+  const deadlocks = new Set<string>();
+  restored.boxes.forEach((b) => {
+    const [x, y] = b.split(',').map(Number);
+    if (isDeadlockPosition(restored, { x, y })) deadlocks.add(b);
+  });
+  restored.deadlocks = deadlocks;
+  return restored;
+};
+
+const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
   void getDailySeed;
+  const isFocused = windowMeta?.isFocused ?? true;
   const [packs, setPacks] = useState<LevelPack[]>(LEVEL_PACKS);
   const [packIndex, setPackIndex] = useState(0);
   const [index, setIndex] = useState(0);
@@ -97,7 +200,6 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   const [best, setBest] = useState<number | null>(null);
   const [hint, setHint] = useState<string>('');
   const [status, setStatus] = useState<string>('');
-  const [warnDir, setWarnDir] = useState<DirectionKey | null>(null);
   const [ghost, setGhost] = useState<Set<string>>(new Set());
   const [solutionPath, setSolutionPath] = useState<Set<string>>(new Set());
   const [puffs, setPuffs] = useState<{ id: number; x: number; y: number }[]>([]);
@@ -110,28 +212,305 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     moves: 0,
     pushes: 0,
   });
+  const [autoMode, setAutoMode] = useState<'walk' | 'solve' | null>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
   const [boardScale, setBoardScale] = useState(1);
   const initRef = useRef(false);
+  const prefersReducedMotion = useRef(false);
+  const stateRef = useRef(state);
+  const packIndexRef = useRef(packIndex);
+  const indexRef = useRef(index);
+  const packsRef = useRef(packs);
+  const warnDirRef = useRef<DirectionKey | null>(null);
+  const autoplayRef = useRef<{
+    mode: 'walk' | 'solve';
+    moves: DirectionKey[];
+    index: number;
+    timer: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  useEffect(() => {
+    packIndexRef.current = packIndex;
+  }, [packIndex]);
+
+  useEffect(() => {
+    indexRef.current = index;
+  }, [index]);
+
+  useEffect(() => {
+    packsRef.current = packs;
+  }, [packs]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    prefersReducedMotion.current =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+  }, []);
+
+  const clearAutoplay = useCallback(() => {
+    const active = autoplayRef.current;
+    if (!active) return false;
+    if (active.timer) {
+      window.clearTimeout(active.timer);
+    }
+    autoplayRef.current = null;
+    setAutoMode(null);
+    setStatus('');
+    return true;
+  }, []);
+
+  const loadProgressState = useCallback(
+    (levelIndex: number, packIdx: number, packData: LevelPack[] = packsRef.current) => {
+      const pack = packData[packIdx];
+      const base = loadLevel(pack.levels[levelIndex]);
+      try {
+        const stored = localStorage.getItem(progressKey(packIdx, levelIndex));
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (isValidProgress(parsed)) {
+            return restoreProgress(base, parsed);
+          }
+        }
+      } catch {
+        // ignore storage errors
+      }
+      return base;
+    },
+    []
+  );
+
+  const persistProgress = useCallback((nextState: State) => {
+    if (isSolved(nextState)) return;
+    try {
+      const key = progressKey(packIndexRef.current, indexRef.current);
+      localStorage.setItem(key, JSON.stringify(serializeProgress(nextState)));
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const clearProgress = useCallback(() => {
+    try {
+      const key = progressKey(packIndexRef.current, indexRef.current);
+      localStorage.removeItem(key);
+    } catch {
+      // ignore storage errors
+    }
+  }, []);
+
+  const registerPushEffects = useCallback((prevState: State, nextState: State) => {
+    if (nextState.pushes <= prevState.pushes) return;
+    const from = Array.from(prevState.boxes).find((b) => !nextState.boxes.has(b));
+    const to = Array.from(nextState.boxes).find((b) => !prevState.boxes.has(b));
+    if (from) {
+      const [fx, fy] = from.split(',').map(Number);
+      const id = puffId.current++;
+      setPuffs((p) => [...p, { id, x: fx, y: fy }]);
+      setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
+    }
+    if (to) {
+      setLastPush(to);
+      setTimeout(() => setLastPush(null), 200);
+    }
+    logEvent({ category: 'sokoban', action: 'push' });
+  }, []);
+
+  const handleSolved = useCallback(
+    (nextState: State) => {
+      logGameEnd('sokoban', `level_complete`);
+      logEvent({
+        category: 'sokoban',
+        action: 'level_complete',
+        value: nextState.pushes,
+      });
+      const bestKey = `sokoban-best-${packIndexRef.current}-${indexRef.current}`;
+      const prevBest = localStorage.getItem(bestKey);
+      if (!prevBest || nextState.pushes < Number(prevBest)) {
+        localStorage.setItem(bestKey, String(nextState.pushes));
+        setBest(nextState.pushes);
+      }
+      clearProgress();
+      setStats({ moves: nextState.moves, pushes: nextState.pushes });
+      setShowStats(true);
+      clearAutoplay();
+    },
+    [clearAutoplay, clearProgress]
+  );
+
+  const applyNextState = useCallback(
+    (prevState: State, nextState: State) => {
+      setState(nextState);
+      setReach(reachable(nextState));
+      setHint('');
+      setStatus(nextState.deadlocks.size ? 'Deadlock!' : '');
+      setGhost(new Set());
+      setSolutionPath(new Set());
+      setShowStats(false);
+      warnDirRef.current = null;
+      registerPushEffects(prevState, nextState);
+      if (isSolved(nextState)) {
+        setStatus('');
+        handleSolved(nextState);
+      }
+    },
+    [handleSolved, registerPushEffects]
+  );
+
+  const resetCurrentLevel = useCallback(() => {
+    clearAutoplay();
+    const pack = packsRef.current[packIndexRef.current];
+    const lvl = indexRef.current;
+    const st = resetLevel(pack.levels[lvl]);
+    setState(st);
+    setReach(reachable(st));
+    setHint('');
+    setStatus('');
+    setGhost(new Set());
+    setSolutionPath(new Set());
+    setShowStats(false);
+    setMinPushes(null);
+    setTimeout(() => setMinPushes(findMinPushes(st)), 0);
+    warnDirRef.current = null;
+  }, [clearAutoplay]);
+
+  const undoCurrentMove = useCallback(() => {
+    clearAutoplay();
+    const current = stateRef.current;
+    const st = undoMove(current);
+    if (st !== current) {
+      setState(st);
+      setReach(reachable(st));
+      setHint('');
+      setStatus(st.deadlocks.size ? 'Deadlock!' : '');
+      setGhost(new Set());
+      setSolutionPath(new Set());
+      setShowStats(false);
+      warnDirRef.current = null;
+      logEvent({ category: 'sokoban', action: 'undo' });
+    }
+  }, [clearAutoplay]);
+
+  const redoCurrentMove = useCallback(() => {
+    clearAutoplay();
+    const current = stateRef.current;
+    const st = redoMove(current);
+    if (st !== current) {
+      setState(st);
+      setReach(reachable(st));
+      setHint('');
+      setStatus(st.deadlocks.size ? 'Deadlock!' : '');
+      setGhost(new Set());
+      setSolutionPath(new Set());
+      setShowStats(false);
+      warnDirRef.current = null;
+      logEvent({ category: 'sokoban', action: 'redo' });
+    }
+  }, [clearAutoplay]);
+
+  const handleDirectionalInput = useCallback(
+    (dir: DirectionKey, { suppressWarning = false } = {}) => {
+      const current = stateRef.current;
+      if (!suppressWarning) {
+        if (warnDirRef.current && warnDirRef.current !== dir) {
+          warnDirRef.current = null;
+          setStatus('');
+        }
+        if (warnDirRef.current === dir) {
+          warnDirRef.current = null;
+          setStatus('');
+        } else if (wouldDeadlock(current, dir)) {
+          setStatus('Deadlock ahead! Press again to confirm.');
+          warnDirRef.current = dir;
+          return;
+        }
+      } else {
+        warnDirRef.current = null;
+      }
+      const nextState = move(current, dir);
+      if (nextState === current) return;
+      applyNextState(current, nextState);
+    },
+    [applyNextState]
+  );
+
+  const directionFromDelta = useCallback((dx: number, dy: number): DirectionKey | null => {
+    if (dx === 0 && dy === -1) return 'ArrowUp';
+    if (dx === 0 && dy === 1) return 'ArrowDown';
+    if (dx === -1 && dy === 0) return 'ArrowLeft';
+    if (dx === 1 && dy === 0) return 'ArrowRight';
+    return null;
+  }, []);
+
+  const startAutoplay = useCallback(
+    (moves: DirectionKey[], mode: 'walk' | 'solve') => {
+      clearAutoplay();
+      if (!moves.length) return;
+      autoplayRef.current = {
+        mode,
+        moves,
+        index: 0,
+        timer: null,
+      };
+      setAutoMode(mode);
+      setStatus(mode === 'solve' ? 'Solving...' : 'Walking...');
+      const step = () => {
+        const active = autoplayRef.current;
+        if (!active) return;
+        const current = stateRef.current;
+        const dir = active.moves[active.index];
+        if (!dir) {
+          clearAutoplay();
+          return;
+        }
+        const nextState = move(current, dir);
+        if (nextState === current) {
+          clearAutoplay();
+          return;
+        }
+        if (active.mode === 'walk' && nextState.pushes > current.pushes) {
+          clearAutoplay();
+          return;
+        }
+        applyNextState(current, nextState);
+        if (!autoplayRef.current) return;
+        active.index += 1;
+        if (active.index >= active.moves.length) {
+          clearAutoplay();
+          return;
+        }
+        const delay = prefersReducedMotion.current ? 120 : 60;
+        active.timer = window.setTimeout(step, delay);
+      };
+      step();
+    },
+    [applyNextState, clearAutoplay]
+  );
 
   const selectLevel = useCallback(
     (i: number, pIdx: number = packIndex, pData: LevelPack[] = packs) => {
       const pack = pData[pIdx];
-      const st = loadLevel(pack.levels[i]);
+      clearAutoplay();
+      const st = loadProgressState(i, pIdx, pData);
       setPackIndex(pIdx);
       setIndex(i);
       setState(st);
       setReach(reachable(st));
       setHint('');
       setStatus('');
+      setGhost(new Set());
       setSolutionPath(new Set());
       setShowStats(false);
       setMinPushes(null);
       setTimeout(() => setMinPushes(findMinPushes(st)), 0);
+      warnDirRef.current = null;
       logGameStart('sokoban');
       logEvent({ category: 'sokoban', action: 'level_select', value: i });
     },
-    [packIndex, packs]
+    [clearAutoplay, loadProgressState, packIndex, packs]
   );
 
   const selectPack = useCallback(
@@ -142,51 +521,23 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   );
 
   const handleUndo = useCallback(() => {
-    const st = undoMove(state);
-    if (st !== state) {
-      setState(st);
-      setReach(reachable(st));
-      setHint('');
-      setStatus('');
-      setGhost(new Set());
-      setSolutionPath(new Set());
-      setShowStats(false);
-      logEvent({ category: 'sokoban', action: 'undo' });
-    }
-  }, [state]);
+    undoCurrentMove();
+  }, [undoCurrentMove]);
 
   const handleRedo = useCallback(() => {
-    const st = redoMove(state);
-    if (st !== state) {
-      setState(st);
-      setReach(reachable(st));
-      setHint('');
-      setStatus('');
-      setGhost(new Set());
-      setSolutionPath(new Set());
-      setShowStats(false);
-      logEvent({ category: 'sokoban', action: 'redo' });
-    }
-  }, [state]);
+    redoCurrentMove();
+  }, [redoCurrentMove]);
 
   const handleReset = useCallback(() => {
-    const st = resetLevel(currentPack.levels[index]);
-    setState(st);
-    setReach(reachable(st));
-      setHint('');
-      setStatus('');
-      setGhost(new Set());
-      setSolutionPath(new Set());
-      setShowStats(false);
-      setMinPushes(null);
-    setTimeout(() => setMinPushes(findMinPushes(st)), 0);
-  }, [currentPack, index]);
+    resetCurrentLevel();
+  }, [resetCurrentLevel]);
 
   const handleFile = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       try {
         const file = e.target.files?.[0];
         if (!file) return;
+        clearAutoplay();
         const text = await file.text();
         const lvl = parseLevels(text);
         if (lvl.length) {
@@ -203,7 +554,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         logGameError('sokoban', err instanceof Error ? err.message : String(err));
       }
     },
-    [selectLevel]
+    [clearAutoplay, selectLevel]
   );
 
   useEffect(() => {
@@ -227,7 +578,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
           const customPack: LevelPack = { name: 'Custom', difficulty: 'Custom', levels: parsed };
           const newPacks = [...LEVEL_PACKS, customPack];
           setPacks(newPacks);
-          const st = loadLevel(parsed[0]);
+          const st = loadProgressState(0, newPacks.length - 1, newPacks);
           setPackIndex(newPacks.length - 1);
           setIndex(0);
           setState(st);
@@ -237,13 +588,16 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         }
       }
       if (!code) {
+        const st = loadProgressState(indexRef.current, packIndexRef.current);
+        setState(st);
+        setReach(reachable(st));
         setMinPushes(null);
-        setTimeout(() => setMinPushes(findMinPushes(state)), 0);
+        setTimeout(() => setMinPushes(findMinPushes(st)), 0);
       }
     } catch (err: unknown) {
       logGameError('sokoban', err instanceof Error ? err.message : String(err));
     }
-  }, [state]);
+  }, [loadProgressState]);
 
   useEffect(() => {
     const k = `sokoban-best-${packIndex}-${index}`;
@@ -252,142 +606,32 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
   }, [index, packIndex]);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        handleReset();
-        return;
-      }
-      if (['u', 'U', 'z', 'Z', 'Backspace'].includes(e.key)) {
-        e.preventDefault();
-        handleUndo();
-        return;
-      }
-      if (['y', 'Y'].includes(e.key)) {
-        e.preventDefault();
-        handleRedo();
-        return;
-      }
-      if (!directionKeys.includes(e.key as DirectionKey)) return;
-      e.preventDefault();
-      const dir = e.key as DirectionKey;
-      if (warnDir) {
-        if (warnDir === dir) {
-          const newState = move(state, dir);
-          if (newState !== state) {
-            setState(newState);
-            setReach(reachable(newState));
-            setHint('');
-            setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
-            setGhost(new Set());
-            setSolutionPath(new Set());
-            if (newState.pushes > state.pushes) {
-              const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
-              const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
-              if (from) {
-                const [fx, fy] = from.split(',').map(Number);
-                const id = puffId.current++;
-                setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-                setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
-              }
-              if (to) {
-                setLastPush(to);
-                setTimeout(() => setLastPush(null), 200);
-              }
-              logEvent({ category: 'sokoban', action: 'push' });
-            }
-            if (isSolved(newState)) {
-              logGameEnd('sokoban', `level_complete`);
-              logEvent({
-                category: 'sokoban',
-                action: 'level_complete',
-                value: newState.pushes,
-              });
-              const bestKey = `sokoban-best-${packIndex}-${index}`;
-              const prevBest = localStorage.getItem(bestKey);
-              if (!prevBest || newState.pushes < Number(prevBest)) {
-                localStorage.setItem(bestKey, String(newState.pushes));
-                setBest(newState.pushes);
-              }
-              setStats({ moves: newState.moves, pushes: newState.pushes });
-              setShowStats(true);
-            }
-          }
-          setWarnDir(null);
-          return;
-        }
-        setWarnDir(null);
-      }
-      if (wouldDeadlock(state, dir)) {
-        setStatus('Deadlock ahead! Press again to confirm.');
-        setWarnDir(dir);
-        return;
-      }
-      const newState = move(state, dir);
-      if (newState === state) return;
-      setState(newState);
-      setReach(reachable(newState));
-      setHint('');
-      setStatus(newState.deadlocks.size ? 'Deadlock!' : '');
-      setGhost(new Set());
-      setSolutionPath(new Set());
-      if (newState.pushes > state.pushes) {
-        const from = Array.from(state.boxes).find((b) => !newState.boxes.has(b));
-        const to = Array.from(newState.boxes).find((b) => !state.boxes.has(b));
-        if (from) {
-          const [fx, fy] = from.split(',').map(Number);
-          const id = puffId.current++;
-          setPuffs((p) => [...p, { id, x: fx, y: fy }]);
-          setTimeout(() => setPuffs((p) => p.filter((pp) => pp.id !== id)), 300);
-        }
-        if (to) {
-          setLastPush(to);
-          setTimeout(() => setLastPush(null), 200);
-        }
-        logEvent({ category: 'sokoban', action: 'push' });
-      }
-      if (isSolved(newState)) {
-        logGameEnd('sokoban', `level_complete`);
-        logEvent({
-          category: 'sokoban',
-          action: 'level_complete',
-          value: newState.pushes,
-        });
-        const bestKey = `sokoban-best-${packIndex}-${index}`;
-        const prevBest = localStorage.getItem(bestKey);
-        if (!prevBest || newState.pushes < Number(prevBest)) {
-          localStorage.setItem(bestKey, String(newState.pushes));
-          setBest(newState.pushes);
-        }
-        setStats({ moves: newState.moves, pushes: newState.pushes });
-        setShowStats(true);
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [state, index, packIndex, warnDir, handleReset, handleUndo, handleRedo]);
+    persistProgress(state);
+  }, [persistProgress, state]);
 
   const handleHint = useCallback(() => {
+    clearAutoplay();
     setHint('...');
     setTimeout(() => {
-      const dir = findHint(state);
+      const dir = findHint(stateRef.current);
       setHint(dir ? dir.replace('Arrow', '') : 'No hint');
     }, 0);
-  }, [state]);
+  }, [clearAutoplay]);
   
   const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
 
   const handlePreview = useCallback(() => {
+    clearAutoplay();
     setSolutionPath(new Set());
     setStatus('...');
     setTimeout(() => {
-      const sol = findSolution(state);
+      const sol = findSolution(stateRef.current);
       if (!sol) {
         setStatus('No solution');
         return;
       }
       const positions: string[] = [];
-      let st = state;
+      let st = stateRef.current;
       sol.forEach((dir) => {
         st = move(st, dir);
         positions.push(keyPos(st.player));
@@ -395,7 +639,70 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       setSolutionPath(new Set(positions));
       setStatus('');
     }, 0);
-  }, [state, keyPos]);
+  }, [clearAutoplay, keyPos]);
+
+  const handleSolve = useCallback(() => {
+    clearAutoplay();
+    setSolutionPath(new Set());
+    const sol = findSolution(stateRef.current);
+    if (!sol || !sol.length) {
+      setStatus('No solution');
+      return;
+    }
+    startAutoplay(sol, 'solve');
+  }, [clearAutoplay, startAutoplay]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
+      if (e.key === 'Escape') {
+        if (clearAutoplay()) {
+          consumeGameKey(e);
+        }
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        consumeGameKey(e);
+        handleReset();
+        return;
+      }
+      if (['u', 'U', 'z', 'Z', 'Backspace'].includes(e.key)) {
+        consumeGameKey(e);
+        handleUndo();
+        return;
+      }
+      if (['y', 'Y'].includes(e.key)) {
+        consumeGameKey(e);
+        handleRedo();
+        return;
+      }
+      if (['h', 'H'].includes(e.key)) {
+        consumeGameKey(e);
+        handleHint();
+        return;
+      }
+      if (['p', 'P'].includes(e.key)) {
+        consumeGameKey(e);
+        handlePreview();
+        return;
+      }
+      if (!directionKeys.includes(e.key as DirectionKey)) return;
+      consumeGameKey(e);
+      clearAutoplay();
+      handleDirectionalInput(e.key as DirectionKey);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [
+    clearAutoplay,
+    handleDirectionalInput,
+    handleHint,
+    handlePreview,
+    handleRedo,
+    handleReset,
+    handleUndo,
+    isFocused,
+  ]);
 
   const cellStyle = useMemo(
     () => ({ width: CELL, height: CELL } as React.CSSProperties),
@@ -444,8 +751,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
     };
   }, [state.width, state.height]);
 
-  const findPath = useCallback((target: Position): string[] => {
-    const start = state.player;
+  const findPath = useCallback((target: Position, current: State): string[] => {
+    const start = current.player;
     const q: Position[] = [start];
     const prev = new Map<string, string | null>();
     prev.set(keyPos(start), null);
@@ -473,10 +780,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         if (
           n.x < 0 ||
           n.y < 0 ||
-          n.x >= state.width ||
-          n.y >= state.height ||
-          state.walls.has(k) ||
-          state.boxes.has(k)
+          n.x >= current.width ||
+          n.y >= current.height ||
+          current.walls.has(k) ||
+          current.boxes.has(k)
         )
           continue;
         prev.set(k, keyPos(cur));
@@ -484,7 +791,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
       }
     }
     return [];
-  }, [keyPos, state]);
+  }, [keyPos]);
 
   const handleHover = useCallback(
     (x: number, y: number) => {
@@ -493,10 +800,33 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         setGhost(new Set());
         return;
       }
-      const path = findPath({ x, y });
+      const path = findPath({ x, y }, state);
       setGhost(new Set(path));
     },
     [findPath, reach, state]
+  );
+
+  const handleTileClick = useCallback(
+    (x: number, y: number) => {
+      const current = stateRef.current;
+      const k = `${x},${y}`;
+      if (!reach.has(k) || current.walls.has(k) || current.boxes.has(k)) {
+        return;
+      }
+      const path = findPath({ x, y }, current);
+      if (!path.length) return;
+      const directions: DirectionKey[] = [];
+      let prev = current.player;
+      path.forEach((pos) => {
+        const [px, py] = pos.split(',').map(Number);
+        const dir = directionFromDelta(px - prev.x, py - prev.y);
+        if (dir) directions.push(dir);
+        prev = { x: px, y: py };
+      });
+      if (!directions.length) return;
+      startAutoplay(directions, 'walk');
+    },
+    [directionFromDelta, findPath, reach, startAutoplay]
   );
 
   const baseBoardWidth = state.width * CELL;
@@ -569,6 +899,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             <button
               type="button"
               onClick={handleHint}
+              aria-label="Hint"
               className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Hint
@@ -576,10 +907,32 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
             <button
               type="button"
               onClick={handlePreview}
+              aria-label="Preview solution path"
               className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
             >
               Preview
             </button>
+            <button
+              type="button"
+              onClick={handleSolve}
+              aria-label="Solve level"
+              disabled={autoMode === 'solve'}
+              className={`rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                autoMode === 'solve' ? 'cursor-not-allowed opacity-60' : ''
+              }`}
+            >
+              {autoMode === 'solve' ? 'Solving...' : 'Solve'}
+            </button>
+            {autoMode && (
+              <button
+                type="button"
+                onClick={() => clearAutoplay()}
+                aria-label="Cancel autoplay"
+                className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--color-error)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-error)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-start gap-2 text-sm text-[color:var(--kali-text)]">
@@ -605,13 +958,14 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <div className="mx-auto flex justify-center">
           <div className="relative" style={{ width: scaledBoardWidth, height: scaledBoardHeight }}>
             <div
-              className="relative rounded-md border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-lg"
+              className="relative rounded-md border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
               style={{
                 width: baseBoardWidth,
                 height: baseBoardHeight,
                 transform: `scale(${boardScale})`,
                 transformOrigin: 'top left',
               }}
+              tabIndex={0}
               onMouseLeave={() => setGhost(new Set())}
             >
               {Array.from({ length: state.height }).map((_, y) =>
@@ -642,6 +996,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
                         className={tileClasses.join(' ')}
                         style={{ ...cellStyle, left: x * CELL, top: y * CELL }}
                         onMouseEnter={() => handleHover(x, y)}
+                        onClick={() => handleTileClick(x, y)}
                       />
                       {isReach && !isWall && (
                         <div
@@ -708,6 +1063,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button
           type="button"
           onClick={handleUndo}
+          aria-label="Undo move"
           className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           Undo
@@ -715,6 +1071,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button
           type="button"
           onClick={handleRedo}
+          aria-label="Redo move"
           className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           Redo
@@ -722,17 +1079,26 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed }) => {
         <button
           type="button"
           onClick={handleReset}
+          aria-label="Reset level"
           className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
         >
           Reset
         </button>
       </div>
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
-        <span>Arrow keys: Move</span>
-        <span>Z or U: Undo</span>
-        <span>Y: Redo</span>
-        <span>R: Reset</span>
-      </div>
+      <details className="mx-auto w-full max-w-xl rounded border border-[color:var(--kali-panel-border)]/70 bg-[color:color-mix(in_srgb,var(--kali-panel)_70%,transparent)] px-3 py-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
+        <summary className="cursor-pointer text-sm font-semibold text-[color:var(--kali-text)]">
+          Help & controls
+        </summary>
+        <div className="mt-2 grid gap-1 sm:grid-cols-2">
+          <span>Arrow keys: Move/push</span>
+          <span>Z: Undo</span>
+          <span>Y: Redo</span>
+          <span>R: Reset</span>
+          <span>H: Hint</span>
+          <span>P: Preview</span>
+          <span>Esc: Cancel autoplay/solve</span>
+        </div>
+      </details>
       {showStats && (
         <div
           className="fixed inset-0 flex bg-[color:var(--kali-overlay)]/85 backdrop-blur-sm"
