@@ -285,26 +285,67 @@ function addNote(content = '') {
 }
 
 function enableDrag(el, note) {
-  let offsetX, offsetY;
-  function onMouseDown(e) {
-    if (['TEXTAREA', 'INPUT', 'BUTTON'].includes(e.target.tagName)) return;
-    offsetX = e.clientX - el.offsetLeft;
-    offsetY = e.clientY - el.offsetTop;
-    document.addEventListener('mousemove', onMouseMove);
-    document.addEventListener('mouseup', onMouseUp);
-  }
-  function onMouseMove(e) {
-    note.x = e.clientX - offsetX;
-    note.y = e.clientY - offsetY;
+  let offsetX = 0;
+  let offsetY = 0;
+  let pointerId = null;
+  let frame = null;
+  let pendingX = note.x;
+  let pendingY = note.y;
+
+  const applyPosition = () => {
+    frame = null;
+    note.x = pendingX;
+    note.y = pendingY;
     el.style.left = note.x + 'px';
     el.style.top = note.y + 'px';
-  }
-  function onMouseUp() {
-    document.removeEventListener('mousemove', onMouseMove);
-    document.removeEventListener('mouseup', onMouseUp);
+  };
+
+  const queuePositionUpdate = () => {
+    if (frame !== null) return;
+    frame = requestAnimationFrame(applyPosition);
+  };
+
+  const endDrag = (event) => {
+    if (pointerId === null || event.pointerId !== pointerId) return;
+    if (frame !== null) {
+      cancelAnimationFrame(frame);
+      applyPosition();
+    }
+    if (typeof el.releasePointerCapture === 'function') {
+      el.releasePointerCapture(pointerId);
+    }
+    pointerId = null;
+    el.removeEventListener('pointermove', onPointerMove);
+    el.removeEventListener('pointerup', endDrag);
+    el.removeEventListener('pointercancel', endDrag);
     void saveNotes();
-  }
-  el.addEventListener('mousedown', onMouseDown);
+  };
+
+  const onPointerMove = (event) => {
+    if (pointerId === null || event.pointerId !== pointerId) return;
+    pendingX = event.clientX - offsetX;
+    pendingY = event.clientY - offsetY;
+    queuePositionUpdate();
+  };
+
+  const onPointerDown = (event) => {
+    if (pointerId !== null) return;
+    if (['TEXTAREA', 'INPUT', 'BUTTON'].includes(event.target.tagName)) return;
+    pointerId = event.pointerId;
+    pendingX = note.x;
+    pendingY = note.y;
+    offsetX = event.clientX - note.x;
+    offsetY = event.clientY - note.y;
+    if (typeof el.setPointerCapture === 'function') {
+      el.setPointerCapture(pointerId);
+    }
+    el.addEventListener('pointermove', onPointerMove);
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
+  };
+
+  el.style.touchAction = 'none';
+  el.addEventListener('pointerdown', onPointerDown);
 }
 async function init() {
   try {
