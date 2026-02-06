@@ -1,5 +1,6 @@
 const CACHE_NAME = 'periodic-cache-v1';
 const ASSETS = [
+  '/',
   '/apps/weather.js',
   '/feeds',
   '/about',
@@ -67,6 +68,18 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(request).then((cached) => cached || fetch(request)),
+    caches.match(request).then(async (cached) => {
+      try {
+        return cached || (await fetch(request));
+      } catch (err) {
+        if (
+          request.mode === 'navigate' ||
+          request.destination === 'document'
+        ) {
+          return caches.match('/offline.html');
+        }
+        return cached;
+      }
+    }),
   );
 });
