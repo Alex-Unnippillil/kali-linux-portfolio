@@ -339,8 +339,13 @@ export const createTowerDefenseEngine = (config: TowerDefenseConfig = {}) => {
       cooldowns.set(key, nextCooldown);
       if (nextCooldown > 0) return;
 
+      const towerCenterX = tower.x + 0.5;
+      const towerCenterY = tower.y + 0.5;
       const target = enemies.find((enemy) =>
-        Math.hypot(enemy.x - tower.x, enemy.y - tower.y) <= tower.range,
+        Math.hypot(
+          enemy.x + 0.5 - towerCenterX,
+          enemy.y + 0.5 - towerCenterY,
+        ) <= tower.range,
       );
       if (!target) return;
 
@@ -535,8 +540,8 @@ export const createTowerDefenseEngine = (config: TowerDefenseConfig = {}) => {
         state.towers.push({
           x: cell.x,
           y: cell.y,
-          range: 1,
-          damage: 1,
+          range: 1.5,
+          damage: 2,
           level: 1,
         });
         state.gold -= baseTowerCost;

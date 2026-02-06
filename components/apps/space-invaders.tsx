@@ -39,6 +39,12 @@ type Star = {
   alpha: number;
 };
 
+const getInvaderColor = (points: number) => {
+  if (points >= 30) return '#f472b6';
+  if (points >= 20) return '#34d399';
+  return '#a3e635';
+};
+
 const isTextInput = (target: EventTarget | null) => {
   if (!target || !(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -427,9 +433,9 @@ const SpaceInvaders: React.FC = () => {
       );
     }
 
-    ctx.fillStyle = '#34d399';
     state.invaders.forEach((invader) => {
       if (!invader.alive) return;
+      ctx.fillStyle = getInvaderColor(invader.points);
       const bob = prefersReducedMotion ? 0 : Math.sin(invader.phase) * 1.5;
       ctx.fillRect(invader.x, invader.y + bob, invader.w, invader.h);
       if (state.invaderFrame === 1) {

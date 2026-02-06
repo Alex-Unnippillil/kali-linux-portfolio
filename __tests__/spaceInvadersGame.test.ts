@@ -55,6 +55,32 @@ describe('space-invaders logic', () => {
     expect(game.highScore).toBe(20);
   });
 
+  test('ufo awards classic score values', () => {
+    const game = createGame();
+    game.ufo.active = true;
+    game.bullets.push({
+      x: game.ufo.x + 1,
+      y: game.ufo.y + 1,
+      dx: 0,
+      dy: 0,
+      active: true,
+      owner: 'player',
+    });
+    const result = stepGame(game, { left: false, right: false, fire: false }, 0.016);
+    const event = result.events.find((ev) => ev.type === 'ufo-destroyed');
+    expect(event?.value).toBeDefined();
+    expect([50, 100, 150, 300]).toContain(event?.value);
+  });
+
+  test('invaders reaching player line trigger game over', () => {
+    const game = createGame();
+    const target = game.invaders[0];
+    target.alive = true;
+    target.y = game.player.y - target.h + 1;
+    stepGame(game, { left: false, right: false, fire: false }, 0.016);
+    expect(game.gameOver).toBe(true);
+  });
+
   test('enemy bullets originate from front-line invader per column', () => {
     const game = createGame();
     game.bullets = [];

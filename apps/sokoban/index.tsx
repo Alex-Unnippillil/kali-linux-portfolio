@@ -214,6 +214,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
   });
   const [autoMode, setAutoMode] = useState<'walk' | 'solve' | null>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
   const [boardScale, setBoardScale] = useState(1);
   const initRef = useRef(false);
   const prefersReducedMotion = useRef(false);
@@ -837,6 +838,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
   const packSelectId = React.useId();
   const levelSelectId = React.useId();
   const importInputId = React.useId();
+  const canUndo = state.history.length > 0;
+  const canRedo = state.future.length > 0;
+  const hasPrevLevel = index > 0;
+  const hasNextLevel = index + 1 < currentPack.levels.length;
 
   return (
     <div className="select-none space-y-4 p-4">
@@ -858,22 +863,53 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
               ))}
             </select>
           </label>
-          <label
-            htmlFor={levelSelectId}
-            className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]"
-          >
+          <div className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]">
             <span className="font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">Level</span>
-            <select
-              id={levelSelectId}
-              value={index}
-              onChange={(e) => selectLevel(Number(e.target.value))}
-              className="mt-1 rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)] px-2 py-1 text-sm text-[color:var(--kali-text)] shadow-sm transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:var(--kali-control)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
-            >
-              {currentPack.levels.map((_, i) => (
-                <option key={i} value={i}>{`Level ${i + 1}`}</option>
-              ))}
-            </select>
-          </label>
+            <div className="mt-1 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => selectLevel(index - 1)}
+                disabled={!hasPrevLevel}
+                aria-label="Previous level"
+                className={`rounded border border-[color:var(--kali-panel-border)] px-2 py-1 text-xs font-semibold text-[color:var(--kali-control)] shadow transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                  hasPrevLevel
+                    ? 'bg-[color:var(--kali-control-overlay)] hover:bg-[color:var(--kali-control-surface)]'
+                    : 'cursor-not-allowed bg-[color:var(--kali-panel)] text-[color:color-mix(in_srgb,var(--kali-text)_50%,transparent)]'
+                }`}
+              >
+                ◀
+              </button>
+              <label
+                htmlFor={levelSelectId}
+                className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]"
+              >
+                <span className="sr-only">Level</span>
+                <select
+                  id={levelSelectId}
+                  value={index}
+                  onChange={(e) => selectLevel(Number(e.target.value))}
+                  className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-surface)] px-2 py-1 text-sm text-[color:var(--kali-text)] shadow-sm transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:var(--kali-control)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
+                >
+                  {currentPack.levels.map((_, i) => (
+                    <option key={i} value={i}>{`Level ${i + 1}`}</option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={() => selectLevel(index + 1)}
+                disabled={!hasNextLevel}
+                aria-label="Next level"
+                className={`rounded border border-[color:var(--kali-panel-border)] px-2 py-1 text-xs font-semibold text-[color:var(--kali-control)] shadow transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                  hasNextLevel
+                    ? 'bg-[color:var(--kali-control-overlay)] hover:bg-[color:var(--kali-control-surface)]'
+                    : 'cursor-not-allowed bg-[color:var(--kali-panel)] text-[color:color-mix(in_srgb,var(--kali-text)_50%,transparent)]'
+                }`}
+              >
+                ▶
+              </button>
+            </div>
+          </div>
           <label
             htmlFor={importInputId}
             className="flex flex-col text-xs text-[color:color-mix(in_srgb,var(--kali-text)_72%,transparent)]"
@@ -965,8 +1001,10 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
                 transform: `scale(${boardScale})`,
                 transformOrigin: 'top left',
               }}
+              ref={boardRef}
               tabIndex={0}
               onMouseLeave={() => setGhost(new Set())}
+              onPointerDown={() => boardRef.current?.focus()}
             >
               {Array.from({ length: state.height }).map((_, y) =>
                 Array.from({ length: state.width }).map((_, x) => {
@@ -1064,7 +1102,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
           type="button"
           onClick={handleUndo}
           aria-label="Undo move"
-          className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+          disabled={!canUndo}
+          className={`rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+            canUndo
+              ? 'hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)]'
+              : 'cursor-not-allowed opacity-60'
+          }`}
         >
           Undo
         </button>
@@ -1072,7 +1115,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
           type="button"
           onClick={handleRedo}
           aria-label="Redo move"
-          className="rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+          disabled={!canRedo}
+          className={`rounded bg-kali-control px-3 py-1 text-sm font-semibold text-slate-900 shadow transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+            canRedo
+              ? 'hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)]'
+              : 'cursor-not-allowed opacity-60'
+          }`}
         >
           Redo
         </button>
@@ -1112,13 +1160,42 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
             <div>Moves: {stats.moves}</div>
             <div>Pushes: {stats.pushes}</div>
             {minPushes !== null && <div>Minimal pushes: {minPushes}</div>}
-            <button
-              type="button"
-              onClick={() => setShowStats(false)}
-              className="rounded bg-kali-control px-2 py-1 text-sm font-semibold text-slate-900 transition hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
-            >
-              Close
-            </button>
+            <div className="flex flex-wrap gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  handleReset();
+                  setShowStats(false);
+                }}
+                className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-2 py-1 text-sm font-semibold text-[color:var(--kali-control)] transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              >
+                Replay
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (hasNextLevel) {
+                    selectLevel(index + 1);
+                    setShowStats(false);
+                  }
+                }}
+                disabled={!hasNextLevel}
+                className={`rounded bg-kali-control px-2 py-1 text-sm font-semibold text-slate-900 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] ${
+                  hasNextLevel
+                    ? 'hover:bg-[color:color-mix(in_srgb,var(--color-control-accent)_85%,#000000)]'
+                    : 'cursor-not-allowed opacity-60'
+                }`}
+              >
+                {hasNextLevel ? 'Next level' : 'Pack complete'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowStats(false)}
+                className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-2 py-1 text-sm font-semibold text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
