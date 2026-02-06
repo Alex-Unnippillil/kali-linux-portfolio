@@ -4,6 +4,7 @@ import SimulationReportExport from '../SimulationReportExport';
 import { recordSimulation } from '../../../utils/simulationLog';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import SchedulerViz from './SchedulerViz';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -766,6 +767,7 @@ const HydraApp = () => {
         throttling and stops at {LOCKOUT_THRESHOLD} attempts to illustrate
         account lockout.
       </p>
+      <SchedulerViz />
       <AttemptTimeline attempts={timeline} />
       {timeline.length > 0 && (
         <table className="mt-4 w-full text-sm">
