@@ -1,0 +1,22 @@
+[
+  {
+    "path": "/",
+    "resourceSizes": [
+      { "resourceType": "script", "budget": 160 },
+      { "resourceType": "image", "budget": 300 }
+    ],
+    "timings": [
+      { "metric": "largest-contentful-paint", "threshold": 2200 }
+    ]
+  },
+  {
+    "path": "/apps",
+    "resourceSizes": [
+      { "resourceType": "script", "budget": 160 },
+      { "resourceType": "image", "budget": 300 }
+    ],
+    "timings": [
+      { "metric": "largest-contentful-paint", "threshold": 2200 }
+    ]
+  }
+]

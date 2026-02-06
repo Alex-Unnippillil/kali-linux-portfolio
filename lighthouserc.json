@@ -1,0 +1,24 @@
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./out",
+      "url": ["/", "/apps"],
+      "numberOfRuns": 3,
+      "settings": {
+        "throttlingMethod": "simulate",
+        "throttling": {
+          "rttMs": 150,
+          "throughputKbps": 1600,
+          "cpuSlowdownMultiplier": 4
+        },
+        "formFactor": "mobile",
+        "screenEmulation": { "mobile": true }
+      }
+    },
+    "assert": {
+      "assertions": {
+        "largest-contentful-paint": ["error", { "maxNumericValue": 2200, "aggregationMethod": "p95" }]
+      }
+    }
+  }
+}
