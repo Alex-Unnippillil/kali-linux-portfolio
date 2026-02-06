@@ -70,6 +70,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 
 ### Contact Me
 - Simple form posting to dummy endpoint with client-side validation and privacy note.
+- Mobile keyboard optimized via `inputmode`, `autocomplete`, and autocorrect guidance on name/email/message fields.
 
 ### Converter
 - Centralize unit mappings in `components/apps/converter/units.js` and maintain test coverage.
