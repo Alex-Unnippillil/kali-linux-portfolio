@@ -40,6 +40,7 @@ export interface GameState {
   modeIndex: number;
   modeTimer: number;
   frightenedTimer: number;
+  frightenedCombo: number;
   pelletsRemaining: number;
   score: number;
   levelTime: number;
@@ -222,6 +223,7 @@ export const createInitialState = (
     modeIndex: 0,
     modeTimer: options.scatterChaseSchedule[0]?.duration ?? 0,
     frightenedTimer: 0,
+    frightenedCombo: 0,
     pelletsRemaining,
     score: 0,
     levelTime: 0,
@@ -339,6 +341,7 @@ export const step = (
     } else {
       state.score += 50;
       state.frightenedTimer = options.frightenedDuration;
+      state.frightenedCombo = 0;
       events.energizer = true;
     }
   }
@@ -348,10 +351,12 @@ export const step = (
     pac.lives += 1;
   }
 
+  const prevMode = state.mode;
   if (state.frightenedTimer > 0) {
     state.frightenedTimer = Math.max(0, state.frightenedTimer - dt);
     if (state.frightenedTimer === 0) {
       state.mode = options.scatterChaseSchedule[state.modeIndex]?.mode ?? 'scatter';
+      state.frightenedCombo = 0;
     } else {
       state.mode = 'fright';
     }
@@ -364,6 +369,7 @@ export const step = (
     state.mode = options.scatterChaseSchedule[state.modeIndex]?.mode ?? 'scatter';
   }
 
+  const modeChanged = prevMode !== state.mode;
   const randomMode = options.levelIndex < options.randomModeLevel;
 
   ghosts = ghosts.map((g) => {
@@ -377,11 +383,15 @@ export const step = (
     const gSpeed =
       speedBase * (isTunnel(maze, gTile.x, gTile.y) ? options.tunnelSpeed : 1);
     let dir = g.dir;
+    const forcedTurn = modeChanged && (dir.x !== 0 || dir.y !== 0);
+    if (forcedTurn) {
+      dir = { x: -dir.x, y: -dir.y };
+    }
 
-    if (isNearCenter(g, options.turnTolerance)) {
+    if (!forcedTurn && isNearCenter(g, options.turnTolerance)) {
       const rev = { x: -dir.x, y: -dir.y };
       let optionsDirs = DIRECTIONS.filter((d) => {
-        if (d.x === rev.x && d.y === rev.y) return false;
+        if (!modeChanged && d.x === rev.x && d.y === rev.y) return false;
         return canMove(maze, gTile.x + d.x, gTile.y + d.y);
       });
       if (!optionsDirs.length) optionsDirs = DIRECTIONS;
@@ -416,7 +426,9 @@ export const step = (
   ghosts.forEach((g) => {
     if (Math.floor(g.x) === pacTileCheck.x && Math.floor(g.y) === pacTileCheck.y) {
       if (state.frightenedTimer > 0) {
-        state.score += 200;
+        const comboMultiplier = Math.pow(2, state.frightenedCombo);
+        state.score += 200 * comboMultiplier;
+        state.frightenedCombo = Math.min(state.frightenedCombo + 1, 3);
         events.ghostEaten = g.name;
         const spawn = state.spawns.ghosts[g.name];
         g.x = spawn.x + 0.5;

@@ -103,6 +103,22 @@ describe('pacman engine', () => {
     );
   });
 
+  it('scales ghost scores during frightened combos', () => {
+    const state = createInitialState(baseLevel, baseOptions);
+    state.frightenedTimer = 2;
+    state.ghosts[0].x = state.pac.x;
+    state.ghosts[0].y = state.pac.y;
+    const first = step(state, {}, 0.1, baseOptions);
+    expect(first.state.score).toBeGreaterThanOrEqual(200);
+
+    const comboState = {
+      ...first.state,
+      pac: { ...first.state.pac, x: first.state.ghosts[1].x, y: first.state.ghosts[1].y },
+    };
+    const second = step(comboState, {}, 0.1, baseOptions);
+    expect(second.state.score).toBeGreaterThan(first.state.score);
+  });
+
   it('transitions between scatter and chase on schedule', () => {
     const options: EngineOptions = {
       ...baseOptions,
@@ -141,5 +157,20 @@ describe('pacman engine', () => {
     const turned = step(blocked.state, { direction: { x: 0, y: 1 } }, 0.4, baseOptions);
     expect(turned.state.pac.dir).toEqual({ x: 0, y: 1 });
     expect(turned.state.pac.y).toBeGreaterThan(1.5);
+  });
+
+  it('reverses ghosts when the mode changes', () => {
+    const options: EngineOptions = {
+      ...baseOptions,
+      scatterChaseSchedule: [
+        { mode: 'scatter', duration: 0.01 },
+        { mode: 'chase', duration: 1 },
+      ],
+    };
+    const state = createInitialState(baseLevel, options);
+    state.ghosts[0].dir = { x: 1, y: 0 };
+    const result = step(state, {}, 0.02, options);
+    expect(result.state.mode).toBe('chase');
+    expect(result.state.ghosts[0].dir).not.toEqual({ x: 1, y: 0 });
   });
 });
