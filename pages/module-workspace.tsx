@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import Meta from '../components/SEO/Meta';
 import usePersistentState from '../hooks/usePersistentState';
 import { setValue, getAll } from '../utils/moduleStore';
 import StarterWizard from '../components/workspaces/StarterWizard';
@@ -46,6 +47,28 @@ const modules: Module[] = [
     sample: '[+] CVE-2024-1234 present on host',
   },
 ];
+
+const moduleListJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Alex Unnippillil Project Modules',
+  description:
+    'A curated list of simulated security modules demonstrating Alex Unnippillil’s approach to tooling design and UX. Each entry highlights inputs, outputs, and saved workspace states.',
+  url: 'https://unnippillil.com/module-workspace',
+  numberOfItems: modules.length,
+  itemListElement: modules.map((module, index) => ({
+    '@type': 'ListItem',
+    position: index + 1,
+    name: module.name,
+    url: `https://unnippillil.com/module-workspace#${module.id}`,
+    item: {
+      '@type': 'SoftwareApplication',
+      name: module.name,
+      description: module.description,
+      applicationCategory: 'SecurityApplication',
+    },
+  })),
+};
 
 const ModuleWorkspace: React.FC = () => {
   const [workspaces, setWorkspaces] = usePersistentState<string[]>(
@@ -113,10 +136,17 @@ const ModuleWorkspace: React.FC = () => {
   }, [selected, optionValues]);
 
   return (
-    <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
-      <StarterWizard />
-      <section className="space-y-2">
-        <h1 className="text-xl font-semibold">Workspaces</h1>
+    <>
+      <Meta
+        title="Project Modules"
+        description="Experiment with Alex Unnippillil’s simulated security modules, configure inputs, and generate repeatable results for portfolio walkthroughs."
+        canonical="/module-workspace"
+        jsonLd={[moduleListJsonLd]}
+      />
+      <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
+        <StarterWizard />
+        <section className="space-y-2">
+          <h1 className="text-xl font-semibold">Workspaces</h1>
           <div className="flex gap-2">
             <input
               value={newWorkspace}
@@ -264,7 +294,8 @@ const ModuleWorkspace: React.FC = () => {
           )}
         </>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
