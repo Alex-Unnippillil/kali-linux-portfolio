@@ -1,0 +1,13 @@
+{
+  "headBuildDir": ".next",
+  "baseBuildDir": "../base/.next",
+  "globs": {
+    "js": ["static/chunks/**/*.js"],
+    "css": ["static/css/**/*.css"]
+  },
+  "budgets": {
+    "jsTotalBrotliKb": 2800,
+    "cssTotalBrotliKb": 150
+  },
+  "topAssets": 5
+}
