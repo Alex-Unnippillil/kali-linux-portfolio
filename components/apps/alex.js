@@ -129,8 +129,8 @@ function About() {
                 />
             </div>
             <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-                <div>My name is <span className="font-bold">Alex Unnippillil</span>, </div>
-                 <div className="font-normal ml-1">I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span></div>
+                <div className="font-normal">My name is <span className="font-bold">Alex Unnippillil</span>.</div>
+                <div className="font-normal ml-1">I&apos;m a Toronto-based technology leader focused on <span className="text-ubt-blue font-bold">secure AI and cloud platforms</span>.</div>
             </div>
             <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
                 <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0"></div>
@@ -138,52 +138,19 @@ function About() {
             </div>
             <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
                 <li className="list-pc">
-                    I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a{" "}
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://shared.ontariotechu.ca/shared/faculty/fesns/documents/FESNS%20Program%20Maps/2018_nuclear_engineering_map_2017_entry.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Nuclear Engineering
-                    </a>{" "}
-                    degree at Ontario Tech University before deciding to change my career goals and pursue my passion for{" "}
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://businessandit.ontariotechu.ca/undergraduate/bachelor-of-information-technology/networking-and-information-technology-security/networking-and-i.t-security-bit-2023-2024_.pdf"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        Networking and I.T. Security
-                    </a>
-                    .
+                    I currently serve as <span className="font-medium">Director at MyUnni AI Consulting Inc.</span>, where I build production-grade MLOps, LLMOps, and agentic systems that emphasize safety, observability, and Model Context Protocol alignment.
                 </li>
                 <li className="mt-3 list-building">
-                    If you&apos;re looking for someone who always wants to help others and will put in the work 24/7, feel free to email{" "}
-                    <a className=" underline" href="mailto:alex.unnippillil@hotmail.com">alex.unnippillil@hotmail.com</a>.
-                </li>
-                <li className="mt-3 list-time">
-                    When I&apos;m not learning new technical skills, I enjoy reading books, rock climbing, or watching{" "}
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://www.youtube.com/@Alex-Unnippillil/playlists"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        YouTube videos
-                    </a>{" "}and{" "}
-                    <a
-                        className=" underline cursor-pointer"
-                        href="https://myanimelist.net/animelist/alex_u"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                    >
-                        anime
-                    </a>
-                    .
+                    Previously, I led technology and security at Pixel &amp; Story and managed cross-border e-commerce operations at Fast Shipping Canada, covering infrastructure, compliance, supplier relations, and customer experience across Amazon FBA and Shopify.
                 </li>
                 <li className="mt-3 list-star">
-                    I also have interests in deep learning, software development, and animation.
+                    I&apos;m completing an Information Technology degree in Networking &amp; I.T. Security after foundational studies in Nuclear Engineering—pairing deep technical rigor with hands-on cybersecurity execution.
+                </li>
+                <li className="mt-3 list-time">
+                    Recent certifications include AWS Solutions Architect, CompTIA Security+, CCSK, and IBM/Google professional credentials, reinforcing my focus on secure cloud architectures and responsible AI delivery.
+                </li>
+                <li className="mt-3 list-mail">
+                    Let&apos;s connect: <a className=" underline" href="mailto:alex_u@live.com">alex_u@live.com</a> · <a className=" underline" href="https://linkedin.com/in/unnippillil" target="_blank" rel="noopener noreferrer">LinkedIn</a> · <a className=" underline" href="https://unnippillil.com" target="_blank" rel="noopener noreferrer">unnippillil.com</a>.
                 </li>
             </ul>
             <Timeline />
