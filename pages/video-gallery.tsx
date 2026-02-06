@@ -47,7 +47,11 @@ const VideoGallery: React.FC = () => {
         className="mb-4 w-full max-w-md px-4 py-2 border rounded"
       />
       {playing && (
-        <div className="mb-4 w-full max-w-2xl aspect-video">
+        <div
+          className="mb-4 w-full max-w-2xl aspect-video relative"
+          role="region"
+          aria-label="Video player"
+        >
           <iframe
             title="Selected video"
             className="w-full h-full"
@@ -56,7 +60,16 @@ const VideoGallery: React.FC = () => {
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             referrerPolicy="no-referrer"
             allowFullScreen
+            tabIndex={-1}
           />
+          <button
+            type="button"
+            onClick={() => setPlaying(null)}
+            className="absolute top-2 right-2 rounded bg-black/70 px-2 py-1 text-white"
+            aria-label="Hide video"
+          >
+            ✕<span className="sr-only">Hide video</span>
+          </button>
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
