@@ -6,6 +6,7 @@ import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
 import ActivityCalendar from 'react-activity-calendar';
+import { observeViewport } from '../../utils/viewport';
 
 export class AboutAlex extends Component {
 
@@ -200,29 +201,33 @@ function Timeline() {
     const [liveMessage, setLiveMessage] = React.useState('');
 
     React.useEffect(() => {
-        const elements = document.querySelectorAll('.timeline-item');
+        const elements = Array.from(document.querySelectorAll('.timeline-item'));
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         if (prefersReducedMotion.matches) {
-            elements.forEach(el => el.classList.add('opacity-100', 'translate-y-0'));
-            return;
+            elements.forEach((el) => el.classList.add('opacity-100', 'translate-y-0'));
+            return undefined;
         }
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    requestAnimationFrame(() => {
-                        entry.target.classList.add('opacity-100', 'translate-y-0');
-                        setLiveMessage(entry.target.getAttribute('data-description') || '');
-                    });
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 });
-
-        elements.forEach(el => observer.observe(el));
+        const subscriptions = elements.map((el) => {
+            let unsubscribe = () => {};
+            unsubscribe = observeViewport(
+                el,
+                (entry) => {
+                    if (entry.isIntersecting) {
+                        requestAnimationFrame(() => {
+                            entry.target.classList.add('opacity-100', 'translate-y-0');
+                            setLiveMessage(entry.target.getAttribute('data-description') || '');
+                        });
+                        unsubscribe();
+                    }
+                },
+                { threshold: 0.1 }
+            );
+            return unsubscribe;
+        });
 
         return () => {
-            elements.forEach(el => observer.unobserve(el));
+            subscriptions.forEach((unsubscribe) => unsubscribe());
         };
     }, []);
 
@@ -485,23 +490,27 @@ function Resume({ data: resume }) {
     const experiences = filter === 'all' ? resume.experience : resume.experience.filter((e) => e.tags.includes(filter));
 
     React.useEffect(() => {
-        const elements = document.querySelectorAll('.exp-item');
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                    requestAnimationFrame(() => {
-                        entry.target.classList.add('opacity-100', 'translate-y-0');
-                        setLiveMessage(entry.target.getAttribute('data-description') || '');
-                    });
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.1 });
-
-        elements.forEach((el) => observer.observe(el));
+        const elements = Array.from(document.querySelectorAll('.exp-item'));
+        const subscriptions = elements.map((el) => {
+            let unsubscribe = () => {};
+            unsubscribe = observeViewport(
+                el,
+                (entry) => {
+                    if (entry.isIntersecting) {
+                        requestAnimationFrame(() => {
+                            entry.target.classList.add('opacity-100', 'translate-y-0');
+                            setLiveMessage(entry.target.getAttribute('data-description') || '');
+                        });
+                        unsubscribe();
+                    }
+                },
+                { threshold: 0.1 }
+            );
+            return unsubscribe;
+        });
 
         return () => {
-            elements.forEach((el) => observer.unobserve(el));
+            subscriptions.forEach((unsubscribe) => unsubscribe());
         };
     }, [filter]);
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import { observeViewport } from '../utils/viewport';
 
 const GitHubStars = ({ user, repo }) => {
   const ref = useRef(null);
@@ -28,16 +29,19 @@ const GitHubStars = ({ user, repo }) => {
   }, [user, repo, setStars, isTestEnv]);
 
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          setVisible(true);
-          observer.disconnect();
-        }
-      });
+    const node = ref.current;
+    if (!node) return undefined;
+
+    let unsubscribe = observeViewport(node, (entry) => {
+      if (entry.isIntersecting) {
+        setVisible(true);
+        unsubscribe();
+      }
     });
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
