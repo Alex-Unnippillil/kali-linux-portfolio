@@ -4,10 +4,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import TabbedWindow, { TabDefinition } from '../../components/ui/TabbedWindow';
 import RouterProfiles, {
   ROUTER_PROFILES,
-  RouterProfile,
+  type VendorProfile,
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import {
+  generatePinsForProfile,
+  getProfileById,
+} from './utils/pinAlgorithms';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -70,7 +74,7 @@ const ReaverPanel: React.FC = () => {
   const [routers, setRouters] = useState<RouterMeta[]>([]);
   const [routerIdx, setRouterIdx] = useState(0);
   const [rate, setRate] = useState(1);
-  const [profile, setProfile] = useState<RouterProfile>(ROUTER_PROFILES[0]);
+  const [profile, setProfile] = useState<VendorProfile>(ROUTER_PROFILES[0]);
   const [attempts, setAttempts] = useState(0);
   const [running, setRunning] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(0);
@@ -79,6 +83,8 @@ const ReaverPanel: React.FC = () => {
   const burstRef = useRef(0); // attempts since last lock
   const lockRef = useRef(0); // lockout seconds remaining
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [candidatePins, setCandidatePins] = useState<string[]>([]);
+  const [pinMeta, setPinMeta] = useState({ durationMs: 0, fromCache: false });
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -136,6 +142,27 @@ const ReaverPanel: React.FC = () => {
     burstRef.current = 0;
     lockRef.current = 0;
     setLockRemaining(0);
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profile) return;
+    try {
+      const start = typeof performance !== 'undefined' ? performance.now() : 0;
+      const { pins, fromCache } = generatePinsForProfile(profile.id, {
+        storage:
+          typeof window !== 'undefined' && window.localStorage
+            ? window.localStorage
+            : undefined,
+      });
+      const duration =
+        typeof performance !== 'undefined' ? performance.now() - start : 0;
+      setCandidatePins(pins);
+      setPinMeta({ durationMs: duration, fromCache });
+    } catch (error) {
+      console.error(error);
+      setCandidatePins([]);
+      setPinMeta({ durationMs: 0, fromCache: false });
+    }
   }, [profile]);
 
   const start = () => {
@@ -246,7 +273,7 @@ const ReaverPanel: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">PIN Brute-force Simulator</h2>
-        <RouterProfiles onChange={setProfile} />
+        <RouterProfiles onChange={(p) => setProfile(getProfileById(p.id) ?? p)} />
         <div className="flex items-center gap-4 mb-4 flex-wrap">
           <div className="flex items-center gap-2">
             <label htmlFor="rate" className="text-sm">
@@ -310,6 +337,46 @@ const ReaverPanel: React.FC = () => {
         )}
         <div className="text-sm mb-2">
           Est. time remaining: {formatTime(timeRemaining)}
+        </div>
+        <div className="mt-4 p-3 bg-gray-800 rounded">
+          <h3 className="text-lg mb-2">Vendor PIN Candidates</h3>
+          <p className="text-xs text-gray-400 mb-2">{profile.description}</p>
+          <dl className="text-xs text-gray-400 mb-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+            <div>
+              <dt className="font-semibold text-gray-300">MAC seed</dt>
+              <dd className="font-mono">{profile.sampleSeed.mac}</dd>
+            </div>
+            {profile.sampleSeed.serial && (
+              <div>
+                <dt className="font-semibold text-gray-300">Serial seed</dt>
+                <dd className="font-mono">{profile.sampleSeed.serial}</dd>
+              </div>
+            )}
+            {profile.sampleSeed.ssid && (
+              <div>
+                <dt className="font-semibold text-gray-300">SSID seed</dt>
+                <dd className="font-mono">{profile.sampleSeed.ssid}</dd>
+              </div>
+            )}
+          </dl>
+          <p className="text-xs text-gray-400 mb-2">
+            Generated {candidatePins.length} candidates in {pinMeta.durationMs.toFixed(2)} ms
+            {pinMeta.fromCache ? ' (cached)' : ''}.
+          </p>
+          {candidatePins.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {candidatePins.map((pin) => (
+                <code
+                  key={pin}
+                  className="block text-center bg-gray-900 border border-gray-700 rounded px-2 py-1 text-sm"
+                >
+                  {pin}
+                </code>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-red-400">Unable to derive candidates.</p>
+          )}
         </div>
         <div
           ref={logRef}
