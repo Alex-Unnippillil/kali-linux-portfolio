@@ -117,4 +117,29 @@ describe('pacman engine', () => {
     const next = step(result.state, {}, 0.6, options);
     expect(next.state.mode).toBe('chase');
   });
+
+  it('snaps pacman to the tile center when blocked to avoid wall lock', () => {
+    const level: LevelDefinition = {
+      maze: [
+        [1,1,1],
+        [1,2,1],
+        [1,2,1],
+        [1,1,1],
+      ],
+      fruit: { x: 1, y: 2 },
+      fruitTimes: [],
+      pacStart: { x: 1, y: 1 },
+    };
+    const state = createInitialState(level, baseOptions);
+    state.pac.dir = { x: 1, y: 0 };
+
+    const blocked = step(state, {}, 0.4, baseOptions);
+    expect(blocked.state.pac.dir).toEqual({ x: 0, y: 0 });
+    expect(blocked.state.pac.x).toBeCloseTo(1.5, 2);
+    expect(blocked.state.pac.y).toBeCloseTo(1.5, 2);
+
+    const turned = step(blocked.state, { direction: { x: 0, y: 1 } }, 0.4, baseOptions);
+    expect(turned.state.pac.dir).toEqual({ x: 0, y: 1 });
+    expect(turned.state.pac.y).toBeGreaterThan(1.5);
+  });
 });

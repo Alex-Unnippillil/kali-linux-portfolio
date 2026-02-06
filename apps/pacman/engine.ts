@@ -153,6 +153,15 @@ const alignToCenter = (pos: Point) => ({
   y: Math.floor(pos.y) + 0.5,
 });
 
+const findNearestWalkableTile = (maze: Tile[][], tile: Point) => {
+  if (canMove(maze, tile.x, tile.y)) return tile;
+  for (const dir of DIRECTIONS) {
+    const candidate = { x: tile.x + dir.x, y: tile.y + dir.y };
+    if (canMove(maze, candidate.x, candidate.y)) return candidate;
+  }
+  return tile;
+};
+
 const targetFor = (ghost: GhostState, pac: PacState, ghosts: GhostState[]) => {
   const px = Math.floor(pac.x);
   const py = Math.floor(pac.y);
@@ -261,7 +270,17 @@ export const step = (
 
   state.levelTime += dt;
 
-  const pacTile = { x: Math.floor(pac.x), y: Math.floor(pac.y) };
+  let pacTile = { x: Math.floor(pac.x), y: Math.floor(pac.y) };
+  const recoveryTile = findNearestWalkableTile(maze, pacTile);
+  if (recoveryTile.x !== pacTile.x || recoveryTile.y !== pacTile.y) {
+    pac = {
+      ...pac,
+      x: recoveryTile.x + 0.5,
+      y: recoveryTile.y + 0.5,
+      dir: { x: 0, y: 0 },
+    };
+    pacTile = { ...recoveryTile };
+  }
   const pacCenter = alignToCenter(pac);
   const canTurn =
     pac.nextDir &&
@@ -301,7 +320,7 @@ export const step = (
   if (canMove(maze, nextPacTile.x, nextPacTile.y)) {
     pac = { ...pac, ...wrapIfNeeded(maze, nextPac) };
   } else {
-    pac = { ...pac, dir: { x: 0, y: 0 } };
+    pac = { ...pac, x: pacCenter.x, y: pacCenter.y, dir: { x: 0, y: 0 } };
   }
 
   const pacCell = {
