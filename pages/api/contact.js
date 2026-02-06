@@ -6,7 +6,7 @@ import { formatCookie } from '../../utils/cookies';
 
 // Simple in-memory rate limiter. Not suitable for distributed environments.
 export const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX = 5;
+export const RATE_LIMIT_MAX = 5;
 
 export const rateLimit = new Map();
 
