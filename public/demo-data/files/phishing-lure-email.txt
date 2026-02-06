@@ -1,0 +1,11 @@
+# Phishing Lure – Invoice Reconciliation Thread
+
+Received: from gateway02 by mail.unnippillil.com with ESMTPS id 84ad3
+DKIM-Signature: v=1; a=rsa-sha256; d=contoso-internal.com; s=mail;
+Subject: Re: Q1 invoice reconciliation outstanding
+From: "Accounts Payable" <accounts@contoso-internal.com>
+To: finance-notifications@unnippillil.com
+Date: Tue, 12 Mar 2025 14:05:33 +0000
+
+Visible link: https://sharepoint.contoso-internal.com/finance
+Actual link:  hxxps://invoice-check.support/login
