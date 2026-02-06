@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -21,7 +20,16 @@ interface Props {
   openApp?: (id: string) => void;
 }
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+let monacoModulePromise:
+  | Promise<Awaited<typeof import('@monaco-editor/react')>>
+  | null = null;
+
+const loadMonaco = () => {
+  if (!monacoModulePromise) {
+    monacoModulePromise = import('@monaco-editor/react');
+  }
+  return monacoModulePromise;
+};
 
 const STORAGE_KEY = 'project-gallery-filters';
 const STORAGE_FILE = 'project-gallery-filters.json';
@@ -46,6 +54,36 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const [tags, setTags] = useState<string[]>(initialFilters?.tags ?? []);
   const [ariaMessage, setAriaMessage] = useState('');
   const [selected, setSelected] = useState<Project[]>([]);
+  const [expandedEditors, setExpandedEditors] = useState<Record<number, boolean>>({});
+  const [MonacoEditor, setMonacoEditor] = useState<
+    Awaited<typeof import('@monaco-editor/react')>['default'] | null
+  >(null);
+  const [loadingEditorFor, setLoadingEditorFor] = useState<number | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    updatePreference();
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updatePreference);
+      return () => mediaQuery.removeEventListener('change', updatePreference);
+    }
+    // Safari fallback
+    if (typeof mediaQuery.addListener === 'function') {
+      mediaQuery.addListener(updatePreference);
+      return () => mediaQuery.removeListener(updatePreference);
+    }
+    return () => {};
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const readFilters = async () => {
     try {
@@ -173,6 +211,36 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     });
   };
 
+  const toggleEditor = async (projectId: number) => {
+    if (expandedEditors[projectId]) {
+      setExpandedEditors((prev) => {
+        const next = { ...prev };
+        delete next[projectId];
+        return next;
+      });
+      return;
+    }
+
+    if (MonacoEditor) {
+      setExpandedEditors((prev) => ({ ...prev, [projectId]: true }));
+      return;
+    }
+
+    setLoadingEditorFor(projectId);
+    try {
+      const monacoModule = await loadMonaco();
+      if (!isMountedRef.current) {
+        return;
+      }
+      setMonacoEditor(() => monacoModule.default);
+      setExpandedEditors((prev) => ({ ...prev, [projectId]: true }));
+    } finally {
+      if (isMountedRef.current) {
+        setLoadingEditorFor(null);
+      }
+    }
+  };
+
   return (
     <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
       <div className="flex flex-wrap gap-2 mb-4">
@@ -249,7 +317,9 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
           <table className="w-full text-sm text-left" role="table">
             <thead>
               <tr>
-                <th />
+                <th scope="col" className="sr-only">
+                  Attribute
+                </th>
                 {selected.map((p) => (
                   <th key={p.id}>{p.title}</th>
                 ))}
@@ -285,19 +355,41 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                 className="w-full md:w-1/2 h-48 object-cover"
                 loading="lazy"
               />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
+              <div
+                className="w-full md:w-1/2 h-48 relative"
+                aria-busy={loadingEditorFor === project.id}
+              >
+                {expandedEditors[project.id] && MonacoEditor ? (
+                  <MonacoEditor
+                    height="100%"
+                    theme="vs-dark"
+                    language={project.language}
+                    value={project.snippet}
+                    options={{ readOnly: true, minimap: { enabled: false } }}
+                  />
+                ) : (
+                  <pre className="h-full w-full overflow-auto bg-black/70 p-3 text-[11px] leading-relaxed font-mono text-green-200">
+                    {project.snippet}
+                  </pre>
+                )}
+                {loadingEditorFor === project.id && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/80 text-sm">
+                    <span className={prefersReducedMotion ? '' : 'animate-pulse'}>
+                      Loading code editor…
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="p-4 space-y-2">
               <h3 className="text-lg font-semibold">{project.title}</h3>
               <p className="text-sm">{project.description}</p>
+              <button
+                onClick={() => toggleEditor(project.id)}
+                className="bg-blue-600 hover:bg-blue-500 text-xs px-2 py-1 rounded-full"
+              >
+                {expandedEditors[project.id] ? 'Close code sample' : 'Open code sample'}
+              </button>
               <button
                 onClick={() => toggleSelect(project)}
                 aria-label={`Select ${project.title} for comparison`}
@@ -344,24 +436,24 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
                 >
                   Repo
                 </a>
-                  {project.demo && (
-                    <>
-                      <a
-                        href={project.demo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        Live Demo
-                      </a>
-                      <button
-                        onClick={() => openInFirefox(project.demo)}
-                        className="text-blue-400 hover:underline"
-                      >
-                        Open in Firefox
-                      </button>
-                    </>
-                  )}
+                {project.demo && (
+                  <>
+                    <a
+                      href={project.demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:underline"
+                    >
+                      Live Demo
+                    </a>
+                    <button
+                      onClick={() => openInFirefox(project.demo)}
+                      className="text-blue-400 hover:underline"
+                    >
+                      Open in Firefox
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
