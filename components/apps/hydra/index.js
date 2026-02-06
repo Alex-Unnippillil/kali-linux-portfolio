@@ -101,6 +101,7 @@ const HydraApp = () => {
   const [progress, setProgress] = useState(0);
   const [showSaved, setShowSaved] = useState(false);
   const targetInputRef = useRef(null);
+  const [targetError, setTargetError] = useState('');
 
   const LOCKOUT_THRESHOLD = 10;
   const BACKOFF_THRESHOLD = 5;
@@ -328,10 +329,19 @@ const HydraApp = () => {
     const user = effectiveUserList;
     const pass = effectivePassList;
     const normalizedTarget = (target || targetInputRef.current?.value || '').trim();
-    if (!validateTarget(normalizedTarget) || !user || !pass) {
+    if (!validateTarget(normalizedTarget)) {
+      setTargetError('Please enter a valid IP address.');
       setOutput('Please provide a valid target, user list and password list');
       return;
     }
+
+    if (!user || !pass) {
+      setTargetError('Please select a user list and password list.');
+      setOutput('Please provide a valid target, user list and password list');
+      return;
+    }
+
+    setTargetError('');
 
     if (normalizedTarget && normalizedTarget !== target) {
       setTarget(normalizedTarget);
@@ -529,11 +539,20 @@ const HydraApp = () => {
             ref={targetInputRef}
             type="text"
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onChange={(e) => {
+              const nextTarget = e.target.value;
+              setTarget(nextTarget);
+              if (targetError && validateTarget(nextTarget)) {
+                setTargetError('');
+              }
+            }}
             className="w-full p-2 rounded text-black"
             aria-label="Target host"
             placeholder="192.168.0.1"
           />
+          {targetError && (
+            <p className="mt-1 text-sm text-red-400">{targetError}</p>
+          )}
         </div>
         <div>
           <label className="block mb-1" htmlFor="hydra-service">
