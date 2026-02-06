@@ -72,6 +72,24 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
 
   useEffect(() => () => clearTimer(), [clearTimer]);
 
+  useEffect(() => {
+    if (!visible || typeof document === 'undefined') {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        hide();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [hide, visible]);
+
   useIsomorphicLayoutEffect(() => {
     if (!visible || !triggerRef.current || !tooltipRef.current) {
       return;
