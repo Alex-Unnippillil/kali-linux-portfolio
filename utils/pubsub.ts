@@ -1,37 +1,62 @@
-type Callback = (data: unknown) => void;
+type EventHandler<Event extends { type: string; payload: unknown }> = (event: Event) => void;
 
-interface PubSub {
-  publish: (topic: string, data: unknown) => void;
-  subscribe: (topic: string, cb: Callback) => () => void;
+export type EventOfType<
+  Event extends { type: string; payload: unknown },
+  Type extends Event['type'],
+> = Extract<
+  Event,
+  { type: Type }
+>;
+
+export type EventPayload<
+  Event extends { type: string; payload: unknown },
+  Type extends Event['type'],
+> = EventOfType<Event, Type> extends { payload: infer Payload }
+  ? Payload
+  : never;
+
+export interface PubSub<Event extends { type: string; payload: unknown }> {
+  publish: (event: Event) => void;
+  subscribe: <Type extends Event['type']>(
+    type: Type,
+    handler: (payload: EventPayload<Event, Type>) => void,
+  ) => () => void;
 }
 
-function createPubSub(): PubSub {
-  const channels = new Map<string, Set<Callback>>();
+export function createPubSub<Event extends { type: string; payload: unknown }>(): PubSub<Event> {
+  const channels = new Map<Event['type'], Set<EventHandler<Event>>>();
+
   return {
-    publish(topic, data) {
-      const subs = channels.get(topic);
-      if (subs) subs.forEach((cb) => cb(data));
+    publish(event) {
+      const handlers = channels.get(event.type);
+      if (!handlers) return;
+      handlers.forEach((handler) => {
+        handler(event);
+      });
     },
-    subscribe(topic, cb) {
-      let subs = channels.get(topic);
-      if (!subs) {
-        subs = new Set();
-        channels.set(topic, subs);
+    subscribe<Type extends Event['type']>(type: Type, handler: (payload: EventPayload<Event, Type>) => void) {
+      let handlers = channels.get(type);
+      if (!handlers) {
+        handlers = new Set<EventHandler<Event>>();
+        channels.set(type, handlers);
       }
-      subs.add(cb);
+
+      const bucket = handlers;
+      const wrapped: EventHandler<Event> = (event) => {
+        const typedEvent = event as EventOfType<Event, Type>;
+        const payload = typedEvent.payload as EventPayload<Event, Type>;
+        handler(payload);
+      };
+
+      bucket.add(wrapped);
+
       return () => {
-        subs!.delete(cb);
+        bucket.delete(wrapped);
+        if (bucket.size === 0) {
+          channels.delete(type);
+        }
       };
     },
   };
 }
-
-const pubsub: PubSub = createPubSub();
-
-if (typeof globalThis !== 'undefined') {
-  (globalThis as any).pubsub = pubsub;
-}
-
-export const publish = pubsub.publish;
-export const subscribe = pubsub.subscribe;
 
