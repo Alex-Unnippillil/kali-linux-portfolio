@@ -19,9 +19,13 @@ const publicEnvSchema = z.object({
 
 const serverEnvSchema = publicEnvSchema.extend({
   RECAPTCHA_SECRET: z.string(),
-  SUPABASE_URL: z.string().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
-  SUPABASE_ANON_KEY: z.string().optional(),
+  JWT_SECRET: z.string(),
+  JWT_REFRESH_SECRET: z.string(),
+  RATE_LIMIT_SECRET: z.string(),
+  ADMIN_READ_KEY: z.string(),
+  SUPABASE_URL: z.string(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string(),
+  SUPABASE_ANON_KEY: z.string(),
 });
 
 export function validatePublicEnv(env: NodeJS.ProcessEnv) {

@@ -4,10 +4,27 @@ import { createMocks } from 'node-mocks-http';
 const originalNodeEnv = process.env.NODE_ENV;
 
 describe('contact api', () => {
+  const requiredEnv = {
+    JWT_SECRET: 'jwt-secret',
+    JWT_REFRESH_SECRET: 'jwt-refresh-secret',
+    RATE_LIMIT_SECRET: 'rate-limit-secret',
+    ADMIN_READ_KEY: 'admin-key',
+    SUPABASE_URL: 'https://example.com',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role',
+    SUPABASE_ANON_KEY: 'anon-key',
+  };
+
+  beforeEach(() => {
+    Object.assign(process.env, requiredEnv);
+  });
+
   afterEach(() => {
     rateLimit.clear();
     jest.restoreAllMocks();
     delete (global as any).fetch;
+    for (const key of Object.keys(requiredEnv)) {
+      delete process.env[key];
+    }
     delete process.env.RECAPTCHA_SECRET;
     process.env.NODE_ENV = originalNodeEnv;
   });

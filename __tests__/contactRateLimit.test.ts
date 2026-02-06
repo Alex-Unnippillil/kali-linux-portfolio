@@ -1,10 +1,27 @@
 import handler, { rateLimit, RATE_LIMIT_WINDOW_MS } from '../pages/api/contact';
 
 describe('contact api rate limiter', () => {
+  const requiredEnv = {
+    JWT_SECRET: 'jwt-secret',
+    JWT_REFRESH_SECRET: 'jwt-refresh-secret',
+    RATE_LIMIT_SECRET: 'rate-limit-secret',
+    ADMIN_READ_KEY: 'admin-key',
+    SUPABASE_URL: 'https://example.com',
+    SUPABASE_SERVICE_ROLE_KEY: 'service-role',
+    SUPABASE_ANON_KEY: 'anon-key',
+  };
+
+  beforeEach(() => {
+    Object.assign(process.env, requiredEnv);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
     rateLimit.clear();
     delete (global as any).fetch;
+    for (const key of Object.keys(requiredEnv)) {
+      delete process.env[key];
+    }
     delete process.env.RECAPTCHA_SECRET;
   });
 
