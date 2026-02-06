@@ -96,6 +96,7 @@ export interface InputState {
 export interface StepOptions {
   paused?: boolean;
   difficulty?: number;
+  allowPowerUps?: boolean;
 }
 
 export interface StepEvent {
@@ -131,7 +132,8 @@ const UFO_SPEED = 90;
 const SHIELD_SEG_ROWS = 2;
 const SHIELD_SEG_COLS = 3;
 const SHIELD_SEG_HP = 2;
-const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
+const EXTRA_LIFE_THRESHOLDS = [1500];
+const MAX_ENEMY_BULLETS = 3;
 export const HIGH_SCORE_KEY = 'si_highscore';
 
 const clamp = (value: number, min: number, max: number) =>
@@ -180,6 +182,12 @@ export const createShields = (width: number, height: number): ShieldState[] => {
   ];
 };
 
+const getInvaderPoints = (row: number) => {
+  if (row === 0) return 30;
+  if (row === 1) return 20;
+  return 10;
+};
+
 export const createWave = (stage: number, width: number): InvaderState[] => {
   const rows = 4 + (stage - 1);
   const gridWidth = (INVADER_COLS - 1) * INVADER_SPACING;
@@ -187,7 +195,7 @@ export const createWave = (stage: number, width: number): InvaderState[] => {
   const invaders: InvaderState[] = [];
   for (let r = 0; r < rows; r += 1) {
     for (let c = 0; c < INVADER_COLS; c += 1) {
-      const points = 10 + (rows - 1 - r) * 5;
+      const points = getInvaderPoints(r);
       invaders.push({
         x: startX + c * INVADER_SPACING,
         y: 40 + r * INVADER_SPACING,
@@ -369,6 +377,14 @@ const getEnemyCooldown = (
   return clamp(scaled, 0.35, 1.2);
 };
 
+const getUfoScore = () => {
+  const roll = random();
+  if (roll < 0.25) return 50;
+  if (roll < 0.5) return 100;
+  if (roll < 0.75) return 150;
+  return 300;
+};
+
 export const stepGame = (
   state: GameState,
   input: InputState,
@@ -438,37 +454,42 @@ export const stepGame = (
 
   state.enemyCooldown -= delta;
   if (state.enemyCooldown <= 0 && aliveInvaders > 0) {
-    state.frontLine.fill(-1);
-    for (let i = 0; i < state.invaders.length; i += 1) {
-      const invader = state.invaders[i];
-      if (!invader.alive) continue;
-      const current = state.frontLine[invader.column];
-      if (
-        current === -1 ||
-        invader.y > state.invaders[current].y
-      ) {
-        state.frontLine[invader.column] = i;
+    let activeEnemyBullets = 0;
+    for (const bullet of state.bullets) {
+      if (bullet.active && bullet.owner === 'enemy') activeEnemyBullets += 1;
+    }
+    if (activeEnemyBullets >= MAX_ENEMY_BULLETS) {
+      state.enemyCooldown = Math.min(state.enemyCooldown, 0.2);
+    } else {
+      state.frontLine.fill(-1);
+      for (let i = 0; i < state.invaders.length; i += 1) {
+        const invader = state.invaders[i];
+        if (!invader.alive) continue;
+        const current = state.frontLine[invader.column];
+        if (current === -1 || invader.y > state.invaders[current].y) {
+          state.frontLine[invader.column] = i;
+        }
       }
+      let pickIndex = -1;
+      let seen = 0;
+      for (const index of state.frontLine) {
+        if (index < 0) continue;
+        seen += 1;
+        if (random() < 1 / seen) pickIndex = index;
+      }
+      if (pickIndex >= 0) {
+        const pick = state.invaders[pickIndex];
+        spawnBullet(state.bullets, {
+          x: pick.x + pick.w / 2,
+          y: pick.y + pick.h,
+          dx: 0,
+          dy: ENEMY_BULLET_SPEED,
+          owner: 'enemy',
+        });
+      }
+      const aliveRatio = aliveInvaders / (state.invaders.length || 1);
+      state.enemyCooldown = getEnemyCooldown(aliveRatio, difficulty, state.stage);
     }
-    let pickIndex = -1;
-    let seen = 0;
-    for (const index of state.frontLine) {
-      if (index < 0) continue;
-      seen += 1;
-      if (random() < 1 / seen) pickIndex = index;
-    }
-    if (pickIndex >= 0) {
-      const pick = state.invaders[pickIndex];
-      spawnBullet(state.bullets, {
-        x: pick.x + pick.w / 2,
-        y: pick.y + pick.h,
-        dx: 0,
-        dy: ENEMY_BULLET_SPEED,
-        owner: 'enemy',
-      });
-    }
-    const aliveRatio = aliveInvaders / (state.invaders.length || 1);
-    state.enemyCooldown = getEnemyCooldown(aliveRatio, difficulty, state.stage);
   }
 
   state.waveTime += delta;
@@ -497,6 +518,17 @@ export const stepGame = (
     }
   }
 
+  for (const invader of state.invaders) {
+    if (!invader.alive) continue;
+    if (invader.y + invader.h >= player.y) {
+      state.gameOver = true;
+      state.lives = 0;
+      state.highScore = updateHighScore(state.score, state.highScore);
+      events.push({ type: 'game-over' });
+      return { events };
+    }
+  }
+
   state.ufoTimer += delta;
   if (!state.ufo.active && state.ufoTimer > 12 && random() < 0.02) {
     spawnUFO(state);
@@ -510,37 +542,41 @@ export const stepGame = (
     }
   }
 
-  let powerUpWrite = 0;
-  for (let i = 0; i < state.powerUps.length; i += 1) {
-    const powerUp = state.powerUps[i];
-    if (!powerUp.active) continue;
-    powerUp.y += 40 * delta;
-    if (powerUp.y > state.height + 10) powerUp.active = false;
-    if (
-      intersects(
-        powerUp.x - 5,
-        powerUp.y - 5,
-        10,
-        10,
-        player.x,
-        player.y,
-        player.w,
-        player.h,
-      )
-    ) {
-      powerUp.active = false;
-      handlePowerUp(state, powerUp.type);
-      if (powerUp.type === 'life') {
-        events.push({ type: 'extra-life', message: 'Extra life!' });
+  if (options?.allowPowerUps) {
+    let powerUpWrite = 0;
+    for (let i = 0; i < state.powerUps.length; i += 1) {
+      const powerUp = state.powerUps[i];
+      if (!powerUp.active) continue;
+      powerUp.y += 40 * delta;
+      if (powerUp.y > state.height + 10) powerUp.active = false;
+      if (
+        intersects(
+          powerUp.x - 5,
+          powerUp.y - 5,
+          10,
+          10,
+          player.x,
+          player.y,
+          player.w,
+          player.h,
+        )
+      ) {
+        powerUp.active = false;
+        handlePowerUp(state, powerUp.type);
+        if (powerUp.type === 'life') {
+          events.push({ type: 'extra-life', message: 'Extra life!' });
+        }
+        events.push({ type: 'powerup', message: `${powerUp.type} collected` });
       }
-      events.push({ type: 'powerup', message: `${powerUp.type} collected` });
+      if (powerUp.active) {
+        state.powerUps[powerUpWrite] = powerUp;
+        powerUpWrite += 1;
+      }
     }
-    if (powerUp.active) {
-      state.powerUps[powerUpWrite] = powerUp;
-      powerUpWrite += 1;
-    }
+    state.powerUps.length = powerUpWrite;
+  } else {
+    state.powerUps.length = 0;
   }
-  state.powerUps.length = powerUpWrite;
 
   for (const bullet of state.bullets) {
     if (!bullet.active) continue;
@@ -569,7 +605,7 @@ export const stepGame = (
             y: invader.y + invader.h / 2,
             row: invader.row,
           });
-          if (random() < 0.1) {
+          if (options?.allowPowerUps && random() < 0.1) {
             state.powerUps.push({
               x: invader.x + invader.w / 2,
               y: invader.y + invader.h / 2,
@@ -595,10 +631,11 @@ export const stepGame = (
         ) {
           bullet.active = false;
           state.ufo.active = false;
-          state.score += 50;
+          const ufoScore = getUfoScore();
+          state.score += ufoScore;
           events.push({
             type: 'ufo-destroyed',
-            value: 50,
+            value: ufoScore,
             x: state.ufo.x + state.ufo.w / 2,
             y: state.ufo.y + state.ufo.h / 2,
           });
@@ -607,6 +644,27 @@ export const stepGame = (
       if (bullet.active) {
         for (const shield of state.shields) {
           if (applyShieldHit(shield, bullet, events)) break;
+        }
+      }
+      if (bullet.active) {
+        for (const other of state.bullets) {
+          if (!other.active || other.owner === 'player') continue;
+          if (
+            intersects(
+              bullet.x,
+              bullet.y,
+              2,
+              6,
+              other.x,
+              other.y,
+              2,
+              6,
+            )
+          ) {
+            bullet.active = false;
+            other.active = false;
+            break;
+          }
         }
       }
     } else if (bullet.owner === 'enemy') {
