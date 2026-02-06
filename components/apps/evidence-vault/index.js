@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { trackEvent } from '@/lib/analytics-client';
 
 // Build hierarchical tree from slash-delimited tags
 const buildTagTree = (items) => {
@@ -60,6 +61,8 @@ const EvidenceVaultApp = () => {
   const [items, setItems] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const fileInputRef = useRef(null);
+  const captureCountRef = useRef(0);
+  const exportCountRef = useRef(0);
 
   useEffect(() => {
     // reset selection when items change
@@ -79,6 +82,13 @@ const EvidenceVaultApp = () => {
       ...prev,
       { id: Date.now(), type: 'note', title, content, tags },
     ]);
+    captureCountRef.current += 1;
+    trackEvent('evidence_capture', {
+      source: 'note',
+      totalCaptures: captureCountRef.current,
+      hasTags: tags.length > 0,
+      contentLength: content.length,
+    });
   };
 
   const handleFileChange = (e) => {
@@ -92,8 +102,24 @@ const EvidenceVaultApp = () => {
     const url = URL.createObjectURL(file);
     setItems((prev) => [
       ...prev,
-      { id: Date.now(), type: 'file', name: file.name, url, tags },
+      {
+        id: Date.now(),
+        type: 'file',
+        name: file.name,
+        url,
+        tags,
+        size: file.size,
+        mime: file.type,
+      },
     ]);
+    captureCountRef.current += 1;
+    trackEvent('evidence_capture', {
+      source: 'file',
+      totalCaptures: captureCountRef.current,
+      fileSize: file.size,
+      hasTags: tags.length > 0,
+      mimeType: file.type || undefined,
+    });
     e.target.value = '';
   };
 
@@ -129,6 +155,7 @@ const EvidenceVaultApp = () => {
             ref={fileInputRef}
             type="file"
             className="hidden"
+            aria-label="Select evidence file"
             onChange={handleFileChange}
           />
         </div>
@@ -147,6 +174,16 @@ const EvidenceVaultApp = () => {
                     href={item.url}
                     download
                     className="text-blue-400 underline text-sm"
+                    onClick={() => {
+                      exportCountRef.current += 1;
+                      trackEvent('evidence_export', {
+                        itemId: item.id,
+                        totalExports: exportCountRef.current,
+                        type: item.type,
+                        fileSize: item.size,
+                        hasTags: item.tags?.length > 0,
+                      });
+                    }}
                   >
                     Download
                   </a>
