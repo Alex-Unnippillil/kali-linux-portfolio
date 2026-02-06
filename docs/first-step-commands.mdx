@@ -1,0 +1,64 @@
+import { useState } from 'react';
+
+function CopyButton({ command }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(command);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="ml-2 px-2 py-1 text-xs border rounded"
+      aria-label="Copy command"
+    >
+      {copied ? 'Copied!' : 'Copy'}
+    </button>
+  );
+}
+
+# Kali Linux First Steps
+
+Run these commands after a fresh Kali installation.
+
+## Update the system
+
+```bash
+sudo apt update && sudo apt full-upgrade -y
+```
+<CopyButton command="sudo apt update && sudo apt full-upgrade -y" />
+
+## Install Guest Drivers
+
+### VirtualBox
+
+```bash
+sudo apt install -y virtualbox-guest-x11
+```
+<CopyButton command="sudo apt install -y virtualbox-guest-x11" />
+
+### VMware
+
+```bash
+sudo apt install -y open-vm-tools-desktop
+```
+<CopyButton command="sudo apt install -y open-vm-tools-desktop" />
+
+## Useful Metapackages
+
+- [kali-linux-default](https://www.kali.org/docs/general-use/metapackages/#kali-linux-default) – Standard desktop tools
+
+```bash
+sudo apt install -y kali-linux-default
+```
+<CopyButton command="sudo apt install -y kali-linux-default" />
+
+- [kali-tools-top10](https://www.kali.org/docs/general-use/metapackages/#kali-tools-top10) – Top 10 tools
+
+```bash
+sudo apt install -y kali-tools-top10
+```
+<CopyButton command="sudo apt install -y kali-tools-top10" />
