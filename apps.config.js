@@ -651,6 +651,9 @@ const gameList = [
     favourite: false,
     desktop_shortcut: true,
     screen: displayTowerDefense,
+    ...gameDefaults,
+    defaultWidth: 70,
+    defaultHeight: 72,
   },
   {
     id: 'word-search',

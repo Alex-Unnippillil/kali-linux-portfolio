@@ -13,9 +13,9 @@ exercise the game across desktop, mobile, and gamepad setups.
 
 ## Touch
 
-- **Movement** – Swipe anywhere on the canvas; the dominant axis determines the
+- **Movement** – Swipe on the game canvas; the dominant axis determines the
   direction. A swipe must travel ~30px before it registers to avoid accidental
-  turns.
+  turns, and the gesture is scoped to the board so other apps do not receive it.
 - **Pause / Resume** – Tap the Pause button below the canvas.
 
 ## Gamepad
@@ -32,9 +32,13 @@ exercise the game across desktop, mobile, and gamepad setups.
 - **Sound toggle** – The Sound button mutes or restores the synthesized beeps
   that play on collisions and scoring.
 - **Reduced motion** – Respecting the OS-level reduce motion setting pauses the
-  automatic loop until the player explicitly resumes.
+  automatic loop until the player explicitly resumes via the on-screen Resume
+  button.
 
 ## Persistence
 
-- **High score** – Scores persist in `localStorage` under `snake_highscore` so
+- **High score** – Scores persist in `localStorage` under `snake:highScore` so
   testers can confirm high-score saves survive reloads.
+- **Settings** – Wrap, skin, colorblind assist, sound, base speed, and touch
+  controls use `snake:*` keys (for example `snake:wrap` and `snake:baseSpeed`)
+  to keep preferences consistent across sessions.

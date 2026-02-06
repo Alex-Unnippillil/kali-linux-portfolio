@@ -1,6 +1,7 @@
 import React, { act } from 'react';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import Window from '../components/desktop/Window';
+import { SnapOverlayProvider } from '../components/desktop/SnapOverlay';
 import windowStyles from '../components/base/window.module.css';
 import { DESKTOP_TOP_PADDING, SNAP_BOTTOM_INSET } from '../utils/uiConstants';
 import {
@@ -23,6 +24,19 @@ jest.mock('../utils/windowLayout', () => {
 const measureSafeAreaInsetMock = measureSafeAreaInset as jest.MockedFunction<typeof measureSafeAreaInset>;
 const measureWindowTopOffsetMock = measureWindowTopOffset as jest.MockedFunction<typeof measureWindowTopOffset>;
 const measureSnapBottomInsetMock = measureSnapBottomInset as jest.MockedFunction<typeof measureSnapBottomInset>;
+
+const Wrapper = ({ children }: { children: React.ReactNode }) => (
+  <SnapOverlayProvider>{children}</SnapOverlayProvider>
+);
+
+const renderWithOverlay = (ui: React.ReactElement, options?: Parameters<typeof render>[1]) =>
+  render(ui, { wrapper: Wrapper, ...options });
+
+const flushDragUpdate = () => {
+  act(() => {
+    jest.advanceTimersByTime(20);
+  });
+};
 
 const computeAvailableHeightPx = () => {
   const topOffset = measureWindowTopOffset();
@@ -102,7 +116,7 @@ describe('Window lifecycle', () => {
     jest.useFakeTimers();
     const closed = jest.fn();
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -128,7 +142,7 @@ describe('Window lifecycle', () => {
   it('focuses the frame when mounting a focused window', () => {
     const focus = jest.fn();
 
-    render(
+    renderWithOverlay(
       <Window
         id="focused-window"
         title="Focused"
@@ -150,7 +164,7 @@ describe('Window lifecycle', () => {
 
 describe('Window snap grid configuration', () => {
   it('applies custom grid to draggable when snapping is enabled', () => {
-    render(
+    renderWithOverlay(
       <Window
         id="grid-test"
         title="Grid Test"
@@ -169,7 +183,7 @@ describe('Window snap grid configuration', () => {
   });
 
   it('excludes resize handles from draggable interactions', () => {
-    render(
+    renderWithOverlay(
       <Window
         id="grid-cancel-test"
         title="Grid Cancel"
@@ -187,7 +201,7 @@ describe('Window snap grid configuration', () => {
 
   it('snaps dimensions using axis-specific grid values', () => {
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="grid-snap-test"
         title="Grid Snap"
@@ -208,9 +222,9 @@ describe('Window snap grid configuration', () => {
 });
 
 describe('Window drag position synchronization', () => {
-  it('tracks drag position in state when a drag begins', () => {
+  it('updates transform when a drag begins', () => {
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="drag-sync-test"
         title="Drag Sync"
@@ -223,19 +237,33 @@ describe('Window drag position synchronization', () => {
       />
     );
 
+    const winEl = document.getElementById('drag-sync-test')!;
+
     act(() => {
-      ref.current!.handleDragStart(null, { x: 120, y: 140 });
+      ref.current!.handleDragStart(null, { x: 120, y: 140, node: winEl });
     });
 
-    expect(ref.current!.state.position).toEqual(ref.current!.getResistedPosition({ x: 120, y: 140 }));
+    const expected = ref.current!.getResistedPosition({ x: 120, y: 140 });
+    expect(winEl.style.transform).toBe(`translate(${expected.x}px, ${expected.y}px)`);
   });
 });
 
 describe('Window snapping preview', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+  });
+
   it('shows preview when dragged near left edge', () => {
     setViewport(1920, 1080);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -249,21 +277,12 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    // Simulate being near the left edge
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 150,
-      right: 105,
-      bottom: 250,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 150,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 5, clientY: 150 }, { node: winEl, x: 5, y: 150 });
+    });
+    flushDragUpdate();
+    act(() => {
+      jest.advanceTimersByTime(100);
     });
 
     const preview = screen.getByTestId('snap-preview');
@@ -276,7 +295,7 @@ describe('Window snapping preview', () => {
 
   it('hides preview when away from edge', () => {
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -290,21 +309,12 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    // Position far from edges
-    winEl.getBoundingClientRect = () => ({
-      left: 200,
-      top: 200,
-      right: 300,
-      bottom: 300,
-      width: 100,
-      height: 100,
-      x: 200,
-      y: 200,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 400, clientY: 300 }, { node: winEl, x: 400, y: 300 });
+    });
+    flushDragUpdate();
+    act(() => {
+      jest.advanceTimersByTime(120);
     });
 
     expect(screen.queryByTestId('snap-preview')).toBeNull();
@@ -313,7 +323,7 @@ describe('Window snapping preview', () => {
   it('shows top preview when dragged near top edge', () => {
     setViewport(1280, 720);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -327,23 +337,14 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 400,
-      top: 5,
-      right: 500,
-      bottom: 105,
-      width: 100,
-      height: 100,
-      x: 400,
-      y: 5,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 450, clientY: 5 }, { node: winEl, x: 450, y: 5 });
+    });
+    flushDragUpdate();
+    act(() => {
+      jest.advanceTimersByTime(100);
     });
 
-    expect(ref.current!.state.snapPosition).toBe('top');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
     expect(preview).toHaveAttribute('aria-label', 'Snap full screen');
@@ -353,7 +354,7 @@ describe('Window snapping preview', () => {
   it('shows corner preview when dragged near the top-left edge', () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -367,23 +368,14 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 4,
-      top: 6,
-      right: 104,
-      bottom: 106,
-      width: 100,
-      height: 100,
-      x: 4,
-      y: 6,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 4, clientY: 6 }, { node: winEl, x: 4, y: 6 });
+    });
+    flushDragUpdate();
+    act(() => {
+      jest.advanceTimersByTime(100);
     });
 
-    expect(ref.current!.state.snapPosition).toBe('top-left');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`width: ${window.innerWidth / 2}px`);
     expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
@@ -391,10 +383,10 @@ describe('Window snapping preview', () => {
     expect(within(preview).getByText('Snap top-left quarter')).toBeInTheDocument();
   });
 
-  it('shows right-half preview when dragged near the bottom-right edge', () => {
+  it('shows bottom-right preview when dragged near the bottom-right edge', () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -408,31 +400,20 @@ describe('Window snapping preview', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1490,
-      top: 770,
-      right: 1590,
-      bottom: 870,
-      width: 100,
-      height: 100,
-      x: 1490,
-      y: 770,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 1590, clientY: 870 }, { node: winEl, x: 1590, y: 870 });
+    });
+    flushDragUpdate();
+    act(() => {
+      jest.advanceTimersByTime(100);
     });
 
-    expect(ref.current!.state.snapPosition).toBe('right');
     const preview = screen.getByTestId('snap-preview');
     expect(preview).toHaveStyle(`left: ${window.innerWidth / 2}px`);
-    expect(preview).toHaveStyle(
-      `top: ${measureWindowTopOffset()}px`
-    );
-    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx()}px`);
-    expect(preview).toHaveAttribute('aria-label', 'Snap right half');
-    expect(within(preview).getByText('Snap right half')).toBeInTheDocument();
+    expect(preview).toHaveStyle(`top: ${measureWindowTopOffset() + computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveStyle(`height: ${computeAvailableHeightPx() / 2}px`);
+    expect(preview).toHaveAttribute('aria-label', 'Snap bottom-right quarter');
+    expect(within(preview).getByText('Snap bottom-right quarter')).toBeInTheDocument();
   });
 });
 
@@ -440,7 +421,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near left edge', () => {
     setViewport(1024, 768);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -455,23 +436,14 @@ describe('Window snapping finalize and release', () => {
 
     const winEl = document.getElementById('test-window')!;
     const leftSnapTop = computeLeftSnapTestTop();
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: leftSnapTop,
-      right: 105,
-      bottom: leftSnapTop + 100,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: leftSnapTop,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag(
+        { clientX: 5, clientY: leftSnapTop },
+        { node: winEl, x: 5, y: leftSnapTop }
+      );
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 5, clientY: leftSnapTop }, { node: winEl });
     });
 
     expect(ref.current!.state.snapped).toBe('left');
@@ -485,7 +457,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near right edge on large viewport', () => {
     setViewport(1920, 1080);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -499,23 +471,11 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1820,
-      top: 200,
-      right: 1920,
-      bottom: 300,
-      width: 100,
-      height: 100,
-      x: 1820,
-      y: 200,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 1910, clientY: 250 }, { node: winEl, x: 1910, y: 250 });
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 1910, clientY: 250 }, { node: winEl });
     });
 
     expect(ref.current!.state.snapped).toBe('right');
@@ -529,7 +489,7 @@ describe('Window snapping finalize and release', () => {
   it('aligns snapped window with offset parent inset', () => {
     setViewport(1920, 1080);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -562,23 +522,17 @@ describe('Window snapping finalize and release', () => {
       value: offsetParent,
     });
 
-    winEl.getBoundingClientRect = () => ({
-      left: window.innerWidth - 100,
-      top: DESKTOP_TOP_PADDING + 180,
-      right: window.innerWidth,
-      bottom: DESKTOP_TOP_PADDING + 280,
-      width: 100,
-      height: 100,
-      x: window.innerWidth - 100,
-      y: DESKTOP_TOP_PADDING + 180,
-      toJSON: () => ({}),
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag(
+        { clientX: window.innerWidth - 10, clientY: DESKTOP_TOP_PADDING + 200 },
+        { node: winEl, x: window.innerWidth - 10, y: DESKTOP_TOP_PADDING + 200 }
+      );
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop(
+        { clientX: window.innerWidth - 10, clientY: DESKTOP_TOP_PADDING + 200 },
+        { node: winEl }
+      );
     });
 
     expect(ref.current!.state.snapped).toBe('right');
@@ -590,7 +544,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near top edge', () => {
     setViewport(1366, 768);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -604,23 +558,11 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 400,
-      top: 6,
-      right: 500,
-      bottom: 106,
-      width: 100,
-      height: 100,
-      x: 400,
-      y: 6,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 450, clientY: 6 }, { node: winEl, x: 450, y: 6 });
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 450, clientY: 6 }, { node: winEl });
     });
 
     expect(ref.current!.state.snapped).toBe('top');
@@ -633,7 +575,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near the top-left corner', () => {
     setViewport(1440, 900);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -647,23 +589,11 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 6,
-      top: 8,
-      right: 106,
-      bottom: 208,
-      width: 100,
-      height: 200,
-      x: 6,
-      y: 8,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 6, clientY: 8 }, { node: winEl, x: 6, y: 8 });
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 6, clientY: 8 }, { node: winEl });
     });
 
     expect(ref.current!.state.snapped).toBe('top-left');
@@ -676,7 +606,7 @@ describe('Window snapping finalize and release', () => {
   it('snaps window on drag stop near the bottom-right corner', () => {
     setViewport(1600, 900);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -690,38 +620,26 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 1500,
-      top: 760,
-      right: 1600,
-      bottom: 860,
-      width: 100,
-      height: 100,
-      x: 1500,
-      y: 760,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 1590, clientY: 860 }, { node: winEl, x: 1590, y: 860 });
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 1590, clientY: 860 }, { node: winEl });
     });
 
-    expect(ref.current!.state.snapped).toBe('right');
+    expect(ref.current!.state.snapped).toBe('bottom-right');
     expect(ref.current!.state.width).toBeCloseTo(50, 2);
-    const expectedHeight = computeSnappedHeightPercent();
+    const expectedHeight = computeQuarterHeightPercent();
     expect(ref.current!.state.height).toBeCloseTo(expectedHeight, 5);
     const expectedX = window.innerWidth / 2;
-    const expectedY = getSnapTranslateTop();
+    const expectedY = getSnapTranslateTop() + computeAvailableHeightPx() / 2;
     expect(winEl.style.transform).toBe(`translate(${expectedX}px, ${expectedY}px)`);
   });
 
   it('releases snap with Alt+ArrowDown restoring size', () => {
     setViewport(1024, 768);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -736,23 +654,14 @@ describe('Window snapping finalize and release', () => {
 
     const winEl = document.getElementById('test-window')!;
     const leftSnapTop = computeLeftSnapTestTop();
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: leftSnapTop,
-      right: 105,
-      bottom: leftSnapTop + 100,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: leftSnapTop,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag(
+        { clientX: 5, clientY: leftSnapTop },
+        { node: winEl, x: 5, y: leftSnapTop }
+      );
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 5, clientY: leftSnapTop }, { node: winEl });
     });
 
     expect(ref.current!.state.snapped).toBe('left');
@@ -784,7 +693,7 @@ describe('Window snapping finalize and release', () => {
   it('releases snap when starting drag', () => {
     setViewport(1440, 900);
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -798,23 +707,11 @@ describe('Window snapping finalize and release', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 5,
-      top: 150,
-      right: 105,
-      bottom: 250,
-      width: 100,
-      height: 100,
-      x: 5,
-      y: 150,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag();
+      ref.current!.handleDrag({ clientX: 5, clientY: 150 }, { node: winEl, x: 5, y: 150 });
     });
     act(() => {
-      ref.current!.handleStop();
+      ref.current!.handleStop({ clientX: 5, clientY: 150 }, { node: winEl });
     });
 
     expect(ref.current!.state.snapped).toBe('left');
@@ -836,7 +733,7 @@ describe('Window maximize behavior', () => {
     const safeTop = DESKTOP_TOP_PADDING + 48;
     measureWindowTopOffsetMock.mockReturnValue(safeTop);
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -858,7 +755,7 @@ describe('Window maximize behavior', () => {
   it('keeps maximized windows within the desktop padding when navbar height is under-reported', () => {
     measureWindowTopOffsetMock.mockReturnValue(DESKTOP_TOP_PADDING - 12);
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -906,7 +803,7 @@ describe('Window maximize behavior', () => {
 describe('Window keyboard dragging', () => {
   it('moves window using arrow keys with grabbed state', async () => {
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -957,9 +854,20 @@ describe('Window keyboard dragging', () => {
 });
 
 describe('Edge resistance', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+    jest.useRealTimers();
+  });
+
   it('clamps drag movement near boundaries', () => {
     const ref = React.createRef<any>();
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -973,21 +881,10 @@ describe('Edge resistance', () => {
     );
 
     const winEl = document.getElementById('test-window')!;
-    winEl.getBoundingClientRect = () => ({
-      left: 0,
-      top: 0,
-      right: 100,
-      bottom: 100,
-      width: 100,
-      height: 100,
-      x: 0,
-      y: 0,
-      toJSON: () => {}
-    });
-
     act(() => {
-      ref.current!.handleDrag({}, { node: winEl, x: -100, y: -50 } as any);
+      ref.current!.handleDrag({ clientX: -100, clientY: -50 }, { node: winEl, x: -100, y: -50 } as any);
     });
+    flushDragUpdate();
 
     const expectedTop = ref.current!.state.safeAreaTop ?? 0;
     expect(winEl.style.transform).toBe(`translate(0px, ${expectedTop}px)`);
@@ -999,7 +896,7 @@ describe('Window viewport constraints', () => {
     const ref = React.createRef<any>();
     const onPositionChange = jest.fn();
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -1061,7 +958,7 @@ describe('Window viewport constraints', () => {
   it('uses visual viewport size when available', () => {
     const ref = React.createRef<any>();
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -1105,7 +1002,7 @@ describe('Window viewport constraints', () => {
   it('respects visual viewport offsets when storing transform values', () => {
     const ref = React.createRef<any>();
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -1161,7 +1058,7 @@ describe('Window overlay inert behaviour', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
@@ -1201,7 +1098,7 @@ describe('Window overlay inert behaviour', () => {
     document.body.appendChild(opener);
     opener.focus();
 
-    render(
+    renderWithOverlay(
       <Window
         id="test-window"
         title="Test"
