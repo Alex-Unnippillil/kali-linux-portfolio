@@ -35,7 +35,22 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'content-sync') {
-    event.waitUntil(prefetchAssets());
+    event.waitUntil(
+      (async () => {
+        await prefetchAssets();
+        try {
+          const res = await fetch('/api/inbox/unread-count');
+          if (res.ok) {
+            const { unread } = await res.json();
+            if (self.registration.setAppBadge) {
+              await self.registration.setAppBadge(unread).catch(() => {});
+            }
+          }
+        } catch (err) {
+          // Ignore failures
+        }
+      })(),
+    );
   }
 });
 
