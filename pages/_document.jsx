@@ -21,6 +21,7 @@ class MyDocument extends Document {
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>
+          <header className="kali-panel" role="navigation" aria-label="Global"></header>
           <Main />
           <NextScript nonce={nonce} />
         </body>
