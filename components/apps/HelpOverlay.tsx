@@ -225,47 +225,106 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
 };
 
+const FOCUSABLE_SELECTORS =
+  'a[href], area[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
   const info = GAME_INSTRUCTIONS[gameId];
   const [mapping, setKey] = useInputMapping(gameId, info?.actions || {});
   const overlayRef = useRef<HTMLDivElement>(null);
   const prevFocus = useRef<HTMLElement | null>(null);
-  const noop = () => null;
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!overlayRef.current) return;
-    prevFocus.current = document.activeElement as HTMLElement | null;
-    const selectors =
-      'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
-    const focusables = Array.from(
-      overlayRef.current.querySelectorAll<HTMLElement>(selectors),
-    );
-    focusables[0]?.focus();
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Tab" && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else if (document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
+    const node = overlayRef.current;
+    const active = document.activeElement as HTMLElement | null;
+    if (active && active !== document.body && !node.contains(active)) {
+      prevFocus.current = active;
+    }
+
+    const getFocusable = () =>
+      Array.from(
+        node.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS),
+      ).filter(
+        (el) =>
+          !el.hasAttribute("inert") &&
+          !el.hasAttribute("disabled") &&
+          el.getAttribute("aria-hidden") !== "true"
+      );
+
+    const focusFirst = () => {
+      const focusables = getFocusable();
+      if (focusables.length > 0) {
+        focusables[0].focus();
+      } else {
+        node.focus();
       }
     };
-    const node = overlayRef.current;
+
+    focusFirst();
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+
+      if (e.key !== "Tab") return;
+      const focusables = getFocusable();
+      if (focusables.length === 0) {
+        e.preventDefault();
+        node.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const current = document.activeElement as HTMLElement | null;
+
+      if (e.shiftKey) {
+        if (!current || !node.contains(current)) {
+          e.preventDefault();
+          last.focus();
+        } else if (current === first) {
+          e.preventDefault();
+          last.focus();
+        }
+        return;
+      }
+
+      if (!current || !node.contains(current)) {
+        e.preventDefault();
+        first.focus();
+        return;
+      }
+
+      if (current === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!node.contains(event.target as Node)) {
+        focusFirst();
+      }
+    };
+
     node.addEventListener("keydown", handleKey);
+    document.addEventListener("focusin", handleFocusIn);
     return () => {
       node.removeEventListener("keydown", handleKey);
-      prevFocus.current?.focus();
+      document.removeEventListener("focusin", handleFocusIn);
+      if (prevFocus.current && typeof prevFocus.current.focus === "function") {
+        prevFocus.current.focus();
+      }
     };
-  }, [onClose]);
+  }, []);
 
   if (!info) return null;
   return (
@@ -274,6 +333,7 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
       className="absolute inset-0 bg-black bg-opacity-75 text-white flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
+      tabIndex={-1}
     >
       <div className="max-w-md p-4 bg-gray-800 rounded shadow-lg">
         <h2 className="text-xl font-bold mb-2">{gameId} Help</h2>
