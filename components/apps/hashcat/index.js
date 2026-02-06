@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import RuleEditor from './RuleEditor';
 
 export const hashTypes = [
   {
@@ -54,6 +55,12 @@ const ruleSets = {
   none: [],
   best64: ['c', 'u', 'l', 'r', 'd', 'p', 't', 's'],
   quick: ['l', 'u', 'c', 'd'],
+};
+
+const sampleWordlists = {
+  default: ['password', 'letmein', 'summer2024', 'trustno1', 'welcome'],
+  rockyou: ['password', 'dragon', 'qwerty', 'princess', 'iloveyou'],
+  top100: ['123456', 'password1', 'monkey', 'shadow', 'football'],
 };
 
 const sampleOutput = `hashcat (v6.2.6) starting in benchmark mode...
@@ -248,7 +255,14 @@ function HashcatApp() {
   const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
-  const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
+  const [ruleText, setRuleText] = useState('');
+  const [ruleMetrics, setRuleMetrics] = useState({
+    validRules: [],
+    errors: [],
+    uniqueCandidateCount: 0,
+    preview: [],
+    truncated: false,
+  });
   const workerRef = useRef(null);
   const frameRef = useRef(null);
   const [showHelp, setShowHelp] = useState(false);
@@ -389,6 +403,16 @@ function HashcatApp() {
     attackModes.find((m) => m.value === attackMode)?.label ||
     attackModes[0].label;
   const info = { ...progressInfo, mode: selectedMode };
+  const sampleWords = sampleWordlists[wordlist] || sampleWordlists.default;
+  const sampleLabel = wordlist ? `${wordlist}.txt` : 'demo wordlist';
+  const ruleArgument =
+    ruleSet === 'custom'
+      ? ruleMetrics.validRules.length
+        ? ' -r demo-custom.rule'
+        : ''
+      : ruleSet !== 'none'
+      ? ` -r ${ruleSet}.rule`
+      : '';
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -409,6 +433,25 @@ function HashcatApp() {
     const blob = new Blob([list.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     setWordlistUrl(url);
+  };
+
+  const handleRuleSetChange = (value) => {
+    setRuleSet(value);
+    if (value !== 'custom') {
+      const presetRules = ruleSets[value] || [];
+      setRuleText(presetRules.join('\n'));
+    }
+  };
+
+  const handleRuleTextChange = (value) => {
+    setRuleText(value);
+    if (ruleSet !== 'custom') {
+      setRuleSet('custom');
+    }
+  };
+
+  const handleRuleEditorUpdate = (update) => {
+    setRuleMetrics(update);
   };
 
   return (
@@ -550,15 +593,36 @@ function HashcatApp() {
           id="rule-set"
           className="text-black px-2 py-1"
           value={ruleSet}
-          onChange={(e) => setRuleSet(e.target.value)}
+          onChange={(e) => handleRuleSetChange(e.target.value)}
         >
           <option value="none">None</option>
           <option value="best64">best64</option>
           <option value="quick">quick</option>
+          <option value="custom">Custom</option>
         </select>
-        <pre className="bg-black p-2 text-xs mt-2 overflow-auto h-24">
-          {rulePreview || '(no rules)'}
-        </pre>
+        <div className="text-xs mt-2 text-ubt-grey max-w-xl">
+          Preset selections load their contents into the editor. Changing the
+          text automatically switches to the custom profile for this session.
+        </div>
+        <RuleEditor
+          value={ruleText}
+          onChange={handleRuleTextChange}
+          onRulesUpdate={handleRuleEditorUpdate}
+          sampleWords={sampleWords}
+          sampleLabel={sampleLabel}
+        />
+        {ruleSet === 'custom' && (
+          <div className="text-xs mt-2 text-ubt-grey max-w-xl">
+            {ruleMetrics.validRules.length
+              ? `${ruleMetrics.validRules.length} valid rule${
+                  ruleMetrics.validRules.length === 1 ? '' : 's'
+                } will be included in the demo command.`
+              : 'Add valid rules above to include them in the demo command.'}
+            {ruleMetrics.errors.length
+              ? ' Fix the highlighted lines to use them here.'
+              : ''}
+          </div>
+        )}
       </div>
       <div>Detected: {selectedHash}</div>
       <div>Summary: {selected.summary}</div>
@@ -641,7 +705,7 @@ function HashcatApp() {
               hashInput || 'hash.txt'
             } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
               showMask && mask ? ` ${mask}` : ''
-            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
+            }${ruleArgument}`}
           </code>
           <button
             className="ml-2"
@@ -653,7 +717,7 @@ function HashcatApp() {
                     hashInput || 'hash.txt'
                   } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
                     showMask && mask ? ` ${mask}` : ''
-                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
+                  }${ruleArgument}`
                 );
               }
             }}
