@@ -86,18 +86,46 @@ function parseELF(bytes: Uint8Array): ParsedData {
   return { sections, strings: extractStrings(bytes) };
 }
 
+const FORMAT_GUIDANCE = [
+  {
+    title: 'Portable Executable (.exe, .dll)',
+    description:
+      'Great for Windows malware and tooling. We enumerate PE sections and extract printable strings for triage.',
+  },
+  {
+    title: 'ELF binaries (.elf)',
+    description:
+      'Use for Linux utilities or firmware. Section headers are parsed and strings are surfaced to speed up reconnaissance.',
+  },
+  {
+    title: 'Raw binary dumps (.bin)',
+    description:
+      'Supported for quick string scraping. Convert to ELF/PE with objcopy for richer metadata.',
+  },
+];
+
+const INPUT_ID = 'ghidra-import-input';
+
 export default function ImportAnnotate() {
   const [sections, setSections] = useState<string[]>([]);
   const [strings, setStrings] = useState<string[]>([]);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setErrorMessage('');
+    setStatusMessage('');
     const buf = await file.arrayBuffer();
     const bytes = new Uint8Array(buf);
+    const extension = file.name.split('.').pop()?.toLowerCase();
     let parsed: ParsedData = { sections: [], strings: [] };
     if (bytes[0] === 0x4d && bytes[1] === 0x5a) {
       parsed = parsePE(bytes);
+      setStatusMessage(
+        'Portable Executable detected. Sections and printable strings are listed below.'
+      );
     } else if (
       bytes[0] === 0x7f &&
       bytes[1] === 0x45 &&
@@ -105,20 +133,65 @@ export default function ImportAnnotate() {
       bytes[3] === 0x46
     ) {
       parsed = parseELF(bytes);
+      setStatusMessage('ELF binary detected. Section headers and strings are ready for review.');
+    } else if (extension === 'bin') {
+      parsed = { sections: [], strings: extractStrings(bytes) };
+      setStatusMessage(
+        'Raw binary loaded. Showing printable strings only — convert with `objcopy --input-target binary --output-target elf32-i386 sample.bin sample.elf` for more metadata.'
+      );
+    } else {
+      setSections([]);
+      setStrings([]);
+      setErrorMessage(
+        "We couldn't recognise this format. Export it as an ELF or PE file, or use `objcopy --input-target binary --output-target elf32-i386 input.bin output.elf` before re-uploading."
+      );
+      return;
     }
     setSections(parsed.sections);
     setStrings(parsed.strings);
   };
 
   return (
-    <div className="text-xs md:text-sm">
-      <label className="block mb-1">Upload PE or ELF file</label>
+    <div className="text-xs md:text-sm space-y-3">
+      <div>
+        <label className="block font-semibold" htmlFor={INPUT_ID}>
+          Upload PE, ELF, or raw binary
+        </label>
+        <p className="text-gray-300">Drop a sample to annotate imports and surface quick IoCs.</p>
+      </div>
+      <div className="grid gap-2 md:grid-cols-3">
+        {FORMAT_GUIDANCE.map((item) => (
+          <div key={item.title} className="rounded border border-gray-700 p-2">
+            <h3 className="font-bold">{item.title}</h3>
+            <p>{item.description}</p>
+          </div>
+        ))}
+      </div>
       <input
         type="file"
         accept=".exe,.dll,.bin,.elf"
         onChange={handleFile}
-        className="mb-2"
+        id={INPUT_ID}
+        className="mb-1"
       />
+      {statusMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded bg-emerald-900/60 p-2 text-emerald-100"
+        >
+          {statusMessage}
+        </div>
+      )}
+      {errorMessage && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="rounded bg-red-900/70 p-2 text-red-100"
+        >
+          {errorMessage}
+        </div>
+      )}
       <div className="flex flex-wrap gap-4">
         <div>
           <h3 className="font-bold">Sections</h3>
