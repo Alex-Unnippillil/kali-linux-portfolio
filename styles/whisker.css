@@ -1,0 +1,17 @@
+/*
+ * Whisker menu design tokens.
+ * Override these CSS variables to customize the menu appearance.
+ *
+ * --menu-bg: background color of the menu container
+ * --menu-fg: text color used inside the menu
+ * --sidebar-width: width of the sidebar section
+ * --item-hover-bg: background color for hovered items
+ * --item-active-bg: background color for the active item
+ */
+:root {
+  --menu-bg: #1a1b1e;
+  --menu-fg: #ffffff;
+  --sidebar-width: 15rem;
+  --item-hover-bg: rgba(255, 255, 255, 0.1);
+  --item-active-bg: rgba(255, 255, 255, 0.2);
+}
