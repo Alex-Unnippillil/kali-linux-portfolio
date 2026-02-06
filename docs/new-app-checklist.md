@@ -19,6 +19,11 @@ const MyApp = dynamic(() => import('./components/apps/my-app'), {
 export const displayMyApp = () => <MyApp />;
 ```
 
+## Routes
+
+- Use `buildAppRoute({ appId: 'my-app' })` from `utils/routes` when generating links (for example in menus or metadata).
+- Parse incoming paths with `parseAppRoute` to validate that a string targets a known `/apps/*` page before opening windows.
+
 ## Content Security Policy
 
 - Apps that fetch data or embed external sites must whitelist their domains in `next.config.js`.

@@ -1,3 +1,5 @@
+import { buildAppRoute } from '../utils/routes';
+
 export type AppMetadata = {
   title: string;
   description: string;
@@ -6,10 +8,11 @@ export type AppMetadata = {
   icon?: string;
 };
 
-type AppEntry = {
+export type AppEntry = {
   id: string;
   title: string;
   icon?: string;
+  disabled?: boolean;
 };
 
 const DEFAULT_KEYBOARD_HINTS = [
@@ -74,7 +77,7 @@ export const buildAppMetadata = (app: AppEntry): AppMetadata => {
     icon: app.icon,
     description:
       override.description ?? `Launch the ${app.title} demo environment.`,
-    path: override.path ?? `/apps/${app.id}`,
+    path: override.path ?? buildAppRoute({ appId: app.id }),
     keyboard: override.keyboard ?? DEFAULT_KEYBOARD_HINTS,
   };
 };
