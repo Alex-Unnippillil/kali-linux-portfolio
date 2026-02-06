@@ -462,3 +462,16 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+kbd,
+.prose kbd {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: 0 2px 0 var(--color-border);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85em;
+  line-height: 1;
+}
