@@ -290,7 +290,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   return (
     <RecorderContext.Provider value={contextValue}>
-      <div className="relative h-full w-full" data-reduced-motion={prefersReducedMotion}>
+      <div
+        className="relative flex h-full w-full min-h-0 flex-col"
+        data-reduced-motion={prefersReducedMotion}
+        data-game-viewport
+      >
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
         {paused && (
           <div

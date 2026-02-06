@@ -17,6 +17,10 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
       if (clientWidth > 0 && clientHeight > 0) {
         return parent;
       }
+      const gameViewport = parent.closest('[data-game-viewport]') as HTMLElement | null;
+      if (gameViewport) {
+        return gameViewport;
+      }
       const fallback = parent.closest('.windowMainScreen') as HTMLElement | null;
       return fallback ?? parent;
     };
@@ -42,12 +46,14 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
 
     resize();
     const parent = canvas.parentElement;
+    const gameViewport = parent?.closest('[data-game-viewport]') as HTMLElement | null;
     const fallback = parent?.closest('.windowMainScreen') as HTMLElement | null;
     const ro =
       typeof ResizeObserver !== 'undefined'
         ? new ResizeObserver(resize)
         : null;
     if (parent && ro) ro.observe(parent);
+    if (gameViewport && ro && gameViewport !== parent) ro.observe(gameViewport);
     if (fallback && ro && fallback !== parent) ro.observe(fallback);
     window.addEventListener('resize', resize);
     return () => {

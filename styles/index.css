@@ -209,6 +209,16 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
 
 .windowMainScreen {
     container-type: inline-size;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    overflow-x: hidden;
+}
+
+.windowMainScreen > * {
+    min-height: 0;
+    min-width: 0;
 }
 
 .windowMainScreen::-webkit-scrollbar-track {
@@ -778,4 +788,3 @@ textarea:focus-visible {
     font-variant-numeric: tabular-nums;
     opacity: 0.7;
 }
-
