@@ -5,6 +5,7 @@ import modules from './modules.json';
 import privTree from './priv-esc.json';
 import RemediationTable from './components/RemediationTable';
 import ResultCard from './components/ResultCard';
+import HostComparison from './components/HostComparison';
 import usePersistentState from '../../hooks/usePersistentState';
 
 interface ModuleOption {
@@ -461,6 +462,7 @@ const MetasploitPost: React.FC = () => {
           Save report
         </button>
       </div>
+      <HostComparison />
       <div className="flex">
         <div className="w-1/3 overflow-auto border-r border-gray-700 pr-2">
           <ModuleTree data={treeData} onSelect={select} />
