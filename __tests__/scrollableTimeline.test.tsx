@@ -1,30 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import ScrollableTimeline from '../components/ScrollableTimeline';
 
-// Provide a minimal IntersectionObserver mock for the test environment
-beforeAll(() => {
-  class IntersectionObserverMock {
-    constructor() {}
-    disconnect() {}
-    observe() {}
-    unobserve() {}
-    takeRecords() { return []; }
-  }
-  // @ts-ignore
-  global.IntersectionObserver = IntersectionObserverMock;
-});
-
 describe('ScrollableTimeline', () => {
-  it('toggles between year and month view', () => {
+  it('renders milestones with sticky day headers', () => {
     render(<ScrollableTimeline />);
-    // Initially shows years
-    const year = screen.getByText('2012');
-    expect(year).toBeInTheDocument();
 
-    // Clicking a year zooms to month view
-    fireEvent.click(year);
-    expect(screen.getByText('2012-09')).toBeInTheDocument();
-    expect(screen.getByText('Back to years')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /career timeline/i })).toBeInTheDocument();
+
+    const dayHeader = screen.getByText(/Sep\s+1,\s+2012/i);
+    expect(dayHeader).toBeInTheDocument();
+    const headerElement = dayHeader.closest('header');
+    expect(headerElement).toHaveClass('sticky');
+
+    const links = screen.getAllByRole('link', { name: /visit resource/i });
+    expect(links.length).toBeGreaterThan(0);
   });
 });
 
