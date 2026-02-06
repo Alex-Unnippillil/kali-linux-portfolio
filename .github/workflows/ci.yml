@@ -72,6 +72,21 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn npm audit --severity high
 
+  smoke:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - run: yarn install --immutable --immutable-cache
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps
+      - name: Run Playwright smoke tests
+        run: yarn playwright test
+
   vercel-preview:
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.head.repo.fork && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
