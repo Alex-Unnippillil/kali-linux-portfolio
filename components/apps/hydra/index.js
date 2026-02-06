@@ -4,6 +4,7 @@ import SimulationReportExport from '../SimulationReportExport';
 import { recordSimulation } from '../../../utils/simulationLog';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import CredSets from './CredSets';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -738,6 +739,8 @@ const HydraApp = () => {
           )}
         </div>
       </div>
+
+      <CredSets />
 
       <Stepper
         active={running && !paused}
