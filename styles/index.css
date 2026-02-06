@@ -2,7 +2,7 @@
 @import './animation.css';
 
 html {
-    font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
+    font-size: var(--font-size-root);
 }
 
 body{
@@ -10,6 +10,66 @@ body{
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    font-size: var(--font-size-body);
+    line-height: var(--font-line-height-body);
+}
+
+h1,
+.heading-1,
+.text-4xl,
+.text-3xl {
+    font-size: var(--font-size-h1);
+    line-height: var(--font-line-height-h1);
+}
+
+h2,
+.heading-2,
+.text-2xl {
+    font-size: var(--font-size-h2);
+    line-height: var(--font-line-height-h2);
+}
+
+h3,
+.heading-3,
+.text-xl {
+    font-size: var(--font-size-h3);
+    line-height: var(--font-line-height-h3);
+}
+
+h4,
+.heading-4,
+.text-lg {
+    font-size: var(--font-size-h4);
+    line-height: var(--font-line-height-h4);
+}
+
+h5,
+.heading-5,
+.text-base {
+    font-size: var(--font-size-h5);
+    line-height: var(--font-line-height-h5);
+}
+
+h6,
+.heading-6,
+.text-sm {
+    font-size: var(--font-size-h6);
+    line-height: var(--font-line-height-h6);
+}
+
+p,
+li,
+dd,
+dt,
+blockquote {
+    font-size: var(--font-size-body);
+    line-height: var(--font-line-height-body);
+}
+
+small,
+.text-xs {
+    font-size: var(--font-size-small);
+    line-height: var(--font-line-height-small);
 }
 
 :root {
