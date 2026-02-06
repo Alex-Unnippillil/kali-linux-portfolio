@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import useKeymap from '../../apps/settings/keymapRegistry';
 
 const formatEvent = (e: KeyboardEvent) => {
@@ -14,11 +14,28 @@ const formatEvent = (e: KeyboardEvent) => {
   return parts.filter(Boolean).join('+');
 };
 
+const FOCUSABLE_SELECTORS = [
+  'a[href]',
+  'area[href]',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  'button:not([disabled])',
+  'iframe',
+  'object',
+  'embed',
+  '[tabindex]:not([tabindex="-1"])',
+  '[contenteditable]'
+].join(',');
+
 const ShortcutOverlay: React.FC = () => {
   const [open, setOpen] = useState(false);
   const { shortcuts } = useKeymap();
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
 
   const toggle = useCallback(() => setOpen((o) => !o), []);
+  const close = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -36,12 +53,78 @@ const ShortcutOverlay: React.FC = () => {
         toggle();
       } else if (e.key === 'Escape' && open) {
         e.preventDefault();
-        setOpen(false);
+        close();
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, toggle, shortcuts]);
+  }, [open, toggle, shortcuts, close]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const overlay = overlayRef.current;
+    if (!overlay) return undefined;
+
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+
+    const focusable = overlay.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+    const focusTarget = focusable[0] ?? overlay;
+    focusTarget.focus();
+
+    const enforceFocus = (event: FocusEvent) => {
+      if (!overlay.contains(event.target as Node)) {
+        const updatedFocusable = overlay.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+        const target = updatedFocusable[0] ?? overlay;
+        target.focus();
+      }
+    };
+
+    document.addEventListener('focus', enforceFocus, true);
+
+    return () => {
+      document.removeEventListener('focus', enforceFocus, true);
+      const previouslyFocused = previouslyFocusedRef.current;
+      previouslyFocusedRef.current = null;
+      previouslyFocused?.focus();
+    };
+  }, [open]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const overlay = overlayRef.current;
+      if (!overlay) return;
+
+      const focusable = overlay.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        overlay.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+
+      if (event.shiftKey) {
+        if (active === first || !overlay.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !overlay.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    },
+    [close]
+  );
 
   const handleExport = () => {
     const data = JSON.stringify(shortcuts, null, 2);
@@ -71,13 +154,16 @@ const ShortcutOverlay: React.FC = () => {
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/80 text-white p-4 overflow-auto"
       role="dialog"
       aria-modal="true"
+      ref={overlayRef}
+      tabIndex={-1}
+      onKeyDown={handleKeyDown}
     >
       <div className="max-w-lg w-full space-y-4">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-bold">Keyboard Shortcuts</h2>
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={close}
             className="text-sm underline"
           >
             Close
