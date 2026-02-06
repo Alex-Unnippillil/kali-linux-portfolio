@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
 
@@ -195,13 +194,6 @@ export default function YouTubePlayer({ videoId }) {
 
   return (
     <>
-      <Head>
-        <link
-          rel="preconnect"
-          href="https://www.youtube-nocookie.com"
-        />
-        <link rel="preconnect" href="https://i.ytimg.com" />
-      </Head>
       <div
         className="relative w-full"
         style={{ aspectRatio: '16 / 9' }}
