@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 
 interface ViewerProps {
   data: any[];
@@ -10,6 +10,8 @@ export default function ResultViewer({ data }: ViewerProps) {
   const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>('raw');
   const [sortKey, setSortKey] = useState('');
   const [filter, setFilter] = useState('');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const copyResetTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     try {
@@ -60,6 +62,58 @@ export default function ResultViewer({ data }: ViewerProps) {
       });
     });
   }, [filtered, sortKey]);
+  const rawContent = useMemo(() => JSON.stringify(data, null, 2), [data]);
+
+  useEffect(() => {
+    if (copyStatus === 'idle') return;
+
+    if (copyResetTimeout.current) {
+      clearTimeout(copyResetTimeout.current);
+    }
+
+    copyResetTimeout.current = setTimeout(() => {
+      setCopyStatus('idle');
+      copyResetTimeout.current = null;
+    }, 2000);
+
+    return () => {
+      if (copyResetTimeout.current) {
+        clearTimeout(copyResetTimeout.current);
+        copyResetTimeout.current = null;
+      }
+    };
+  }, [copyStatus]);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimeout.current) {
+        clearTimeout(copyResetTimeout.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(rawContent);
+      } else if (typeof document !== 'undefined') {
+        const textarea = document.createElement('textarea');
+        textarea.value = rawContent;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'absolute';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      } else {
+        throw new Error('Clipboard unavailable');
+      }
+      setCopyStatus('success');
+    } catch {
+      setCopyStatus('error');
+    }
+  };
 
   const exportCsv = () => {
     const csv = [
@@ -88,7 +142,30 @@ export default function ResultViewer({ data }: ViewerProps) {
           Chart
         </button>
       </div>
-      {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{JSON.stringify(data, null, 2)}</pre>}
+      {tab === 'raw' && (
+        <div>
+          <div className="mb-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="px-2 py-1 bg-ub-green text-black font-semibold"
+              aria-label="Copy raw results"
+            >
+              Copy
+            </button>
+            <span role="status" aria-live="polite" className="text-ubt-grey">
+              {copyStatus === 'success' && 'Copied!'}
+              {copyStatus === 'error' && 'Copy failed'}
+            </span>
+          </div>
+          <pre
+            className="bg-black text-white p-1 h-40 overflow-auto font-mono"
+            style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+          >
+            {rawContent}
+          </pre>
+        </div>
+      )}
       {tab === 'parsed' && (
         <div>
           <details className="mb-2 space-y-2 rounded border border-black/30 bg-black/10 p-2">
