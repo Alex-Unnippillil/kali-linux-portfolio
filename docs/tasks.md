@@ -123,6 +123,11 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Flappy Bird
 - Pinball
 
+## QA & Diagnostics
+- Use the Diagnostics/Plugin Manager app to run every available test suite and confirm the output panel captures results.
+- Export the generated CSV artifact, open it locally, and verify the filename reflects the executed suite.
+- Close and reopen the app to ensure installed diagnostics and the last results persist in localStorage before sign-off.
+
 ## Housekeeping
 - Keep `apps.config.js` organized with utilities and games grouped and exported consistently.
 - Monitor `fast-glob` updates and explore hash optimizations for the custom service worker.
