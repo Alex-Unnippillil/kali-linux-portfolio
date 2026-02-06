@@ -117,7 +117,6 @@ For each game below, build a canvas-based component with `requestAnimationFrame`
 - Tetris
 - Tower Defense
 - Word Search: enhance with found words list, timer, difficulty.
-- Nonogram
 - Space Invaders
 - Sudoku
 - Flappy Bird

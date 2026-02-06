@@ -1,12 +1,21 @@
 import fs from 'fs';
 import path from 'path';
-import { checkContradictions, autoFill } from '../apps/games/nonogram/logic';
+import {
+  checkContradictions,
+  autoFill,
+  validateSolution,
+} from '../apps/games/nonogram/logic';
 import { createHintSystem, revealRandomCell } from '../apps/games/nonogram/hints';
 import {
   parsePack,
   loadPackFromJSON,
+  selectPuzzleBySeed,
 } from '../apps/games/nonogram/packs';
-import { saveProgress, loadProgress } from '../apps/games/nonogram/progress';
+import {
+  saveProgress,
+  loadProgress,
+  clearProgress,
+} from '../apps/games/nonogram/progress';
 
 describe('games/nonogram logic', () => {
   test('detects contradictions from cross marks', () => {
@@ -42,6 +51,16 @@ describe('games/nonogram logic', () => {
     expect(result[0][0]).toBe(1);
   });
 
+  test('validateSolution confirms solved puzzle', () => {
+    const rows = [[1], [1]];
+    const cols = [[1], [1]];
+    const grid = [
+      [1, 0],
+      [0, 1],
+    ];
+    expect(validateSolution(grid, rows, cols)).toBe(true);
+  });
+
   test('hint system enforces usage limit', () => {
     const grid = [[0]] as (0 | 1 | -1)[][];
     const solution = [[1]] as (0 | 1)[][];
@@ -75,6 +94,8 @@ describe('games/nonogram logic', () => {
     expect(pack.puzzles).toHaveLength(2);
     expect(pack.puzzles[0].rows).toEqual([[1], [2], []]);
     expect(pack.puzzles[0].cols).toEqual([[2], [1], []]);
+    const daily = selectPuzzleBySeed('2024-01-01', pack.puzzles);
+    expect(pack.puzzles).toContainEqual(daily);
   });
 
   test('persists progress per puzzle', () => {
@@ -83,5 +104,7 @@ describe('games/nonogram logic', () => {
     saveProgress('p1', state);
     const loaded = loadProgress('p1');
     expect(loaded).toEqual(state);
+    clearProgress('p1');
+    expect(loadProgress('p1')).toBeNull();
   });
 });
