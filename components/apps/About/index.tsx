@@ -189,7 +189,7 @@ function About() {
       <div className="w-20 md:w-28 my-4 full">
         <Image
           className="w-full rounded border border-gray-600"
-          src="/images/logos/bitmoji.png"
+          src="/images/logos/bitmoji.1b21789f.png"
           alt="Alex Unnippillil Logo"
           width={256}
           height={256}
