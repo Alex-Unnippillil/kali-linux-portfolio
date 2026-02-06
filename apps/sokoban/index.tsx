@@ -1,3 +1,4 @@
+'use client';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { logEvent, logGameStart, logGameEnd, logGameError } from '../../utils/analytics';
 import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
