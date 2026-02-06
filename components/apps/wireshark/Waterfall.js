@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { protocolName, getRowColor } from './utils';
+import { resetFrameMetrics, trackFrame } from './frameMetrics';
 
 // High-contrast background colours for the protocol bars. The darker
 // shades ensure the 3:1 contrast ratio required for non-text elements on
@@ -15,16 +16,27 @@ const Waterfall = ({ packets, colorRules, viewIndex, prefersReducedMotion }) => 
   const containerRef = useRef(null);
 
   useEffect(() => {
+    resetFrameMetrics();
+    return () => {
+      resetFrameMetrics();
+    };
+  }, []);
+
+  useEffect(() => {
     const node = containerRef.current;
     if (!node) return;
     if (prefersReducedMotion) {
       node.style.transform = `translateX(-${viewIndex * 8}px)`;
       return;
     }
-    const raf = requestAnimationFrame(() => {
+    const raf = trackFrame(() => {
       node.style.transform = `translateX(-${viewIndex * 8}px)`;
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      if (typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(raf);
+      }
+    };
   }, [viewIndex, prefersReducedMotion]);
 
   return (
