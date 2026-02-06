@@ -12,10 +12,15 @@ describe('SpaceInvaders', () => {
       fillRect: jest.fn(),
       clearRect: jest.fn(),
       strokeRect: jest.fn(),
+      save: jest.fn(),
+      restore: jest.fn(),
+      translate: jest.fn(),
       setTransform: jest.fn(),
       createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
       fillStyle: '',
       strokeStyle: '',
+      globalAlpha: 1,
+      imageSmoothingEnabled: false,
     }));
   });
   afterEach(() => {

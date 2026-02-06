@@ -56,17 +56,57 @@ export interface HangmanRendererSnapshot {
   paused: boolean;
 }
 
+export interface HangmanRendererColors {
+  bg: string;
+  stroke: string;
+  text: string;
+  muted: string;
+  success: string;
+  failure: string;
+  overlay: string;
+}
+
 export const createHangmanRenderer = ({
   canvas,
   getSnapshot,
   prefersReducedMotion,
+  colors,
 }: {
   canvas: HTMLCanvasElement;
   getSnapshot: () => HangmanRendererSnapshot;
   prefersReducedMotion: () => boolean;
+  colors?: Partial<HangmanRendererColors>;
 }) => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return () => {};
+
+  const resolveColors = (): HangmanRendererColors => {
+    if (typeof window === 'undefined') {
+      return {
+        bg: BG_COLOR,
+        stroke: STROKE_COLOR,
+        text: TEXT_COLOR,
+        muted: MUTED_TEXT,
+        success: SUCCESS_COLOR,
+        failure: FAILURE_COLOR,
+        overlay: 'rgba(0,0,0,0.6)',
+        ...colors,
+      };
+    }
+    const styles = getComputedStyle(canvas);
+    const fromVar = (name: string, fallback: string) =>
+      styles.getPropertyValue(name).trim() || fallback;
+    return {
+      bg: fromVar('--kali-surface', BG_COLOR),
+      stroke: fromVar('--kali-border', STROKE_COLOR),
+      text: fromVar('--kali-text', TEXT_COLOR),
+      muted: fromVar('--kali-text-muted', MUTED_TEXT),
+      success: fromVar('--color-success', SUCCESS_COLOR),
+      failure: fromVar('--color-danger', FAILURE_COLOR),
+      overlay: fromVar('--color-overlay-soft', 'rgba(0,0,0,0.6)'),
+      ...colors,
+    };
+  };
 
   let raf = 0;
   let cancelled = false;
@@ -119,11 +159,13 @@ export const createHangmanRenderer = ({
       offsetY * dpr,
     );
 
+    const palette = resolveColors();
+
     ctx.clearRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
-    ctx.fillStyle = BG_COLOR;
+    ctx.fillStyle = palette.bg;
     ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
 
-    ctx.strokeStyle = STROKE_COLOR;
+    ctx.strokeStyle = palette.stroke;
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -168,15 +210,15 @@ export const createHangmanRenderer = ({
         const y = 235;
         const char = masked[i];
         const show = char !== '_';
-        ctx.fillStyle = show ? TEXT_COLOR : MUTED_TEXT;
+        ctx.fillStyle = show ? palette.text : palette.muted;
         ctx.fillText(show ? char : '_', x, y);
       }
     }
 
     if (paused && game.status === 'playing') {
-      ctx.fillStyle = 'rgba(0,0,0,0.6)';
+      ctx.fillStyle = palette.overlay;
       ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
-      ctx.fillStyle = TEXT_COLOR;
+      ctx.fillStyle = palette.text;
       ctx.font = 'bold 22px monospace';
       ctx.textAlign = 'center';
       ctx.fillText('PAUSED', BASE_WIDTH / 2, BASE_HEIGHT / 2);
@@ -188,7 +230,7 @@ export const createHangmanRenderer = ({
           ? 'rgba(34,197,94,0.25)'
           : 'rgba(239,68,68,0.25)';
       ctx.fillRect(0, 0, BASE_WIDTH, BASE_HEIGHT);
-      ctx.fillStyle = game.status === 'won' ? SUCCESS_COLOR : FAILURE_COLOR;
+      ctx.fillStyle = game.status === 'won' ? palette.success : palette.failure;
       ctx.font = 'bold 22px monospace';
       ctx.textAlign = 'center';
       ctx.fillText(

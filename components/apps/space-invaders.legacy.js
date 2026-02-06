@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/control-has-associated-label */
 import React, { useRef, useEffect, useState } from 'react';
 import GameLayout from './GameLayout';
 import useAssetLoader from '../../hooks/useAssetLoader';

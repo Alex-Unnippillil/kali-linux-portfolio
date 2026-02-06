@@ -48,6 +48,35 @@ describe('snake engine', () => {
     expect(result.won).toBe(false);
   });
 
+  it('allows moving into the tail when not growing', () => {
+    const state = createInitialState({
+      gridSize: 5,
+      snake: [
+        { x: 2, y: 2 },
+        { x: 2, y: 3 },
+        { x: 1, y: 3 },
+        { x: 1, y: 2 },
+      ],
+      food: { x: 4, y: 4 },
+      obstacles: [],
+    });
+
+    const result = stepSnake(state, { x: -1, y: 0 }, {
+      wrap: false,
+      gridSize: 5,
+      randomObstacle: null,
+    });
+
+    expect(result.collision).toBe('none');
+    expect(result.grew).toBe(false);
+    expect(result.state.snake).toEqual([
+      { x: 1, y: 2 },
+      { x: 2, y: 2 },
+      { x: 2, y: 3 },
+      { x: 1, y: 3 },
+    ]);
+  });
+
   it('detects obstacle collisions', () => {
     const state = createInitialState({
       gridSize: 5,
@@ -102,12 +131,14 @@ describe('snake engine', () => {
       result.state.snake,
       [{ x: 0, y: 0 }],
       5,
+      expect.any(Function),
     );
     expect(randomObstacle).toHaveBeenCalledWith(
       result.state.snake,
       nextFood,
       [{ x: 0, y: 0 }],
       5,
+      expect.any(Function),
     );
   });
 

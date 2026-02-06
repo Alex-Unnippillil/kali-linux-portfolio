@@ -8,7 +8,7 @@ export const THEME_UNLOCKS: Record<string, number> = {
   matrix: 1000,
 };
 
-const DARK_THEMES = ['dark', 'neon', 'matrix'] as const;
+const DARK_THEMES = ['default', 'dark', 'neon', 'matrix'] as const;
 
 export const isDarkTheme = (theme: string): boolean =>
   DARK_THEMES.includes(theme as (typeof DARK_THEMES)[number]);
