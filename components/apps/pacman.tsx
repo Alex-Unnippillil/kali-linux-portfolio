@@ -265,6 +265,9 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
     setStatusMessage('');
     setAnnouncement('');
     setPaused(false);
+    setShowNameModal(false);
+    setPlayerName('');
+    setStarted(true);
   }, [activeLevel, options]);
 
   const advanceLevel = useCallback(() => {
@@ -426,7 +429,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       if (events.gameOver) {
         playTone?.(120, { duration: 0.3, volume: 0.6 });
         setStatusMessage('Game Over');
-        submitScore();
+        setShowNameModal(false);
       }
       if (events.levelComplete) {
         playTone?.(880, { duration: 0.2, volume: 0.5 });
@@ -438,7 +441,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       }
       syncUi(state);
     },
-    [advanceLevel, playTone, submitScore, syncUi],
+    [advanceLevel, playTone, syncUi],
   );
 
   const draw = useCallback(
@@ -861,13 +864,13 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
         ) : null
       }
     >
-      <div className="relative h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white p-4">
-        <div className="relative flex items-center justify-center">
+      <div className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white">
+        <div className="relative flex-1 w-full min-h-0 flex items-center justify-center">
           <canvas
             ref={canvasRef}
             width={activeLevel.maze[0].length * TILE_SIZE}
             height={activeLevel.maze.length * TILE_SIZE}
-            className="bg-black rounded-md shadow-inner"
+            className="bg-black rounded-md shadow-inner max-w-full max-h-full"
             role="img"
             aria-label="Pacman playfield"
           />
@@ -882,10 +885,17 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
               >
                 Restart
               </button>
+              <button
+                type="button"
+                onClick={submitScore}
+                className="rounded bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-900"
+              >
+                Save score
+              </button>
             </div>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-200">
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 px-3 pb-3 text-xs text-slate-200">
           <div className="rounded bg-slate-900/70 px-2 py-1">
             Mode: {mode === 'fright' ? 'Frightened' : mode}
           </div>
