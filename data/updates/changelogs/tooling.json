@@ -1,0 +1,37 @@
+{
+  "id": "tooling-2024-05",
+  "release": "Offensive Tooling Refresh",
+  "releasedAt": "2024-05-16",
+  "packages": [
+    {
+      "id": "metasploit-framework",
+      "name": "metasploit-framework",
+      "version": "6.4.19",
+      "category": "feature",
+      "summary": "Ships the HTTP/3 transport experiment and smarter credential stuffing safeguards.",
+      "size": "35 MB",
+      "etaMinutes": 3,
+      "requiresRestart": false
+    },
+    {
+      "id": "nmap",
+      "name": "nmap",
+      "version": "7.94.2",
+      "category": "bugfix",
+      "summary": "Resolves NSE crash on malformed MQTT brokers and refreshes fingerprint database.",
+      "size": "9.4 MB",
+      "etaMinutes": 2,
+      "requiresRestart": false
+    },
+    {
+      "id": "hashcat",
+      "name": "hashcat",
+      "version": "6.2.7",
+      "category": "security",
+      "summary": "Hardens OpenCL kernel bounds checking and removes obsolete legacy cipher autodetection.",
+      "etaMinutes": 2,
+      "requiresRestart": false,
+      "cves": ["CVE-2024-31203"]
+    }
+  ]
+}
