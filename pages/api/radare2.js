@@ -1,10 +1,29 @@
-import { execFile } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { promisify } from 'util';
+import { z } from 'zod';
+import radareSamples from '../../components/apps/radare2/samples/disasm.json';
+import { checkRateLimit, normalizeIdentifier } from '../../lib/rateLimit';
 
-const execFileAsync = promisify(execFile);
+const radareSchema = z
+  .object({
+    action: z.enum(['disasm', 'analyze']),
+    hex: z.string().trim().max(20000).optional(),
+    file: z.string().trim().max(200000).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.action === 'disasm' && !value.hex) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'hex is required for disasm',
+        path: ['hex'],
+      });
+    }
+    if (value.action === 'analyze' && !value.file) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'file is required for analyze',
+        path: ['file'],
+      });
+    }
+  });
 
 export default async function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
@@ -18,51 +37,23 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { action, hex, file } = req.body || {};
-
-  try {
-    if (action === 'disasm' && hex) {
-      try {
-        await execFileAsync('which', ['rasm2']);
-      } catch {
-        return res.status(500).json({ error: 'radare2 not installed' });
-      }
-      try {
-        const { stdout } = await execFileAsync('rasm2', ['-d', hex], {
-          timeout: 1000 * 60,
-        });
-        return res.status(200).json({ result: stdout });
-      } catch (error) {
-        const msg = error.stderr?.toString() || error.message;
-        return res.status(500).json({ error: msg });
-      }
-    }
-
-    if (action === 'analyze' && file) {
-      try {
-        await execFileAsync('which', ['rabin2']);
-      } catch {
-        return res.status(500).json({ error: 'radare2 not installed' });
-      }
-      const buffer = Buffer.from(file, 'base64');
-      const tmpPath = path.join(os.tmpdir(), `radare2-${Date.now()}`);
-      fs.writeFileSync(tmpPath, buffer);
-      try {
-        const { stdout } = await execFileAsync('rabin2', ['-I', tmpPath], {
-          timeout: 1000 * 60,
-        });
-        fs.unlink(tmpPath, () => {});
-        return res.status(200).json({ result: stdout });
-      } catch (error) {
-        fs.unlink(tmpPath, () => {});
-        const msg = error.stderr?.toString() || error.message;
-        return res.status(500).json({ error: msg });
-      }
-    }
-
-    return res.status(400).json({ error: 'Invalid request' });
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
+  const identifier = normalizeIdentifier(req);
+  const limit = checkRateLimit(identifier, { max: 5, windowMs: 60_000 });
+  if (!limit.allowed) {
+    return res.status(429).json({ error: 'Rate limit exceeded' });
   }
+
+  let payload;
+  try {
+    payload = radareSchema.parse(req.body || {});
+  } catch (error) {
+    return res.status(400).json({ error: 'Invalid request' });
+  }
+
+  if (payload.action === 'disasm') {
+    return res.status(200).json({ result: radareSamples.disassembly });
+  }
+
+  return res.status(200).json({ result: radareSamples.analysis });
 }
 

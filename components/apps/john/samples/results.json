@@ -1,0 +1,22 @@
+{
+  "scenarios": [
+    {
+      "id": "raw-md5-success",
+      "label": "Raw-MD5 quick win",
+      "output": "Loaded 1 password hash (Raw-MD5 [MD5 128/128 AVX2 8x1])\nPress 'q' or Ctrl-C to abort, almost any other key for status\npassword (alice)\n1g 0:00:00:00 DONE (2024-01-01 00:00) 100.0g/s 0p/s 0c/s 0C/s\nUse the \"--show\" option to display all of the cracked passwords reliably\nSession completed.",
+      "summary": "SecLists excerpt finds an MD5 password immediately."
+    },
+    {
+      "id": "wordlist-exhausted",
+      "label": "Wordlist exhausted",
+      "output": "Loaded 1 password hash (Raw-SHA1 [SHA1 256/256 AVX2 8x])\nPress 'q' or Ctrl-C to abort, almost any other key for status\nSession completed.\n0 password hashes cracked, 1 left",
+      "summary": "SHA1 hash remains after running the training list."
+    },
+    {
+      "id": "zip-sample",
+      "label": "Zip archive demo",
+      "output": "Using default input encoding: UTF-8\nLoaded 1 password hash (ZIP [32/64])\nPress 'q' or Ctrl-C to abort, almost any other key for status\nProceeding with local training samples only.\nNo cracks found in demo timeframe.",
+      "summary": "Zip training hash replayed without contacting external files."
+    }
+  ]
+}
