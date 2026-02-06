@@ -1,6 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { useRouter } from 'next/router';
 import usePersistentState from '../hooks/usePersistentState';
-import { setValue, getAll } from '../utils/moduleStore';
+import { setValue, getAll, clearStore } from '../utils/moduleStore';
+import { deserializeModuleWorkspaceSession } from '../utils/moduleWorkspaceSession';
 import StarterWizard from '../components/workspaces/StarterWizard';
 
 interface ModuleOption {
@@ -48,6 +50,8 @@ const modules: Module[] = [
 ];
 
 const ModuleWorkspace: React.FC = () => {
+  const router = useRouter();
+  const { isReady, query, pathname, replace } = router;
   const [workspaces, setWorkspaces] = usePersistentState<string[]>(
     'workspaces',
     [],
@@ -60,6 +64,7 @@ const ModuleWorkspace: React.FC = () => {
   const [optionValues, setOptionValues] = useState<Record<string, string>>({});
   const [result, setResult] = useState('');
   const [storeData, setStoreData] = useState<Record<string, string>>({});
+  const appliedRestoreRef = useRef<string | null>(null);
 
   const tags = useMemo(
     () => Array.from(new Set(modules.flatMap((m) => m.tags))),
@@ -111,6 +116,72 @@ const ModuleWorkspace: React.FC = () => {
     setValue(selected.id, res);
     setStoreData(getAll());
   }, [selected, optionValues]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    const token = query.restore;
+    if (!token || Array.isArray(token)) return;
+    if (appliedRestoreRef.current === token) return;
+    appliedRestoreRef.current = token;
+
+    const session = deserializeModuleWorkspaceSession(token);
+    const cleanedQuery = { ...query };
+    delete cleanedQuery.restore;
+    replace({ pathname, query: cleanedQuery }, undefined, {
+      shallow: true,
+    });
+
+    if (!session) return;
+
+    if (session.workspace) {
+      setWorkspaces((prev) =>
+        prev.includes(session.workspace) ? prev : [...prev, session.workspace],
+      );
+      setCurrentWorkspace(session.workspace);
+    }
+
+    if (session.tags && session.tags.length) {
+      const matchingTag = session.tags.find((tag) => tags.includes(tag));
+      if (matchingTag) {
+        setFilter(matchingTag);
+      }
+    }
+
+    clearStore();
+    if (session.store && Object.keys(session.store).length) {
+      Object.entries(session.store).forEach(([key, value]) => {
+        setValue(key, value);
+      });
+      setStoreData(getAll());
+    } else {
+      setStoreData({});
+    }
+
+    if (session.moduleId) {
+      const matchedModule = modules.find((m) => m.id === session.moduleId) ?? null;
+      if (matchedModule) {
+        setSelected(matchedModule);
+        const initial: Record<string, string> = {};
+        matchedModule.options.forEach((opt) => {
+          initial[opt.name] = session.options?.[opt.name] ?? '';
+        });
+        setOptionValues(initial);
+      }
+    } else if (session.options) {
+      setOptionValues(session.options);
+    }
+
+    if (session.result) {
+      setResult(session.result);
+    }
+  }, [
+    isReady,
+    query,
+    pathname,
+    replace,
+    setWorkspaces,
+    tags,
+  ]);
 
   return (
     <div className="p-4 space-y-4 bg-ub-cool-grey text-white min-h-screen">
