@@ -462,3 +462,17 @@ html {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
 }
+
+@layer utilities {
+  .bg-kali-menu {
+    background-color: var(--kali-panel);
+  }
+
+  .border-kali-border {
+    border-color: var(--kali-panel-border);
+  }
+
+  .hover\:bg-kali-highlight:hover {
+    background-color: var(--kali-panel-highlight);
+  }
+}
