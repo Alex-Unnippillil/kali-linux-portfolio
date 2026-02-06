@@ -1,7 +1,9 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 
-export default async function handler(_req, res) {
+import rateLimitEdge from '@/lib/rateLimitEdge';
+
+async function handler(_req, res) {
   try {
     const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');
     const raw = await readFile(versionPath, 'utf8');
@@ -23,3 +25,5 @@ export default async function handler(_req, res) {
     res.status(500).json({ error: 'Unable to check script versions' });
   }
 }
+
+export default rateLimitEdge(handler);

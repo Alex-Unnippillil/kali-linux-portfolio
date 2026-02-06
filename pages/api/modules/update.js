@@ -1,4 +1,5 @@
 import versionData from '../../../data/module-version.json';
+import rateLimitEdge from '@/lib/rateLimitEdge';
 
 const REMOTE_VERSION_URL =
   'https://raw.githubusercontent.com/unnipillil/kali-linux-portfolio/main/data/module-version.json';
@@ -13,7 +14,7 @@ function compareSemver(a, b) {
   return 0;
 }
 
-export default async function handler(
+async function handler(
   req,
   res,
 ) {
@@ -40,3 +41,5 @@ export default async function handler(
   const needsUpdate = compareSemver(current, latest) < 0;
   res.status(200).json({ current, latest, needsUpdate });
 }
+
+export default rateLimitEdge(handler);

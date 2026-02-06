@@ -1,6 +1,7 @@
 import modules from '../../components/apps/mimikatz/modules.json';
+import rateLimitEdge from '@/lib/rateLimitEdge';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
     res.status(501).json({ error: 'Not implemented' });
     return;
@@ -24,3 +25,5 @@ export default async function handler(req, res) {
   res.setHeader('Allow', ['GET', 'POST']);
   return res.status(405).end('Method Not Allowed');
 }
+
+export default rateLimitEdge(handler);
