@@ -8,11 +8,17 @@ import useOPFS from '../hooks/useOPFS';
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
 // simple overlay used for notes/transcripts.
-export default function YouTubePlayer({ videoId }) {
+export default function YouTubePlayer({
+  videoId,
+  descriptionAudioSrc,
+  transcriptUrl,
+}) {
   const [activated, setActivated] = useState(false);
   const containerRef = useRef(null); // DOM node hosting the iframe
   const playerRef = useRef(null); // YT.Player instance
+  const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [descriptionsOn, setDescriptionsOn] = useState(false);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -21,6 +27,22 @@ export default function YouTubePlayer({ videoId }) {
   const [results, setResults] = useState([]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const stored = sessionStorage.getItem('yt:descriptions');
+    if (stored) setDescriptionsOn(stored === 'true');
+  }, []);
+
+  const toggleDescriptions = () => {
+    setDescriptionsOn((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('yt:descriptions', String(next));
+      }
+      return next;
+    });
+  };
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -143,6 +165,35 @@ export default function YouTubePlayer({ videoId }) {
   };
 
   useEffect(() => {
+    const audio = audioRef.current;
+    const player = playerRef.current;
+    if (!descriptionAudioSrc || !audio || !player) return;
+    if (descriptionsOn && isPlaying) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [descriptionsOn, isPlaying, descriptionAudioSrc]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    const player = playerRef.current;
+    if (!descriptionAudioSrc || !audio || !player) return undefined;
+    let id;
+    if (descriptionsOn && isPlaying) {
+      id = setInterval(() => {
+        const t = player.getCurrentTime ? player.getCurrentTime() : 0;
+        if (Math.abs(audio.currentTime - t) > 0.5) {
+          audio.currentTime = t;
+        }
+      }, 1000);
+    }
+    return () => {
+      if (id) clearInterval(id);
+    };
+  }, [descriptionsOn, isPlaying, descriptionAudioSrc]);
+
+  useEffect(() => {
     let cancelled = false;
     if (!supported) return;
     (async () => {
@@ -202,6 +253,9 @@ export default function YouTubePlayer({ videoId }) {
         />
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Head>
+      {descriptionAudioSrc && (
+        <audio ref={audioRef} src={descriptionAudioSrc} aria-hidden="true" />
+      )}
       <div
         className="relative w-full"
         style={{ aspectRatio: '16 / 9' }}
@@ -259,6 +313,26 @@ export default function YouTubePlayer({ videoId }) {
             >
               PiP
             </button>
+            {descriptionAudioSrc && (
+              <button
+                type="button"
+                aria-label="Toggle descriptions"
+                onClick={toggleDescriptions}
+                className="bg-black/60 text-white px-2 py-1 rounded"
+              >
+                {descriptionsOn ? 'Desc on' : 'Desc off'}
+              </button>
+            )}
+            {transcriptUrl && (
+              <a
+                href={transcriptUrl}
+                download
+                aria-label="Download transcript"
+                className="bg-black/60 text-white px-2 py-1 rounded"
+              >
+                Transcript
+              </a>
+            )}
             <button
               type="button"
               aria-label="Notes"
