@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
+import { CopyIcon, FlashIcon, SwitchCameraIcon } from '../../icons';
 
 const QRScanner: React.FC = () => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -191,51 +192,5 @@ const QRScanner: React.FC = () => {
     </div>
   );
 };
-
-const FlashIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
-  </svg>
-);
-
-const SwitchCameraIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M23 4v6h-6" />
-    <path d="M1 20v-6h6" />
-    <path d="M3.51 9a9 9 0 0 1 14.13-3.36L23 10" />
-    <path d="M20.49 15a9 9 0 0 1-14.13 3.36L1 14" />
-  </svg>
-);
-
-const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-  </svg>
-);
 
 export default QRScanner;
