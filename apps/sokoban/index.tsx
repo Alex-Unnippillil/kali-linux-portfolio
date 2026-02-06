@@ -216,6 +216,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
   const boardWrapperRef = useRef<HTMLDivElement>(null);
   const [boardScale, setBoardScale] = useState(1);
   const initRef = useRef(false);
+  const prefersReducedMotion = useRef(false);
   const stateRef = useRef(state);
   const packIndexRef = useRef(packIndex);
   const indexRef = useRef(index);
@@ -243,6 +244,12 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
   useEffect(() => {
     packsRef.current = packs;
   }, [packs]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    prefersReducedMotion.current =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+  }, []);
 
   const clearAutoplay = useCallback(() => {
     const active = autoplayRef.current;
@@ -475,7 +482,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
           clearAutoplay();
           return;
         }
-        active.timer = window.setTimeout(step, 60);
+        const delay = prefersReducedMotion.current ? 120 : 60;
+        active.timer = window.setTimeout(step, delay);
       };
       step();
     },
@@ -601,6 +609,49 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
     persistProgress(state);
   }, [persistProgress, state]);
 
+  const handleHint = useCallback(() => {
+    clearAutoplay();
+    setHint('...');
+    setTimeout(() => {
+      const dir = findHint(stateRef.current);
+      setHint(dir ? dir.replace('Arrow', '') : 'No hint');
+    }, 0);
+  }, [clearAutoplay]);
+  
+  const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
+
+  const handlePreview = useCallback(() => {
+    clearAutoplay();
+    setSolutionPath(new Set());
+    setStatus('...');
+    setTimeout(() => {
+      const sol = findSolution(stateRef.current);
+      if (!sol) {
+        setStatus('No solution');
+        return;
+      }
+      const positions: string[] = [];
+      let st = stateRef.current;
+      sol.forEach((dir) => {
+        st = move(st, dir);
+        positions.push(keyPos(st.player));
+      });
+      setSolutionPath(new Set(positions));
+      setStatus('');
+    }, 0);
+  }, [clearAutoplay, keyPos]);
+
+  const handleSolve = useCallback(() => {
+    clearAutoplay();
+    setSolutionPath(new Set());
+    const sol = findSolution(stateRef.current);
+    if (!sol || !sol.length) {
+      setStatus('No solution');
+      return;
+    }
+    startAutoplay(sol, 'solve');
+  }, [clearAutoplay, startAutoplay]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!shouldHandleGameKey(e, { isFocused })) return;
@@ -652,49 +703,6 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
     handleUndo,
     isFocused,
   ]);
-
-  const handleHint = useCallback(() => {
-    clearAutoplay();
-    setHint('...');
-    setTimeout(() => {
-      const dir = findHint(stateRef.current);
-      setHint(dir ? dir.replace('Arrow', '') : 'No hint');
-    }, 0);
-  }, [clearAutoplay]);
-  
-  const keyPos = useCallback((p: Position) => `${p.x},${p.y}`, []);
-
-  const handlePreview = useCallback(() => {
-    clearAutoplay();
-    setSolutionPath(new Set());
-    setStatus('...');
-    setTimeout(() => {
-      const sol = findSolution(stateRef.current);
-      if (!sol) {
-        setStatus('No solution');
-        return;
-      }
-      const positions: string[] = [];
-      let st = stateRef.current;
-      sol.forEach((dir) => {
-        st = move(st, dir);
-        positions.push(keyPos(st.player));
-      });
-      setSolutionPath(new Set(positions));
-      setStatus('');
-    }, 0);
-  }, [clearAutoplay, keyPos]);
-
-  const handleSolve = useCallback(() => {
-    clearAutoplay();
-    setSolutionPath(new Set());
-    const sol = findSolution(stateRef.current);
-    if (!sol || !sol.length) {
-      setStatus('No solution');
-      return;
-    }
-    startAutoplay(sol, 'solve');
-  }, [clearAutoplay, startAutoplay]);
 
   const cellStyle = useMemo(
     () => ({ width: CELL, height: CELL } as React.CSSProperties),
@@ -915,6 +923,16 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
             >
               {autoMode === 'solve' ? 'Solving...' : 'Solve'}
             </button>
+            {autoMode && (
+              <button
+                type="button"
+                onClick={() => clearAutoplay()}
+                aria-label="Cancel autoplay"
+                className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-3 py-1 text-sm font-semibold text-[color:var(--color-error)] shadow transition hover:bg-[color:var(--kali-control-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-error)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+              >
+                Cancel
+              </button>
+            )}
           </div>
         </div>
         <div className="flex flex-col items-start gap-2 text-sm text-[color:var(--kali-text)]">
