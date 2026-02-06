@@ -1,3 +1,4 @@
+@import './fonts.css';
 @import './globals.css';
 @import './animation.css';
 
@@ -720,7 +721,7 @@ html[data-theme='matrix'] .word-search-clue {
 /* Ensure monospace layout for app outputs */
 textarea,
 pre {
-    font-family: monospace;
+    font-family: var(--font-family-monospace);
     line-height: 1.2;
 }
 
