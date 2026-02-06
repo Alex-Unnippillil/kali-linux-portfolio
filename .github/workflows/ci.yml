@@ -72,6 +72,58 @@ jobs:
       - run: yarn dedupe --check
       - run: yarn npm audit --severity high
 
+  build:
+    runs-on: ubuntu-latest
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - name: Install dependencies
+        run: yarn install --immutable
+      - name: Build (capture warnings)
+        id: build
+        env:
+          CI: true
+        run: |
+          set -o pipefail
+          yarn build 2>&1 | tee build.log
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+
+          warnings=false
+          if grep -E "^(warn\s+-|warning\s|Warning:)" build.log > build-warnings.log; then
+            warnings=true
+          else
+            rm -f build-warnings.log
+          fi
+
+          echo "warnings=$warnings" >> "$GITHUB_OUTPUT"
+      - name: Upload build logs
+        if: ${{ steps.build.outputs.status != '0' || steps.build.outputs.warnings == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build.log
+            build-warnings.log
+          if-no-files-found: ignore
+      - name: Ensure build succeeded without warnings
+        if: ${{ steps.build.outputs.status != '0' || steps.build.outputs.warnings == 'true' }}
+        env:
+          BUILD_STATUS: ${{ steps.build.outputs.status }}
+          HAD_WARNINGS: ${{ steps.build.outputs.warnings }}
+        run: |
+          if [ "$BUILD_STATUS" != "0" ]; then
+            echo "::error::yarn build failed with exit code $BUILD_STATUS."
+          fi
+          if [ "$HAD_WARNINGS" = "true" ]; then
+            echo "::error::yarn build produced warnings. See build.log for details."
+          fi
+          exit 1
+
   vercel-preview:
     runs-on: ubuntu-latest
     if: ${{ !github.event.pull_request.head.repo.fork && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
