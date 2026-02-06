@@ -4,6 +4,7 @@ import SimulationReportExport from '../SimulationReportExport';
 import { recordSimulation } from '../../../utils/simulationLog';
 import Stepper from './Stepper';
 import AttemptTimeline from './Timeline';
+import Progress from '../../../apps/hydra/components/Progress';
 
 const baseServices = ['ssh', 'ftp', 'http-get', 'http-post-form', 'smtp'];
 const pluginServices = [];
@@ -767,6 +768,11 @@ const HydraApp = () => {
         account lockout.
       </p>
       <AttemptTimeline attempts={timeline} />
+      <Progress
+        attempts={timeline}
+        totalAttempts={totalAttempts}
+        lockoutThreshold={LOCKOUT_THRESHOLD}
+      />
       {timeline.length > 0 && (
         <table className="mt-4 w-full text-sm">
           <thead>
