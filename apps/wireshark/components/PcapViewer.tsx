@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { protocolName } from '../../../components/apps/wireshark/utils';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  protocolName,
+  useTcpStreams,
+  type PacketSummary,
+} from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
-
+import StreamViewer from './StreamViewer';
 
 interface PcapViewerProps {
   showLegend?: boolean;
@@ -22,19 +26,16 @@ const samples = [
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
 
-// Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b, i) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-interface Packet {
-  timestamp: string;
+interface PacketMeta {
   src: string;
   dest: string;
   protocol: number;
   info: string;
-  data: Uint8Array;
   sport?: number;
   dport?: number;
 }
@@ -44,32 +45,45 @@ interface Layer {
   fields: Record<string, string>;
 }
 
-// Basic Ethernet + IPv4 parser
-const parseEthernetIpv4 = (data: Uint8Array) => {
-  if (data.length < 34) return { src: '', dest: '', protocol: 0, info: '' };
+const parseEthernetIpv4 = (data: Uint8Array): PacketMeta => {
+  if (data.length < 34) {
+    return { src: '', dest: '', protocol: 0, info: '' };
+  }
   const etherType = (data[12] << 8) | data[13];
-  if (etherType !== 0x0800) return { src: '', dest: '', protocol: 0, info: '' };
+  if (etherType !== 0x0800) {
+    return { src: '', dest: '', protocol: 0, info: '' };
+  }
   const protocol = data[23];
   const src = Array.from(data.slice(26, 30)).join('.');
   const dest = Array.from(data.slice(30, 34)).join('.');
-  let info = '';
   if (protocol === 6 && data.length >= 54) {
     const sport = (data[34] << 8) | data[35];
     const dport = (data[36] << 8) | data[37];
-    info = `TCP ${sport} → ${dport}`;
-    return { src, dest, protocol, info, sport, dport };
+    return {
+      src,
+      dest,
+      protocol,
+      info: `TCP ${sport} → ${dport}`,
+      sport,
+      dport,
+    };
   }
   if (protocol === 17 && data.length >= 42) {
     const sport = (data[34] << 8) | data[35];
     const dport = (data[36] << 8) | data[37];
-    info = `UDP ${sport} → ${dport}`;
-    return { src, dest, protocol, info, sport, dport };
+    return {
+      src,
+      dest,
+      protocol,
+      info: `UDP ${sport} → ${dport}`,
+      sport,
+      dport,
+    };
   }
-  return { src, dest, protocol, info };
+  return { src, dest, protocol, info: '' };
 };
 
-// Parse classic pcap format
-const parsePcap = (buf: ArrayBuffer): Packet[] => {
+const parsePcap = (buf: ArrayBuffer): PacketSummary[] => {
   const view = new DataView(buf);
   const magic = view.getUint32(0, false);
   let little: boolean;
@@ -77,7 +91,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
   else if (magic === 0xd4c3b2a1) little = true;
   else throw new Error('Unsupported pcap format');
   let offset = 24;
-  const packets: Packet[] = [];
+  const packets: PacketSummary[] = [];
   while (offset + 16 <= view.byteLength) {
     const tsSec = view.getUint32(offset, little);
     const tsUsec = view.getUint32(offset + 4, little);
@@ -86,7 +100,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
     offset += 16;
     if (offset + capLen > view.byteLength) break;
     const data = new Uint8Array(buf.slice(offset, offset + capLen));
-    const meta: any = parseEthernetIpv4(data);
+    const meta = parseEthernetIpv4(data);
     packets.push({
       timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
       src: meta.src,
@@ -102,13 +116,12 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
   return packets;
 };
 
-// Parse PCAP-NG files including section and interface blocks
-const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
+const parsePcapNg = (buf: ArrayBuffer): PacketSummary[] => {
   const view = new DataView(buf);
   let offset = 0;
   let little = true;
   const ifaces: { tsres: number }[] = [];
-  const packets: Packet[] = [];
+  const packets: PacketSummary[] = [];
 
   while (offset + 8 <= view.byteLength) {
     let blockType = view.getUint32(offset, little);
@@ -142,7 +155,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
       const capLen = view.getUint32(offset + 20, little);
       const dataStart = offset + 28;
       const data = new Uint8Array(buf.slice(dataStart, dataStart + capLen));
-      const meta: any = parseEthernetIpv4(data);
+      const meta = parseEthernetIpv4(data);
       const res = ifaces[ifaceId]?.tsres ?? 1e-6;
       const timestamp = ((tsHigh * 2 ** 32 + tsLow) * res).toFixed(6);
       packets.push({
@@ -163,9 +176,8 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
   return packets;
 };
 
-const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
+const parseWithWasm = async (buf: ArrayBuffer): Promise<PacketSummary[]> => {
   try {
-    // Attempt to load wasm parser; fall back to JS parsing
     await WebAssembly.instantiateStreaming(
       fetch('https://unpkg.com/pcap.js@latest/pcap.wasm'),
       {}
@@ -177,8 +189,8 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
   return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
 };
 
-const decodePacketLayers = (pkt: Packet): Layer[] => {
-  const data = pkt.data;
+const decodePacketLayers = (pkt: PacketSummary): Layer[] => {
+  const { data } = pkt;
   const layers: Layer[] = [];
   if (data.length >= 14) {
     const destMac = Array.from(data.slice(0, 6))
@@ -235,7 +247,7 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
 };
 
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+  const [packets, setPackets] = useState<PacketSummary[]>([]);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -272,6 +284,38 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.history.replaceState(null, '', url.toString());
   }, [filter]);
 
+  const { packetToStream } = useTcpStreams(packets);
+
+  const filtered = useMemo(() => {
+    if (!filter) return packets;
+    const term = filter.toLowerCase();
+    return packets.filter((p) =>
+      p.src.toLowerCase().includes(term) ||
+      p.dest.toLowerCase().includes(term) ||
+      protocolName(p.protocol).toLowerCase().includes(term) ||
+      (p.info || '').toLowerCase().includes(term)
+    );
+  }, [filter, packets]);
+
+  useEffect(() => {
+    if (selected !== null && !filtered[selected]) {
+      setSelected(null);
+    }
+  }, [filtered, selected]);
+
+  const selectedPacket = selected !== null ? filtered[selected] : null;
+  const selectedLayers = useMemo(
+    () => (selectedPacket ? decodePacketLayers(selectedPacket) : []),
+    [selectedPacket]
+  );
+  const hexDump = useMemo(
+    () => (selectedPacket ? toHex(selectedPacket.data) : ''),
+    [selectedPacket]
+  );
+  const selectedStream = selectedPacket
+    ? packetToStream.get(selectedPacket) ?? null
+    : null;
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -288,17 +332,6 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setPackets(pkts);
     setSelected(null);
   };
-
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -427,6 +460,8 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                           case 'Info':
                             val = pkt.info;
                             break;
+                          default:
+                            break;
                         }
                         return (
                           <td key={col} className="px-1 whitespace-nowrap">
@@ -439,17 +474,22 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 </tbody>
               </table>
             </div>
-            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
-                <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
-                  ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
-                </>
-              ) : (
-                'Select a packet'
-              )}
+            <div className="flex flex-1 overflow-hidden space-x-2">
+              <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
+                {selectedPacket ? (
+                  <>
+                    {selectedLayers.map((layer, i) => (
+                      <LayerView key={i} name={layer.name} fields={layer.fields} />
+                    ))}
+                    <pre className="text-green-400 whitespace-pre-wrap break-words">
+                      {hexDump}
+                    </pre>
+                  </>
+                ) : (
+                  'Select a packet'
+                )}
+              </div>
+              <StreamViewer stream={selectedStream} focusPacket={selectedPacket} />
             </div>
           </div>
         </>
@@ -459,4 +499,3 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
 };
 
 export default PcapViewer;
-
