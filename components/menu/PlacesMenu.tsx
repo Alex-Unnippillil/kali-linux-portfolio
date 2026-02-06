@@ -4,7 +4,7 @@ export type PlacesMenuItem = {
   id: string;
   label: string;
   icon: string;
-  onSelect?: () => void;
+  onSelect?: () => void | Promise<void>;
 };
 
 export interface PlacesMenuProps {
@@ -46,6 +46,43 @@ const resolveKaliIcon = (id: string): string | undefined => {
   return KALI_ICON_MAP[normalizedId];
 };
 
+const dispatchTrashChange = () => {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('trash-change'));
+  }
+};
+
+const isTrashEmptyAction = (id: string) => {
+  const normalized = id.toLowerCase();
+  return normalized.includes('trash') && normalized.includes('empty');
+};
+
+const notifyWhenSettled = (maybePromise: unknown) => {
+  if (
+    maybePromise &&
+    typeof (maybePromise as PromiseLike<unknown>).then === 'function'
+  ) {
+    const promise = maybePromise as PromiseLike<unknown> & {
+      finally?: (onFinally: () => void) => PromiseLike<unknown>;
+    };
+
+    if (typeof promise.finally === 'function') {
+      promise.finally(dispatchTrashChange);
+    } else {
+      promise.then(
+        () => dispatchTrashChange(),
+        error => {
+          dispatchTrashChange();
+          throw error;
+        },
+      );
+    }
+    return true;
+  }
+
+  return false;
+};
+
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
   return (
     <nav aria-label={heading} className="w-56 select-none text-sm text-white">
@@ -58,7 +95,14 @@ const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) =>
           const src = kaliIcon ?? item.icon;
 
           const handleClick = () => {
-            item.onSelect?.();
+            const result = item.onSelect?.();
+            if (!isTrashEmptyAction(item.id)) {
+              return;
+            }
+
+            if (!notifyWhenSettled(result)) {
+              dispatchTrashChange();
+            }
           };
 
           return (
