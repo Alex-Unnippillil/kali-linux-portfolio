@@ -8,6 +8,7 @@ import RouterProfiles, {
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import HandshakeDiagram from './components/HandshakeDiagram';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -211,6 +212,11 @@ const ReaverPanel: React.FC = () => {
       <div className="mb-6">
         <h2 className="text-lg mb-2">Access Points</h2>
         <APList />
+      </div>
+
+      <div className="mb-6">
+        <h2 className="text-lg mb-2">Captured Handshake</h2>
+        <HandshakeDiagram />
       </div>
 
       <div className="mb-6">
