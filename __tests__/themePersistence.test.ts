@@ -18,7 +18,6 @@ describe('theme persistence and unlocking', () => {
     expect(result.current.theme).toBe('dark');
     expect(getTheme()).toBe('dark');
     expect(window.localStorage.getItem('app:theme')).toBe('dark');
-
   });
 
   test('themes unlock at score milestones', () => {
@@ -27,7 +26,9 @@ describe('theme persistence and unlocking', () => {
     expect(unlocked).not.toContain('matrix');
   });
 
-  test('dark class applied for neon and matrix themes', () => {
+  test('dark class applied for default, neon, and matrix themes', () => {
+    setTheme('default');
+    expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('neon');
     expect(document.documentElement.classList.contains('dark')).toBe(true);
     setTheme('matrix');
