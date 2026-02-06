@@ -276,7 +276,16 @@ const lockPiece = (state: GameState) => {
 
   nextState = spawnPiece(nextState);
 
-  if (nextState.spawnBlocked) {
+  const hasHiddenOverflow = (() => {
+    for (let y = 0; y < HIDDEN_ROWS; y += 1) {
+      for (let x = 0; x < nextState.width; x += 1) {
+        if (getCell(nextState.board, nextState.width, x, y)) return true;
+      }
+    }
+    return false;
+  })();
+
+  if (hasHiddenOverflow) {
     nextState = { ...nextState, gameOver: true, paused: true };
   }
 

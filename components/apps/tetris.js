@@ -105,6 +105,7 @@ const Tetris = ({ windowMeta } = {}) => {
   const [finishTime, setFinishTime] = useState(null);
   const [bindingWarning, setBindingWarning] = useState('');
   const [gamepadConnected, setGamepadConnected] = useState(false);
+  const audioCtxRef = useRef(null);
 
   const [gameState, setGameState] = useState(() =>
     createInitialState({
@@ -114,10 +115,6 @@ const Tetris = ({ windowMeta } = {}) => {
     }),
   );
 
-  const gameStateRef = useRef(gameState);
-  useEffect(() => {
-    gameStateRef.current = gameState;
-  }, [gameState]);
 
   useEffect(() => {
     setGameState((prev) =>
@@ -156,6 +153,38 @@ const Tetris = ({ windowMeta } = {}) => {
     if (gameState.score > highScore) setHighScore(gameState.score);
     if (gameState.level > maxLevel) setMaxLevel(gameState.level);
   }, [gameState.level, gameState.score, highScore, maxLevel, setHighScore, setMaxLevel]);
+
+  const playSound = useCallback(
+    (freq = 440, duration = 0.08) => {
+      if (!sound) return;
+      try {
+        const ctx =
+          audioCtxRef.current ||
+          new (window.AudioContext || window.webkitAudioContext)();
+        audioCtxRef.current = ctx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch {
+        /* ignore */
+      }
+    },
+    [sound],
+  );
+
+  useEffect(
+    () => () => {
+      audioCtxRef.current?.close?.();
+    },
+    [],
+  );
 
   useEffect(() => {
     if (gameState.sprintComplete && finishTime === null) {
@@ -198,6 +227,29 @@ const Tetris = ({ windowMeta } = {}) => {
       setTimeout(() => setPcMessage(''), 1200);
     }
   }, [gameState.lastClear]);
+
+  const prevPiecesRef = useRef(gameState.stats.piecesPlaced);
+  useEffect(() => {
+    if (gameState.stats.piecesPlaced > prevPiecesRef.current) {
+      playSound(160, 0.05);
+    }
+    prevPiecesRef.current = gameState.stats.piecesPlaced;
+  }, [gameState.stats.piecesPlaced, playSound]);
+
+  useEffect(() => {
+    if (!gameState.lastClear) return;
+    if (gameState.lastClear.isTetris) {
+      playSound(880, 0.16);
+      return;
+    }
+    if (gameState.lastClear.isTSpin) {
+      playSound(740, 0.12);
+      return;
+    }
+    if (gameState.lastClear.lines.length > 0) {
+      playSound(520, 0.1);
+    }
+  }, [gameState.lastClear, playSound]);
 
   useEffect(() => {
     if (!clearAnimation) return undefined;
@@ -270,7 +322,15 @@ const Tetris = ({ windowMeta } = {}) => {
         ctx.strokeStyle = adjustColor(color, highContrast ? -120 : -100);
         ctx.lineWidth = 1;
         ctx.strokeRect(px + 0.5, py + 0.5, size - 1, size - 1);
+        ctx.strokeStyle = adjustColor(color, highContrast ? 120 : 90);
+        ctx.beginPath();
+        ctx.moveTo(px + 1, py + size - 1);
+        ctx.lineTo(px + size - 1, py + size - 1);
+        ctx.lineTo(px + size - 1, py + 1);
+        ctx.stroke();
       }
+      ctx.fillStyle = `rgba(255,255,255,${highContrast ? 0.25 : 0.15})`;
+      ctx.fillRect(px + size * 0.15, py + size * 0.15, size * 0.3, size * 0.2);
       ctx.restore();
     },
     [highContrast],
@@ -303,6 +363,17 @@ const Tetris = ({ windowMeta } = {}) => {
       ctx.beginPath();
       ctx.moveTo(0, y * CELL_SIZE + 0.5);
       ctx.lineTo(10 * CELL_SIZE, y * CELL_SIZE + 0.5);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = highContrast ? 0.2 : 0.08;
+    ctx.strokeStyle = '#0f172a';
+    for (let y = 0; y < 20 * CELL_SIZE; y += 4) {
+      ctx.beginPath();
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(10 * CELL_SIZE, y + 0.5);
       ctx.stroke();
     }
     ctx.restore();
@@ -734,6 +805,7 @@ const Tetris = ({ windowMeta } = {}) => {
       { label: 'Max Combo', value: gameState.stats.maxCombo > 0 ? `${gameState.stats.maxCombo}x` : '—' },
       { label: 'Level', value: gameState.level },
       { label: 'Lines', value: gameState.mode === 'sprint' ? `${gameState.lines}/40` : gameState.lines },
+      { label: 'B2B', value: gameState.b2b > 0 ? `${gameState.b2b}x` : '—' },
       { label: 'Pieces', value: gameState.stats.piecesPlaced },
       { label: 'Tetrises', value: gameState.stats.tetrises },
       { label: 'T-Spins', value: gameState.stats.tspins },
@@ -796,6 +868,7 @@ const Tetris = ({ windowMeta } = {}) => {
                 className="rounded-2xl border border-slate-800/70 bg-slate-950/60 shadow-[0_20px_60px_rgba(15,23,42,0.7)] transition-transform duration-150"
                 aria-label="Active Tetris board"
               />
+              <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[length:100%_6px] opacity-60" />
               {gameState.lastClear?.isTetris && (
                 <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(circle_at_top,#facc15_0%,rgba(250,204,21,0.0)_55%)]" />
               )}
