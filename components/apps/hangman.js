@@ -261,6 +261,46 @@ const Hangman = ({ windowMeta } = {}) => {
     }
   }, [dict, dictionaries, setDict, topics]);
 
+  const getElapsedMs = useCallback(() => {
+    const current = timerRef.current;
+    if (current.running && current.startedAt) {
+      return current.elapsedMs + (Date.now() - current.startedAt);
+    }
+    return current.elapsedMs;
+  }, []);
+
+  const stopTimer = useCallback(() => {
+    setTimer((prev) => {
+      if (!prev.running) return prev;
+      const elapsed =
+        prev.elapsedMs + (Date.now() - (prev.startedAt || Date.now()));
+      return {
+        startedAt: null,
+        elapsedMs: elapsed,
+        running: false,
+      };
+    });
+  }, []);
+
+  const startTimer = useCallback(() => {
+    setTimer((prev) => ({
+      ...prev,
+      startedAt: Date.now(),
+      running: true,
+    }));
+  }, []);
+
+  const getTimeBonus = useCallback((elapsedSeconds, diff) => {
+    const targets = {
+      casual: 140,
+      standard: 110,
+      hard: 90,
+    };
+    const target = targets[diff] ?? targets.standard;
+    const bonus = Math.floor((target - elapsedSeconds) * 2);
+    return Math.max(0, bonus);
+  }, []);
+
   useEffect(() => {
     if (game.status !== 'won' && game.status !== 'lost') return;
     const key = `${game.category}:${game.word}:${game.status}`;
@@ -350,46 +390,6 @@ const Hangman = ({ windowMeta } = {}) => {
     const minutes = Math.floor(totalSeconds / 60);
     const seconds = totalSeconds % 60;
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }, []);
-
-  const getElapsedMs = useCallback(() => {
-    const current = timerRef.current;
-    if (current.running && current.startedAt) {
-      return current.elapsedMs + (Date.now() - current.startedAt);
-    }
-    return current.elapsedMs;
-  }, []);
-
-  const stopTimer = useCallback(() => {
-    setTimer((prev) => {
-      if (!prev.running) return prev;
-      const elapsed =
-        prev.elapsedMs + (Date.now() - (prev.startedAt || Date.now()));
-      return {
-        startedAt: null,
-        elapsedMs: elapsed,
-        running: false,
-      };
-    });
-  }, []);
-
-  const startTimer = useCallback(() => {
-    setTimer((prev) => ({
-      ...prev,
-      startedAt: Date.now(),
-      running: true,
-    }));
-  }, []);
-
-  const getTimeBonus = useCallback((elapsedSeconds, diff) => {
-    const targets = {
-      casual: 140,
-      standard: 110,
-      hard: 90,
-    };
-    const target = targets[diff] ?? targets.standard;
-    const bonus = Math.floor((target - elapsedSeconds) * 2);
-    return Math.max(0, bonus);
   }, []);
 
   const startNewGame = useCallback(
@@ -614,8 +614,7 @@ const Hangman = ({ windowMeta } = {}) => {
     setCustomWords(result.words);
     setCustomDraft(result.words.join('\n'));
     setCustomStatus(
-      `Imported ${result.words.length} word${
-        result.words.length === 1 ? '' : 's'
+      `Imported ${result.words.length} word${result.words.length === 1 ? '' : 's'
       }${result.truncated ? ' (trimmed to 200 entries).' : '.'}`,
     );
     setDict('custom');
@@ -1056,9 +1055,8 @@ const Hangman = ({ windowMeta } = {}) => {
               {(won || lost) && (
                 <div className="mt-4 text-center">
                   <div
-                    className={`text-lg font-mono ${
-                      won ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
-                    }`}
+                    className={`text-lg font-mono ${won ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                      }`}
                   >
                     {won ? 'You won!' : 'You lost'}
                   </div>

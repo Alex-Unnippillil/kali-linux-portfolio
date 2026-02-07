@@ -70,9 +70,8 @@ const Card = ({ card, faceDown, peeking }) => {
 
   return (
     <div
-      className={`h-16 w-12 sm:h-24 sm:w-16 card ${flipped ? 'flipped' : ''} ${
-        peeking || (faceDown && hovered) ? 'peek' : ''
-      } animate-deal`}
+      className={`h-16 w-12 sm:h-24 sm:w-16 card ${flipped ? 'flipped' : ''} ${peeking || (faceDown && hovered) ? 'peek' : ''
+        } animate-deal`}
       aria-label={faceDown ? 'Hidden card' : `${card.value}${card.suit}`}
       role="img"
       onMouseEnter={() => faceDown && setHovered(true)}
@@ -407,6 +406,12 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     }
   }, [bet, handCount, paused, playSound, setLastBet, triggerHaptics, update]);
 
+  const recommended = useCallback(() => {
+    const hand = playerHands[current];
+    if (!hand) return '';
+    return recommendAction(hand, dealerHand[0], bankroll);
+  }, [bankroll, current, dealerHand, playerHands]);
+
   const act = useCallback(
     (type) => {
       if (paused) return;
@@ -450,12 +455,6 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       setMessage(e.message);
     }
   }, [update]);
-
-  const recommended = useCallback(() => {
-    const hand = playerHands[current];
-    if (!hand) return '';
-    return recommendAction(hand, dealerHand[0], bankroll);
-  }, [bankroll, current, dealerHand, playerHands]);
 
   const startPractice = useCallback(() => {
     setPractice(true);
@@ -834,9 +833,8 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
               Available: {availableBankroll}
             </div>
             <div
-              className={`h-8 w-6 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-muted)_88%,transparent)] ${
-                shuffling ? 'shuffle' : ''
-              }`}
+              className={`h-8 w-6 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-muted)_88%,transparent)] ${shuffling ? 'shuffle' : ''
+                }`}
               aria-hidden="true"
             ></div>
             {showCount && (
@@ -916,11 +914,10 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                   <button
                     key={v}
                     type="button"
-                    className={`chip transition ${CHIP_COLORS[v]} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-                      bet + v > maxBet
+                    className={`chip transition ${CHIP_COLORS[v]} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${bet + v > maxBet
                         ? 'cursor-not-allowed opacity-40'
                         : 'hover:scale-105 hover:bg-kali-primary hover:text-kali-inverse hover:shadow-[0_0_18px_rgba(15,148,210,0.45)]'
-                    }`}
+                      }`}
                     onClick={() => bet + v <= maxBet && setBet(bet + v)}
                     aria-label={`Add ${v} chip`}
                     disabled={bet + v > maxBet}
@@ -1000,11 +997,10 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
             return (
               <div
                 key={idx}
-                className={`flex w-full max-w-xl flex-col items-center gap-2 rounded-xl border border-transparent px-3 py-2 ${
-                  isActive
+                className={`flex w-full max-w-xl flex-col items-center gap-2 rounded-xl border border-transparent px-3 py-2 ${isActive
                     ? 'border-[color:color-mix(in_srgb,var(--kali-primary)_55%,var(--kali-border))] bg-[color:color-mix(in_srgb,var(--color-surface)_72%,transparent)] shadow-[0_0_16px_rgba(15,148,210,0.2)]'
                     : ''
-                }`}
+                  }`}
                 aria-current={isActive ? 'step' : undefined}
               >
                 <div className="text-sm uppercase tracking-wide text-kali-control">
@@ -1042,11 +1038,10 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                         <button
                           key={type}
                           type="button"
-                          className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm sm:text-base font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
-                            isRecommended
+                          className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm sm:text-base font-medium disabled:cursor-not-allowed disabled:opacity-50 ${isRecommended
                               ? 'bg-kali-primary text-kali-inverse shadow-[0_0_18px_rgba(15,148,210,0.45)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_85%,transparent)]'
                               : ''
-                          }`}
+                            }`}
                           onClick={() => act(type)}
                           disabled={!available}
                           aria-keyshortcuts={shortcut}

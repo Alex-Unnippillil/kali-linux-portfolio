@@ -57,7 +57,7 @@ describe('contact api', () => {
     await handler(req as any, res as any);
 
     expect(res._getStatusCode()).toBe(200);
-    expect(res._getJSONData()).toEqual({ ok: true });
+    expect(res._getJSONData()).toEqual({ ok: true, demo: false });
   });
 
   test('removes stale ip entries', async () => {

@@ -128,8 +128,8 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
-      role="alert"
-      aria-live="assertive"
+      role="status"
+      aria-live="polite"
       className={`
         fixed left-1/2 -translate-x-1/2 z-[9999]
         max-w-sm w-[calc(100vw-2rem)] sm:w-auto sm:min-w-[320px]
