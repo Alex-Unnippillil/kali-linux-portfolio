@@ -3,6 +3,7 @@ import {
   createBoard,
   detonateColorBomb,
   findMatches,
+  removeCandyAt,
   resolveBoard,
   scoreCascade,
   shuffleBoard,
@@ -127,5 +128,34 @@ describe('candy crush logic helpers', () => {
     expect(first).toBeGreaterThan(0);
     expect(second).toBe(first * 2);
   });
-});
 
+  test('removeCandyAt removes a candy and returns a refreshed board', () => {
+    const [a, b, c, d, e] = GEM_IDS;
+    const board = makeBoard([
+      a,
+      b,
+      c,
+      d,
+      b,
+      c,
+      d,
+      e,
+      c,
+      d,
+      e,
+      a,
+      d,
+      e,
+      a,
+      b,
+    ]);
+    const rng = mockRng([0.1, 0.2, 0.3]);
+
+    const result = removeCandyAt(board, 0, 4, GEM_IDS, rng);
+
+    expect(result.removed).toBe(1);
+    expect(result.color).toBe(a);
+    expect(result.board).toHaveLength(board.length);
+    expect(result.board.some((cell) => cell.gem === 'unknown')).toBe(false);
+  });
+});

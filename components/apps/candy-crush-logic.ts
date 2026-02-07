@@ -250,6 +250,12 @@ export interface ColorBombResult {
   color: GemId | null;
 }
 
+export interface RemoveCandyResult {
+  board: CandyCell[];
+  removed: number;
+  color: GemId | null;
+}
+
 export const detonateColorBomb = (
   board: readonly CandyCell[],
   width = BOARD_WIDTH,
@@ -285,7 +291,27 @@ export const detonateColorBomb = (
   return { board: collapsed, removed, color: target ?? null };
 };
 
-export const initialBoosters = Object.freeze({ shuffle: 2, colorBomb: 1 });
+export const removeCandyAt = (
+  board: readonly CandyCell[],
+  index: number,
+  width = BOARD_WIDTH,
+  pool: readonly GemId[] = DEFAULT_POOL,
+  rng: () => number = Math.random,
+): RemoveCandyResult => {
+  if (index < 0 || index >= board.length) {
+    return { board: board.slice(), removed: 0, color: null };
+  }
+  const target = board[index];
+  if (!target) {
+    return { board: board.slice(), removed: 0, color: null };
+  }
+  const cleared = board.map((cell, idx) => (idx === index ? null : cell));
+  const collapsed = collapseColumns(cleared, width, pool, rng);
+  const resolved = resolveBoard(collapsed, width, pool, rng);
+  return { board: resolved.board, removed: 1, color: target.gem ?? null };
+};
+
+export const initialBoosters = Object.freeze({ shuffle: 2, colorBomb: 1, lollipop: 1 });
 
 export const swapCandies = (
   board: readonly CandyCell[],
