@@ -15,7 +15,10 @@ const customJestConfig = {
     '<rootDir>/playwright/',
     '<rootDir>/__tests__/playwright/',
     '<rootDir>/tests/',
+    '\\.spec\\.ts$',
   ],
+  // Memory optimization for CI
+  workerIdleMemoryLimit: '512MB',
 };
 
 module.exports = createJestConfig(customJestConfig);

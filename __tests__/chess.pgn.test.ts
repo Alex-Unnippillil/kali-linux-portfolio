@@ -7,7 +7,7 @@ const puzzlePgn = `[Event "Mate in 1"]
 [Black "?"]
 [Result "*"]
 [SetUp "1"]
-[FEN "6k1/5ppp/8/8/8/8/5PPP/6K1 w - - 0 1"]
+[FEN "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"]
 1. Re8# *`;
 
 const openingPgn = `[Event "Ruy Lopez"]
