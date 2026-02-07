@@ -20,10 +20,18 @@ describe('ScrollableTimeline', () => {
     // Initially shows years
     const year = screen.getByText('2012');
     expect(year).toBeInTheDocument();
+    // Summary for first milestone is visible
+    expect(
+      screen.getByText('Started nuclear engineering studies at Ontario Tech.')
+    ).toBeInTheDocument();
 
     // Clicking a year zooms to month view
     fireEvent.click(year);
     expect(screen.getByText('2012-09')).toBeInTheDocument();
+    // Summary persists in month view
+    expect(
+      screen.getByText('Started nuclear engineering studies at Ontario Tech.')
+    ).toBeInTheDocument();
     expect(screen.getByText('Back to years')).toBeInTheDocument();
   });
 });
