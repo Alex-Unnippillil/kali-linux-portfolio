@@ -176,6 +176,14 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
     -moz-box-shadow: var(--shadow-2);
 }
 
+.main-window {
+    background-clip: padding-box;
+}
+
+.main-window:focus-visible {
+    outline-offset: -1px;
+}
+
 .closed-window {
     animation: closeWindow var(--window-motion-duration-close, 180ms) var(--window-motion-ease-close, var(--window-motion-ease-minimize)) 1 forwards;
     will-change: opacity, transform;
