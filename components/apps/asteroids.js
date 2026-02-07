@@ -20,6 +20,14 @@ const STAR_DENSITY = 8000;
 const MAX_PARTICLES = 180;
 const SHAKE_DECAY = 0.85;
 
+const DIFFICULTIES = [
+  { level: 1, name: 'Novice' },
+  { level: 2, name: 'Pilot' },
+  { level: 3, name: 'Warrior' },
+  { level: 4, name: 'Commander' },
+  { level: 5, name: 'Ace' },
+];
+
 const drawCircle = (ctx, x, y, r, color, fill = false) => {
   ctx.beginPath();
   ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -40,16 +48,21 @@ const renderAsteroid = (ctx, asteroid, alpha) => {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(asteroid.angle || 0);
-  ctx.strokeStyle = 'white';
+
+  // Simple solid fill - no gradients for performance
+  ctx.fillStyle = '#374151';
+  ctx.strokeStyle = '#9ca3af';
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   const shape = asteroid.shape;
   if (shape && shape.length) {
     ctx.moveTo(shape[0].x, shape[0].y);
     shape.slice(1).forEach((pt) => ctx.lineTo(pt.x, pt.y));
   } else {
-    ctx.moveTo(asteroid.r, 0);
+    ctx.arc(0, 0, asteroid.r, 0, Math.PI * 2);
   }
   ctx.closePath();
+  ctx.fill();
   ctx.stroke();
   ctx.restore();
 };
@@ -75,6 +88,7 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
     });
     ctx.globalAlpha = 1;
   }
+  if (game.lives <= 0) return; // Don't draw ship if dead
   const ship = game.ship;
   const sx = interpolate(ship.px, ship.x, alpha);
   const sy = interpolate(ship.py, ship.y, alpha);
@@ -86,24 +100,41 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
   if (ship.hitCooldown > 0) {
     ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(ship.hitCooldown * 0.2));
   }
-  ctx.strokeStyle = 'white';
+
+  // Ship body - no shadows for performance
+  ctx.fillStyle = '#1e293b';
+  ctx.strokeStyle = ship.shield > 0 ? 'cyan' : 'white';
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(12, 0);
-  ctx.lineTo(-12, -8);
-  ctx.lineTo(-12, 8);
+  ctx.moveTo(14, 0);
+  ctx.lineTo(-10, -8);
+  ctx.lineTo(-6, 0);
+  ctx.lineTo(-10, 8);
   ctx.closePath();
+  ctx.fill();
   ctx.stroke();
+
+  // Thruster flame - fixed length to prevent flicker
   if (ship.thrusting) {
     ctx.beginPath();
-    ctx.moveTo(-12, 0);
-    ctx.lineTo(-18, 4);
-    ctx.lineTo(-20, 0);
-    ctx.lineTo(-18, -4);
+    ctx.moveTo(-6, 0);
+    ctx.lineTo(-10, 3);
+    ctx.lineTo(-16, 0);
+    ctx.lineTo(-10, -3);
     ctx.closePath();
-    ctx.strokeStyle = '#fbbf24';
-    ctx.stroke();
+    ctx.fillStyle = '#fbbf24';
+    ctx.fill();
   }
-  if (ship.shield > 0) drawCircle(ctx, 0, 0, ship.r + 4, 'cyan');
+
+  // Shield bubble
+  if (ship.shield > 0) {
+    ctx.strokeStyle = 'cyan';
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(0, 0, ship.r + 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
   ctx.restore();
 
   game.asteroids.forEach((a) => {
@@ -114,49 +145,72 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
     if (!b.active) return;
     const x = interpolate(b.px, b.x, alpha);
     const y = interpolate(b.py, b.y, alpha);
-    drawCircle(ctx, x, y, b.r, 'yellow', true);
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(x, y, b.r, 0, Math.PI * 2);
+    ctx.fill();
   });
 
   if (game.ufo.active) {
     const x = interpolate(game.ufo.px, game.ufo.x, alpha);
     const y = interpolate(game.ufo.py, game.ufo.y, alpha);
-    drawCircle(ctx, x, y, game.ufo.r, 'purple');
+    // UFO body
+    ctx.fillStyle = '#7c3aed';
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(x, y, game.ufo.r, game.ufo.r * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    // Dome
+    ctx.fillStyle = '#a78bfa';
+    ctx.beginPath();
+    ctx.ellipse(x, y - 3, game.ufo.r * 0.5, game.ufo.r * 0.3, 0, Math.PI, 0);
+    ctx.fill();
   }
 
   game.ufoBullets.forEach((b) => {
     const x = interpolate(b.px, b.x, alpha);
     const y = interpolate(b.py, b.y, alpha);
-    drawCircle(ctx, x, y, b.r, 'red', true);
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x, y, b.r, 0, Math.PI * 2);
+    ctx.fill();
   });
 
-  if (game.ghostShip) {
-    const x = interpolate(game.ghostShip.px ?? game.ghostShip.x, game.ghostShip.x, alpha);
-    const y = interpolate(game.ghostShip.py ?? game.ghostShip.y, game.ghostShip.y, alpha);
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(game.ghostShip.angle);
-    ctx.strokeStyle = 'rgba(125, 211, 252, 0.6)';
-    ctx.setLineDash([4, 6]);
-    ctx.beginPath();
-    ctx.moveTo(12, 0);
-    ctx.lineTo(-12, -8);
-    ctx.lineTo(-12, 8);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.restore();
-    ctx.setLineDash([]);
-  }
+
+  // Ghost ship removed for cleaner gameplay
 
   game.powerUps.forEach((p) => {
     const x = interpolate(p.px ?? p.x, p.x, alpha);
     const y = interpolate(p.py ?? p.y, p.y, alpha);
-    drawCircle(
-      ctx,
-      x,
-      y,
-      p.r,
-      p.type === POWER_UPS.SHIELD ? 'cyan' : p.type === POWER_UPS.RAPID_FIRE ? 'yellow' : 'lime',
-    );
+    const color =
+      p.type === POWER_UPS.SHIELD
+        ? 'cyan'
+        : p.type === POWER_UPS.RAPID_FIRE
+          ? 'yellow'
+          : p.type === POWER_UPS.SPREAD
+            ? 'orange'
+            : 'lime';
+    drawCircle(ctx, x, y, p.r, color); // Stroke
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.globalAlpha = 0.2;
+    ctx.beginPath();
+    ctx.arc(x, y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    let label = '?';
+    if (p.type === POWER_UPS.SHIELD) label = 'S';
+    if (p.type === POWER_UPS.RAPID_FIRE) label = 'R';
+    if (p.type === POWER_UPS.SPREAD) label = 'V';
+    if (p.type === POWER_UPS.EXTRA_LIFE) label = '+';
+    ctx.fillText(label, x, y + 1);
+    ctx.restore();
   });
 
   // Radar
@@ -183,7 +237,13 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
   game.inventory.forEach((type, i) => {
     ctx.beginPath();
     ctx.strokeStyle =
-      type === POWER_UPS.SHIELD ? 'cyan' : type === POWER_UPS.RAPID_FIRE ? 'yellow' : 'lime';
+      type === POWER_UPS.SHIELD
+        ? 'cyan'
+        : type === POWER_UPS.RAPID_FIRE
+          ? 'yellow'
+          : type === POWER_UPS.SPREAD
+            ? 'orange'
+            : 'lime';
     ctx.arc(10 + i * 20, 80, 8, 0, Math.PI * 2);
     ctx.stroke();
   });
@@ -200,6 +260,21 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
 
   if (particles?.length) {
     renderParticles(ctx, particles, alpha);
+  }
+
+  // Render floating texts
+  if (game?.floatingTexts?.length) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.font = 'bold 16px sans-serif';
+    game.floatingTexts.forEach((ft) => {
+      ctx.globalAlpha = Math.max(0, ft.life / 60);
+      ctx.fillStyle = ft.color || '#fff';
+      const x = interpolate(ft.x, ft.x, alpha); // No interpolation needed really as they move slowly
+      const y = interpolate(ft.y, ft.y, alpha);
+      ctx.fillText(ft.text, x, y);
+    });
+    ctx.restore();
   }
 };
 
@@ -220,14 +295,14 @@ const Asteroids = () => {
   const worldRef = useRef({ w: 0, h: 0 });
   const inventoryRef = useRef([]);
   const [inventory, setInventory] = useState([]);
-  const [highScore, setHighScore] = useState(0);
+  const [highScores, setHighScores] = useState({});
   const [lastScore, setLastScore] = useState(0);
   const [stage, setStage] = useState(startLevelNum);
   const [score, setScore] = useState(0);
   const [lives, setLives] = useState(3);
   const [multiplier, setMultiplier] = useState(1);
   const [multiplierTimer, setMultiplierTimer] = useState(0);
-  const highScoreRef = useRef(0);
+  const highScoresRef = useRef({});
   const lastScoreRef = useRef(0);
   const stageRef = useRef(stage);
   const scoreRef = useRef(score);
@@ -243,16 +318,19 @@ const Asteroids = () => {
   const shakeRef = useRef(0);
   const audioRef = useRef(null);
   const thrustCooldownRef = useRef(0);
+  const particlesEnabledRef = useRef(particlesEnabled);
+  const screenShakeRef = useRef(screenShake);
+  const playToneRef = useRef(null);
 
   const playTone = useCallback((freq, duration = 0.08, volume = 0.12) => {
-    if (muted || !audioRef.current) return;
+    if (muted || !audioRef.current || pausedRef.current) return;
     try {
       const ctx = audioRef.current;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'sawtooth';
+      osc.type = 'sine';
       osc.frequency.value = freq;
-      gain.gain.value = volume;
+      gain.gain.value = volume * 0.5;
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
@@ -277,23 +355,42 @@ const Asteroids = () => {
 
   useEffect(() => {
     if (!particlesEnabled) particlesRef.current = [];
+    particlesEnabledRef.current = particlesEnabled;
   }, [particlesEnabled]);
 
   useEffect(() => {
     if (!screenShake) shakeRef.current = 0;
+    screenShakeRef.current = screenShake;
   }, [screenShake]);
 
   useEffect(() => {
-    const hs = Number(localStorage.getItem('asteroids-highscore') || 0);
+    playToneRef.current = playTone;
+  }, [playTone]);
+
+  useEffect(() => {
+    const scores = {};
+    DIFFICULTIES.forEach((d) => {
+      scores[d.level] = Number(localStorage.getItem(`asteroids-highscore-${d.level}`) || 0);
+    });
+    setHighScores(scores);
+    highScoresRef.current = scores;
+
+    // Legacy migration check (optional, but good practice)
+    const legacy = localStorage.getItem('asteroids-highscore');
+    if (legacy && !localStorage.getItem('asteroids-highscore-1')) {
+      // Assuming legacy high score was Novice
+      localStorage.setItem('asteroids-highscore-1', legacy);
+      scores[1] = Number(legacy);
+      setHighScores({ ...scores });
+    }
+
     const ls = Number(localStorage.getItem('asteroids-lastscore') || 0);
-    setHighScore(hs);
     setLastScore(ls);
-    highScoreRef.current = hs;
     lastScoreRef.current = ls;
   }, []);
   useEffect(() => {
-    highScoreRef.current = highScore;
-  }, [highScore]);
+    highScoresRef.current = highScores;
+  }, [highScores]);
   useEffect(() => {
     lastScoreRef.current = lastScore;
   }, [lastScore]);
@@ -368,7 +465,7 @@ const Asteroids = () => {
     window.addEventListener('keydown', handleInventoryUse);
 
     const spawnParticles = (x, y, color, count, speed = 1) => {
-      if (!particlesEnabled) return;
+      if (!particlesEnabledRef.current) return;
       for (let i = 0; i < count; i += 1) {
         if (particlesRef.current.length >= MAX_PARTICLES) break;
         const angle = Math.random() * Math.PI * 2;
@@ -398,7 +495,7 @@ const Asteroids = () => {
         }
         if (evt.type === 'lives') {
           if (livesRef.current !== evt.lives) setLives(evt.lives);
-          setLiveText(`Lives ${evt.lives}`);
+          setLiveText(`Lives ${Math.max(0, evt.lives)}`);
         }
         if (evt.type === 'hud') {
           if (scoreRef.current !== evt.score) setScore(evt.score);
@@ -407,35 +504,45 @@ const Asteroids = () => {
           if (multiplierTimerRef.current !== evt.multiplierTimer)
             setMultiplierTimer(evt.multiplierTimer);
         }
-        if (evt.type === 'gameOver') {
-          setLiveText(`Game over. Score ${evt.score}`);
-          setGameOver(true);
-          const newHigh = Math.max(evt.score, highScoreRef.current);
-          setHighScore(newHigh);
-          setLastScore(evt.score);
-          try {
-            localStorage.setItem('asteroids-highscore', String(newHigh));
-            localStorage.setItem('asteroids-lastscore', String(evt.score));
-          } catch {}
-          const updated = { upgrades: saveDataRef.current.upgrades, ghost: evt.ghostData };
-          saveDataRef.current = updated;
-          setSaveData(updated);
-          setSelectingLevel(true);
-        }
         if (evt.type === 'asteroidDestroyed') {
           spawnParticles(evt.x, evt.y, '#f8fafc', 12, 1.6);
-          if (screenShake) shakeRef.current = Math.max(shakeRef.current, 3);
-          playTone(220, 0.06, 0.09);
+          if (screenShakeRef.current) shakeRef.current = Math.max(shakeRef.current, 3);
+          if (playToneRef.current) playToneRef.current(220, 0.06, 0.09);
         }
         if (evt.type === 'shipHit') {
           spawnParticles(evt.x, evt.y, '#38bdf8', 18, 2.2);
-          if (screenShake) shakeRef.current = Math.max(shakeRef.current, 6);
-          playTone(110, 0.12, 0.12);
+          if (screenShakeRef.current) shakeRef.current = Math.max(shakeRef.current, 6);
+          if (playToneRef.current) playToneRef.current(110, 0.12, 0.12);
         }
         if (evt.type === 'ufoDestroyed') {
           spawnParticles(evt.x, evt.y, '#c084fc', 16, 1.8);
-          if (screenShake) shakeRef.current = Math.max(shakeRef.current, 4);
-          playTone(160, 0.1, 0.1);
+          if (screenShakeRef.current) shakeRef.current = Math.max(shakeRef.current, 4);
+          if (playToneRef.current) playToneRef.current(160, 0.1, 0.1);
+        }
+        if (evt.type === 'gameOver') {
+          // Play a "loss" sound if undesired, but user asked to stop sound.
+          // We ensure playTone checks paused status if we were to pause.
+          // Currently game doesn't strictly pause engine, but we stop inputs via overlay.
+
+          setLiveText(`Game over. Score ${evt.score}`);
+          setGameOver(true);
+
+          const difficulty = evt.startLevel || 1;
+          const currentHigh = highScoresRef.current[difficulty] || 0;
+          const newHigh = Math.max(evt.score, currentHigh);
+
+          setHighScores((prev) => ({ ...prev, [difficulty]: newHigh }));
+          setLastScore(evt.score);
+
+          try {
+            localStorage.setItem(`asteroids-highscore-${difficulty}`, String(newHigh));
+            localStorage.setItem('asteroids-lastscore', String(evt.score));
+          } catch { }
+
+          const updated = { upgrades: saveDataRef.current.upgrades, ghost: evt.ghostData };
+          saveDataRef.current = updated;
+          setSaveData(updated);
+          // Don't auto-select level, let Game Over screen show
         }
       });
     };
@@ -454,8 +561,8 @@ const Asteroids = () => {
       particlesRef.current = next;
     };
 
-  const render = (alpha) => {
-      const shake = screenShake ? shakeRef.current : 0;
+    const render = (alpha) => {
+      const shake = screenShakeRef.current ? shakeRef.current : 0;
       ctx.save();
       if (shake > 0.1) {
         ctx.translate((Math.random() * 2 - 1) * shake, (Math.random() * 2 - 1) * shake);
@@ -488,7 +595,7 @@ const Asteroids = () => {
         inventoryUseRef.current = null;
         tick(gameRef.current, input, dt);
         processEvents();
-        if (gameRef.current?.ship?.thrusting && particlesEnabled) {
+        if (gameRef.current?.ship?.thrusting && particlesEnabledRef.current) {
           if (thrustCooldownRef.current <= 0) {
             const ship = gameRef.current.ship;
             const x = ship.x - Math.cos(ship.angle) * 12;
@@ -512,7 +619,7 @@ const Asteroids = () => {
             if (star.y > worldRef.current.h) star.y -= worldRef.current.h;
           });
         }
-        if (screenShake) {
+        if (screenShakeRef.current) {
           shakeRef.current = Math.max(0, shakeRef.current * Math.pow(SHAKE_DECAY, dt / 16));
         }
       },
@@ -535,9 +642,6 @@ const Asteroids = () => {
     selectingLevel,
     startLevelNum,
     setSaveData,
-    particlesEnabled,
-    screenShake,
-    playTone,
   ]);
 
   const restartGame = () => {
@@ -563,6 +667,8 @@ const Asteroids = () => {
         return 'Shield';
       case POWER_UPS.RAPID_FIRE:
         return 'Rapid';
+      case POWER_UPS.SPREAD:
+        return 'Spread';
       case POWER_UPS.EXTRA_LIFE:
         return 'Life';
       default:
@@ -615,9 +721,9 @@ const Asteroids = () => {
     <GameLayout
       gameId="asteroids"
       stage={stage}
-      lives={lives}
+      lives={Math.max(0, lives)}
       score={score}
-      highScore={highScore}
+      highScore={highScores[startLevelNum]}
       settingsPanel={settingsPanel}
       paused={paused}
       onPauseChange={(p) => {
@@ -632,28 +738,32 @@ const Asteroids = () => {
     >
       {selectingLevel && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 text-white space-y-3 z-50">
-          <div className="text-2xl font-semibold tracking-wide">Asteroids</div>
-          <div className="text-sm text-slate-200">Select starting wave</div>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {[1, 2, 3, 4, 5].map((lvl) => (
-              <button
-                key={lvl}
-                type="button"
-                onClick={() => {
-                  setStartLevelNum(lvl);
-                  setSelectingLevel(false);
-                  setGameOver(false);
-                  setRestartKey((k) => k + 1);
-                }}
-                className="px-3 py-1 bg-gray-700 rounded hover:bg-gray-600 focus:outline-none focus:ring"
-              >
-                Wave {lvl}
-              </button>
+          <div className="text-3xl font-bold tracking-wide mb-2">🚀 Asteroids</div>
+          <div className="text-sm text-slate-200">Select Difficulty</div>
+          <div className="flex flex-col gap-2 w-full max-w-xs px-8">
+            {DIFFICULTIES.map((d) => (
+              <div key={d.level} className="flex items-center justify-between w-full">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartLevelNum(d.level);
+                    setSelectingLevel(false);
+                    setGameOver(false);
+                    setRestartKey((k) => k + 1);
+                  }}
+                  className="flex-1 px-3 py-2 bg-gray-700/80 rounded hover:bg-emerald-600/80 focus:outline-none focus:ring transition-colors text-left"
+                >
+                  {d.name}
+                </button>
+                <div className="ml-3 text-xs text-slate-400 tabular-nums w-12 text-right">
+                  {highScores[d.level] || 0}
+                </div>
+              </div>
             ))}
           </div>
           {lastScore > 0 && (
-            <div className="text-xs text-slate-300">
-              Last score: {lastScore} · Best: {highScore}
+            <div className="text-xs text-slate-300 mt-2">
+              Last score: {lastScore}
             </div>
           )}
         </div>
@@ -704,8 +814,8 @@ const Asteroids = () => {
           <div className="rounded-lg border border-slate-700 bg-slate-900/95 p-6 text-center text-white shadow-xl max-w-sm">
             <div className="text-xl font-semibold mb-2">Game Over</div>
             <div className="text-sm text-slate-300 mb-4">
-              Score: <span className="font-semibold text-emerald-300">{lastScore}</span> · High:{' '}
-              <span className="font-semibold text-indigo-300">{highScore}</span>
+              Score: <span className="font-semibold text-emerald-300">{Math.floor(lastScore)}</span> · High:{' '}
+              <span className="font-semibold text-indigo-300">{highScores[startLevelNum] || 0}</span>
             </div>
             <div className="flex gap-3 justify-center">
               <button
@@ -723,10 +833,11 @@ const Asteroids = () => {
                 type="button"
                 onClick={() => {
                   setSelectingLevel(true);
+                  setGameOver(false);
                 }}
                 className="px-3 py-1 rounded bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring"
               >
-                Change Wave
+                Menu
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@ export const POWER_UPS = {
   SHIELD: 'shield',
   RAPID_FIRE: 'rapid-fire',
   EXTRA_LIFE: 'extra-life',
+  SPREAD: 'spread',
 };
 
 export function wrap(value, max, margin = 0) {
@@ -87,6 +88,9 @@ export function applyPowerUp(powerUp, ship, lives, shieldDuration = 600, rapidFi
       break;
     case POWER_UPS.RAPID_FIRE:
       ship.rapidFire = rapidFireDuration;
+      break;
+    case POWER_UPS.SPREAD:
+      ship.spreadShot = rapidFireDuration;
       break;
     case POWER_UPS.EXTRA_LIFE:
       lives += 1;

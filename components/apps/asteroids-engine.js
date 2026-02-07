@@ -52,6 +52,7 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
     cooldown: 0,
     shield: 0,
     rapidFire: 0,
+    spreadShot: 0,
     hitCooldown: 0,
   };
 
@@ -63,12 +64,15 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
     lives: 3,
     score: 0,
     level: startLevel,
+    gameOver: false,
+    gameOverTimer: 0,
     extraLifeScore: 10000,
     bullets: createBulletPool(40).map((b) => ({ ...b, px: 0, py: 0 })),
     asteroids: [],
     ufo: { active: false, x: 0, y: 0, px: 0, py: 0, dx: 0, dy: 0, r: 15, cooldown: 0 },
     ufoBullets: [],
     powerUps: [],
+    floatingTexts: [],
     inventory: [],
     ufoTimer: 600,
     multiplier: 1,
@@ -103,6 +107,7 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
     state.upgrades.forEach((u) => {
       if (u === POWER_UPS.SHIELD) state.ship.shield = SHIELD_DURATION;
       if (u === POWER_UPS.RAPID_FIRE) state.ship.rapidFire = 600;
+      if (u === POWER_UPS.SPREAD) state.ship.spreadShot = 600;
     });
   };
 
@@ -138,6 +143,7 @@ export const createGame = ({ worldW, worldH, seed = 'asteroids', startLevel = 1,
   };
 
   state.startLevel = startLevelFn;
+  state.originalStartLevel = startLevel; // Track for high score
   startLevelFn();
   return state;
 };
@@ -165,25 +171,46 @@ const applyShipInput = (ship, input, dtScale) => {
 const fireBullet = (state) => {
   const { ship } = state;
   if (ship.cooldown > 0) return null;
-  const bullet = spawnBullet(
-    state.bullets,
-    ship.x + Math.cos(ship.angle) * 12,
-    ship.y + Math.sin(ship.angle) * 12,
-    Math.cos(ship.angle) * 6 + ship.velX,
-    Math.sin(ship.angle) * 6 + ship.velY,
-    60,
-  );
-  if (bullet) {
-    bullet.px = bullet.x;
-    bullet.py = bullet.y;
+
+  const angles = [ship.angle];
+  if (ship.spreadShot > 0) {
+    angles.push(ship.angle - 0.2, ship.angle + 0.2);
+  }
+
+  let lastBullet = null;
+
+  angles.forEach((angle) => {
+    const bullet = spawnBullet(
+      state.bullets,
+      ship.x + Math.cos(angle) * 12,
+      ship.y + Math.sin(angle) * 12,
+      Math.cos(angle) * 6 + ship.velX,
+      Math.sin(angle) * 6 + ship.velY,
+      60,
+    );
+    if (bullet) {
+      bullet.px = bullet.x;
+      bullet.py = bullet.y;
+      lastBullet = bullet;
+    }
+  });
+
+  if (lastBullet) {
     ship.cooldown = ship.rapidFire > 0 ? 5 : 15;
   }
-  return bullet;
+  return lastBullet;
 };
 
 const destroyAsteroid = (state, index) => {
   const a = state.asteroids[index];
   state.score += 100 * state.multiplier;
+  state.floatingTexts.push({
+    x: a.x,
+    y: a.y,
+    text: `+${100 * state.multiplier}`,
+    life: 60,
+    color: '#fbbf24', // amber-400
+  });
   state.multiplier = Math.min(state.multiplier + 1, MAX_MULTIPLIER);
   state.multiplierTimer = MULTIPLIER_TIMEOUT;
   if (a.r > 20) {
@@ -216,26 +243,31 @@ const destroyShip = (state) => {
   else {
     state.lives -= 1;
     state.multiplier = 1;
-    ship.x = state.worldW / 2;
-    ship.y = state.worldH / 2;
-    ship.velX = 0;
-    ship.velY = 0;
-    ship.angle = 0;
+    if (state.lives > 0) {
+      ship.x = state.worldW / 2;
+      ship.y = state.worldH / 2;
+      ship.velX = 0;
+      ship.velY = 0;
+      ship.angle = 0;
+    }
   }
   ship.hitCooldown = COLLISION_COOLDOWN;
   state.events.push({ type: 'shipHit', x: ship.x, y: ship.y });
   if (state.lives <= 0) {
-    state.events.push({
-      type: 'gameOver',
-      score: state.score,
-      ghostData: state.currentRun.slice(),
-    });
+    state.gameOverTimer = 120; // 2 seconds delay
   }
 };
 
 const destroyUfo = (state) => {
   state.ufo.active = false;
   state.score += 500 * state.multiplier;
+  state.floatingTexts.push({
+    x: state.ufo.x,
+    y: state.ufo.y,
+    text: `+${500 * state.multiplier}`,
+    life: 60,
+    color: '#a78bfa', // violet-400
+  });
   state.multiplier = Math.min(state.multiplier + 1, MAX_MULTIPLIER);
   state.multiplierTimer = MULTIPLIER_TIMEOUT;
   state.events.push({ type: 'ufoDestroyed', x: state.ufo.x, y: state.ufo.y });
@@ -382,9 +414,11 @@ const handleUfoLogic = (state, dtScale) => {
 };
 
 export const tick = (state, input, dt = 16) => {
-  if (!state || state.events.find((e) => e.type === 'gameOver')) return state;
-  const dtScale = dt / 16;
+  if (!state) return state;
   state.events.length = 0;
+  if (state.gameOver) return state;
+
+  const dtScale = dt / 16;
   const { ship } = state;
   storePrevious(ship);
   applyShipInput(ship, input, dtScale);
@@ -395,6 +429,7 @@ export const tick = (state, input, dt = 16) => {
   state.currentRun.push({ x: ship.x, y: ship.y, angle: ship.angle });
   ship.cooldown = Math.max(0, ship.cooldown - 1 * dtScale);
   ship.rapidFire = Math.max(0, ship.rapidFire - 1 * dtScale);
+  ship.spreadShot = Math.max(0, ship.spreadShot - 1 * dtScale);
   ship.shield = Math.max(0, ship.shield - 1 * dtScale);
   ship.hitCooldown = Math.max(0, ship.hitCooldown - 1 * dtScale);
 
@@ -410,10 +445,32 @@ export const tick = (state, input, dt = 16) => {
   else state.multiplier = 1;
   if (state.waveBannerTimer > 0) state.waveBannerTimer -= 1 * dtScale;
 
+  if (state.gameOverTimer > 0) {
+    state.gameOverTimer -= 1 * dtScale;
+    if (state.gameOverTimer <= 0) {
+      state.events.push({
+        type: 'gameOver',
+        score: state.score,
+        startLevel: state.originalStartLevel,
+        ghostData: state.currentRun.slice(),
+      });
+      state.gameOver = true;
+    }
+  }
+
   updateBulletsWithHistory(state, dtScale);
   updateAsteroids(state, dtScale);
   handleUfoLogic(state, dtScale);
   updateUfoBullets(state, dtScale);
+
+  // Update floating texts
+  for (let i = state.floatingTexts.length - 1; i >= 0; i -= 1) {
+    const ft = state.floatingTexts[i];
+    ft.y -= 0.5 * dtScale;
+    ft.life -= 1 * dtScale;
+    if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+  }
+
   handleGhostPlayback(state);
 
   handleBulletCollisions(state);
@@ -445,13 +502,25 @@ export const tick = (state, input, dt = 16) => {
     }
   }
 
-  state.events.push({
-    type: 'hud',
-    score: state.score,
-    multiplier: state.multiplier,
-    multiplierTimer: state.multiplierTimer,
-    lives: state.lives,
-  });
+  // Only push HUD event when values actually change
+  const scoreChanged = state.score !== state._prevScore;
+  const livesChanged = state.lives !== state._prevLives;
+  const multiplierChanged = state.multiplier !== state._prevMultiplier;
+  const timerChanged = Math.floor(state.multiplierTimer) !== Math.floor(state._prevMultiplierTimer || 0);
+
+  if (scoreChanged || livesChanged || multiplierChanged || timerChanged) {
+    state.events.push({
+      type: 'hud',
+      score: state.score,
+      multiplier: state.multiplier,
+      multiplierTimer: state.multiplierTimer,
+      lives: state.lives,
+    });
+    state._prevScore = state.score;
+    state._prevLives = state.lives;
+    state._prevMultiplier = state.multiplier;
+    state._prevMultiplierTimer = Math.floor(state.multiplierTimer);
+  }
 
   return state;
 };

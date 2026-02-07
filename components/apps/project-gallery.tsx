@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useMemo, useState, useCallback } from 'react';
+import '../../styles/project-gallery.css';
 import projectsData from '../../data/projects.json';
 
 interface Project {
@@ -7,13 +7,14 @@ interface Project {
   title: string;
   description: string;
   stack: string[];
-  tags: string[];
+  category: string;
+  featured: boolean;
   year: number;
-  type: string;
-  thumbnail: string;
+  stars: number;
+  commits: number;
+  lastUpdated: string;
   repo: string;
   demo: string;
-  snippet: string;
   language: string;
 }
 
@@ -21,139 +22,59 @@ interface Props {
   openApp?: (id: string) => void;
 }
 
-const Editor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
+const CATEGORIES = [
+  { id: 'all', label: 'All', icon: '📁' },
+  { id: 'web', label: 'Web', icon: '🌐' },
+  { id: 'game', label: 'Games', icon: '🎮' },
+  { id: 'security', label: 'Security', icon: '🔐' },
+  { id: 'ai', label: 'AI/ML', icon: '🤖' },
+  { id: 'data', label: 'Data', icon: '📊' },
+  { id: 'tool', label: 'Tools', icon: '🛠️' },
+];
 
-const STORAGE_KEY = 'project-gallery-filters';
-const STORAGE_FILE = 'project-gallery-filters.json';
+const LANGUAGE_COLORS: Record<string, string> = {
+  typescript: '#3178c6',
+  javascript: '#f7df1e',
+  python: '#3776ab',
+  html: '#e34c26',
+  powershell: '#5391fe',
+  other: '#6e7681',
+};
 
-const getInitialFilters = () => {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return `${Math.floor(diffDays / 365)}y ago`;
 };
 
 const ProjectGallery: React.FC<Props> = ({ openApp }) => {
   const projects: Project[] = projectsData as Project[];
-  const initialFilters = getInitialFilters();
-  const [search, setSearch] = useState(initialFilters?.search ?? '');
-  const [stack, setStack] = useState(initialFilters?.stack ?? '');
-  const [year, setYear] = useState(initialFilters?.year ?? '');
-  const [type, setType] = useState(initialFilters?.type ?? '');
-  const [tags, setTags] = useState<string[]>(initialFilters?.tags ?? []);
-  const [ariaMessage, setAriaMessage] = useState('');
-  const [selected, setSelected] = useState<Project[]>([]);
+  const [category, setCategory] = useState('all');
 
-  const readFilters = async () => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      /* ignore */
-    }
-    try {
-      // @ts-ignore - OPFS not yet in TypeScript libs
-      const root = await navigator.storage?.getDirectory();
-      const handle = await root?.getFileHandle(STORAGE_FILE);
-      const file = await handle?.getFile();
-      const text = await file?.text();
-      return text ? JSON.parse(text) : {};
-    } catch {
-      /* ignore */
-    }
-    return {};
-  };
-
-  const writeFilters = async (data: {
-    search: string;
-    stack: string;
-    year: string;
-    type: string;
-    tags: string[];
-  }) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      return;
-    } catch {
-      /* ignore */
-    }
-    try {
-      // @ts-ignore - OPFS not yet in TypeScript libs
-      const root = await navigator.storage?.getDirectory();
-      const handle = await root?.getFileHandle(STORAGE_FILE, { create: true });
-      const writable = await handle?.createWritable();
-      await writable?.write(JSON.stringify(data));
-      await writable?.close();
-    } catch {
-      /* ignore */
-    }
-  };
-
-  useEffect(() => {
-    if (initialFilters) {
-      return;
-    }
-    readFilters().then((data) => {
-      const hasPersisted =
-        data &&
-        (data.search ||
-          data.stack ||
-          data.year ||
-          data.type ||
-          (Array.isArray(data.tags) && data.tags.length > 0));
-      if (!hasPersisted) return;
-      setSearch(data.search || '');
-      setStack(data.stack || '');
-      setYear(data.year || '');
-      setType(data.type || '');
-      setTags(data.tags || []);
-    });
-  }, [initialFilters, projects.length]);
-
-  const stacks = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.stack))),
-    [projects]
-  );
-  const years = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.year))).sort((a, b) => b - a),
-    [projects]
-  );
-  const types = useMemo(
-    () => Array.from(new Set(projects.map((p) => p.type))),
-    [projects]
-  );
-  const allTags = useMemo(
-    () => Array.from(new Set(projects.flatMap((p) => p.tags))),
+  const getCategoryCount = useCallback(
+    (cat: string) => {
+      if (cat === 'all') return projects.length;
+      return projects.filter((p) => p.category === cat).length;
+    },
     [projects]
   );
 
-  const filtered = useMemo(
-    () =>
-      projects.filter(
-        (p) =>
-          (!stack || p.stack.includes(stack)) &&
-          (!year || String(p.year) === year) &&
-          (!type || p.type === type) &&
-          (tags.length === 0 || tags.every((t) => p.tags.includes(t))) &&
-          (search === '' ||
-            p.title.toLowerCase().includes(search.toLowerCase()) ||
-            p.description.toLowerCase().includes(search.toLowerCase()))
-      ),
-    [projects, stack, year, type, tags, search]
-  );
-
-  useEffect(() => {
-    writeFilters({ search, stack, year, type, tags });
-  }, [search, stack, year, type, tags]);
-
-  useEffect(() => {
-    setAriaMessage(
-      `Showing ${filtered.length} project${filtered.length === 1 ? '' : 's'}${stack ? ` filtered by ${stack}` : ''}${tags.length ? ` with tags ${tags.join(', ')}` : ''}${year ? ` in ${year}` : ''}${type ? ` of type ${type}` : ''}${search ? ` matching "${search}"` : ''}`
-    );
-  }, [filtered.length, stack, year, type, tags, search]);
+  const filtered = useMemo(() => {
+    return projects
+      .filter((p) => category === 'all' || p.category === category)
+      .sort((a, b) => {
+        if (a.featured !== b.featured) return b.featured ? 1 : -1;
+        return new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+      });
+  }, [projects, category]);
 
   const openInFirefox = (url: string) => {
     try {
@@ -161,214 +82,121 @@ const ProjectGallery: React.FC<Props> = ({ openApp }) => {
     } catch {
       /* ignore */
     }
-    openApp && openApp('firefox');
-  };
-
-  const toggleSelect = (project: Project) => {
-    setSelected((prev) => {
-      const exists = prev.find((p) => p.id === project.id);
-      if (exists) return prev.filter((p) => p.id !== project.id);
-      if (prev.length === 2) return [prev[1], project];
-      return [...prev, project];
-    });
+    openApp?.('firefox');
   };
 
   return (
-    <div className="p-4 h-full overflow-auto bg-ub-cool-grey text-white">
-      <div className="flex flex-wrap gap-2 mb-4">
-        <input
-          aria-label="Search"
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="px-2 py-1 text-black"
-        />
-        <select
-          aria-label="Stack"
-          value={stack}
-          onChange={(e) => setStack(e.target.value)}
-          className="px-2 py-1 text-black"
-        >
-          <option value="">All Stacks</option>
-          {stacks.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
+    <div className="project-gallery">
+      {/* Header with Category Pills */}
+      <div className="pg-header-bar">
+        <div className="pg-categories" role="tablist" aria-label="Filter by category">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.id}
+              role="tab"
+              aria-selected={category === cat.id}
+              className={`pg-category-pill${category === cat.id ? ' active' : ''}`}
+              onClick={() => setCategory(cat.id)}
+            >
+              <span className="pg-pill-icon">{cat.icon}</span>
+              <span className="pg-pill-label">{cat.label}</span>
+              <span className="pg-category-count">{getCategoryCount(cat.id)}</span>
+            </button>
           ))}
-        </select>
-        <select
-          aria-label="Year"
-          value={year}
-          onChange={(e) => setYear(e.target.value)}
-          className="px-2 py-1 text-black"
-        >
-          <option value="">All Years</option>
-          {years.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Type"
-          value={type}
-          onChange={(e) => setType(e.target.value)}
-          className="px-2 py-1 text-black"
-        >
-          <option value="">All Types</option>
-          {types.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+        </div>
       </div>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {allTags.map((t) => (
-          <label key={t} className="flex items-center gap-1 text-xs">
-            <input
-              type="checkbox"
-              aria-label={t}
-              checked={tags.includes(t)}
-              onChange={(e) =>
-                setTags((prev) =>
-                  e.target.checked
-                    ? [...prev, t]
-                    : prev.filter((tag) => tag !== t)
-                )
-              }
-              className="text-black"
-            />
-            {t}
-          </label>
-        ))}
-      </div>
-      {selected.length === 2 && (
-        <div className="mb-4 overflow-auto">
-          <table className="w-full text-sm text-left" role="table">
-            <thead>
-              <tr>
-                <th />
-                {selected.map((p) => (
-                  <th key={p.id}>{p.title}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <th>Stack</th>
-                {selected.map((p) => (
-                  <td key={`${p.id}-stack`}>{p.stack.join(', ')}</td>
-                ))}
-              </tr>
-              <tr>
-                <th>Highlights</th>
-                {selected.map((p) => (
-                  <td key={`${p.id}-tags`}>{p.tags.join(', ')}</td>
-                ))}
-              </tr>
-            </tbody>
-          </table>
+
+      {/* Projects Grid */}
+      {filtered.length === 0 ? (
+        <div className="pg-empty">
+          <span className="pg-empty-icon">📁</span>
+          <h3 className="pg-empty-title">No projects in this category</h3>
+          <button className="pg-empty-reset" onClick={() => setCategory('all')}>
+            View All
+          </button>
+        </div>
+      ) : (
+        <div className="pg-grid">
+          {filtered.map((project, index) => (
+            <article
+              key={project.id}
+              className={`pg-card${project.featured ? ' featured' : ''}`}
+              style={{ animationDelay: `${Math.min(index * 0.03, 0.2)}s` }}
+            >
+              {/* Card Header */}
+              <div className="pg-card-header">
+                <div className="pg-card-title-row">
+                  <div className="pg-card-title-group">
+                    <span
+                      className="pg-lang-dot"
+                      style={{
+                        backgroundColor:
+                          LANGUAGE_COLORS[project.language] || LANGUAGE_COLORS.other,
+                      }}
+                      title={project.language}
+                    />
+                    <h3 className="pg-card-title">{project.title}</h3>
+                  </div>
+                  {project.featured && (
+                    <span className="pg-card-featured-badge">⭐</span>
+                  )}
+                </div>
+                <p className="pg-card-description">{project.description}</p>
+              </div>
+
+              {/* Card Body - Tech Stack */}
+              <div className="pg-card-body">
+                <div className="pg-card-stack">
+                  {project.stack.slice(0, 3).map((tech) => (
+                    <span key={tech} className="pg-stack-tag">{tech}</span>
+                  ))}
+                  {project.stack.length > 3 && (
+                    <span className="pg-stack-tag pg-stack-more">+{project.stack.length - 3}</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Card Footer */}
+              <div className="pg-card-footer">
+                <div className="pg-card-meta">
+                  {project.stars > 0 && (
+                    <span className="pg-meta-item" title="Stars">⭐ {project.stars}</span>
+                  )}
+                  <span className="pg-meta-item" title="Last updated">🕐 {formatDate(project.lastUpdated)}</span>
+                </div>
+                <div className="pg-card-actions">
+                  <a
+                    href={project.repo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pg-card-btn"
+                    aria-label={`View ${project.title} on GitHub`}
+                  >
+                    <svg className="pg-btn-icon" viewBox="0 0 16 16" fill="currentColor" width="14" height="14">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                    </svg>
+                    Code
+                  </a>
+                  {project.demo && (
+                    <button
+                      className="pg-card-btn primary"
+                      onClick={() => openInFirefox(project.demo)}
+                      aria-label={`Open ${project.title} demo`}
+                    >
+                      Demo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))}
         </div>
       )}
-      <div className="columns-1 sm:columns-2 md:columns-3 gap-4">
-        {filtered.map((project) => (
-          <div
-            key={project.id}
-            className="mb-4 break-inside-avoid bg-gray-800 rounded shadow overflow-hidden"
-          >
-            <div className="flex flex-col md:flex-row h-48">
-              <img
-                src={project.thumbnail}
-                alt={project.title}
-                className="w-full md:w-1/2 h-48 object-cover"
-                loading="lazy"
-              />
-              <div className="w-full md:w-1/2 h-48">
-                <Editor
-                  height="100%"
-                  theme="vs-dark"
-                  language={project.language}
-                  value={project.snippet}
-                  options={{ readOnly: true, minimap: { enabled: false } }}
-                />
-              </div>
-            </div>
-            <div className="p-4 space-y-2">
-              <h3 className="text-lg font-semibold">{project.title}</h3>
-              <p className="text-sm">{project.description}</p>
-              <button
-                onClick={() => toggleSelect(project)}
-                aria-label={`Select ${project.title} for comparison`}
-                className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-              >
-                {selected.some((p) => p.id === project.id)
-                  ? 'Deselect'
-                  : 'Compare'}
-              </button>
-              <div className="flex flex-wrap gap-1">
-                {project.stack.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setStack(s)}
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {project.tags.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() =>
-                      setTags((prev) =>
-                        prev.includes(t)
-                          ? prev.filter((tag) => tag !== t)
-                          : [...prev, t]
-                      )
-                    }
-                    className="bg-gray-700 text-xs px-2 py-1 rounded-full"
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-3 text-sm pt-2">
-                <a
-                  href={project.repo}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
-                >
-                  Repo
-                </a>
-                  {project.demo && (
-                    <>
-                      <a
-                        href={project.demo}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline"
-                      >
-                        Live Demo
-                      </a>
-                      <button
-                        onClick={() => openInFirefox(project.demo)}
-                        className="text-blue-400 hover:underline"
-                      >
-                        Open in Firefox
-                      </button>
-                    </>
-                  )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+
+      {/* Screen reader announcement */}
       <div aria-live="polite" className="sr-only">
-        {ariaMessage}
+        Showing {filtered.length} of {projects.length} projects
+        {category !== 'all' ? ` in ${category}` : ''}
       </div>
     </div>
   );
