@@ -150,7 +150,7 @@ const SudokuApp = createDynamicApp(() => import('./components/apps/sudoku'), 'Su
 const SpaceInvadersApp = createDynamicApp(() => import('./components/apps/space-invaders'), 'Space Invaders');
 const NonogramApp = createDynamicApp(() => import('./components/apps/nonogram'), 'Nonogram');
 const TetrisApp = createDynamicApp(() => import('./components/apps/tetris'), 'Tetris');
-const CandyCrushApp = createDynamicApp(() => import('./components/apps/candy-crush'), 'Candy Crush');
+const CandyCrushApp = createDynamicApp(() => import('./components/apps/candy-crush'), 'Kali Crush');
 const FileExplorerApp = createDynamicApp(() => import('./components/apps/file-explorer'), 'Files');
 const Radare2App = createDynamicApp(() => import('./components/apps/radare2'), 'Radare2');
 const AboutAlexApp = createDynamicApp(() => import('./components/apps/alex'), 'About Alex');
@@ -711,7 +711,7 @@ const gameList = [
   },
   {
     id: 'candy-crush',
-    title: 'Candy Crush',
+    title: 'Kali Crush',
     icon: '/themes/Yaru/apps/candy-crush.svg',
     disabled: false,
     favourite: false,
