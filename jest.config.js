@@ -11,11 +11,11 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
     '^react-ga4$': '<rootDir>/__mocks__/react-ga4.js',
   },
-  testPathIgnorePatterns: [
-    '<rootDir>/playwright/',
-    '<rootDir>/__tests__/playwright/',
-    '<rootDir>/tests/',
-  ],
+    testPathIgnorePatterns: [
+      '<rootDir>/playwright/',
+      '<rootDir>/__tests__/playwright/',
+      '<rootDir>/tests/apps.smoke.spec.ts',
+    ],
 };
 
 module.exports = createJestConfig(customJestConfig);

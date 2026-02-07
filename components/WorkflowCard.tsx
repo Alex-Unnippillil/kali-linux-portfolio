@@ -1,4 +1,5 @@
 import React from 'react';
+import { KALI_SITES } from '@/src/config/kaliSites';
 
 interface Step {
   title: string;
@@ -9,7 +10,7 @@ interface Step {
 const steps: Step[] = [
   {
     title: 'Reconnaissance',
-    link: 'https://www.kali.org/tools/nmap/',
+    link: `${KALI_SITES.BASE}/tools/nmap/`,
     description: 'Discover and map targets.'
   },
   {
