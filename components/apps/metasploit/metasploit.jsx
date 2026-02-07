@@ -22,7 +22,18 @@ const moduleTypes = ['auxiliary', 'exploit', 'post'];
 
 const timelineSteps = 5;
 
-const banner = `Metasploit Framework Console (mock)\nFor legal and ethical use only.\nType 'search <term>' to search modules.`;
+const banner = `
+       =[ metasploit v6.3.44-dev                          ]
++ -- --=[ 2376 exploits - 1232 auxiliary - 416 post       ]
++ -- --=[ 1405 payloads - 46 encoders - 11 nops           ]
++ -- --=[ 9 evasion                                        ]
+
+Metasploit Documentation: https://docs.metasploit.com/
+
+[*] This is a simulated MSF console for educational purposes.
+[*] No network connections are made. All outputs are deterministic.
+
+msf6 > `;
 
 const simulationScenarios = [
   {
@@ -123,7 +134,7 @@ const simulationScenarios = [
 
 const MetasploitApp = ({
   demoMode = process.env.NEXT_PUBLIC_DEMO_MODE === 'true',
-  onLoadingChange = () => {},
+  onLoadingChange = () => { },
 } = {}) => {
   const [command, setCommand] = useState('');
   const [output, setOutput] = usePersistentState('metasploit-history', banner);
@@ -190,7 +201,7 @@ const MetasploitApp = ({
           setLoot(data.loot || []);
           setNotes(data.notes || []);
         }
-      } catch (e) {}
+      } catch (e) { }
     })();
     return () => {
       active = false;
@@ -615,57 +626,56 @@ const MetasploitApp = ({
             </ul>
           )}
           <div className="mt-4">
-          <div className="mb-2">
-            <select
-              className="bg-ub-grey text-white p-1 rounded"
-              value={selectedTag}
-              onChange={(e) => setSelectedTag(e.target.value)}
-              aria-label="Filter by tag"
-            >
-              <option value="">All Tags</option>
-              {allTags.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-2">
-            <select
-              className="bg-ub-grey text-white p-1 rounded"
-              value={selectedPlatform}
-              onChange={(e) => setSelectedPlatform(e.target.value)}
-              aria-label="Filter by platform"
-            >
-              <option value="">All Platforms</option>
-              {allPlatforms.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-2">
-            <input
-              className="bg-ub-grey text-white p-1 rounded w-full"
-              value={cveFilter}
-              onChange={(e) => setCveFilter(e.target.value)}
-              placeholder="Filter by CVE"
-              aria-label="Filter by CVE"
-              spellCheck={false}
-            />
-          </div>
-          <div className="flex flex-wrap mb-2">
+            <div className="mb-2">
+              <select
+                className="bg-ub-grey text-white p-1 rounded"
+                value={selectedTag}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                aria-label="Filter by tag"
+              >
+                <option value="">All Tags</option>
+                {allTags.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-2">
+              <select
+                className="bg-ub-grey text-white p-1 rounded"
+                value={selectedPlatform}
+                onChange={(e) => setSelectedPlatform(e.target.value)}
+                aria-label="Filter by platform"
+              >
+                <option value="">All Platforms</option>
+                {allPlatforms.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mb-2">
+              <input
+                className="bg-ub-grey text-white p-1 rounded w-full"
+                value={cveFilter}
+                onChange={(e) => setCveFilter(e.target.value)}
+                placeholder="Filter by CVE"
+                aria-label="Filter by CVE"
+                spellCheck={false}
+              />
+            </div>
+            <div className="flex flex-wrap mb-2">
               {severities.map((s) => (
                 <button
                   key={s}
                   onClick={() => setSelectedSeverity(s)}
                   aria-pressed={selectedSeverity === s}
-                  className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${severityStyles[s]} ${
-                    selectedSeverity === s
+                  className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${severityStyles[s]} ${selectedSeverity === s
                       ? 'ring-2 ring-white motion-safe:transition-transform motion-safe:duration-300 motion-safe:scale-110 motion-reduce:transition-none motion-reduce:scale-100'
                       : ''
-                  }`}
+                    }`}
                 >
                   {s}
                 </button>

@@ -163,9 +163,8 @@ const NmapNSEApp = () => {
     .map((s) => scriptOptions[s])
     .filter(Boolean)
     .join(',');
-  const command = `nmap ${portFlag} ${
-    selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
-  } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
+  const command = `nmap ${portFlag} ${selectedScripts.length ? `--script ${selectedScripts.join(',')}` : ''
+    } ${argsString ? `--script-args ${argsString}` : ''} ${target}`
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -230,7 +229,22 @@ const NmapNSEApp = () => {
   return (
     <div className="flex h-full w-full flex-col text-kali-text md:flex-row">
       <div className="md:w-1/2 overflow-y-auto bg-kali-surface p-4">
-        <h1 className="mb-4 text-lg font-semibold">Nmap NSE Demo</h1>
+        {/* Nmap Header with Logo */}
+        <div className="flex items-center gap-3 mb-4 p-3 rounded-lg bg-gradient-to-r from-purple-900/50 to-purple-700/30 border border-purple-600/30">
+          <svg viewBox="0 0 24 24" className="w-8 h-8 text-purple-300" fill="currentColor">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="12" cy="12" r="3" fill="currentColor" />
+            <line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" strokeWidth="2" />
+            <line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" strokeWidth="2" />
+            <line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" strokeWidth="2" />
+            <line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2" />
+          </svg>
+          <div>
+            <span className="text-lg font-bold text-white">Nmap NSE</span>
+            <span className="ml-2 text-xs text-purple-300">v7.94 - Network Scripting Engine</span>
+            <p className="text-xs text-purple-200/70 mt-0.5">https://nmap.org</p>
+          </div>
+        </div>
         <SimulationBanner
           toolName="Nmap NSE"
           message="Simulated scripts and outputs. Commands are build-only; no packets are sent."
@@ -375,11 +389,10 @@ const NmapNSEApp = () => {
                 key={p.label}
                 type="button"
                 onClick={() => setPortFlag(p.flag)}
-                className={`rounded px-3 py-1 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
-                  portFlag === p.flag
+                className={`rounded px-3 py-1 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${portFlag === p.flag
                     ? 'bg-kali-control text-black shadow-[0_0_0_1px_rgba(255,255,255,0.2)]'
                     : 'bg-kali-surface-muted text-white/80 hover:text-white'
-                }`}
+                  }`}
               >
                 {p.label}
               </button>
@@ -416,13 +429,12 @@ const NmapNSEApp = () => {
               {phases.map((p) => (
                 <div
                   key={p}
-                  className={`flex-1 rounded px-2 py-1 text-center text-sm font-semibold uppercase tracking-wide ${
-                    scriptPhases[activeScript]?.includes(p)
+                  className={`flex-1 rounded px-2 py-1 text-center text-sm font-semibold uppercase tracking-wide ${scriptPhases[activeScript]?.includes(p)
                       ? phaseStep >= scriptPhases[activeScript].indexOf(p)
                         ? 'bg-kali-info text-kali-inverse shadow-[0_0_0_1px_rgba(255,255,255,0.08)]'
                         : 'bg-kali-info/30 text-white/80'
                       : 'bg-kali-surface-muted text-white/60'
-                  }`}
+                    }`}
                 >
                   {p}
                 </div>

@@ -248,6 +248,14 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       onDrop={handleDrop}
       onDragOver={handleDragOver}
     >
+      {/* Wireshark Header with Logo */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-gradient-to-r from-blue-900 to-blue-700 border-b border-blue-600">
+        <svg viewBox="0 0 24 24" className="w-6 h-6 text-blue-200" fill="currentColor">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" />
+        </svg>
+        <span className="text-lg font-semibold text-white tracking-wide">Wireshark</span>
+        <span className="text-xs text-blue-200">Network Protocol Analyzer (Demo)</span>
+      </div>
       <div className="p-2 bg-gray-900">
         <SimulationBanner
           toolName="Wireshark"
@@ -441,9 +449,8 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           Showing {filteredCount} of {packets.length} packets
         </span>
         <button
-          className={`px-2 py-1 rounded border ${
-            protocolFilter === '' ? 'bg-gray-700' : 'bg-gray-800'
-          }`}
+          className={`px-2 py-1 rounded border ${protocolFilter === '' ? 'bg-gray-700' : 'bg-gray-800'
+            }`}
           onClick={() => setProtocolFilter('')}
         >
           All
@@ -451,9 +458,8 @@ const WiresharkApp = ({ initialPackets = [] }) => {
         {protocols.map((proto) => (
           <button
             key={proto}
-            className={`px-2 py-1 rounded border ${
-              protocolFilter === proto ? 'bg-gray-700' : 'bg-gray-800'
-            }`}
+            className={`px-2 py-1 rounded border ${protocolFilter === proto ? 'bg-gray-700' : 'bg-gray-800'
+              }`}
             onClick={() => setProtocolFilter(proto)}
           >
             {proto}
@@ -462,17 +468,15 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       </div>
       <div className="p-2 flex space-x-2 bg-gray-900">
         <button
-          className={`px-2 py-1 rounded border ${
-            view === 'packets' ? 'bg-gray-700' : 'bg-gray-800'
-          }`}
+          className={`px-2 py-1 rounded border ${view === 'packets' ? 'bg-gray-700' : 'bg-gray-800'
+            }`}
           onClick={() => setView('packets')}
         >
           Packets
         </button>
         <button
-          className={`px-2 py-1 rounded border ${
-            view === 'flows' ? 'bg-gray-700' : 'bg-gray-800'
-          }`}
+          className={`px-2 py-1 rounded border ${view === 'flows' ? 'bg-gray-700' : 'bg-gray-800'
+            }`}
           onClick={() => setView('flows')}
         >
           Flows
@@ -502,9 +506,8 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                       className={`${i % 2 ? 'bg-gray-900' : 'bg-gray-800'} ${getRowColor(
                         p,
                         colorRules
-                      )} ${isMatch ? 'bg-yellow-900' : ''} ${
-                        selectedPacket === p ? 'outline outline-1 outline-yellow-400' : ''
-                      }`}
+                      )} ${isMatch ? 'bg-yellow-900' : ''} ${selectedPacket === p ? 'outline outline-1 outline-yellow-400' : ''
+                        }`}
                     >
                       <td className="px-2 py-1 whitespace-nowrap">{p.timestamp}</td>
                       <td className="px-2 py-1 whitespace-nowrap">{p.len}</td>

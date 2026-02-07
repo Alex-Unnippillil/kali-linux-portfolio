@@ -86,7 +86,13 @@ const HydraApp = () => {
   const [passLists, setPassLists] = useState(initialPassLists);
   const [selectedUser, setSelectedUser] = useState(initialConfig?.selectedUser || initialUserLists[0]?.name || '');
   const [selectedPass, setSelectedPass] = useState(initialConfig?.selectedPass || initialPassLists[0]?.name || '');
-  const [output, setOutput] = useState('');
+  const hydraBanner = `Hydra v9.5 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes.
+
+[DATA] max 16 tasks per 1 server, overall 16 tasks, 1 login try (l:1/p:1), ~1 try per task
+[DATA] attacking ssh://target:22/
+[STATUS] Simulation mode - no network traffic generated
+`;
+  const [output, setOutput] = useState(hydraBanner);
   const [running, setRunning] = useState(false);
   const [paused, setPaused] = useState(false);
   const [runId, setRunId] = useState(0);
@@ -372,9 +378,8 @@ const HydraApp = () => {
         recordSimulation({
           tool: 'hydra',
           title: `${service} against ${target || 'demo host'}`,
-          summary: `Live run with ${user.content.split('\n').filter(Boolean).length} users and ${
-            pass.content.split('\n').filter(Boolean).length
-          } passwords`,
+          summary: `Live run with ${user.content.split('\n').filter(Boolean).length} users and ${pass.content.split('\n').filter(Boolean).length
+            } passwords`,
           data: {
             target,
             service,
@@ -511,9 +516,8 @@ const HydraApp = () => {
             <div
               key={m.value}
               onClick={() => setService(m.value)}
-              className={`flex items-center p-2 rounded border cursor-pointer text-sm ${
-                service === m.value ? 'bg-blue-600' : 'bg-gray-700'
-              }`}
+              className={`flex items-center p-2 rounded border cursor-pointer text-sm ${service === m.value ? 'bg-blue-600' : 'bg-gray-700'
+                }`}
             >
               <img src={m.icon} alt={m.label} className="w-6 h-6 mr-2" />
               <span>{m.label}</span>
@@ -802,7 +806,7 @@ const HydraApp = () => {
       </div>
 
       {output && (
-        <pre className="mt-4 bg-black p-2 overflow-auto h-64 whitespace-pre-wrap font-mono">{output}</pre>
+        <pre className="mt-4 bg-black text-green-400 p-4 overflow-auto h-64 whitespace-pre-wrap font-mono text-sm border border-gray-700 rounded">{output}</pre>
       )}
       {showSaved && (
         <div className="fixed bottom-4 right-4 bg-green-600 text-white px-3 py-1 rounded text-sm">
