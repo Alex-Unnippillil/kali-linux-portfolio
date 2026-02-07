@@ -74,10 +74,12 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
+button:focus-visible,
 a:focus-visible,
-button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
-    outline-offset: 2px;
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    @apply focus-ring;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -723,14 +725,6 @@ pre {
     font-family: monospace;
     line-height: 1.2;
 }
-
-/* Visible focus rings for copy buttons and text areas */
-button:focus-visible,
-textarea:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color);
-    outline-offset: 2px;
-}
-
 /* Enable scroll snapping for gallery containers */
 .gallery-container {
     scroll-snap-type: x mandatory;
