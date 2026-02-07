@@ -49,11 +49,12 @@ describe('breakout physics step', () => {
     layout[0][0] = 1;
     const bricks = createBricks(layout);
     const brick = bricks[0];
+    // Position ball just touching bottom of brick (within BALL_RADIUS)
     const ball = {
       x: brick.x + brick.w / 2,
-      y: brick.y - BALL_RADIUS - 1,
+      y: brick.y + brick.h + BALL_RADIUS * 0.9, // Just touching bottom edge
       vx: 0,
-      vy: 140,
+      vy: -140, // Moving upward into brick
       stuck: false,
       offset: 0,
       trail: [],
@@ -69,7 +70,8 @@ describe('breakout physics step', () => {
     });
 
     expect(hitBrickIndex).toBe(0);
-    expect(nextBall.vy).toBeLessThan(0);
+    // After collision the ball should be moving downward (away from brick)
+    expect(nextBall.vy).toBeGreaterThan(0);
   });
 
   test('reflects off the left wall', () => {

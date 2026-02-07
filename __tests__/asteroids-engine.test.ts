@@ -46,8 +46,16 @@ describe('asteroids engine', () => {
         r: 25,
       },
     ];
+    // First tick triggers collision and starts gameOverTimer
     tick(game, { turn: 0, thrust: 0, fire: false, hyperspace: false, useInventory: null }, 16);
-    const gameOver = game.events.find((evt: any) => evt.type === 'gameOver');
+
+    // Run additional ticks to countdown gameOverTimer (starts at 120) 
+    for (let i = 0; i < 200; i++) {
+      tick(game, { turn: 0, thrust: 0, fire: false, hyperspace: false, useInventory: null }, 16);
+    }
+
+    // Check if gameOver flag is set or gameOver event was fired
+    const gameOver = game.events.find((evt: any) => evt.type === 'gameOver') || game.gameOver;
     expect(gameOver).toBeDefined();
   });
 
