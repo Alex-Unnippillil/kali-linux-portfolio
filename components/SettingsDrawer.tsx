@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
 
@@ -10,6 +10,16 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
   const [open, setOpen] = useState(false);
   const unlocked = getUnlockedThemes(highScore);
   const { accent, setAccent, theme, setTheme } = useSettings();
+  const [opacity, setOpacity] = useState(1);
+  const [blur, setBlur] = useState(0);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--wp-opacity', String(opacity));
+  }, [opacity]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty('--wp-blur', `${blur}px`);
+  }, [blur]);
 
   return (
     <div>
@@ -51,6 +61,30 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 />
               ))}
             </div>
+          </label>
+          <label>
+            Wallpaper Opacity
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={opacity}
+              onChange={(e) => setOpacity(parseFloat(e.target.value))}
+              aria-label="wallpaper-opacity"
+            />
+          </label>
+          <label>
+            Wallpaper Blur
+            <input
+              type="range"
+              min="0"
+              max="20"
+              step="1"
+              value={blur}
+              onChange={(e) => setBlur(parseFloat(e.target.value))}
+              aria-label="wallpaper-blur"
+            />
           </label>
         </div>
       )}
