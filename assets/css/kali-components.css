@@ -1,0 +1,3 @@
+.kali-panel[data-hidden] {
+  transform: translateY(-100%);
+}
