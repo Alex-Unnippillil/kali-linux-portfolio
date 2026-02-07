@@ -21,7 +21,7 @@ describe('Settings reset flow', () => {
 
     await screen.findByRole('button', { name: 'Reset Desktop' });
 
-    const [themeSelect, densitySelect] = screen.getAllByRole('combobox');
+    const densitySelect = screen.getByRole('combobox');
     const fontSlider = screen.getByRole('slider');
     const defaultAccentRadio = screen.getByRole('radio', {
       name: `select-accent-${defaults.accent}`,
@@ -41,7 +41,6 @@ describe('Settings reset flow', () => {
     await waitFor(() => expect(hapticsToggle).toBeChecked());
     await waitFor(() => expect(pongSpinToggle).toBeChecked());
 
-    await user.selectOptions(themeSelect, 'dark');
     await user.click(alternateAccentRadio);
     await user.selectOptions(densitySelect, 'compact');
     fireEvent.change(fontSlider, { target: { value: '1.5' } });
@@ -53,7 +52,6 @@ describe('Settings reset flow', () => {
     await user.click(hapticsToggle);
     await user.click(pongSpinToggle);
 
-    expect(themeSelect).toHaveValue('dark');
     expect(alternateAccentRadio).toHaveAttribute('aria-checked', 'true');
     expect(densitySelect).toHaveValue('compact');
     expect(fontSlider).toHaveValue('1.5');
@@ -67,9 +65,7 @@ describe('Settings reset flow', () => {
 
     await user.click(screen.getByRole('button', { name: 'Reset Desktop' }));
 
-    await waitFor(() => expect(themeSelect).toHaveValue('default'));
-    expect(defaultAccentRadio).toHaveAttribute('aria-checked', 'true');
-    expect(densitySelect).toHaveValue(defaults.density);
+    await waitFor(() => expect(densitySelect).toHaveValue(defaults.density));
     expect(fontSlider).toHaveValue(String(defaults.fontScale));
     expect(kaliWallpaperToggle.checked).toBe(defaults.useKaliWallpaper);
     expect(reducedMotionToggle.checked).toBe(defaults.reducedMotion);

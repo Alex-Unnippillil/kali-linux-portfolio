@@ -4,9 +4,9 @@ import ConnectFour from '../components/apps/connect-four';
 
 beforeAll(() => {
   class ResizeObserverMock {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe() { }
+    unobserve() { }
+    disconnect() { }
   }
   // @ts-ignore
   global.ResizeObserver = ResizeObserverMock;
@@ -98,6 +98,6 @@ describe('connect four app', () => {
     await waitFor(() => {
       const after = document.querySelectorAll('[data-token="yellow"]');
       expect(after.length).toBeGreaterThan(0);
-    });
+    }, { timeout: 5000 });
   });
 });

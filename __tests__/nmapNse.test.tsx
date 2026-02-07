@@ -82,7 +82,8 @@ describe('NmapNSEApp', () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining('Sample output')
     );
-    expect(await screen.findByRole('status')).toHaveTextContent(/copied/i);
+    const statusElements = await screen.findAllByRole('status');
+    expect(statusElements.some(el => /copied/i.test(el.textContent || ''))).toBe(true);
 
     mockFetch.mockRestore();
   });
@@ -96,25 +97,25 @@ describe('NmapNSEApp', () => {
             Promise.resolve(
               typeof url === 'string' && url.includes('nmap-results')
                 ? {
-                    hosts: [
-                      {
-                        ip: '192.0.2.1',
-                        ports: [
-                          {
-                            port: 80,
-                            service: 'http',
-                            cvss: 5,
-                            scripts: [
-                              {
-                                name: 'http-title',
-                                output: 'Example Domain',
-                              },
-                            ],
-                          },
-                        ],
-                      },
-                    ],
-                  }
+                  hosts: [
+                    {
+                      ip: '192.0.2.1',
+                      ports: [
+                        {
+                          port: 80,
+                          service: 'http',
+                          cvss: 5,
+                          scripts: [
+                            {
+                              name: 'http-title',
+                              output: 'Example Domain',
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                }
                 : {}
             ),
         })

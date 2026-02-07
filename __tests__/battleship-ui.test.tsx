@@ -40,7 +40,7 @@ describe('Battleship UI', () => {
     const placementCell = screen.getAllByRole('button', { name: /Place ship at/i })[0];
     fireEvent.click(placementCell);
 
-    expect(screen.getByText(/Select a ship before placing/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Select a ship before placing/i).length).toBeGreaterThan(0);
   });
 
   it('limits salvo target selection to available shots', () => {

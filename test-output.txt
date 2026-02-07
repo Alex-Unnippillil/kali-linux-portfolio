@@ -1,0 +1,5869 @@
+﻿node : Missing env vars; running without 
+validation
+At line:1 char:1
++ node .yarn/releases/yarn-4.9.2.cjs jest 
+--testPathIgnorePatterns=e2e  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: 
+    (Missing env var...hout validation:Str  
+  ing) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommand 
+   Error
+ 
+FAIL __tests__/battleship-ui.test.tsx
+  ΓùÅ Battleship UI ΓÇ║ announces when 
+placing without a selected ship
+
+    TestingLibraryElementError: Found 
+multiple elements with the text: /Select a 
+ship before placing/i
+
+    Here are the matching elements:
+
+    Ignored nodes: comments, script, style
+    [36m<p[39m
+      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+text-base font-medium text-white"[39m
+    [36m>[39m
+      [0mSelect a ship before placing.[0m
+    [36m</p>[39m
+
+    Ignored nodes: comments, script, style
+    [36m<div[39m
+      [33maria-live[39m=[32m"polite"[39m
+      
+[33mclass[39m=[32m"jsx-e6b06efe515413a6 
+sr-only"[39m
+      [33mrole[39m=[32m"status"[39m
+    [36m>[39m
+      [0mSelect a ship before placing.[0m
+    [36m</div>[39m
+
+    (If this is intentional, then use the 
+`*AllBy*` variant of the query (like 
+`queryAllByText`, `getAllByText`, or 
+`findAllByText`)).
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"jsx-e6b06efe515413a6 
+h-full w-full"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex h-full w-full flex-col items-center 
+justify-start gap-4 overflow-auto 
+bg-ub-cool-grey p-4 font-ubuntu 
+text-white"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-live[39m=[32m"assertive"[39m
+              
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+relative w-full max-w-4xl rounded-2xl 
+border px-4 py-3 
+shadow-[0_20px_40px_rgba(0,0,0,0.45)] 
+backdrop-blur transition-opacity 
+duration-300 from-amber-500/90 
+via-orange-500/70 to-yellow-500/60 
+border-amber-300/70"[39m
+              
+[33mrole[39m=[32m"status"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex items-start justify-between gap-4"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"jsx-
+c11f166c774ffea4"[39m
+                [36m>[39m
+                  [36m<p[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+text-sm font-semibold uppercase 
+tracking-wide text-white/70"[39m
+                  [36m>[39m
+                    [0mTactical 
+Advisory[0m
+                  [36m</p>[39m
+                  [36m<p[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+text-base font-medium text-white"[39m
+                  [36m>[39m
+                    [0mSelect a ship 
+before placing.[0m
+                  [36m</p>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+rounded-full border border-white/20 
+bg-black/20 px-2 py-1 text-xs uppercase 
+tracking-wide text-white/70 transition 
+hover:bg-black/40 focus:outline-none 
+focus-visible:ring-2 
+focus-visible:ring-cyan-300"[39m
+                  
+[33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mClose[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<section[39m
+              
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+w-full max-w-5xl space-y-3 rounded-3xl 
+border border-white/10 bg-slate-900/60 p-4 
+shadow-[0_30px_60px_rgba(5,12,40,0.45)] 
+backdrop-blur-xl"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-col gap-3 lg:flex-row 
+lg:items-start lg:justify-between"[39m
+              [36m>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+grid w-full gap-3 sm:grid-cols-2 
+lg:w-2/3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-col rounded-xl border 
+border-white/10 bg-white/5 p-3 text-xs 
+uppercase tracking-wide text-white/70"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+mb-1"[39m
+                    [36m>[39m
+                      [0mGame Mode[0m
+                    [36m</span>[39m
+                    [36m<select[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+rounded-lg border border-white/20 
+bg-slate-950/80 px-3 py-2 text-base 
+font-semibold text-white focus:outline-none 
+focus-visible:ring-2 
+focus-visible:ring-cyan-400"[39m
+                    [36m>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"ai"[39m
+                      [36m>[39m
+                        [0mVs AI[0m
+                      [36m</option>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"hotseat"[39m
+                      [36m>[39m
+                        [0mLocal 
+two-player (hotseat)[0m
+                      [36m</option>[39m
+                    [36m</select>[39m
+                  [36m</label>[39m
+                  [36m<label[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-col rounded-xl border 
+border-white/10 bg-white/5 p-3 text-xs 
+uppercase tracking-wide text-white/70"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+mb-1"[39m
+                    [36m>[39m
+                      [0mDifficulty[0m
+                    [36m</span>[39m
+                    [36m<select[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+rounded-lg border border-white/20 
+bg-slate-950/80 px-3 py-2 text-base 
+font-semibold text-white focus:outline-none 
+focus-visible:ring-2 
+focus-visible:ring-cyan-400"[39m
+                    [36m>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"easy"[39m
+                      [36m>[39m
+                        [0mEasy ΓÇö Patrol 
+AI[0m
+                      [36m</option>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"medium"[39m
+                      [36m>[39m
+                        [0mMedium ΓÇö 
+Tactical AI[0m
+                      [36m</option>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"hard"[39m
+                      [36m>[39m
+                        [0mHard ΓÇö Monte 
+Carlo AI[0m
+                      [36m</option>[39m
+                    [36m</select>[39m
+                  [36m</label>[39m
+                  [36m<div[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex items-center justify-between gap-2 
+rounded-xl border border-white/10 
+bg-white/5 p-3"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex-1 rounded-lg bg-gradient-to-br 
+from-cyan-500/90 to-blue-600/90 px-3 py-2 
+text-sm font-semibold uppercase 
+tracking-wide shadow-lg transition 
+hover:from-cyan-400 hover:to-blue-500 
+focus:outline-none focus-visible:ring-2 
+focus-visible:ring-cyan-300"[39m
+                      
+[33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [0mReset Grid[0m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex-1 rounded-lg border border-cyan-400/60 
+bg-slate-950/70 px-3 py-2 text-sm 
+font-semibold uppercase tracking-wide 
+text-cyan-200 transition hover:bg-slate-900 
+focus:outline-none focus-visible:ring-2 
+focus-visible:ring-cyan-300"[39m
+                      
+[33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [0mHide Targeting 
+Heatmap[0m
+                    [36m</button>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-wrap items-center gap-2 
+rounded-xl border border-white/10 
+bg-white/5 p-3 text-sm...
+
+    [0m [90m 48 |[39m
+     [90m 49 |[39m     fireEvent[33m.[39
+mclick(screen[33m.[39mgetByLabelText([35m
+/salvo mode/i[39m))[33m;[39m
+    [31m[1m>[22m[39m[90m 50 |[39m     
+fireEvent[33m.[39mclick(screen[33m.[39mg
+etByRole([32m'button'[39m[33m,[39m { 
+name[33m:[39m [35m/Begin Battle/i[39m 
+}))[33m;[39m
+     [90m    |[39m                        
+       [31m[1m^[22m[39m
+     [90m 51 |[39m
+     [90m 52 |[39m     [36mconst[39m 
+targetButtons [33m=[39m screen[33m.[39mg
+etAllByRole([32m'button'[39m[33m,[39m { 
+name[33m:[39m [35m/Select target 
+at/i[39m })[33m;[39m
+     [90m 53 |[39m     targetButtons[33m.
+[39mslice([35m0[39m[33m,[39m 
+[35m6[39m)[33m.[39mforEach((btn) 
+[33m=>[39m fireEvent[33m.[39mclick(btn))
+[33m;[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at getElementError (node_modules/@test
+ing-library/dom/dist/query-helpers.js:20:35)
+      at getMultipleElementsFoundError (node
+_modules/@testing-library/dom/dist/query-hel
+pers.js:23:10)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:55:13
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/battleship-ui.test.tsx:50:31)
+
+  ΓùÅ Battleship UI ΓÇ║ shows pass screen 
+when switching turns in hotseat mode
+
+    TestingLibraryElementError: Found 
+multiple elements with the text: /Pass the 
+device/i
+
+    Here are the matching elements:
+
+    Ignored nodes: comments, script, style
+    [36m<p[39m
+      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+text-base font-medium text-white"[39m
+    [36m>[39m
+      [0mPass the device to the next 
+player.[0m
+    [36m</p>[39m
+
+    Ignored nodes: comments, script, style
+    [36m<div[39m
+      [33maria-live[39m=[32m"polite"[39m
+      
+[33mclass[39m=[32m"jsx-e6b06efe515413a6 
+sr-only"[39m
+      [33mrole[39m=[32m"status"[39m
+    [36m>[39m
+      [0mPass the device to the next 
+player.[0m
+    [36m</div>[39m
+
+    Ignored nodes: comments, script, style
+    [36m<h2[39m
+      
+[33mclass[39m=[32m"jsx-e6b06efe515413a6 
+text-2xl font-semibold"[39m
+    [36m>[39m
+      [0mPass the device[0m
+    [36m</h2>[39m
+
+    (If this is intentional, then use the 
+`*AllBy*` variant of the query (like 
+`queryAllByText`, `getAllByText`, or 
+`findAllByText`)).
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"jsx-e6b06efe515413a6 
+h-full w-full"[39m
+          [33mtabindex[39m=[32m"0"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex h-full w-full flex-col items-center 
+justify-start gap-4 overflow-auto 
+bg-ub-cool-grey p-4 font-ubuntu 
+text-white"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-live[39m=[32m"assertive"[39m
+              
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+relative w-full max-w-4xl rounded-2xl 
+border px-4 py-3 
+shadow-[0_20px_40px_rgba(0,0,0,0.45)] 
+backdrop-blur transition-opacity 
+duration-300 from-cyan-500/90 
+via-sky-500/70 to-blue-500/60 
+border-cyan-300/70"[39m
+              
+[33mrole[39m=[32m"status"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex items-start justify-between gap-4"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"jsx-
+c11f166c774ffea4"[39m
+                [36m>[39m
+                  [36m<p[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+text-sm font-semibold uppercase 
+tracking-wide text-white/70"[39m
+                  [36m>[39m
+                    [0mTurn Complete[0m
+                  [36m</p>[39m
+                  [36m<p[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+text-base font-medium text-white"[39m
+                  [36m>[39m
+                    [0mPass the device to 
+the next player.[0m
+                  [36m</p>[39m
+                [36m</div>[39m
+                [36m<button[39m
+                  
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+rounded-full border border-white/20 
+bg-black/20 px-2 py-1 text-xs uppercase 
+tracking-wide text-white/70 transition 
+hover:bg-black/40 focus:outline-none 
+focus-visible:ring-2 
+focus-visible:ring-cyan-300"[39m
+                  
+[33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mClose[0m
+                [36m</button>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<section[39m
+              
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+w-full max-w-5xl space-y-3 rounded-3xl 
+border border-white/10 bg-slate-900/60 p-4 
+shadow-[0_30px_60px_rgba(5,12,40,0.45)] 
+backdrop-blur-xl"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-col gap-3 lg:flex-row 
+lg:items-start lg:justify-between"[39m
+              [36m>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+grid w-full gap-3 sm:grid-cols-2 
+lg:w-2/3"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-col rounded-xl border 
+border-white/10 bg-white/5 p-3 text-xs 
+uppercase tracking-wide text-white/70"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+mb-1"[39m
+                    [36m>[39m
+                      [0mGame Mode[0m
+                    [36m</span>[39m
+                    [36m<select[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+rounded-lg border border-white/20 
+bg-slate-950/80 px-3 py-2 text-base 
+font-semibold text-white focus:outline-none 
+focus-visible:ring-2 
+focus-visible:ring-cyan-400"[39m
+                    [36m>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"ai"[39m
+                      [36m>[39m
+                        [0mVs AI[0m
+                      [36m</option>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"hotseat"[39m
+                      [36m>[39m
+                        [0mLocal 
+two-player (hotseat)[0m
+                      [36m</option>[39m
+                    [36m</select>[39m
+                  [36m</label>[39m
+                  [36m<label[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex flex-col rounded-xl border 
+border-white/10 bg-white/5 p-3 text-xs 
+uppercase tracking-wide text-white/70"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+mb-1"[39m
+                    [36m>[39m
+                      [0mDifficulty[0m
+                    [36m</span>[39m
+                    [36m<select[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+rounded-lg border border-white/20 
+bg-slate-950/80 px-3 py-2 text-base 
+font-semibold text-white focus:outline-none 
+focus-visible:ring-2 
+focus-visible:ring-cyan-400"[39m
+                      
+[33mdisabled[39m=[32m""[39m
+                    [36m>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"easy"[39m
+                      [36m>[39m
+                        [0mEasy ΓÇö Patrol 
+AI[0m
+                      [36m</option>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"medium"[39m
+                      [36m>[39m
+                        [0mMedium ΓÇö 
+Tactical AI[0m
+                      [36m</option>[39m
+                      [36m<option[39m
+                        [33mclass[39m=[32
+m"jsx-c11f166c774ffea4"[39m
+                        
+[33mvalue[39m=[32m"hard"[39m
+                      [36m>[39m
+                        [0mHard ΓÇö Monte 
+Carlo AI[0m
+                      [36m</option>[39m
+                    [36m</select>[39m
+                  [36m</label>[39m
+                  [36m<div[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex items-center justify-between gap-2 
+rounded-xl border border-white/10 
+bg-white/5 p-3"[39m
+                  [36m>[39m
+                    [36m<button[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex-1 rounded-lg bg-gradient-to-br 
+from-cyan-500/90 to-blue-600/90 px-3 py-2 
+text-sm font-semibold uppercase 
+tracking-wide shadow-lg transition 
+hover:from-cyan-400 hover:to-blue-500 
+focus:outline-none focus-visible:ring-2 
+focus-visible:ring-cyan-300"[39m
+                      
+[33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [0mReset Grid[0m
+                    [36m</button>[39m
+                    [36m<button[39m
+                      
+[33mclass[39m=[32m"jsx-c11f166c774ffea4 
+flex-1 rounded-lg border border-cyan-400/60 
+bg-slate-950/70 px-3 py-2 text-sm 
+font-semibold uppercase tracking-wide 
+text-cyan-200 transition hover:bg-slate-900 
+focus:outline-none focus-visible:ring-2 
+focus-visible:ring-cyan-300"[39m
+                      
+[33mdisabled[39m=[32m""[39m
+                      
+[33mtype[39m=[32m"button"[39m
+                    [36m>[39m
+                      [0mHide Targeting 
+Heatmap[0m
+                    [36m</button>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    
+[33mclass[39m=[32m"jsx-c11f166c774f...
+
+    [0m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at getElementError (node_modules/@test
+ing-library/dom/dist/query-helpers.js:20:35)
+      at getMultipleElementsFoundError (node
+_modules/@testing-library/dom/dist/query-hel
+pers.js:23:10)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:55:13
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/battleship-ui.test.tsx:92:31)
+
+FAIL __tests__/connect-four.app.test.tsx
+  ΓùÅ connect four app ΓÇ║ CPU move arrives 
+after the player move
+
+    
+expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+    Ignored nodes: comments, script, style
+    [36m<html>[39m
+      [36m<head />[39m
+      [36m<body>[39m
+        [36m<div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"relative 
+flex h-full w-full min-h-0 flex-col"[39m
+            [33mdata-game-viewport[39m=[3
+2m"true"[39m
+            [33mdata-reduced-motion[39m=[
+32m"false"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33mclass[39m=[32m"absolute top-2 
+right-2 z-40 flex space-x-2"[39m
+            [36m>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"px-2 
+py-1 bg-gray-700 text-white rounded 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mPause[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"px-2 
+py-1 bg-gray-700 text-white rounded 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mRestart[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"px-2 
+py-1 bg-gray-700 text-white rounded 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mSnapshot[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"px-2 
+py-1 bg-gray-700 text-white rounded 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mReplay[0m
+              [36m</button>[39m
+              [36m<button[39m
+                [33mclass[39m=[32m"px-2 
+py-1 bg-gray-700 text-white rounded 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mShare[0m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-expanded[39m=[32m"false"[39m
+                
+[33maria-label[39m=[32m"Settings"[39m
+                [33mclass[39m=[32m"px-2 
+py-1 bg-gray-700 text-white rounded 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0mSettings[0m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-expanded[39m=[32m"false"[39m
+                
+[33maria-label[39m=[32m"Help"[39m
+                
+[33mclass[39m=[32m"bg-gray-700 
+text-white rounded-full w-8 h-8 flex 
+items-center justify-center 
+focus:outline-none focus:ring"[39m
+                
+[33mtype[39m=[32m"button"[39m
+              [36m>[39m
+                [0m?[0m
+              [36m</button>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"flex 
+flex-col items-center gap-4 p-4 
+text-white"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"w-full max-w-2xl"[39m
+              [36m>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"flex flex-wrap 
+items-start justify-between gap-3"[39m
+                [36m>[39m
+                  [36m<div>[39m
+                    [36m<div[39m
+                      
+[33mclass[39m=[32m"text-sm 
+text-gray-200"[39m
+                      
+[33mid[39m=[32m"_r_6_"[39m
+                    [36m>[39m
+                      [0mOrange is 
+thinking...[0m
+                    [36m</div>[39m
+                    [36m<div[39m
+                      
+[33mclass[39m=[32m"text-xs 
+text-gray-400"[39m
+                    [36m>[39m
+                      [0mYou: Blue | CPU: 
+Orange[0m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                  [36m<div[39m
+                    
+[33mclass[39m=[32m"text-right text-xs 
+text-gray-400"[39m
+                    
+[33mid[39m=[32m"_r_7_"[39m
+                  [36m>[39m
+                    [36m<div>[39m
+                      [0mArrows: select 
+column[0m
+                    [36m</div>[39m
+                    [36m<div>[39m
+                      [0mEnter/Space: 
+drop[0m
+                    [36m</div>[39m
+                    [36m<div>[39m
+                      [0mU: undo, R: 
+restart[0m
+                    [36m</div>[39m
+                  [36m</div>[39m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                
+[33maria-live[39m=[32m"polite"[39m
+                
+[33mclass[39m=[32m"sr-only"[39m
+              [36m>[39m
+                [0mOrange is 
+thinking...[0m
+              [36m</div>[39m
+              [36m<div[39m
+                
+[33maria-describedby[39m=[32m"_r_6_ 
+_r_7_"[39m
+                
+[33maria-label[39m=[32m"Connect Four 
+board"[39m
+                
+[33mclass[39m=[32m"outline-none 
+rounded-xl ring-1 ring-transparent"[39m
+                
+[33mtabindex[39m=[32m"0"[39m
+              [36m>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"relative rounded-2xl 
+p-3 shadow-none border 
+border-gray-700/70"[39m
+                  
+[33mstyle[39m=[32m"width: 368px; 
+background: rgba(15, 23, 42, 0.9);"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    
+[33maria-colcount[39m=[32m"7"[39m
+                    
+[33maria-rowcount[39m=[32m"6"[39m
+                    
+[33mclass[39m=[32m"relative grid 
+grid-rows-6 grid-cols-7"[39m
+                    
+[33mrole[39m=[32m"grid"[39m
+                    
+[33mstyle[39m=[32m"width: 344px; height: 
+294px; gap: 6px;"[39m
+                  [36m>[39m
+                    [36m<div[39m
+                      
+[33maria-label[39m=[32m"Row 1 column 1. 
+Empty."[39m
+                      
+[33mclass[39m=[32m"rounded-full flex 
+items-center justify-center border 
+border-slate-700"[39m
+                      [33mdata-testid[39m=
+[32m"connect-four-cell-0-0"[39m
+                      
+[33mdata-token[39m=[32m""[39m
+                      
+[33mrole[39m=[32m"gridcell"[39m
+                      
+[33mstyle[39m=[32m"width: 44px; height: 
+44px; background-color: rgba(2, 6, 23, 
+0.65);"[39m
+                    [36m/>[39m
+                    [36m<div[39m
+                      
+[33maria-label[39m=[32m"Row 1 column 2. 
+Empty."[39m
+                      
+[33mclass[39m=[32m"rounded-full flex 
+items-center justify-center border 
+border-slate-700"[39m
+                      [33mdata-testid[39m=
+[32m"connect-four-cell-0-1"[39m
+                      
+[33mdata-token[39m=[32m""[39m
+                      
+[33mrole[39m=[32m"gridcell"[39m
+                      
+[33mstyle[39m=[32m"width: 44px; height: 
+44px; background-color: rgba(2, 6, 23, 
+0.65);"[39m
+                    [36m/>[39m
+                    [36m<div[39m
+                      
+[33maria-label[39m=[32m"Row 1 column 3. 
+Empty."[39m
+                      
+[33mclass[39m=[32m"rounded-full flex 
+items-center justify-center border 
+border-slate-700"[39m
+                      [33mdata-testid[39m=
+[32m"connect-four-cell-0-2"[39m
+                      
+[33mdata-token[39m=[32m""[39m
+                      
+[33mrole[39m=[32m"gridcell"[39m
+                      
+[33mstyle[39m=[32m"width: 44px; height: 
+44px; background-color: rgba(2, 6, 23, 
+0.65);"[39m
+                    [36m/>[39m
+                    [36m<div[39m
+                      
+[33maria-label[39m=[32m"Row 1 column 4. 
+Empty."[39m
+                      
+[33mclass[39m=[32m"rounded-full flex 
+items-cente...
+
+    [0m [90m 103 |[39m })[33m;[39m
+     [90m 104 |[39m[0m
+
+      at 
+__tests__/connect-four.app.test.tsx:105:34
+      at 
+runWithExpensiveErrorDiagnosticsDisabled (no
+de_modules/@testing-library/dom/dist/config.
+js:47:12)
+      at checkCallback (node_modules/@testin
+g-library/dom/dist/wait-for.js:124:77)
+      at checkRealTimersCallback (node_modul
+es/@testing-library/dom/dist/wait-for.js:118
+:16)
+      at Timeout.task [as _onTimeout] (node_
+modules/jsdom/lib/jsdom/browser/Window.js:57
+9:19)
+
+FAIL __tests__/nmapNse.test.tsx
+  ΓùÅ NmapNSEApp ΓÇ║ copies example output 
+to clipboard
+
+    Found multiple elements with the role 
+"status"
+
+    Here are the matching elements:
+
+    Ignored nodes: comments, script, style
+    [36m<div[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33mclass[39m=[32m"mb-3 flex 
+items-start gap-3 rounded-md border border-[
+color:color-mix(in_srgb,var(--color-accent)_
+55%,transparent)] bg-[color:color-mix(in_srg
+b,var(--kali-panel)_88%,var(--kali-overlay)_
+12%)] px-3 py-2 text-sm 
+text-[color:var(--color-text)] 
+shadow-[0_8px_24px_rgba(0,0,0,0.28)] 
+mb-4"[39m
+      [33mrole[39m=[32m"status"[39m
+    [36m>[39m
+      [36m<span[39m
+        
+[33maria-hidden[39m=[32m"true"[39m
+        [33mclass[39m=[32m"mt-0.5 
+inline-flex h-7 w-7 items-center 
+justify-center rounded-full bg-[color:color-
+mix(in_srgb,var(--color-accent)_30%,transpar
+ent)] text-base font-bold text-kali-accent s
+hadow-[0_0_0_1px_color-mix(in_srgb,var(--col
+or-accent)_75%,transparent)]"[39m
+      [36m>[39m
+        [0mSIM[0m
+      [36m</span>[39m
+      [36m<div[39m
+        
+[33mclass[39m=[32m"leading-snug"[39m
+      [36m>[39m
+        [36m<p[39m
+          
+[33mclass[39m=[32m"font-semibold 
+uppercase tracking-wide 
+text-[color:var(--color-muted)]"[39m
+        [36m>[39m
+          [0mNmap NSE[0m
+          [0m Simulation[0m
+        [36m</p>[39m
+        [36m<p[39m
+          [33mclass[39m=[32m"text-[color:
+var(--color-text)]"[39m
+        [36m>[39m
+          [0mSimulated scripts and 
+outputs. Commands are build-only; no 
+packets are sent.[0m
+        [36m</p>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+
+    Ignored nodes: comments, script, style
+    [36m<div[39m
+      [33maria-live[39m=[32m"polite"[39m
+      [33mclass[39m=[32m"
+            fixed left-1/2 -translate-x-1/2 
+z-[9999]
+            max-w-sm w-[calc(100vw-2rem)] 
+sm:w-auto sm:min-w-[320px]
+            bg-slate-900/95 
+border-cyan-500/30
+            border backdrop-blur-xl
+            rounded-xl shadow-2xl 
+shadow-black/30
+            overflow-hidden
+            transform transition-all 
+duration-300 ease-out
+            bottom-4 translate-y-0 
+opacity-100
+          "[39m
+      [33mrole[39m=[32m"status"[39m
+    [36m>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"flex 
+items-start gap-3 px-4 py-3"[39m
+      [36m>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"flex-shrink-0 mt-0.5 
+text-cyan-400"[39m
+        [36m>[39m
+          [36m<svg[39m
+            [33mfill[39m=[32m"none"[39m
+            [33mheight[39m=[32m"18"[39m
+            
+[33mstroke[39m=[32m"currentColor"[39m
+            
+[33mstroke-linecap[39m=[32m"round"[39m
+            
+[33mstroke-linejoin[39m=[32m"round"[39m
+            
+[33mstroke-width[39m=[32m"2"[39m
+            [33mviewBox[39m=[32m"0 0 24 
+24"[39m
+            [33mwidth[39m=[32m"18"[39m
+          [36m>[39m
+            [36m<circle[39m
+              [33mcx[39m=[32m"12"[39m
+              [33mcy[39m=[32m"12"[39m
+              [33mr[39m=[32m"10"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 
+16v-4"[39m
+            [36m/>[39m
+            [36m<path[39m
+              [33md[39m=[32m"M12 
+8h.01"[39m
+            [36m/>[39m
+          [36m</svg>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex-1 
+min-w-0"[39m
+        [36m>[39m
+          [36m<p[39m
+            [33mclass[39m=[32m"text-sm 
+text-white/80 break-words"[39m
+          [36m>[39m
+            [0mOutput copied[0m
+          [36m</p>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex 
+items-center gap-2 flex-shrink-0"[39m
+        [36m>[39m
+          [36m<button[39m
+            
+[33maria-label[39m=[32m"Dismiss"[39m
+            [33mclass[39m=[32m"p-1 
+rounded-md text-white/50 hover:text-white 
+hover:bg-white/10 transition-colors 
+focus:outline-none focus-visible:ring-2 
+focus-visible:ring-cyan-400"[39m
+          [36m>[39m
+            [36m<svg[39m
+              
+[33mfill[39m=[32m"none"[39m
+              
+[33mheight[39m=[32m"14"[39m
+              
+[33mstroke[39m=[32m"currentColor"[39m
+              
+[33mstroke-linecap[39m=[32m"round"[39m
+              
+[33mstroke-linejoin[39m=[32m"round"[39m
+              
+[33mstroke-width[39m=[32m"2"[39m
+              [33mviewBox[39m=[32m"0 0 
+24 24"[39m
+              [33mwidth[39m=[32m"14"[39m
+            [36m>[39m
+              [36m<line[39m
+                [33mx1[39m=[32m"18"[39m
+                [33mx2[39m=[32m"6"[39m
+                [33my1[39m=[32m"6"[39m
+                [33my2[39m=[32m"18"[39m
+              [36m/>[39m
+              [36m<line[39m
+                [33mx1[39m=[32m"6"[39m
+                [33mx2[39m=[32m"18"[39m
+                [33my1[39m=[32m"6"[39m
+                [33my2[39m=[32m"18"[39m
+              [36m/>[39m
+            [36m</svg>[39m
+          [36m</button>[39m
+        [36m</div>[39m
+      [36m</div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"h-0.5 w-full 
+bg-white/5"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"h-full 
+bg-cyan-400 transition-all duration-100 
+ease-linear"[39m
+          [33mstyle[39m=[32m"width: 
+80.48%;"[39m
+        [36m/>[39m
+      [36m</div>[39m
+    [36m</div>[39m
+
+    (If this is intentional, then use the 
+`*AllBy*` variant of the query (like 
+`queryAllByText`, `getAllByText`, or 
+`findAllByText`)).
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"flex h-full 
+w-full flex-col text-kali-text 
+md:flex-row"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"md:w-1/2 
+overflow-y-auto bg-kali-surface p-4"[39m
+          [36m>[39m
+            [36m<h1[39m
+              [33mclass[39m=[32m"mb-4 
+text-lg font-semibold"[39m
+            [36m>[39m
+              [0mNmap NSE Demo[0m
+            [36m</h1>[39m
+            [36m<div[39m
+              
+[33maria-live[39m=[32m"polite"[39m
+              [33mclass[39m=[32m"mb-3 
+flex items-start gap-3 rounded-md border bor
+der-[color:color-mix(in_srgb,var(--color-acc
+ent)_55%,transparent)] bg-[color:color-mix(i
+n_srgb,var(--kali-panel)_88%,var(--kali-over
+lay)_12%)] px-3 py-2 text-sm 
+text-[color:var(--color-text)] 
+shadow-[0_8px_24px_rgba(0,0,0,0.28)] 
+mb-4"[39m
+              
+[33mrole[39m=[32m"status"[39m
+            [36m>[39m
+              [36m<span[39m
+                
+[33maria-hidden[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"mt-0.5 inline-flex 
+h-7 w-7 items-center justify-center 
+rounded-full bg-[color:color-mix(in_srgb,var
+(--color-accent)_30%,transparent)] 
+text-base font-bold text-kali-accent shadow-
+[0_0_0_1px_color-mix(in_srgb,var(--color-acc
+ent)_75%,transparent)]"[39m
+              [36m>[39m
+                [0mSIM[0m
+              [36m</span>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"leading-snug"[39m
+              [36m>[39m
+                [36m<p[39m
+                  
+[33mclass[39m=[32m"font-semibold 
+uppercase tracking-wide 
+text-[color:var(--color-muted)]"[39m
+                [36m>[39m
+                  [0mNmap NSE[0m
+                  [0m Simulation[0m
+                [36m</p>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"text
+-[color:var(--color-text)]"[39m
+                [36m>[39m
+                  [0mSimulated scripts and 
+outputs. Commands are build-only; no 
+packets are sent.[0m
+                [36m</p>[39m
+              [36m</div>[39m
+            [36m</div>[39m
+            [36m<button[39m
+              
+[33maria-expanded[39m=[32m"false"[39m
+              [33mclass[39m=[32m"mb-4 
+rounded border border-white/10 
+bg-kali-surface-muted/80 px-3 py-2 text-sm 
+text-white/80 hover:text-white"[39m
+              
+[33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mAbout this tool[0m
+            [36m</button>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 
+rounded border 
+border-kali-severity-medium/60 
+bg-kali-severity-medium/15 p-3"[39m
+            [36m>[39m
+              [36m<p[39m
+                
+[33mclass[39m=[32m"text-sm 
+font-semibold"[39m
+              [36m>[39m
+                [0mEducational use only. 
+Do not scan systems without permission.[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"mb-4 
+rounded-lg border border-white/10 
+bg-kali-surface-muted/80 p-3"[39m
+            [36m>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"mb-2 
+text-sm font-semibold"[39m
+              [36m>[39m
+                [0mGuided scenario[0m
+              [36m</p>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"flex 
+flex-col gap-2 sm:flex-row 
+sm:items-center"[39m
+              [36m>[39m
+                [36m<select[39m
+                  
+[33maria-label[39m=[32m"Select guided 
+scenario"[39m
+                  
+[33mclass[39m=[32m"rounded border 
+border-white/10 bg-kali-dark px-3 py-2 
+text-sm text-kali-text"[39m
+                [36m>[39m
+                  [36m<option[39m
+                    
+[33mvalue[39m=[32m"web-app"[39m
+                  [36m>[39m
+                    [0mPublic Web App[0m
+                  [36m</option>[39m
+                  [36m<option[39m
+                    
+[33mvalue[39m=[32m"file-server"[39m
+                  [36m>[39m
+                    [0mInternal File 
+Server[0m
+                  [36m</option>[39m
+                  [36m<option[39m
+                    
+[33mvalue[39m=[32m"dns"[39m
+                  [36m>[39m
+                    [0mDNS Inventory[0m
+                  [36m</option>[39m
+                [36m</select>[39m
+                [36m<button[39m
+                  
+[33mclass[39m=[32m"rounded px-3 py-2 
+text-sm font-medium text-black transition 
+focus-visible:outline 
+focus-visible:outline-2 
+focus-visible:outline-offset-2 
+focus-visible:outline-kali-focus 
+bg-kali-control"[39m
+                  
+[33mtype[39m=[32m"button"[39m
+                [36m>[39m
+                  [0mLoad Scenario[0m
+                [36m</button>[39m
+              [36m</div>[39m
+              [36m<p[39m
+                [33mclass[39m=[32m"mt-2 
+text-xs text-white/70"[39m
+              [36m>[39m
+                [0mSimulated public web 
+application audit. Review visible HTTP 
+metadata only.[0m
+              [36m</p>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              
+[33mclass[39m=[32m"mb-4"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"mb-1 
+block text-sm"[39m
+                
+[33mfor[39m=[32m"target"[39m
+              [36m>[39m
+                [0mTarget[0m
+              [36m</label>[39m
+              [36m<input[39m
+                
+[33maria-label[39m=[32m"Scan target"[39m
+                
+[33mclass[39m=[32m"w-full rounded-lg 
+border border-white/10 bg-kali-dark px-3 
+py-2 text-sm text-kali-text 
+placeholder-white/60 focus-visible:outline 
+focus-visible:outline-2 
+focus-visible:outline-offset-2 
+focus-visible:outline-kali-focus"[39m
+                
+[33mid[39m=[32m"target"[39m
+                
+[33mtype[39m=[32m"text"[39m
+                
+[33mvalue[39m=[32m"example.com"[39m
+              [36m/>[39m
+            [36m</div>[39m
+            [36m<div[39m
+              
+[33mclass[39m=[32m"mb-4"[39m
+            [36m>[39m
+              [36m<label[39m
+                [33mclass[39m=[32m"mb-1 
+block text-sm"[39m
+                
+[33mfor[39m=[32m"scripts"[39m
+              [36m>[39m
+                [0mScripts[0m
+              [36m</label>[39m
+              [36m<input[39m
+                
+[33maria-label[39m=[32m"Search 
+scripts"[39m
+                [33mclass[39m=[32m"mb-2 
+w-full rounded-lg border border-white/10 
+bg-kali-dark px-3 py-2 text-sm 
+text-kali-text placeholder-white/60 
+focus-visible:outline 
+focus-visible:outline-2 
+focus-visible:outline-offset-2 
+focus-visible:outline-kali-focus"[39m
+                
+[33mid[39m=[32m"scripts"[39m
+                
+[33mplaceholder[39m=[32m"Search 
+scripts"[39m
+                
+[33mtype[39m=[32m"search"[39m
+                [33mvalue[39m=[32m""[39m
+              [36m/>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"grid 
+max-h-64 grid-cols-1 gap-2 overflow-y-auto 
+sm:grid-cols-2"[39m
+              [36m>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"rounded-lg border 
+border-white/5 bg-kali-surface-muted/90 p-3 
+text-sm text-kali-text shadow-sm"[39m
+                [36m>[39m
+                  [36m<label[39m
+                    
+[33mclass[39m=[32m"flex items-center 
+space-x-2 text-sm"[39m
+                  [36m>[39m
+                    [36m<input[39m
+                      
+[33maria-label[39m=[32m"Toggle 
+http-title"[39m
+                      [33mch...
+
+    [0m [90m 66 |[39m               
+[36mtypeof[39m url [33m===[39m 
+[32m'string'[39m [33m&&[39m url[33m.[3
+9mincludes([32m'nmap-results'[39m)
+     [90m 67 |[39m                 
+[33m?[39m { hosts[33m:[39m [] }
+    [31m[1m>[22m[39m[90m 68 |[39m     
+            [33m:[39m { 
+[32m'http-title'[39m[33m:[39m 
+[32m'Sample output'[39m }
+     [90m    |[39m                        
+             [31m[1m^[22m[39m
+     [90m 69 |[39m             
+)[33m,[39m
+     [90m 70 |[39m         })
+     [90m 71 |[39m       )[33m;[39m[0m
+
+      at waitForWrapper (node_modules/@testi
+ng-library/dom/dist/wait-for.js:163:27)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:86:33
+      at Object.<anonymous> 
+(__tests__/nmapNse.test.tsx:68:37)
+
+FAIL __tests__/projectGallery.test.tsx
+  ΓùÅ ProjectGallery ΓÇ║ renders project 
+cards
+
+    TestingLibraryElementError: Unable to 
+find an element with the text: Projects. 
+This could be because the text is broken up 
+by multiple elements. In this case, you can 
+provide a function for your text matcher to 
+make your matcher more flexible.
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"project-gallery"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-header-bar"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-label[39m=[32m"Filter by 
+category"[39m
+              
+[33mclass[39m=[32m"pg-categories"[39m
+              
+[33mrole[39m=[32m"tablist"[39m
+            [36m>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôü[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAll[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m35[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒîÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mWeb[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m10[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒÄ«[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mGames[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m8[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒöÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mSecurity[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒñû[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAI/ML[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m4[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôè[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mData[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒ¢á∩╕Å[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mTools[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m5[0m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-grid"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"pg-card 
+featured"[39m
+              
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"pg-card-header"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pg-c
+ard-title-row"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"pg
+-card-title-group"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"pg-lang-dot"[39m
+                      
+[33mstyle[39m=[32m"background-color: 
+rgb(49, 120, 198);"[39m
+                      
+[33mtitle[39m=[32m"typescript"[39m
+                    [36m/>[39m
+                    [36m<h3[39m
+                      
+[33mclass[39m=[32m"pg-card-title"[39m
+                    [36m>[39m
+                      [0mKali Linux 
+Portfolio[0m
+                    [36m</h3>[39m
+                  [36m</div>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pg
+-card-featured-badge"[39m
+                  [36m>[39m
+                    [0mΓ¡É[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"pg-c
+ard-description"[39m
+                [36m>[39m
+                  [0mDesktop-style 
+portfolio that recreat...
+
+    [0m [90m 20 |[39m
+     [90m 21 |[39m     [36mconst[39m 
+searchInput [33m=[39m screen[33m.[39mget
+ByPlaceholderText([32m'Search 
+projects...'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 22 |[39m     
+fireEvent[33m.[39mchange(searchInput[33m,
+[39m { target[33m:[39m { 
+value[33m:[39m [32m'Recipe'[39m } 
+})[33m;[39m
+     [90m    |[39m                        
+       [31m[1m^[22m[39m
+     [90m 23 |[39m
+     [90m 24 |[39m     [36mawait[39m 
+waitFor(() [33m=>[39m {
+     [90m 25 |[39m       expect(screen[33
+m.[39mgetByText([32m'Recipe App'[39m))[3
+3m.[39mtoBeInTheDocument()[33m;[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/projectGallery.test.tsx:22:31)
+
+  ΓùÅ ProjectGallery ΓÇ║ filters projects 
+by search
+
+    TestingLibraryElementError: Unable to 
+find an element with the placeholder text 
+of: Search projects...
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"project-gallery"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-header-bar"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-label[39m=[32m"Filter by 
+category"[39m
+              
+[33mclass[39m=[32m"pg-categories"[39m
+              
+[33mrole[39m=[32m"tablist"[39m
+            [36m>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôü[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAll[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m35[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒîÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mWeb[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m10[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒÄ«[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mGames[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m8[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒöÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mSecurity[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒñû[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAI/ML[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m4[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôè[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mData[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒ¢á∩╕Å[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mTools[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m5[0m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-grid"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"pg-card 
+featured"[39m
+              
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"pg-card-header"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pg-c
+ard-title-row"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"pg
+-card-title-group"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"pg-lang-dot"[39m
+                      
+[33mstyle[39m=[32m"background-color: 
+rgb(49, 120, 198);"[39m
+                      
+[33mtitle[39m=[32m"typescript"[39m
+                    [36m/>[39m
+                    [36m<h3[39m
+                      
+[33mclass[39m=[32m"pg-card-title"[39m
+                    [36m>[39m
+                      [0mKali Linux 
+Portfolio[0m
+                    [36m</h3>[39m
+                  [36m</div>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pg
+-card-featured-badge"[39m
+                  [36m>[39m
+                    [0mΓ¡É[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"pg-c
+ard-description"[39m
+                [36m>[39m
+                  [0mDesktop-style 
+portfolio that recreat...
+
+    [0m [90m 25 |[39m       expect(screen
+[33m.[39mgetByText([32m'Recipe App'[39m)
+)[33m.[39mtoBeInTheDocument()[33m;[39m
+     [90m 26 |[39m       expect(screen[33
+m.[39mqueryByText([32m'Kali Linux Portfoli
+o'[39m))[33m.[39mnot[33m.[39mtoBeInTheD
+ocument()[33m;[39m
+    [31m[1m>[22m[39m[90m 27 |[39m     
+})[33m;[39m
+     [90m    |[39m                  
+[31m[1m^[22m[39m
+     [90m 28 |[39m   })[33m;[39m
+     [90m 29 |[39m
+     [90m 30 |[39m   it([32m'filters 
+projects by category'[39m[33m,[39m 
+[36masync[39m () [33m=>[39m {[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/projectGallery.test.tsx:27:44)
+
+  ΓùÅ ProjectGallery ΓÇ║ shows all projects 
+when All category is selected
+
+    TestingLibraryElementError: Unable to 
+find an accessible element with the role 
+"tab" and name `/All Projects/i`
+
+    Here are the accessible roles:
+
+      tablist:
+
+      Name "Filter by category":
+      [36m<div[39m
+        [33maria-label[39m=[32m"Filter 
+by category"[39m
+        
+[33mclass[39m=[32m"pg-categories"[39m
+        [33mrole[39m=[32m"tablist"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      tab:
+
+      Name "≡ƒôü All 35":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"false"[39m
+        
+[33mclass[39m=[32m"pg-category-pill"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      Name "≡ƒîÉ Web 10":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"false"[39m
+        
+[33mclass[39m=[32m"pg-category-pill"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      Name "≡ƒÄ« Games 8":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"true"[39m
+        
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      Name "≡ƒöÉ Security 6":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"false"[39m
+        
+[33mclass[39m=[32m"pg-category-pill"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      Name "≡ƒñû AI/ML 4":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"false"[39m
+        
+[33mclass[39m=[32m"pg-category-pill"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      Name "≡ƒôè Data 2":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"false"[39m
+        
+[33mclass[39m=[32m"pg-category-pill"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      Name "≡ƒ¢á∩╕Å Tools 5":
+      [36m<button[39m
+        
+[33maria-selected[39m=[32m"false"[39m
+        
+[33mclass[39m=[32m"pg-category-pill"[39m
+        [33mrole[39m=[32m"tab"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      article:
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card 
+featured"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.03s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.06s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.09s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.12s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.15s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.18s;"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<article[39m
+        [33mclass[39m=[32m"pg-card"[39m
+        
+[33mstyle[39m=[32m"animation-delay: 
+0.2s;"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      heading:
+
+      Name "Flappy Bird":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Pong":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Tic Tac Toe":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Space Invader":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Reaction Test Game":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Snake Game":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Hangman":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      Name "Web Game Collection":
+      [36m<h3[39m
+        
+[33mclass[39m=[32m"pg-card-title"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      paragraph:
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<p[39m
+        [33mclass[39m=[32m"pg-card-descri
+ption"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      link:
+
+      Name "View Flappy Bird on GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View 
+Flappy Bird on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/flappy-bird"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Pong on GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View 
+Pong on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/pong"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Tic Tac Toe on GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View Tic 
+Tac Toe on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/tictactoe"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Space Invader on GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View 
+Space Invader on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/space-invader"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Reaction Test Game on 
+GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View 
+Reaction Test Game on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/reaction-test-game"[39
+m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Snake Game on GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View 
+Snake Game on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/SnakeGame.py"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Hangman on GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View 
+Hangman on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/hangman.py"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      Name "View Web Game Collection on 
+GitHub":
+      [36m<a[39m
+        [33maria-label[39m=[32m"View Web 
+Game Collection on GitHub"[39m
+        
+[33mclass[39m=[32m"pg-card-btn"[39m
+        [33mhref[39m=[32m"https://github.
+com/Alex-Unnippillil/WebGameSelection"[39m
+        [33mrel[39m=[32m"noopener 
+noreferrer"[39m
+        [33mtarget[39m=[32m"_blank"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      button:
+
+      Name "Open Flappy Bird demo":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Open 
+Flappy Bird demo"[39m
+        [33mclass[39m=[32m"pg-card-btn 
+primary"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"project-gallery"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-header-bar"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-label[39m=[32m"Filter by 
+category"[39m
+              
+[33mclass[39m=[32m"pg-categories"[39m
+              
+[33mrole[39m=[32m"tablist"[39m
+            [36m>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôü[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAll[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m35[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒîÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mWeb[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m10[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒÄ«[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mGames[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m8[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒöÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mSecurity[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒñû[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAI/ML[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m4[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôè[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mData[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒ¢á∩╕Å[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mTools[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m5[0m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-grid"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"pg-card 
+featured"[39m
+              
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"pg-card-header"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pg-c
+ard-title-row"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"pg
+-card-title-group"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"pg-lang-dot"[39m
+                      
+[33mstyle[39m=[32m"background-color: 
+rgb(49, 120, 198);"[39m
+                      
+[33mtitle[39m=[32m"typescript"[39m
+                    [36m/>[39m
+                    [36m<h3[39m
+                      
+[33mclass[39m=[32m"pg-card-title"[39m
+                    [36m>[39m
+                      [0mFlappy Bird[0m
+                    [36m</h3>[39m
+                  [36m</div>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pg
+-card-featured-badge"[39m
+                  [36m>[39m
+                    [0mΓ¡É[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"pg-c
+ard-description"[39m
+                [36m>[39m
+                  [0mTypeScript remake of 
+the classic Flappy Bird ...
+
+    [0m [90m 59 |[39m
+     [90m 60 |[39m   it([32m'displays 
+stats correctly'[39m[33m,[39m 
+[36masync[39m () [33m=>[39m {
+    [31m[1m>[22m[39m[90m 61 |[39m     
+render([33m<[39m[33mProjectGallery[39m 
+[33m/[39m[33m>[39m)[33m;[39m
+     [90m    |[39m                        
+                        [31m[1m^[22m[39m
+     [90m 62 |[39m     [36mawait[39m 
+screen[33m.[39mfindByText([32m'Kali 
+Linux Portfolio'[39m)[33m;[39m
+     [90m 63 |[39m
+     [90m 64 |[39m     [90m// Check that 
+stats are visible[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/projectGallery.test.tsx:61:48)
+
+  ΓùÅ ProjectGallery ΓÇ║ displays stats 
+correctly
+
+    TestingLibraryElementError: Unable to 
+find an element with the text: Total 
+Projects. This could be because the text is 
+broken up by multiple elements. In this 
+case, you can provide a function for your 
+text matcher to make your matcher more 
+flexible.
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"project-gallery"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-header-bar"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-label[39m=[32m"Filter by 
+category"[39m
+              
+[33mclass[39m=[32m"pg-categories"[39m
+              
+[33mrole[39m=[32m"tablist"[39m
+            [36m>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôü[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAll[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m35[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒîÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mWeb[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m10[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒÄ«[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mGames[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m8[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒöÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mSecurity[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒñû[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAI/ML[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m4[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôè[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mData[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒ¢á∩╕Å[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mTools[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m5[0m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-grid"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"pg-card 
+featured"[39m
+              
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"pg-card-header"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pg-c
+ard-title-row"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"pg
+-card-title-group"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"pg-lang-dot"[39m
+                      
+[33mstyle[39m=[32m"background-color: 
+rgb(49, 120, 198);"[39m
+                      
+[33mtitle[39m=[32m"typescript"[39m
+                    [36m/>[39m
+                    [36m<h3[39m
+                      
+[33mclass[39m=[32m"pg-card-title"[39m
+                    [36m>[39m
+                      [0mKali Linux 
+Portfolio[0m
+                    [36m</h3>[39m
+                  [36m</div>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pg
+-card-featured-badge"[39m
+                  [36m>[39m
+                    [0mΓ¡É[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"pg-c
+ard-description"[39m
+                [36m>[39m
+                  [0mDesktop-style 
+portfolio that recreat...
+
+    [0m [90m 70 |[39m   it([32m'shows 
+empty state when no 
+matches'[39m[33m,[39m [36masync[39m () 
+[33m=>[39m {
+     [90m 71 |[39m     
+render([33m<[39m[33mProjectGallery[39m 
+[33m/[39m[33m>[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 72 |[39m     
+[36mawait[39m 
+screen[33m.[39mfindByText([32m'Kali 
+Linux Portfolio'[39m)[33m;[39m
+     [90m    |[39m                        
+       [31m[1m^[22m[39m
+     [90m 73 |[39m
+     [90m 74 |[39m     [36mconst[39m 
+searchInput [33m=[39m screen[33m.[39mget
+ByPlaceholderText([32m'Search 
+projects...'[39m)[33m;[39m
+     [90m 75 |[39m     fireEvent[33m.[39
+mchange(searchInput[33m,[39m { 
+target[33m:[39m { value[33m:[39m 
+[32m'xyznonexistent'[39m } 
+})[33m;[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/projectGallery.test.tsx:72:31)
+
+  ΓùÅ ProjectGallery ΓÇ║ shows empty state 
+when no matches
+
+    TestingLibraryElementError: Unable to 
+find an element with the placeholder text 
+of: Search projects...
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"project-gallery"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-header-bar"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-label[39m=[32m"Filter by 
+category"[39m
+              
+[33mclass[39m=[32m"pg-categories"[39m
+              
+[33mrole[39m=[32m"tablist"[39m
+            [36m>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôü[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAll[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m35[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒîÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mWeb[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m10[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒÄ«[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mGames[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m8[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒöÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mSecurity[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒñû[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAI/ML[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m4[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôè[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mData[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒ¢á∩╕Å[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mTools[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m5[0m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-grid"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"pg-card 
+featured"[39m
+              
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"pg-card-header"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pg-c
+ard-title-row"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"pg
+-card-title-group"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"pg-lang-dot"[39m
+                      
+[33mstyle[39m=[32m"background-color: 
+rgb(49, 120, 198);"[39m
+                      
+[33mtitle[39m=[32m"typescript"[39m
+                    [36m/>[39m
+                    [36m<h3[39m
+                      
+[33mclass[39m=[32m"pg-card-title"[39m
+                    [36m>[39m
+                      [0mKali Linux 
+Portfolio[0m
+                    [36m</h3>[39m
+                  [36m</div>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pg
+-card-featured-badge"[39m
+                  [36m>[39m
+                    [0mΓ¡É[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"pg-c
+ard-description"[39m
+                [36m>[39m
+                  [0mDesktop-style 
+portfolio that recreat...
+
+    [0m [90m 77 |[39m     
+[36mawait[39m waitFor(() [33m=>[39m {
+     [90m 78 |[39m       
+expect(screen[33m.[39mgetByText([32m'No 
+projects found'[39m))[33m.[39mtoBeInTheDo
+cument()[33m;[39m
+    [31m[1m>[22m[39m[90m 79 |[39m     
+})[33m;[39m
+     [90m    |[39m                  
+[31m[1m^[22m[39m
+     [90m 80 |[39m   })[33m;[39m
+     [90m 81 |[39m
+     [90m 82 |[39m   it([32m'opens demo 
+in Firefox when demo button 
+clicked'[39m[33m,[39m [36masync[39m () 
+[33m=>[39m {[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at Object.<anonymous> 
+(__tests__/projectGallery.test.tsx:79:44)
+
+  ΓùÅ ProjectGallery ΓÇ║ shows featured 
+badge on featured projects
+
+    TestingLibraryElementError: Unable to 
+find an element with the text: /Featured/i. 
+This could be because the text is broken up 
+by multiple elements. In this case, you can 
+provide a function for your text matcher to 
+make your matcher more flexible.
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          
+[33mclass[39m=[32m"project-gallery"[39m
+        [36m>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-header-bar"[39m
+          [36m>[39m
+            [36m<div[39m
+              
+[33maria-label[39m=[32m"Filter by 
+category"[39m
+              
+[33mclass[39m=[32m"pg-categories"[39m
+              
+[33mrole[39m=[32m"tablist"[39m
+            [36m>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"true"[39m
+                
+[33mclass[39m=[32m"pg-category-pill 
+active"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôü[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAll[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m35[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒîÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mWeb[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m10[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒÄ«[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mGames[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m8[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒöÉ[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mSecurity[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m6[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒñû[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mAI/ML[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m4[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒôè[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mData[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m2[0m
+                [36m</span>[39m
+              [36m</button>[39m
+              [36m<button[39m
+                
+[33maria-selected[39m=[32m"false"[39m
+                
+[33mclass[39m=[32m"pg-category-pill"[39m
+                
+[33mrole[39m=[32m"tab"[39m
+              [36m>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-icon"[39m
+                [36m>[39m
+                  [0m≡ƒ¢á∩╕Å[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  
+[33mclass[39m=[32m"pg-pill-label"[39m
+                [36m>[39m
+                  [0mTools[0m
+                [36m</span>[39m
+                [36m<span[39m
+                  [33mclass[39m=[32m"pg-c
+ategory-count"[39m
+                [36m>[39m
+                  [0m5[0m
+                [36m</span>[39m
+              [36m</button>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            
+[33mclass[39m=[32m"pg-grid"[39m
+          [36m>[39m
+            [36m<article[39m
+              [33mclass[39m=[32m"pg-card 
+featured"[39m
+              
+[33mstyle[39m=[32m"animation-delay: 
+0s;"[39m
+            [36m>[39m
+              [36m<div[39m
+                
+[33mclass[39m=[32m"pg-card-header"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"pg-c
+ard-title-row"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"pg
+-card-title-group"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      
+[33mclass[39m=[32m"pg-lang-dot"[39m
+                      
+[33mstyle[39m=[32m"background-color: 
+rgb(49, 120, 198);"[39m
+                      
+[33mtitle[39m=[32m"typescript"[39m
+                    [36m/>[39m
+                    [36m<h3[39m
+                      
+[33mclass[39m=[32m"pg-card-title"[39m
+                    [36m>[39m
+                      [0mKali Linux 
+Portfolio[0m
+                    [36m</h3>[39m
+                  [36m</div>[39m
+                  [36m<span[39m
+                    [33mclass[39m=[32m"pg
+-card-featured-badge"[39m
+                  [36m>[39m
+                    [0mΓ¡É[0m
+                  [36m</span>[39m
+                [36m</div>[39m
+                [36m<p[39m
+                  [33mclass[39m=[32m"pg-c
+ard-description"[39m
+                [36m>[39m
+                  [0mDesktop-style 
+portfolio that recreat...
+
+    [0m [90m 105 |[39m   
+it([32m'displays technology stack 
+tags'[39m[33m,[39m [36masync[39m () 
+[33m=>[39m {
+     [90m 106 |[39m     
+render([33m<[39m[33mProjectGallery[39m 
+[33m/[39m[33m>[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 107 |[39m    
+ [36mawait[39m 
+screen[33m.[39mfindByText([32m'Kali 
+Linux Portfolio'[39m)[33m;[39m
+     [90m     |[39m                       
+                        [31m[1m^[22m[39m
+     [90m 108 |[39m
+     [90m 109 |[39m     [90m// Should 
+show stack tags[39m
+     [90m 110 |[39m     expect(screen[33m
+.[39mgetAllByText([32m'Next.js'[39m)[33m
+.[39mlength)[33m.[39mtoBeGreaterThan([35
+m0[39m)[33m;[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:109:15
+      at Object.<anonymous> 
+(__tests__/projectGallery.test.tsx:107:47)
+
+FAIL __tests__/hangmanApp.test.tsx
+  ΓùÅ Hangman app ΓÇ║ share links do not 
+reveal the answer
+
+    TestingLibraryElementError: Unable to 
+find an accessible element with the role 
+"button" and name "Copy link"
+
+    Here are the accessible roles:
+
+      combobox:
+
+      Name "Category":
+      [36m<select[39m
+        
+[33maria-label[39m=[32m"Category"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-2 py-1 text-sm 
+text-[var(--kali-text)] border 
+border-[color:var(--kali-border)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+      [36m/>[39m
+
+      Name "Difficulty":
+      [36m<select[39m
+        
+[33maria-label[39m=[32m"Difficulty"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-2 py-1 text-sm 
+text-[var(--kali-text)] border 
+border-[color:var(--kali-border)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      option:
+
+      Name "family":
+      [36m<option[39m
+        [33mvalue[39m=[32m"family"[39m
+      [36m/>[39m
+
+      Name "sat":
+      [36m<option[39m
+        [33mvalue[39m=[32m"sat"[39m
+      [36m/>[39m
+
+      Name "movie":
+      [36m<option[39m
+        [33mvalue[39m=[32m"movie"[39m
+      [36m/>[39m
+
+      Name "phrases":
+      [36m<option[39m
+        [33mvalue[39m=[32m"phrases"[39m
+      [36m/>[39m
+
+      Name "Casual":
+      [36m<option[39m
+        [33mvalue[39m=[32m"casual"[39m
+      [36m/>[39m
+
+      Name "Standard":
+      [36m<option[39m
+        [33mvalue[39m=[32m"standard"[39m
+      [36m/>[39m
+
+      Name "Hard":
+      [36m<option[39m
+        [33mvalue[39m=[32m"hard"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      button:
+
+      Name "New game":
+      [36m<button[39m
+        [33maria-label[39m=[32m"New 
+game"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-sm 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Use hint":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Use 
+hint"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-sm 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+        [33mtitle[39m=[32m"Hint (H). 
+Costs 7 points."[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Hide options":
+      [36m<button[39m
+        [33maria-controls[39m=[32m"hangma
+n-options"[39m
+        
+[33maria-expanded[39m=[32m"true"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-sm 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Pause":
+      [36m<button[39m
+        
+[33maria-label[39m=[32m"Pause"[39m
+        
+[33maria-pressed[39m=[32m"false"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Sound on":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Sound 
+on"[39m
+        
+[33maria-pressed[39m=[32m"true"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mtitle[39m=[32m"Toggle sound 
+(S)"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Exclude common letters off":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Exclude 
+common letters off"[39m
+        
+[33maria-pressed[39m=[32m"false"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mtitle[39m=[32m"Exclude 
+common letters from the keyboard"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Copy challenge link":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Copy 
+challenge link"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Copy game image":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Copy 
+game image"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Shortcuts":
+      [36m<button[39m
+        [33maria-controls[39m=[32m"hangma
+n-help"[39m
+        
+[33maria-expanded[39m=[32m"false"[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Import list":
+      [36m<button[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Clear list":
+      [36m<button[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Play custom":
+      [36m<button[39m
+        [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mdisabled[39m=[32m""[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess A":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+A"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.362);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess B":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+B"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.181);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess C":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+C"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.174);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess D":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+D"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.241);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess E":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+E"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.47);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess F":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+F"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.201);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess G":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+G"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.221);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess H":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+H"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.255);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess I":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+I"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.362);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess J":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+J"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.12);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess K":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+K"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.127);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess L":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+L"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.221);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess M":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+M"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.214);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess N":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+N"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.315);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess O":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+O"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.308);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess P":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+P"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.228);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess Q":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+Q"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.12);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess R":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+R"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.457);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess S":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+S"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.268);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess T":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+T"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.423);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess U":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+U"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.194);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess V":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+V"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.147);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess W":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+W"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.147);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess X":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+X"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.12);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess Y":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+Y"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.201);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      Name "Guess Z":
+      [36m<button[39m
+        [33maria-label[39m=[32m"Guess 
+Z"[39m
+        [33mclass[39m=[32m"rounded px-2 
+py-2 text-sm font-mono border 
+border-[color:var(--kali-border)] 
+hover:border-[color:var(--kali-control)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-60"[39m
+        
+[33mstyle[39m=[32m"background-color: 
+rgba(56, 189, 248, 0.12);"[39m
+        [33mtype[39m=[32m"button"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      textbox:
+
+      Name "Custom word list":
+      [36m<textarea[39m
+        [33maria-label[39m=[32m"Custom 
+word list"[39m
+        [33mclass[39m=[32m"mt-2 h-24 
+w-full rounded border 
+border-[color:var(--kali-border)] 
+bg-[var(--kali-bg)] p-2 text-xs 
+text-[var(--kali-text)] focus:outline-none 
+focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+        [33mplaceholder[39m=[32m"e.g. 
+red moon\\nblue-sky\\nstar wars"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      status:
+
+      Name "":
+      [36m<div[39m
+        
+[33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"sr-only"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m/>[39m
+
+      Name "":
+      [36m<div[39m
+        
+[33maria-live[39m=[32m"polite"[39m
+        [33mclass[39m=[32m"px-2 pb-2 
+text-sm text-[var(--kali-text)]"[39m
+        [33mrole[39m=[32m"status"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+      img:
+
+      Name "Hangman game board":
+      [36m<canvas[39m
+        [33maria-label[39m=[32m"Hangman 
+game board"[39m
+        [33mclass[39m=[32m"h-full w-full 
+rounded"[39m
+        [33mrole[39m=[32m"img"[39m
+      [36m/>[39m
+
+      --------------------------------------
+------------
+
+    Ignored nodes: comments, script, style
+    [36m<body>[39m
+      [36m<div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"h-full 
+w-full flex flex-col bg-[var(--kali-bg)] 
+text-[var(--kali-text)]"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"flex 
+flex-wrap items-center gap-2 p-2 border-b 
+border-[color:var(--kali-border)] 
+bg-[var(--kali-surface)]"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"flex 
+items-center gap-2"[39m
+            [36m>[39m
+              [36m<span[39m
+                
+[33mclass[39m=[32m"text-xs uppercase 
+tracking-wide 
+text-[var(--kali-text-muted)]"[39m
+              [36m>[39m
+                [0mCategory[0m
+              [36m</span>[39m
+              [36m<select[39m
+                
+[33maria-label[39m=[32m"Category"[39m
+                
+[33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-2 py-1 text-sm 
+text-[var(--kali-text)] border 
+border-[color:var(--kali-border)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+              [36m>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"family"[39m
+                [36m>[39m
+                  [0mfamily[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"sat"[39m
+                [36m>[39m
+                  [0msat[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"movie"[39m
+                [36m>[39m
+                  [0mmovie[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"phrases"[39m
+                [36m>[39m
+                  [0mphrases[0m
+                [36m</option>[39m
+              [36m</select>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"flex 
+items-center gap-2"[39m
+            [36m>[39m
+              [36m<span[39m
+                
+[33mclass[39m=[32m"text-xs uppercase 
+tracking-wide 
+text-[var(--kali-text-muted)]"[39m
+              [36m>[39m
+                [0mDifficulty[0m
+              [36m</span>[39m
+              [36m<select[39m
+                
+[33maria-label[39m=[32m"Difficulty"[39m
+                
+[33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-2 py-1 text-sm 
+text-[var(--kali-text)] border 
+border-[color:var(--kali-border)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+              [36m>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"casual"[39m
+                [36m>[39m
+                  [0mCasual[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"standard"[39m
+                [36m>[39m
+                  [0mStandard[0m
+                [36m</option>[39m
+                [36m<option[39m
+                  
+[33mvalue[39m=[32m"hard"[39m
+                [36m>[39m
+                  [0mHard[0m
+                [36m</option>[39m
+              [36m</select>[39m
+            [36m</label>[39m
+            [36m<button[39m
+              
+[33maria-label[39m=[32m"New game"[39m
+              [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-sm 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+              
+[33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mNew game[0m
+            [36m</button>[39m
+            [36m<button[39m
+              
+[33maria-label[39m=[32m"Use hint"[39m
+              [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-sm 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+              [33mtitle[39m=[32m"Hint 
+(H). Costs 7 points."[39m
+              
+[33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mHint ([0m
+              [0m2[0m
+              [0m)[0m
+            [36m</button>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"
+hangman-options"[39m
+              
+[33maria-expanded[39m=[32m"true"[39m
+              [33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-sm 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)]"[39m
+              
+[33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [0mHide options[0m
+            [36m</button>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"px-2 pb-2 
+text-xs text-[var(--kali-text-muted)]"[39m
+          [36m>[39m
+            [36m<span[39m
+              
+[33mclass[39m=[32m"mr-3"[39m
+            [36m>[39m
+              [0mScore: [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-[
+var(--kali-text)]"[39m
+              [36m>[39m
+                [0m0[0m
+              [36m</span>[39m
+            [36m</span>[39m
+            [36m<span[39m
+              
+[33mclass[39m=[32m"mr-3"[39m
+              [33mdata-testid[39m=[32m"ha
+ngman-timer"[39m
+            [36m>[39m
+              [0mTime: [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-[
+var(--kali-text)]"[39m
+              [36m>[39m
+                [0m00:00[0m
+              [36m</span>[39m
+            [36m</span>[39m
+            [36m<span[39m
+              
+[33mclass[39m=[32m"mr-3"[39m
+            [36m>[39m
+              [0mWrong: [0m
+              [36m<span[39m
+                [33mclass[39m=[32m"text-[
+var(--kali-text)]"[39m
+              [36m>[39m
+                [0m0[0m
+                [0m/[0m
+                [0m6[0m
+              [36m</span>[39m
+            [36m</span>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"mx-2 mt-2 
+rounded border 
+border-[color:var(--kali-border)] 
+bg-[var(--kali-surface)] px-3 py-3 text-xs 
+text-[var(--kali-text-muted)]"[39m
+            
+[33mid[39m=[32m"hangman-options"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"grid 
+gap-3 md:grid-cols-2"[39m
+            [36m>[39m
+              [36m<div>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"text-xs uppercase 
+tracking-wide 
+text-[var(--kali-text-subtle)]"[39m
+                [36m>[39m
+                  [0mControls[0m
+                [36m</div>[39m
+                [36m<div[39m
+                  
+[33mclass[39m=[32m"mt-2 flex flex-wrap 
+items-center gap-2"[39m
+                [36m>[39m
+                  [36m<button[39m
+                    
+[33maria-label[39m=[32m"Pause"[39m
+                    
+[33maria-pressed[39m=[32m"false"[39m
+                    
+[33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline-none focus:ring 
+focus:ring-[color:var(--kali-control)] 
+disabled:opacity-50"[39m
+                    
+[33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [0mPause[0m
+                  [36m</button>[39m
+                  [36m<button[39m
+                    
+[33maria-label[39m=[32m"Sound on"[39m
+                    
+[33maria-pressed[39m=[32m"true"[39m
+                    
+[33mclass[39m=[32m"rounded 
+bg-[var(--kali-overlay)] px-3 py-1 text-xs 
+hover:bg-[var(--kali-control-overlay)] 
+focus:outline...
+
+    [0m [90m 84 |[39m     
+jest[33m.[39museRealTimers()[33m;[39m
+     [90m 85 |[39m   })[33m;[39m
+    [31m[1m>[22m[39m[90m 86 |[39m 
+})[33m;[39m
+     [90m    |[39m              
+[31m[1m^[22m[39m
+     [90m 87 |[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:76:38
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:52:17
+      at node_modules/@testing-library/dom/d
+ist/query-helpers.js:95:19
+      at __tests__/hangmanApp.test.tsx:86:52
+      at node_modules/@testing-library/react
+/dist/act-compat.js:47:24
+      at process.env.NODE_ENV.exports.act (n
+ode_modules/react/cjs/react.development.js:8
+14:22)
+      at node_modules/@testing-library/react
+/dist/act-compat.js:46:25
+      at Object.<anonymous> 
+(__tests__/hangmanApp.test.tsx:85:31)
+
+FAIL __tests__/settings-reset.test.tsx
+  ΓùÅ Settings reset flow ΓÇ║ Reset Desktop 
+restores toggles and slider to defaults
+
+    TestingLibraryElementError: Value 
+"dark" not found in options
+
+    Ignored nodes: comments, script, style
+    [36m<select[39m
+      
+[33mclass[39m=[32m"bg-kali-surface-muted 
+text-kali-text px-2 py-1 rounded-md border 
+border-kali-border/70 transition-colors 
+hover:border-kali-focus/60 
+focus-visible:ring-2 
+focus-visible:ring-kali-focus 
+focus-visible:ring-offset-2 
+focus-visible:ring-offset-kali-surface"[39m
+      
+[33mid[39m=[32m"density-select"[39m
+    [36m>[39m
+      [36m<option[39m
+        [33mvalue[39m=[32m"regular"[39m
+      [36m>[39m
+        [0mRegular[0m
+      [36m</option>[39m
+      [36m<option[39m
+        [33mvalue[39m=[32m"compact"[39m
+      [36m>[39m
+        [0mCompact[0m
+      [36m</option>[39m
+    [36m</select>[39m
+
+    [0m [90m 44 |[39m     
+[36mawait[39m user[33m.[39mselectOptions
+(themeSelect[33m,[39m 
+[32m'dark'[39m)[33m;[39m
+     [90m 45 |[39m     [36mawait[39m use
+r[33m.[39mclick(alternateAccentRadio)[33m
+;[39m
+    [31m[1m>[22m[39m[90m 46 |[39m     
+[36mawait[39m user[33m.[39mselectOptions
+(densitySelect[33m,[39m 
+[32m'compact'[39m)[33m;[39m
+     [90m    |[39m                    
+[31m[1m^[22m[39m
+     [90m 47 |[39m     fireEvent[33m.[39
+mchange(fontSlider[33m,[39m { 
+target[33m:[39m { value[33m:[39m 
+[32m'1.5'[39m } })[33m;[39m
+     [90m 48 |[39m     [36mawait[39m use
+r[33m.[39mclick(kaliWallpaperToggle)[33m;
+[39m
+     [90m 49 |[39m     [36mawait[39m use
+r[33m.[39mclick(reducedMotionToggle)[33m;
+[39m[0m
+
+      at Object.getElementError (node_module
+s/@testing-library/dom/dist/config.js:37:19)
+      at node_modules/@testing-library/user-
+event/dist/cjs/utility/selectOptions.js:39:3
+9
+          at Array.map (<anonymous>)
+      at Object.selectOptionsBase (node_modu
+les/@testing-library/user-event/dist/cjs/uti
+lity/selectOptions.js:31:38)
+      at Object.selectOptions (node_modules/
+@testing-library/user-event/dist/cjs/utility
+/selectOptions.js:18:30)
+      at node_modules/@testing-library/user-
+event/dist/cjs/setup/setup.js:85:45
+      at Object.asyncWrapper (node_modules/@
+testing-library/react/dist/pure.js:87:28)
+      at Object.wrapAsync (node_modules/@tes
+ting-library/user-event/dist/cjs/setup/wrapA
+sync.js:8:28)
+      at Object.method [as selectOptions] (n
+ode_modules/@testing-library/user-event/dist
+/cjs/setup/setup.js:85:26)
+      at Object.<anonymous> 
+(__tests__/settings-reset.test.tsx:46:20)
+
+FAIL __tests__/terminal.test.tsx
+  ΓùÅ Console
+
+    console.error
+      Encountered two children with the 
+same key, `1672531200000`. Keys should be 
+unique so that components maintain their 
+identity across updates. Non-unique keys 
+may cause children to be duplicated and/or 
+omitted ΓÇö the behavior is unsupported and 
+could change in a future version.
+
+    [0m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:6604:23
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnOnInvalidKey (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:66
+03:13)
+      at reconcileChildrenArray (node_module
+s/react-dom/cjs/react-dom-client.development
+.js:6672:31)
+      at reconcileChildFibersImpl (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:6993:30)
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:7098:33
+      at reconcileChildren (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:9
+702:13)
+      at beginWork (node_modules/react-dom/c
+js/react-dom-client.development.js:12049:13)
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at performUnitOfWork (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+7641:22)
+      at workLoopSync (node_modules/react-do
+m/cjs/react-dom-client.development.js:17469:
+41)
+      at renderRootSync (node_modules/react-
+dom/cjs/react-dom-client.development.js:1745
+0:11)
+      at performWorkOnRoot (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+6504:11)
+      at performSyncWorkOnRoot (node_modules
+/react-dom/cjs/react-dom-client.development.
+js:18972:7)
+      at flushSyncWorkAcrossRoots_impl (node
+_modules/react-dom/cjs/react-dom-client.deve
+lopment.js:18814:21)
+      at processRootScheduleInMicrotask (nod
+e_modules/react-dom/cjs/react-dom-client.dev
+elopment.js:18853:9)
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:18982:11
+      at flushActQueue (node_modules/react/c
+js/react.development.js:590:34)
+      at process.env.NODE_ENV.exports.act (n
+ode_modules/react/cjs/react.development.js:8
+84:10)
+      at node_modules/@testing-library/react
+/dist/act-compat.js:46:25
+      at Object.eventWrapper (node_modules/@
+testing-library/react/dist/pure.js:106:28)
+      at fireEvent (node_modules/@testing-li
+brary/dom/dist/events.js:12:35)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/dom/dist/event
+s.js:110:36)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/react/dist/fir
+e-event.js:15:52)
+      at Object.<anonymous> 
+(__tests__/terminal.test.tsx:194:27)
+
+    console.error
+      Encountered two children with the 
+same key, `1672531200000`. Keys should be 
+unique so that components maintain their 
+identity across updates. Non-unique keys 
+may cause children to be duplicated and/or 
+omitted ΓÇö the behavior is unsupported and 
+could change in a future version.
+
+    [0m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:6604:23
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnOnInvalidKey (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:66
+03:13)
+      at reconcileChildrenArray (node_module
+s/react-dom/cjs/react-dom-client.development
+.js:6672:31)
+      at reconcileChildFibersImpl (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:6993:30)
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:7098:33
+      at reconcileChildren (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:9
+702:13)
+      at beginWork (node_modules/react-dom/c
+js/react-dom-client.development.js:12049:13)
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at performUnitOfWork (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+7641:22)
+      at workLoopSync (node_modules/react-do
+m/cjs/react-dom-client.development.js:17469:
+41)
+      at renderRootSync (node_modules/react-
+dom/cjs/react-dom-client.development.js:1745
+0:11)
+      at performWorkOnRoot (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+6504:11)
+      at performSyncWorkOnRoot (node_modules
+/react-dom/cjs/react-dom-client.development.
+js:18972:7)
+      at flushSyncWorkAcrossRoots_impl (node
+_modules/react-dom/cjs/react-dom-client.deve
+lopment.js:18814:21)
+      at processRootScheduleInMicrotask (nod
+e_modules/react-dom/cjs/react-dom-client.dev
+elopment.js:18853:9)
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:18982:11
+      at flushActQueue (node_modules/react/c
+js/react.development.js:590:34)
+      at process.env.NODE_ENV.exports.act (n
+ode_modules/react/cjs/react.development.js:8
+84:10)
+      at node_modules/@testing-library/react
+/dist/act-compat.js:46:25
+      at Object.eventWrapper (node_modules/@
+testing-library/react/dist/pure.js:106:28)
+      at fireEvent (node_modules/@testing-li
+brary/dom/dist/events.js:12:35)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/dom/dist/event
+s.js:110:36)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/react/dist/fir
+e-event.js:15:52)
+      at Object.<anonymous> 
+(__tests__/terminal.test.tsx:194:27)
+
+    console.error
+      Encountered two children with the 
+same key, `1672531200000`. Keys should be 
+unique so that components maintain their 
+identity across updates. Non-unique keys 
+may cause children to be duplicated and/or 
+omitted ΓÇö the behavior is unsupported and 
+could change in a future version.
+
+    [0m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:6604:23
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnOnInvalidKey (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:66
+03:13)
+      at reconcileChildrenArray (node_module
+s/react-dom/cjs/react-dom-client.development
+.js:6645:23)
+      at reconcileChildFibersImpl (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:6993:30)
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:7098:33
+      at reconcileChildren (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:9
+702:13)
+      at beginWork (node_modules/react-dom/c
+js/react-dom-client.development.js:12049:13)
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at performUnitOfWork (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+7641:22)
+      at workLoopSync (node_modules/react-do
+m/cjs/react-dom-client.development.js:17469:
+41)
+      at renderRootSync (node_modules/react-
+dom/cjs/react-dom-client.development.js:1745
+0:11)
+      at performWorkOnRoot (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+6504:11)
+      at performWorkOnRootViaSchedulerTask (
+node_modules/react-dom/cjs/react-dom-client.
+development.js:18957:7)
+      at flushActQueue (node_modules/react/c
+js/react.development.js:590:34)
+      at process.env.NODE_ENV.exports.act (n
+ode_modules/react/cjs/react.development.js:8
+84:10)
+      at node_modules/@testing-library/react
+/dist/act-compat.js:46:25
+      at Object.eventWrapper (node_modules/@
+testing-library/react/dist/pure.js:106:28)
+      at fireEvent (node_modules/@testing-li
+brary/dom/dist/events.js:12:35)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/dom/dist/event
+s.js:110:36)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/react/dist/fir
+e-event.js:15:52)
+      at Object.<anonymous> 
+(__tests__/terminal.test.tsx:194:27)
+
+    console.error
+      Encountered two children with the 
+same key, `1672531200000`. Keys should be 
+unique so that components maintain their 
+identity across updates. Non-unique keys 
+may cause children to be duplicated and/or 
+omitted ΓÇö the behavior is unsupported and 
+could change in a future version.
+
+    [0m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:6604:23
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnOnInvalidKey (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:66
+03:13)
+      at reconcileChildrenArray (node_module
+s/react-dom/cjs/react-dom-client.development
+.js:6645:23)
+      at reconcileChildFibersImpl (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:6993:30)
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:7098:33
+      at reconcileChildren (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:9
+702:13)
+      at beginWork (node_modules/react-dom/c
+js/react-dom-client.development.js:12049:13)
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at performUnitOfWork (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+7641:22)
+      at workLoopSync (node_modules/react-do
+m/cjs/react-dom-client.development.js:17469:
+41)
+      at renderRootSync (node_modules/react-
+dom/cjs/react-dom-client.development.js:1745
+0:11)
+      at performWorkOnRoot (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:1
+6504:11)
+      at performWorkOnRootViaSchedulerTask (
+node_modules/react-dom/cjs/react-dom-client.
+development.js:18957:7)
+      at flushActQueue (node_modules/react/c
+js/react.development.js:590:34)
+      at process.env.NODE_ENV.exports.act (n
+ode_modules/react/cjs/react.development.js:8
+84:10)
+      at node_modules/@testing-library/react
+/dist/act-compat.js:46:25
+      at Object.eventWrapper (node_modules/@
+testing-library/react/dist/pure.js:106:28)
+      at fireEvent (node_modules/@testing-li
+brary/dom/dist/events.js:12:35)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/dom/dist/event
+s.js:110:36)
+      at fireEvent.<computed> [as keyDown] (
+node_modules/@testing-library/react/dist/fir
+e-event.js:15:52)
+      at Object.<anonymous> 
+(__tests__/terminal.test.tsx:194:27)
+
+  ΓùÅ Terminal component ΓÇ║ clears history 
+and prints about/date messages
+
+    expect(received).toContain(expected) // 
+indexOf
+
+    Expected substring: "Jan 01 2023"
+    Received string:    "Welcome to the 
+Kali Linux Portfolio Terminal.
+    Type help to list commands.
+    This terminal is powered by xterm.js
+    Sat Dec 31 2022 19:00:00 GMT-0500 
+(GMT-05:00)"
+
+    [0m[0m
+
+      at Object.<anonymous> 
+(__tests__/terminal.test.tsx:160:45)
+
+FAIL __tests__/hydra.api.test.ts
+  ΓùÅ Hydra API service validation ΓÇ║ 
+allows http variants exposed in UI
+
+    expect(jest.fn()).toHaveBeenCalledWith(.
+..expected)
+
+    Expected: 200
+    Received: 500
+
+    Number of calls: 1
+
+    [0m [90m 184 |[39m })[33m;[39m
+     [90m 185 |[39m[0m
+
+      at Object.<anonymous> 
+(__tests__/hydra.api.test.ts:186:28)
+
+FAIL __tests__/breakoutLogic.test.ts
+  ΓùÅ breakout physics step ΓÇ║ bounces off 
+a brick deterministically
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 0
+    Received:   140
+
+    [0m [90m 70 |[39m
+     [90m 71 |[39m     expect(hitBrickInde
+x)[33m.[39mtoBe([35m0[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 72 |[39m     
+expect(nextBall[33m.[39mvy)[33m.[39mtoBe
+LessThan([35m0[39m)[33m;[39m
+     [90m    |[39m                        
+     [31m[1m^[22m[39m
+     [90m 73 |[39m   })[33m;[39m
+     [90m 74 |[39m
+     [90m 75 |[39m   test([32m'reflects 
+off the left wall'[39m[33m,[39m () 
+[33m=>[39m {[0m
+
+      at Object.<anonymous> 
+(__tests__/breakoutLogic.test.ts:72:29)
+
+FAIL __tests__/connect-four.solver.test.ts
+  ΓùÅ connect four solver ΓÇ║ avoids losing 
+next turn when possible
+
+    expect(received).toContain(expected) // 
+indexOf
+
+    Expected value: 3
+    Received array: [2, 6]
+
+    [0m[0m
+
+      at Object.<anonymous> (__tests__/conne
+ct-four.solver.test.ts:136:12)
+
+FAIL __tests__/hydra-api.test.js
+  ΓùÅ accepts http-get service names 
+exposed in the UI
+
+    expect(jest.fn()).toHaveBeenCalledWith(.
+..expected)
+
+    Expected: 200
+    Received: 500
+
+    Number of calls: 1
+
+    [0m [90m 76 |[39m     
+json[33m:[39m 
+jest[33m.[39mfn()[33m,[39m
+     [90m 77 |[39m   }[33m;[39m
+    [31m[1m>[22m[39m[90m 78 |[39m
+     [90m    |[39m [31m[1m^[22m[39m
+     [90m 79 |[39m   [36mawait[39m 
+handler(req[33m,[39m res)[33m;[39m
+     [90m 80 |[39m
+     [90m 81 |[39m   expect(res[33m.[39m
+status)[33m.[39mtoHaveBeenCalledWith([35m
+200[39m)[33m;[39m[0m
+
+      at Object.<anonymous> 
+(__tests__/hydra-api.test.js:78:24)
+
+FAIL __tests__/asteroids-engine.test.ts
+  ΓùÅ asteroids engine ΓÇ║ ends the run 
+when lives reach zero
+
+    expect(received).toBeDefined()
+
+    Received: undefined
+
+    [0m[0m
+
+      at Object.<anonymous> 
+(__tests__/asteroids-engine.test.ts:79:26)
+
+FAIL __tests__/chess.pgn.test.ts
+  ΓùÅ PGN parsing helpers ΓÇ║ 
+parsePuzzlePgn returns puzzle with solution 
+moves
+
+    Invalid move in PGN: Re8#
+
+    [0m [90m 27 |[39m   moves[33m:[39m 
+[33mPgnMove[39m[][33m;[39m
+     [90m 28 |[39m }[33m;[39m
+    [31m[1m>[22m[39m[90m 29 |[39m
+     [90m    |[39m [31m[1m^[22m[39m
+     [90m 30 |[39m [36mconst[39m 
+safeLoadPgn [33m=[39m (game[33m:[39m 
+[33mChess[39m[33m,[39m pgn[33m:[39m 
+string)[33m:[39m boolean [33m=>[39m {
+     [90m 31 |[39m   [36mif[39m 
+([36mtypeof[39m (game [36mas[39m 
+[33mChess[39m [33m&[39m { 
+load_pgn[33m?[39m[33m:[39m 
+(text[33m:[39m string) [33m=>[39m 
+boolean })[33m.[39mload_pgn [33m===[39m 
+[32m"function"[39m) {
+     [90m 32 |[39m     [36mconst[39m 
+result [33m=[39m (game [36mas[39m 
+[33mChess[39m [33m&[39m { 
+load_pgn[33m:[39m (text[33m:[39m 
+string) [33m=>[39m boolean 
+})[33m.[39mload_pgn(pgn)[33m;[39m[0m
+
+      at Chess.loadPgn (node_modules/chess.j
+s/dist/cjs/chess.js:2963:27)
+      at safeLoadPgn 
+(games/chess/pgn.ts:29:29)
+      at games/chess/pgn.ts:70:24
+          at Array.flatMap (<anonymous>)
+      at parsePuzzlePgn 
+(games/chess/pgn.ts:66:50)
+      at Object.<anonymous> 
+(__tests__/chess.pgn.test.ts:36:49)
+
+PASS __tests__/chess.perft.test.ts (9.937 s)
+PASS __tests__/metasploitPage.test.tsx
+PASS 
+__tests__/desktop/commandPalette.test.tsx
+PASS __tests__/firefox.test.tsx
+PASS __tests__/wireshark.test.tsx
+PASS __tests__/desktop.listeners.test.tsx
+PASS __tests__/game2048.test.tsx
+PASS __tests__/flappyBird.test.tsx
+PASS __tests__/httpBuilder.test.tsx
+PASS __tests__/tictactoe.test.ts
+PASS __tests__/reconng.test.tsx
+PASS 
+__tests__/calculator.interaction.test.tsx
+PASS __tests__/desktop.overlays.test.tsx
+PASS __tests__/calc.test.tsx
+PASS __tests__/htmlRewriter.test.tsx
+PASS __tests__/converter.test.tsx
+PASS __tests__/hashcat.test.tsx
+PASS __tests__/whiskerMenu.test.tsx
+PASS __tests__/ssh-builder.test.tsx
+PASS __tests__/notepad.test.tsx
+PASS __tests__/desktopWindowSizePersistence.
+test.tsx
+PASS __tests__/calculator.formulas.test.ts
+PASS 
+__tests__/converter/unitsCatalog.test.ts
+PASS __tests__/desktopNameBar.test.tsx
+PASS 
+__tests__/desktop-taskbar-order.test.tsx
+PASS __tests__/sudokuApp.test.tsx
+PASS __tests__/niktoApp.test.tsx
+PASS __tests__/window.test.tsx
+PASS __tests__/niktoPage.test.tsx
+PASS __tests__/calculator/parser.test.ts
+PASS __tests__/radare2HexEditor.test.tsx
+PASS __tests__/desktop.badges.test.tsx
+PASS __tests__/openvas.test.tsx
+PASS __tests__/niktoReport.test.tsx
+PASS __tests__/apps/metasploit-post/index.te
+st.tsx
+PASS __tests__/memoryGame.test.tsx
+PASS __tests__/radare2Find.test.tsx
+PASS __tests__/hydra.test.tsx
+PASS __tests__/components/menu/WhiskerMenu.m
+obile.test.tsx
+PASS __tests__/weatherWidget.test.tsx
+PASS __tests__/calc.test.ts
+PASS __tests__/dsniff.test.tsx
+PASS __tests__/desktopLandmarks.test.tsx
+PASS __tests__/apps/project-gallery/index.te
+st.tsx
+PASS __tests__/pdfviewer.test.tsx
+PASS __tests__/radare2Sidebar.test.tsx
+PASS __tests__/youtube.test.tsx
+PASS __tests__/mimikatzOffline.test.tsx
+PASS __tests__/wordle.test.tsx
+PASS __tests__/blackjack-ui.test.tsx
+PASS __tests__/pinballScore.test.tsx
+PASS __tests__/kismet.test.tsx
+PASS __tests__/apps.nmapNsePage.test.tsx
+PASS __tests__/pluginManager.test.tsx
+PASS __tests__/johnApp.test.tsx
+PASS 
+__tests__/popularModules.update.test.tsx
+PASS __tests__/aboutAccessibility.test.tsx
+PASS __tests__/hooks/useDailyQuote.test.ts
+PASS __tests__/input-lab.test.tsx
+PASS __tests__/popularModules.test.tsx
+PASS __tests__/apps/converter/history-panel.
+test.tsx
+PASS __tests__/nessus-report.test.tsx
+PASS __tests__/contactApp.ui.test.tsx
+PASS __tests__/apps.beef.window.test.tsx
+PASS __tests__/autopsy.test.tsx
+PASS __tests__/apps/hydra/index.test.tsx
+PASS __tests__/ubuntu.test.tsx
+  ΓùÅ Console
+
+    console.error
+      An update to NotificationCenter 
+inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React 
+state updates should be wrapped into 
+act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the 
+behavior the user would see in the browser. 
+Learn more at 
+https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 90 |[39m         
+classification[33m,[39m
+     [90m 91 |[39m       }[33m;[39m
+    [31m[1m>[22m[39m[90m 92 |[39m
+     [90m    |[39m [31m[1m^[22m[39m
+     [90m 93 |[39m       [36mreturn[39m 
+{
+     [90m 94 |[39m         
+[33m...[39mprev[33m,[39m
+     [90m 95 |[39m         
+[input[33m.[39mappId][33m:[39m 
+[nextNotification[33m,[39m 
+[33m...[39mlist][33m,[39m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:18758:19
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnIfUpdatesNotWrappedWithActDEV (
+node_modules/react-dom/cjs/react-dom-client.
+development.js:18757:9)
+      at scheduleUpdateOnFiber (node_modules
+/react-dom/cjs/react-dom-client.development.
+js:16409:11)
+      at dispatchSetStateInternal (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:9170:13)
+      at dispatchSetState (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:91
+27:7)
+      at components/common/NotificationCente
+r.tsx:92:9
+      at components/common/SystemNotificatio
+ns.tsx:34:13
+      at callTimer (node_modules/@sinonjs/fa
+ke-timers/src/fake-timers-src.js:806:24)
+      at doTickInner (node_modules/@sinonjs/
+fake-timers/src/fake-timers-src.js:1413:29)
+      at doTick (node_modules/@sinonjs/fake-
+timers/src/fake-timers-src.js:1494:20)
+      at Object.tick (node_modules/@sinonjs/
+fake-timers/src/fake-timers-src.js:1502:20)
+      at Object.runToLast (node_modules/@sin
+onjs/fake-timers/src/fake-timers-src.js:1661
+:26)
+      at FakeTimers.runOnlyPendingTimers (no
+de_modules/@jest/fake-timers/build/index.js:
+542:19)
+      at Object.<anonymous> 
+(__tests__/ubuntu.test.tsx:75:14)
+
+    console.error
+      An update to NotificationCenter 
+inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React 
+state updates should be wrapped into 
+act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the 
+behavior the user would see in the browser. 
+Learn more at 
+https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 90 |[39m         
+classification[33m,[39m
+     [90m 91 |[39m       }[33m;[39m
+    [31m[1m>[22m[39m[90m 92 |[39m
+     [90m    |[39m [31m[1m^[22m[39m
+     [90m 93 |[39m       [36mreturn[39m 
+{
+     [90m 94 |[39m         
+[33m...[39mprev[33m,[39m
+     [90m 95 |[39m         
+[input[33m.[39mappId][33m:[39m 
+[nextNotification[33m,[39m 
+[33m...[39mlist][33m,[39m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:18758:19
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnIfUpdatesNotWrappedWithActDEV (
+node_modules/react-dom/cjs/react-dom-client.
+development.js:18757:9)
+      at scheduleUpdateOnFiber (node_modules
+/react-dom/cjs/react-dom-client.development.
+js:16409:11)
+      at dispatchSetStateInternal (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:9170:13)
+      at dispatchSetState (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:91
+27:7)
+      at components/common/NotificationCente
+r.tsx:92:9
+      at components/common/SystemNotificatio
+ns.tsx:34:13
+      at callTimer (node_modules/@sinonjs/fa
+ke-timers/src/fake-timers-src.js:806:24)
+      at doTickInner (node_modules/@sinonjs/
+fake-timers/src/fake-timers-src.js:1413:29)
+      at doTick (node_modules/@sinonjs/fake-
+timers/src/fake-timers-src.js:1494:20)
+      at Object.tick (node_modules/@sinonjs/
+fake-timers/src/fake-timers-src.js:1502:20)
+      at Object.runToLast (node_modules/@sin
+onjs/fake-timers/src/fake-timers-src.js:1661
+:26)
+      at FakeTimers.runOnlyPendingTimers (no
+de_modules/@jest/fake-timers/build/index.js:
+542:19)
+      at Object.<anonymous> 
+(__tests__/ubuntu.test.tsx:75:14)
+
+    console.error
+      An update to NotificationCenter 
+inside a test was not wrapped in act(...).
+      
+      When testing, code that causes React 
+state updates should be wrapped into 
+act(...):
+      
+      act(() => {
+        /* fire events that update state */
+      });
+      /* assert on the output */
+      
+      This ensures that you're testing the 
+behavior the user would see in the browser. 
+Learn more at 
+https://react.dev/link/wrap-tests-with-act
+
+    [0m [90m 90 |[39m         
+classification[33m,[39m
+     [90m 91 |[39m       }[33m;[39m
+    [31m[1m>[22m[39m[90m 92 |[39m
+     [90m    |[39m [31m[1m^[22m[39m
+     [90m 93 |[39m       [36mreturn[39m 
+{
+     [90m 94 |[39m         
+[33m...[39mprev[33m,[39m
+     [90m 95 |[39m         
+[input[33m.[39mappId][33m:[39m 
+[nextNotification[33m,[39m 
+[33m...[39mlist][33m,[39m[0m
+
+      at node_modules/react-dom/cjs/react-do
+m-client.development.js:18758:19
+      at runWithFiberInDEV (node_modules/rea
+ct-dom/cjs/react-dom-client.development.js:8
+74:13)
+      at warnIfUpdatesNotWrappedWithActDEV (
+node_modules/react-dom/cjs/react-dom-client.
+development.js:18757:9)
+      at scheduleUpdateOnFiber (node_modules
+/react-dom/cjs/react-dom-client.development.
+js:16409:11)
+      at dispatchSetStateInternal (node_modu
+les/react-dom/cjs/react-dom-client.developme
+nt.js:9170:13)
+      at dispatchSetState (node_modules/reac
+t-dom/cjs/react-dom-client.development.js:91
+27:7)
+      at components/common/NotificationCente
+r.tsx:92:9
+      at components/common/SystemNotificatio
+ns.tsx:34:13
+      at callTimer (node_modules/@sinonjs/fa
+ke-timers/src/fake-timers-src.js:806:24)
+      at doTickInner (node_modules/@sinonjs/
+fake-timers/src/fake-timers-src.js:1413:29)
+      at doTick (node_modules/@sinonjs/fake-
+timers/src/fake-timers-src.js:1494:20)
+      at Object.tick (node_modules/@sinonjs/
+fake-timers/src/fake-timers-src.js:1502:20)
+      at Object.runToLast (node_modules/@sin
+onjs/fake-timers/src/fake-timers-src.js:1661
+:26)
+      at FakeTimers.runOnlyPendingTimers (no
+de_modules/@jest/fake-timers/build/index.js:
+542:19)
+      at Object.<anonymous> 
+(__tests__/ubuntu.test.tsx:75:14)
+
+PASS __tests__/navbar-running-apps.test.tsx
+PASS apps/openvas/__tests__/index.test.tsx
+PASS __tests__/radare2Guide.test.tsx
+PASS __tests__/moduleWorkspaceStore.test.tsx
+PASS 
+__tests__/apps/ettercap/statusChips.test.tsx
+PASS __tests__/qrPageCamera.test.tsx
+PASS __tests__/postExploitation.test.tsx
+PASS apps/autopsy/index.test.tsx
+PASS __tests__/volatilityApp.test.tsx
+PASS __tests__/spaceInvaders.test.tsx
+PASS __tests__/components/menu/WhiskerMenu.r
+ecent.test.tsx
+PASS __tests__/ghidraDemoRunner.test.tsx
+PASS __tests__/beef.test.tsx
+PASS __tests__/NetworkInsights.test.tsx
+PASS __tests__/daily2048Seed.test.tsx
+PASS __tests__/desktopViewportResize.test.ts
+PASS apps/metasploit/components/TargetEmulat
+or.test.tsx
+PASS __tests__/posterizerStyles.test.tsx
+PASS __tests__/apps/ascii-art/asciiArtApp.te
+st.tsx
+PASS __tests__/qrAppGenerate.test.tsx
+PASS __tests__/adminMessages.test.ts
+PASS __tests__/windowResizeHandles.test.tsx
+PASS __tests__/booting_screen.test.tsx
+PASS __tests__/ErrorBoundary.test.tsx
+  ΓùÅ Console
+
+    console.log
+      
+{"level":"error","message":"ErrorBoundary 
+caught an error","correlationId":"536d84d1-1
+110-4682-a40c-b6842e1c37e0","error":{},"erro
+rInfo":{"componentStack":"\n    at 
+ProblemChild (C:\\Users\\alexu\\.gemini\\ant
+igravity\\scratch\\kali-linux-portfolio-main
+\\__tests__\\ErrorBoundary.test.tsx:14:25)\n
+    at ErrorBoundary (C:\\Users\\alexu\\.gem
+ini\\antigravity\\scratch\\kali-linux-portfo
+lio-main\\components\\core\\ErrorBoundary.ts
+x:17:9)"}}
+
+      at ConsoleLogger.log 
+(lib/logger.ts:34:17)
+
+    console.log
+      
+{"level":"error","message":"ErrorBoundary 
+caught an error","correlationId":"536d84d1-1
+110-4682-a40c-b6842e1c37e0","error":{},"erro
+rInfo":{"componentStack":"\n    at 
+ProblemChild (C:\\Users\\alexu\\.gemini\\ant
+igravity\\scratch\\kali-linux-portfolio-main
+\\__tests__\\ErrorBoundary.test.tsx:14:25)\n
+    at ErrorBoundary (C:\\Users\\alexu\\.gem
+ini\\antigravity\\scratch\\kali-linux-portfo
+lio-main\\components\\core\\ErrorBoundary.ts
+x:17:9)"}}
+
+      at ConsoleLogger.log 
+(lib/logger.ts:34:17)
+
+PASS __tests__/MazeEditor.test.tsx
+PASS __tests__/frogger.test.ts
+PASS __tests__/passwordGenerator.test.tsx
+PASS __tests__/battleship-ai.test.js
+PASS 
+__tests__/components/ResultViewer.test.tsx
+PASS __tests__/Modal.test.tsx
+PASS 
+__tests__/apps/checkersGuidance.test.tsx
+PASS __tests__/qr_tool.test.tsx
+PASS __tests__/nonogramGame.test.ts
+PASS __tests__/game-shell.test.jsx
+PASS __tests__/betaBadge.test.tsx
+PASS __tests__/allowNetwork.test.ts
+PASS __tests__/shareTarget.test.tsx
+PASS __tests__/beef.page.test.tsx
+PASS __tests__/saveSlots.test.ts
+PASS __tests__/nessus.test.ts
+PASS 
+__tests__/desktop-zindex-manager.test.tsx
+PASS __tests__/spriteStrip.test.tsx
+PASS __tests__/ShortcutOverlay.test.tsx
+PASS __tests__/laneRunner.test.ts
+PASS __tests__/window.listeners.test.tsx
+PASS __tests__/sokoban.test.ts
+PASS __tests__/contact.api.test.ts
+  ΓùÅ Console
+
+    console.warn
+      Supabase service credentials missing; 
+service functionality disabled
+
+    [0m [90m 21 |[39m             
+body[33m:[39m [33mJSON[39m[33m.[39mstr
+ingify(values)[33m,[39m
+     [90m 22 |[39m           })[33m;[39m
+    [31m[1m>[22m[39m[90m 23 |[39m     
+    }[33m,[39m
+     [90m    |[39m                 
+[31m[1m^[22m[39m
+     [90m 24 |[39m       }[33m;[39m
+     [90m 25 |[39m     }[33m,[39m
+     [90m 26 |[39m   }[33m;[39m[0m
+
+      at getServiceSupabase 
+(lib/supabase.ts:23:17)
+      at handler 
+(pages/api/contact.js:207:59)
+      at Object.<anonymous> 
+(__tests__/contact.api.test.ts:94:9)
+
+    console.warn
+      Supabase client not configured; 
+contact message not stored { ip: '2.2.2.2' }
+
+    [0m[0m
+
+      at handler 
+(pages/api/contact.js:218:21)
+      at Object.<anonymous> 
+(__tests__/contact.api.test.ts:94:9)
+
+    console.warn
+      Supabase service credentials missing; 
+service functionality disabled
+
+    [0m [90m 21 |[39m             
+body[33m:[39m [33mJSON[39m[33m.[39mstr
+ingify(values)[33m,[39m
+     [90m 22 |[39m           })[33m;[39m
+    [31m[1m>[22m[39m[90m 23 |[39m     
+    }[33m,[39m
+     [90m    |[39m                 
+[31m[1m^[22m[39m
+     [90m 24 |[39m       }[33m;[39m
+     [90m 25 |[39m     }[33m,[39m
+     [90m 26 |[39m   }[33m;[39m[0m
+
+      at getServiceSupabase 
+(lib/supabase.ts:23:17)
+      at handler 
+(pages/api/contact.js:207:59)
+      at Object.<anonymous> 
+(__tests__/contact.api.test.ts:132:9)
+
+    console.warn
+      Supabase client not configured; 
+contact message not stored { ip: '2.2.2.2' }
+
+    [0m[0m
+
+      at handler 
+(pages/api/contact.js:218:21)
+      at Object.<anonymous> 
+(__tests__/contact.api.test.ts:132:9)
+
+PASS __tests__/vscode.test.tsx
+PASS __tests__/hooks/useFileSystemNavigator.
+test.ts
+PASS __tests__/manifest.test.ts
+PASS __tests__/certs.test.tsx
+PASS __tests__/themePersistence.test.ts
+PASS 
+__tests__/converter/conversionUtils.test.ts
+PASS 
+__tests__/candyCrush.persistence.test.ts
+PASS __tests__/calculator.tape.test.tsx
+PASS __tests__/apps/x/theme.test.ts
+PASS 
+__tests__/battleship-ai-norepeat.test.ts
+PASS __tests__/quote.api.test.ts
+PASS __tests__/simonEngine.test.ts
+PASS __tests__/liveRegion.test.tsx
+PASS __tests__/youtube-search-filter.test.ts
+PASS __tests__/pluginsApiPath.test.js
+PASS __tests__/radare2PatchUtils.test.js
+PASS __tests__/carRacer.test.ts
+PASS __tests__/workspaceStore.test.ts
+PASS 
+__tests__/volatilityPluginBrowser.test.tsx
+PASS __tests__/phaserMatter.test.ts
+PASS __tests__/desktopMenuHydration.test.ts
+PASS __tests__/breakoutSeed.test.ts
+PASS 
+__tests__/games/ghostPersistence.test.ts
+PASS 
+__tests__/games/flappyBirdEngine.test.ts
+PASS __tests__/scrollableTimeline.test.tsx
+PASS __tests__/analytics.test.ts
+PASS __tests__/apps/color_picker.test.ts
+PASS __tests__/trashState.test.ts
+PASS __tests__/desktopFolderDrop.test.tsx
+PASS __tests__/ReportExport.test.tsx
+PASS __tests__/HelpOverlay.test.tsx
+PASS __tests__/GameLoop.test.ts
+PASS __tests__/blackjack.test.ts
+PASS __tests__/reversi.test.ts
+PASS __tests__/sudoku.test.ts
+PASS __tests__/cron.test.ts
+PASS __tests__/contact.test.tsx
+PASS __tests__/displayFilter.benchmark.ts
+  ΓùÅ Console
+
+    console.log
+      getRowColor benchmark: 5.99ms
+
+      at Object.<anonymous> 
+(__tests__/displayFilter.benchmark.ts:37:17)
+
+PASS __tests__/john-utils.test.ts
+PASS __tests__/dailyLeaderboard.test.ts
+PASS __tests__/spaceInvadersGame.test.ts
+PASS __tests__/terminal.man.test.ts
+PASS __tests__/nessusParser.test.ts
+PASS __tests__/shuffle.test.ts
+PASS __tests__/hydraStepper.test.tsx
+PASS __tests__/solitaireLogic.test.ts
+PASS __tests__/nonogram.test.ts
+PASS __tests__/contactRateLimit.test.ts
+  ΓùÅ Console
+
+    console.warn
+      Supabase service credentials missing; 
+service functionality disabled
+
+    [0m [90m 21 |[39m             
+body[33m:[39m [33mJSON[39m[33m.[39mstr
+ingify(values)[33m,[39m
+     [90m 22 |[39m           })[33m;[39m
+    [31m[1m>[22m[39m[90m 23 |[39m     
+    }[33m,[39m
+     [90m    |[39m                 
+[31m[1m^[22m[39m
+     [90m 24 |[39m       }[33m;[39m
+     [90m 25 |[39m     }[33m,[39m
+     [90m 26 |[39m   }[33m;[39m[0m
+
+      at getServiceSupabase 
+(lib/supabase.ts:23:17)
+      at handler 
+(pages/api/contact.js:207:59)
+      at Object.<anonymous> 
+(__tests__/contactRateLimit.test.ts:90:9)
+
+    console.warn
+      Supabase client not configured; 
+contact message not stored { ip: '2.2.2.2' }
+
+    [0m[0m
+
+      at handler 
+(pages/api/contact.js:218:21)
+      at Object.<anonymous> 
+(__tests__/contactRateLimit.test.ts:90:9)
+
+PASS __tests__/candyCrush.logic.test.ts
+PASS 
+__tests__/sudokuEliminationHelper.test.ts
+PASS __tests__/pong.engine.test.ts
+PASS __tests__/tower-defense.test.ts
+PASS __tests__/components/find.worker.shared
+.test.ts
+PASS __tests__/checkers.rules.test.ts
+PASS __tests__/ssh-utils.test.ts
+PASS __tests__/mimikatz.test.ts
+PASS __tests__/gomoku.test.ts
+PASS __tests__/frogger.config.test.ts
+PASS __tests__/services/fileExplorer/recents
+.test.ts
+PASS 
+__tests__/terminal.sessionManager.test.ts
+PASS __tests__/apps/x/embed.test.ts
+PASS __tests__/towerDefenseEngine.test.ts
+PASS __tests__/parsePotfile.test.ts
+PASS __tests__/modules/subnet.test.ts
+PASS __tests__/solitaireEngine.test.ts
+PASS __tests__/minesweeper.generate.test.ts
+PASS apps/snake/__tests__/engine.test.ts
+PASS __tests__/pacman-engine.test.ts
+PASS __tests__/hash-example.test.ts
+PASS __tests__/gamepad.test.ts
+PASS __tests__/john-utils.test.js
+PASS __tests__/qrLast.test.ts
+PASS __tests__/john.fixtures.test.ts
+PASS __tests__/hangman.test.ts
+PASS __tests__/hangman.model.test.ts
+PASS __tests__/battleship-placement.test.ts
+PASS __tests__/wordSearch.test.ts
+PASS __tests__/chess.engineProtocol.test.ts
+PASS __tests__/hangmanGuessPool.test.ts
+PASS __tests__/qrStorage.test.ts
+PASS __tests__/games-theme.test.ts
+PASS __tests__/chess.openingBook.test.ts
+PASS __tests__/checkers.validator.test.ts
+PASS __tests__/chatManager.test.ts
+PASS __tests__/wordSearchGenerator.test.ts
+PASS __tests__/replay.test.ts
+PASS __tests__/memory_utils_seed.test.ts
+PASS __tests__/game2048.test.ts
+PASS __tests__/radare2.test.js
+PASS __tests__/pinballTilt.test.ts
+PASS __tests__/dailyPuzzle.test.ts
+PASS __tests__/share.test.ts
+PASS __tests__/platformer.test.js
+PASS __tests__/asteroids-utils.test.ts
+PASS __tests__/simonAudio.test.ts
+PASS __tests__/windowSnap.test.ts
+PASS __tests__/reportWebVitals.test.ts
+PASS __tests__/notificationRules.test.ts
+PASS __tests__/metadata.test.ts
+PASS __tests__/batteryIndicator.test.ts
+PASS __tests__/pointer.test.ts
+PASS __tests__/battleship-logic.test.ts
+PASS __tests__/scannerSchedule.test.ts
+PASS __tests__/protocolFilter.test.ts
+PASS __tests__/apps/hydra/registerHydraProto
+col.test.js
+PASS __tests__/sudokuState.test.ts
+PASS __tests__/platformer-logic.test.ts
+PASS __tests__/minesweeper.metrics.test.ts
+PASS __tests__/leaderboardAntiCheat.test.ts
+PASS __tests__/abortableFetch.test.ts
+PASS __tests__/services/fileExplorerPermissi
+ons.test.ts
+PASS __tests__/taskbarPayload.test.ts
+PASS __tests__/snake.config.test.ts
+PASS __tests__/sudokuSolver.test.ts
+PASS 
+__tests__/metasploitCommandParser.test.ts
+PASS __tests__/windowPreview.test.ts
+FAIL __tests__/playwright/fallbacks.spec.ts
+  ΓùÅ Test suite failed to run
+
+    ReferenceError: TransformStream is not 
+defined
+
+    [0m [90m 3 |[39m [90m// Test that 
+components gracefully handle missing 
+OffscreenCanvas and PiP support[39m
+     [90m 4 |[39m
+    [31m[1m>[22m[39m[90m 5 |[39m 
+test[33m.[39mdescribe([32m'browser API 
+fallbacks'[39m[33m,[39m () [33m=>[39m {
+     [90m   |[39m               
+[31m[1m^[22m[39m
+     [90m 6 |[39m   test([32m'falls back 
+when OffscreenCanvas is 
+unsupported'[39m[33m,[39m 
+[36masync[39m ({ browser }) [33m=>[39m {
+     [90m 7 |[39m     [36mconst[39m 
+context [33m=[39m [36mawait[39m 
+browser[33m.[39mnewContext()[33m;[39m
+     [90m 8 |[39m     [36mawait[39m 
+context[33m.[39maddInitScript(() 
+[33m=>[39m {[0m
+
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/mcpBundleImpl/index.js:130
+:7246)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/mcpBundle.js:49:22)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/server/utils/nodePlatform.
+js:45:24)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/utils.js:56:27)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/server/registry/index.js:4
+8:20)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/server/index.js:37:23)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/remote/playwrightConnectio
+n.js:24:21)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/remote/playwrightServer.js
+:24:35)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/androidServerImpl.js:24:31
+)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/inProcessFactory.js:24:32)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/lib/inprocess.js:2:31)
+      at Object.<anonymous> (node_modules/pl
+aywright-core/index.js:32:18)
+      at Object.<anonymous> 
+(node_modules/playwright/lib/index.js:41:33)
+      at Object.<anonymous> 
+(node_modules/playwright/test.js:17:13)
+      at Object.<anonymous> (node_modules/@p
+laywright/test/index.js:17:18)
+      at Object.<anonymous> (__tests__/playw
+right/fallbacks.spec.ts:5:15)
+
+
+<--- Last few GCs --->
+
+[48924:000001FEA838D000]   215841 ms: 
+Scavenge (interleaved) 4077.7 (4096.6) -> 
+4074.3 (4105.1) MB, pooled: 0 MB, 4.77 / 
+0.00 ms  (average mu = 0.207, current mu = 
+0.194) allocation failure; 
+[48924:000001FEA838D000]   216818 ms: 
+Mark-Compact 4081.9 (4105.1) -> 4073.4 
+(4104.1) MB, pooled: 1 MB, 935.92 / 0.00 ms 
+ (average mu = 0.246, current mu = 0.283) 
+allocation failure; scavenge might not 
+succeed
+
+FATAL ERROR: Ineffective mark-compacts near 
+heap limit Allocation failed - JavaScript 
+heap out of memory
+----- Native stack trace -----
+
+ 1: 00007FF708E6AE1F node::OnFatalError+1343
+ 2: 00007FF709AB37B7 
+v8::Function::NewInstance+423
+ 3: 00007FF7098B3E77 v8::base::AddressSpaceR
+eservation::AddressSpaceReservation+322071
+ 4: 00007FF7098B7B84 v8::base::AddressSpaceR
+eservation::AddressSpaceReservation+337700
+ 5: 00007FF7098C6B1C v8::internal::StrongRoo
+tAllocatorBase::deallocate_impl+16604
+ 6: 00007FF7098C635B v8::internal::StrongRoo
+tAllocatorBase::deallocate_impl+14619
+ 7: 00007FF70AD2EBED v8::base::UnsignedDivis
+ionByConstant<unsigned __int64>+2791309
+ 8: 00007FF7098B1940 v8::base::AddressSpaceR
+eservation::AddressSpaceReservation+312544
+ 9: 00007FF7098CC1CA 
+X509_STORE_set_cleanup+5098
+10: 00007FF7098D8666 
+uv_timer_set_repeat+20694
+11: 00007FF7094AB6C7 
+v8::String::Utf8Value::~Utf8Value+143495
+12: 000001FEE0AF733A 

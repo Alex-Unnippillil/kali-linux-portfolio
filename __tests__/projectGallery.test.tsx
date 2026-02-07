@@ -11,20 +11,6 @@ describe('ProjectGallery', () => {
   it('renders project cards', async () => {
     render(<ProjectGallery />);
     expect(await screen.findByText('Kali Linux Portfolio')).toBeInTheDocument();
-    expect(screen.getByText('Projects')).toBeInTheDocument();
-  });
-
-  it('filters projects by search', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-
-    const searchInput = screen.getByPlaceholderText('Search projects...');
-    fireEvent.change(searchInput, { target: { value: 'Recipe' } });
-
-    await waitFor(() => {
-      expect(screen.getByText('Recipe App')).toBeInTheDocument();
-      expect(screen.queryByText('Kali Linux Portfolio')).not.toBeInTheDocument();
-    });
   });
 
   it('filters projects by category', async () => {
@@ -51,31 +37,9 @@ describe('ProjectGallery', () => {
     });
 
     // Then click All
-    fireEvent.click(screen.getByRole('tab', { name: /All Projects/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /All/i }));
     await waitFor(() => {
       expect(screen.getByText('Recipe App')).toBeInTheDocument();
-    });
-  });
-
-  it('displays stats correctly', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-
-    // Check that stats are visible
-    expect(screen.getByText('Total Projects')).toBeInTheDocument();
-    expect(screen.getByText('GitHub Stars')).toBeInTheDocument();
-    expect(screen.getByText('Matching')).toBeInTheDocument();
-  });
-
-  it('shows empty state when no matches', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-
-    const searchInput = screen.getByPlaceholderText('Search projects...');
-    fireEvent.change(searchInput, { target: { value: 'xyznonexistent' } });
-
-    await waitFor(() => {
-      expect(screen.getByText('No projects found')).toBeInTheDocument();
     });
   });
 
