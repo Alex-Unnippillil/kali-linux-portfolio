@@ -80,6 +80,13 @@ export default function BackgroundImage({ theme }) {
             const luminance = 0.2126 * toLinear(avgR) + 0.7152 * toLinear(avgG) + 0.0722 * toLinear(avgB);
             const contrast = 1.05 / (luminance + 0.05);
             setNeedsOverlay(contrast < 4.5);
+
+            // Adjust window gap based on wallpaper luminance
+            const baseGap = 8; // px
+            const gap = baseGap + (lum - 0.5) * 4; // slight +/- adjustment
+            requestAnimationFrame(() => {
+                document.documentElement.style.setProperty('--win-gap', `${gap}px`);
+            });
         };
         img.onerror = () => {
             if (!cancelled) {
