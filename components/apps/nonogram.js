@@ -20,15 +20,13 @@ const CLUE_SPACE = 60; // space for row/column clues around grid
 const Nonogram = () => {
   const puzzle = useMemo(() => getDailyPuzzle("nonogram", puzzles), []);
 
-  if (!puzzle) {
-    return <div>No puzzle available.</div>;
-  }
 
-  const rows = puzzle.rows;
-  const cols = puzzle.cols;
+
+  const rows = puzzle?.rows || [];
+  const cols = puzzle?.cols || [];
   const height = rows.length;
   const width = cols.length;
-  const solution = puzzle.grid;
+  const solution = puzzle?.grid || [];
 
   // progress tracking
   const [rowTargets, setRowTargets] = useState(Array(height).fill(0));
@@ -434,7 +432,7 @@ const Nonogram = () => {
         if (i !== dragStart.current.i || j !== dragStart.current.j) {
           dragAxis.current =
             Math.abs(i - dragStart.current.i) >
-            Math.abs(j - dragStart.current.j)
+              Math.abs(j - dragStart.current.j)
               ? "col"
               : "row";
         } else {
@@ -529,17 +527,15 @@ const Nonogram = () => {
           {paused ? "Resume" : "Pause"}
         </button>
         <button
-          className={`px-3 py-1 rounded ${
-            sound ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-500"
-          }`}
+          className={`px-3 py-1 rounded ${sound ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-500"
+            }`}
           onClick={() => setSound((s) => !s)}
         >
           Sound: {sound ? "On" : "Off"}
         </button>
         <button
-          className={`px-3 py-1 rounded ${
-            preventIllegal ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-500"
-          }`}
+          className={`px-3 py-1 rounded ${preventIllegal ? "bg-gray-700 hover:bg-gray-600" : "bg-gray-500"
+            }`}
           onClick={() => setPreventIllegal((p) => !p)}
         >
           Strict: {preventIllegal ? "On" : "Off"}

@@ -142,7 +142,8 @@
     "test-exclude": "7.0.1",
     "webpack": "^5.92.0",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5",
-    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1"
+    "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1",
+    "three-bmfont-text": "2.3.0"
   },
   "packageManager": "yarn@4.9.2"
 }

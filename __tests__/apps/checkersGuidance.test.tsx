@@ -4,9 +4,9 @@ import CheckersPage from '../../apps/checkers';
 
 class MockWorker {
   onmessage: ((event: MessageEvent) => void) | null = null;
-  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-empty-function
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   postMessage() {}
-  // eslint-disable-next-line class-methods-use-this, @typescript-eslint/no-empty-function
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
   terminate() {}
 }
 

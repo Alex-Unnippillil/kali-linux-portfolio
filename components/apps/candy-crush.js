@@ -106,7 +106,7 @@ const fallbackGem = {
   pattern: '#475569',
 };
 
-const useGem = (id) => GEM_LIBRARY[id] ?? fallbackGem;
+const getGem = (id) => GEM_LIBRARY[id] ?? fallbackGem;
 
 const GemSprite = ({ cell, gem, streak, colorblindMode }) => {
   const gradientId = useMemo(() => `gem-gradient-${cell.id}`, [cell.id]);
@@ -777,18 +777,18 @@ const CandyCrush = () => {
   const statusLabel = levelFailed
     ? 'Level Failed'
     : levelComplete
-    ? 'Level Clear'
-    : paused
-    ? 'Paused'
-    : 'Active';
+      ? 'Level Clear'
+      : paused
+        ? 'Paused'
+        : 'Active';
 
   const statusTheme = levelFailed
     ? 'border-rose-500/50 bg-rose-500/10 text-rose-200 shadow-[0_0_18px_rgba(244,63,94,0.35)]'
     : levelComplete
-    ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-100 shadow-[0_0_18px_rgba(16,185,129,0.35)]'
-    : paused
-    ? 'border-amber-500/50 bg-amber-500/10 text-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.35)]'
-    : 'border-cyan-500/60 bg-cyan-500/10 text-cyan-100 shadow-[0_0_18px_rgba(14,165,233,0.35)]';
+      ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-100 shadow-[0_0_18px_rgba(16,185,129,0.35)]'
+      : paused
+        ? 'border-amber-500/50 bg-amber-500/10 text-amber-100 shadow-[0_0_18px_rgba(251,191,36,0.35)]'
+        : 'border-cyan-500/60 bg-cyan-500/10 text-cyan-100 shadow-[0_0_18px_rgba(14,165,233,0.35)]';
 
   return (
     <div className="relative flex flex-col gap-6 rounded-3xl border border-cyan-500/10 bg-gradient-to-br from-slate-950 via-slate-950/85 to-slate-900/90 p-6 text-sm text-cyan-100 shadow-[0_0_32px_rgba(8,47,73,0.45)] backdrop-blur-xl sm:text-base">
@@ -938,11 +938,10 @@ const CandyCrush = () => {
               type="button"
               onClick={toggleColorblind}
               aria-pressed={colorblindMode}
-              className={`rounded-lg border px-4 py-2 font-semibold shadow-[0_0_18px_rgba(15,118,110,0.35)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                colorblindMode
-                  ? 'border-emerald-400/60 bg-emerald-500/20 text-emerald-100'
-                  : 'border-emerald-500/40 bg-slate-950/60 text-emerald-100/80 hover:text-emerald-100'
-              }`}
+              className={`rounded-lg border px-4 py-2 font-semibold shadow-[0_0_18px_rgba(15,118,110,0.35)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${colorblindMode
+                ? 'border-emerald-400/60 bg-emerald-500/20 text-emerald-100'
+                : 'border-emerald-500/40 bg-slate-950/60 text-emerald-100/80 hover:text-emerald-100'
+                }`}
             >
               {colorblindMode ? 'Disable Colorblind Mode' : 'Enable Colorblind Mode'}
             </button>
@@ -963,7 +962,7 @@ const CandyCrush = () => {
                   onKeyDown={handleGridKeyDown}
                 >
                   {board.map((cell, index) => {
-                    const gem = useGem(cell.gem);
+                    const gem = getGem(cell.gem);
                     const row = Math.floor(index / BOARD_WIDTH) + 1;
                     const col = (index % BOARD_WIDTH) + 1;
                     const isDisabled = isInteractionDisabled;
@@ -998,15 +997,14 @@ const CandyCrush = () => {
                         aria-label={`${gem.label} gem at row ${row}, column ${col}`}
                         whileHover={{ scale: isDisabled ? 1 : 1.05 }}
                         whileTap={{ scale: isDisabled ? 1 : 0.92 }}
-                        className={`relative flex items-center justify-center overflow-hidden rounded-xl border bg-slate-900/60 transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${
-                          selected === index
-                            ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-950'
-                            : hinted
+                        className={`relative flex items-center justify-center overflow-hidden rounded-xl border bg-slate-900/60 transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${selected === index
+                          ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-950'
+                          : hinted
                             ? 'ring-2 ring-amber-300/70 ring-offset-2 ring-offset-slate-950'
                             : isActive
-                            ? 'border-cyan-300/60'
-                            : 'hover:shadow-[0_0_14px_rgba(56,189,248,0.35)]'
-                        }`}
+                              ? 'border-cyan-300/60'
+                              : 'hover:shadow-[0_0_14px_rgba(56,189,248,0.35)]'
+                          }`}
                         style={{ width: cellSize, height: cellSize }}
                       >
                         <GemSprite cell={cell} gem={gem} streak={streak} colorblindMode={colorblindMode} />
@@ -1034,7 +1032,7 @@ const CandyCrush = () => {
                       {burst.positions.map((index, particleIndex) => {
                         const row = Math.floor(index / BOARD_WIDTH);
                         const col = index % BOARD_WIDTH;
-                        const gem = useGem(burst.colors[particleIndex] ?? GEM_IDS[0]);
+                        const gem = getGem(burst.colors[particleIndex] ?? GEM_IDS[0]);
                         const left = col * (cellSize + gridGap) + cellSize / 2;
                         const top = row * (cellSize + gridGap) + cellSize / 2;
                         return (

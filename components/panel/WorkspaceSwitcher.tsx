@@ -84,7 +84,7 @@ const WorkspacePreview = ({ workspace, active }: { workspace: WorkspaceSummary; 
               {/* Icon */}
               {win.icon && (
                 <div className="absolute inset-0 flex items-center justify-center opacity-50 p-0.5">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  { }
                   <img
                     src={win.icon}
                     alt=""

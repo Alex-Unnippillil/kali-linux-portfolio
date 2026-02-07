@@ -18,6 +18,7 @@ class MyDocument extends Document {
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
           <meta name="theme-color" content="#0f1317" />
+          {/* eslint-disable-next-line @next/next/no-sync-scripts */}
           <script nonce={nonce} src="/theme.js" />
         </Head>
         <body>

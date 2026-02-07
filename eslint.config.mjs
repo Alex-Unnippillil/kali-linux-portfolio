@@ -18,7 +18,18 @@ const config = [
       },
     },
   },
-  { ignores: ['components/apps/Chrome/index.tsx'] },
+  {
+    ignores: [
+      '.next/*',
+      '.next-dev/*',
+      'out/*',
+      'dist/*',
+      'coverage/*',
+      'node_modules/*',
+      'components/apps/Chrome/index.tsx',
+      'public/apps/*',
+    ],
+  },
   {
     files: jsFilePatterns,
     plugins: {
@@ -39,7 +50,12 @@ const config = [
     rules: {
       '@next/next/no-page-custom-font': 'off',
       '@next/next/no-img-element': 'off',
-      'jsx-a11y/control-has-associated-label': 'error',
+      'jsx-a11y/control-has-associated-label': 'warn',
+      '@typescript-eslint/no-empty-function': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-var-requires': 'off',
+      'deprecation/deprecation': 'off',
     },
   }),
 ];

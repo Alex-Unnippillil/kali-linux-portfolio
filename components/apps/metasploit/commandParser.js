@@ -99,16 +99,16 @@ export const parseMetasploitCommand = (
 
   if (lower.startsWith('use ')) {
     const moduleName = trimmed.slice(4).trim();
-    const module = modules.find((m) => m.name === moduleName);
-    if (!module) {
+    const selectedModule = modules.find((m) => m.name === moduleName);
+    if (!selectedModule) {
       return {
         output: `Unknown module: ${moduleName}`,
         nextState: state,
       };
     }
     return {
-      output: `Module selected: ${module.name}\n${formatOptions(module.options)}`,
-      nextState: { ...state, activeModule: module, options: {} },
+      output: `Module selected: ${selectedModule.name}\n${formatOptions(selectedModule.options)}`,
+      nextState: { ...state, activeModule: selectedModule, options: {} },
     };
   }
 
@@ -161,9 +161,8 @@ export const parseMetasploitCommand = (
       };
     }
     return {
-      output: `[*] Running ${state.activeModule.name} in demo mode...\n${
-        state.activeModule.transcript || '[*] Demo output complete.'
-      }`,
+      output: `[*] Running ${state.activeModule.name} in demo mode...\n${state.activeModule.transcript || '[*] Demo output complete.'
+        }`,
       nextState: state,
     };
   }

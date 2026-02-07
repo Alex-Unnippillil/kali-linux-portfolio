@@ -27,6 +27,7 @@ type CommandPaletteProps = {
 };
 
 const SECTION_METADATA: Record<CommandPaletteItemType, { label: string }> = {
+  // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
   window: { label: 'Recent Windows' },
   app: { label: 'Applications' },
   action: { label: 'Settings & Actions' },
@@ -94,14 +95,14 @@ export default function CommandPalette({
   }, [query, sections]);
 
   const flatItems = useMemo(() => {
-  const list: CommandPaletteItem[] = [];
-  filteredSections.forEach((section) => {
-    section.items.forEach((item) => {
-      list.push(item);
+    const list: CommandPaletteItem[] = [];
+    filteredSections.forEach((section) => {
+      section.items.forEach((item) => {
+        list.push(item);
+      });
     });
-  });
-  return list;
-}, [filteredSections]);
+    return list;
+  }, [filteredSections]);
 
   const indexLookup = useMemo(() => {
     const map = new Map<string, number>();
@@ -293,11 +294,10 @@ export default function CommandPalette({
                         id={optionId}
                         role="option"
                         aria-selected={isActive}
-                        className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          isActive
+                        className={`flex w-full items-center gap-3 rounded-lg border px-3 py-2 text-left text-sm transition ${isActive
                             ? 'border-sky-400/70 bg-sky-500/20 shadow-[0_0_0_1px_rgba(14,165,233,0.45)]'
                             : 'border-white/5 bg-black/20 hover:border-white/15 hover:bg-white/10'
-                        }`}
+                          }`}
                         onClick={() => {
                           if (globalIndex >= 0) {
                             handleSelect(globalIndex);

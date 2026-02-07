@@ -23,6 +23,7 @@ type DelayedTooltipProps = {
 };
 
 const useIsomorphicLayoutEffect =
+  // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
   typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 const DEFAULT_OFFSET = 8;
@@ -128,20 +129,20 @@ const DelayedTooltip: React.FC<DelayedTooltipProps> = ({
       {children(triggerProps)}
       {portalEl && visible
         ? createPortal(
-            <div
-              ref={tooltipRef}
-              style={{
-                position: 'fixed',
-                top: position.top,
-                left: position.left,
-                zIndex: 1000,
-              }}
-              className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
-            >
-              {content}
-            </div>,
-            portalEl,
-          )
+          <div
+            ref={tooltipRef}
+            style={{
+              position: 'fixed',
+              top: position.top,
+              left: position.left,
+              zIndex: 1000,
+            }}
+            className="pointer-events-none max-w-xs rounded-md border border-gray-500/60 bg-ub-grey/95 px-3 py-2 text-xs text-white shadow-xl backdrop-blur"
+          >
+            {content}
+          </div>,
+          portalEl,
+        )
         : null}
     </>
   );

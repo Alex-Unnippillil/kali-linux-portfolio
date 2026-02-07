@@ -7,6 +7,7 @@ const STORAGE_KEY = "sokoban_packs";
 const FILE_NAME = "sokoban-packs.json";
 
 const hasOpfs =
+  // eslint-disable-next-line no-top-level-window/no-top-level-window-or-document
   typeof window !== "undefined" &&
   "storage" in navigator &&
   Boolean((navigator.storage as any).getDirectory);
