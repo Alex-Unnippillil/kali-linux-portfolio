@@ -176,6 +176,12 @@ input[type=range].ubuntu-slider:focus-visible::-webkit-slider-thumb {
     -moz-box-shadow: var(--shadow-2);
 }
 
+:root[data-theme='undercover'] .window-shadow {
+    box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 84%);
+    -webkit-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 84%);
+    -moz-box-shadow: 1px 4px 12px 4px color-mix(in srgb, var(--color-inverse), transparent 84%);
+}
+
 .closed-window {
     animation: closeWindow var(--window-motion-duration-close, 180ms) var(--window-motion-ease-close, var(--window-motion-ease-minimize)) 1 forwards;
     will-change: opacity, transform;
