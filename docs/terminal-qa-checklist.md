@@ -10,8 +10,8 @@
 ## Verification checklist
 - [ ] Keyboard shortcuts (Ctrl/Cmd+Shift+C, Ctrl/Cmd+Shift+V, Ctrl/Cmd+F) verified.
 - [ ] Copy/paste works with and without selection.
-- [ ] Safe Mode toggle updates prompt state and simulated output.
+- [ ] Simulated network commands return deterministic demo output.
 - [ ] Search finds matches in scrollback.
 - [ ] Mobile input bar submits commands.
-- [ ] Preferences persist after refresh (safe mode, font size, scrollback).
+- [ ] Preferences persist after refresh (font size, scrollback).
 - [ ] History and aliases persist after refresh.

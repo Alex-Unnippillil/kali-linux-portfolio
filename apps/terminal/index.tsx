@@ -24,6 +24,7 @@ const SettingsIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export interface TerminalProps {
   openApp?: (id: string) => void;
   sessionName?: string;
+  sessionId?: string;
 }
 
 export interface TerminalHandle {
@@ -42,13 +43,11 @@ interface TranscriptEntry {
 
 interface TerminalSessionSnapshot {
   version: number;
-  history: string[];
   transcript: TranscriptEntry[];
   cwd: string;
-  safeMode: boolean;
 }
 
-const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessionName }, ref) => {
+const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessionName, sessionId }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<any>(null);
   const fitRef = useRef<any>(null);
@@ -66,7 +65,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
   const [isReady, setIsReady] = useState(false);
   const preferences = useTerminalPreferences();
   const { prefs, aliases, history, ready, setAliases, setHistory, setPrefs } = preferences;
-  const [safeMode, setSafeMode] = useState(preferences.prefs.safeMode);
   const [persistSession, setPersistSession] = usePersistentState<boolean>(
     'terminal-session-persist',
     true,
@@ -94,6 +92,9 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
   const prefsRef = useRef(prefs);
   const appendOutputRef = useRef((text: string) => outputBufferRef.current.append(text));
   const setHistoryRef = useRef(setHistory);
+  const sessionKey = sessionId ?? 'default';
+  const sessionPath = `/kali-terminal/session-${sessionKey}.json`;
+  const sessionStorageKey = `terminal-session:${sessionKey}`;
 
   useEffect(() => {
     prefsRef.current = prefs;
@@ -114,7 +115,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     setCwd: (p) => { contextRef.current.cwd = p; },
     history: [],
     aliases: {},
-    safeMode: true,
     setAlias: (name, value) => { contextRef.current.aliases[name] = value; },
     runWorker: async () => { },
     clear: () => {
@@ -123,6 +123,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     },
     openApp,
     listCommands: () => commandRegistry.getAll(),
+    getTermCols: () => termRef.current?.cols,
   });
 
   // Initialize FS
@@ -156,14 +157,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     }
   }, [opfsRoot, opfsSupported]);
 
-  // Keep context safeMode in sync
-  useEffect(() => {
-    contextRef.current.safeMode = safeMode;
-  }, [safeMode]);
-
   useEffect(() => {
     if (!ready) return;
-    setSafeMode(prefs.safeMode);
     contextRef.current.aliases = aliases;
     contextRef.current.history = history;
     contextRef.current.setAlias = (name, value) => {
@@ -171,7 +166,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
       contextRef.current.aliases = next;
       setAliases(next);
     };
-  }, [aliases, history, prefs.safeMode, ready, setAliases]);
+  }, [aliases, history, ready, setAliases]);
 
   useEffect(() => {
     outputBufferRef.current.setMaxLines(prefs.scrollback);
@@ -190,20 +185,18 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     return cwd || '/';
   }, []);
 
-  const buildPromptFor = useCallback((mode: boolean) => {
+  const buildPromptFor = useCallback(() => {
     const cwd = formatCwd();
-    const safeTag = mode ? ' \x1b[1;35m[safe]\x1b[1;36m' : '';
-    return `\r\n\x1b[1;36m┌──(\x1b[1;34mkali㉿kali\x1b[1;36m${safeTag})-[\x1b[1;33m${cwd}\x1b[1;36m]\r\n\x1b[1;36m└─\x1b[1;32m$\x1b[0m `;
+    return `\r\n\x1b[1;36m┌──(\x1b[1;34mkali㉿kali\x1b[1;36m)-[\x1b[1;33m${cwd}\x1b[1;36m]\r\n\x1b[1;36m└─\x1b[1;32m$\x1b[0m `;
   }, [formatCwd]);
 
-  const buildPromptTextFor = useCallback((mode: boolean) => {
+  const buildPromptTextFor = useCallback(() => {
     const cwd = formatCwd();
-    const safeTag = mode ? ' [safe]' : '';
-    return `kali@kali${safeTag}:${cwd}$`;
+    return `kali@kali:${cwd}$`;
   }, [formatCwd]);
 
-  const buildPrompt = useCallback(() => buildPromptFor(safeMode), [buildPromptFor, safeMode]);
-  const buildPromptText = useCallback(() => buildPromptTextFor(safeMode), [buildPromptTextFor, safeMode]);
+  const buildPrompt = useCallback(() => buildPromptFor(), [buildPromptFor]);
+  const buildPromptText = useCallback(() => buildPromptTextFor(), [buildPromptTextFor]);
 
   const simulateNetworkCommand = useCallback((command: string) => {
     const normalized = command.trim();
@@ -270,24 +263,22 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
   const persistSnapshot = useCallback(async () => {
     if (!persistSession) return;
     const snapshot: TerminalSessionSnapshot = {
-      version: 1,
-      history: [...contextRef.current.history],
+      version: 2,
       transcript: [...transcriptRef.current],
       cwd: contextRef.current.cwd,
-      safeMode,
     };
     const payload = JSON.stringify(snapshot);
     if (opfsRoot) {
       await fsRef.current.createDirectory('/kali-terminal');
-      await fsRef.current.writeFile('/kali-terminal/session.json', payload);
+      await fsRef.current.writeFile(sessionPath, payload);
     } else {
       try {
-        window.localStorage.setItem('terminal-session', payload);
+        window.localStorage.setItem(sessionStorageKey, payload);
       } catch {
         // ignore persistence errors
       }
     }
-  }, [opfsRoot, persistSession, safeMode]);
+  }, [opfsRoot, persistSession, sessionPath, sessionStorageKey]);
 
   const schedulePersist = useCallback(() => {
     if (!persistSession) return;
@@ -314,20 +305,42 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     buildPromptTextRef.current = buildPromptText;
     loadSnapshotRef.current = async () => {
       if (!persistSession) return null;
+      const normalizeSnapshot = (raw: unknown): TerminalSessionSnapshot | null => {
+        if (!raw || typeof raw !== 'object') return null;
+        const snapshot = raw as Partial<TerminalSessionSnapshot> & {
+          version?: number;
+          transcript?: TranscriptEntry[];
+          cwd?: string;
+        };
+        return {
+          version: 2,
+          transcript: Array.isArray(snapshot.transcript) ? snapshot.transcript : [],
+          cwd: typeof snapshot.cwd === 'string' ? snapshot.cwd : contextRef.current.cwd,
+        };
+      };
       if (opfsRoot) {
-        const payload = await fsRef.current.readFile('/kali-terminal/session.json');
+        const payload = await fsRef.current.readFile(sessionPath);
         if (!payload) return null;
-        return JSON.parse(payload) as TerminalSessionSnapshot;
+        return normalizeSnapshot(JSON.parse(payload));
       }
       try {
-        const raw = window.localStorage.getItem('terminal-session');
-        return raw ? (JSON.parse(raw) as TerminalSessionSnapshot) : null;
+        const raw = window.localStorage.getItem(sessionStorageKey);
+        return raw ? normalizeSnapshot(JSON.parse(raw)) : null;
       } catch {
         return null;
       }
     };
     schedulePersistRef.current = schedulePersist;
-  }, [appendTranscript, buildPrompt, buildPromptText, opfsRoot, persistSession, schedulePersist]);
+  }, [
+    appendTranscript,
+    buildPrompt,
+    buildPromptText,
+    opfsRoot,
+    persistSession,
+    schedulePersist,
+    sessionPath,
+    sessionStorageKey,
+  ]);
 
   // --- Main Terminal Logic ---
   useEffect(() => {
@@ -510,13 +523,8 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
       };
 
       if (snapshot) {
-        contextRef.current.history = snapshot.history ?? [];
         contextRef.current.cwd = snapshot.cwd || contextRef.current.cwd;
         transcriptRef.current = snapshot.transcript ?? [];
-        if (typeof snapshot.safeMode === 'boolean') {
-          contextRef.current.safeMode = snapshot.safeMode;
-          setSafeMode(snapshot.safeMode);
-        }
         if (snapshot.transcript?.length) {
           snapshot.transcript.forEach((entry) => {
             writeOutputLine(entry.text);
@@ -614,19 +622,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     }
   };
 
-  const toggleSafeMode = () => {
-    const newVal = !safeMode;
-    setSafeMode(newVal);
-    setPrefs({ ...prefs, safeMode: newVal });
-    if (termRef.current) {
-      const message = `[System] Safe Mode: ${newVal ? 'ON' : 'OFF'}`;
-      termRef.current.writeln(`\r\n\x1b[1;33m${message}\x1b[0m`);
-      appendOutput(message + '\n');
-      appendTranscriptRef.current({ type: 'system', text: message });
-      sessionRef.current?.renderPrompt();
-    }
-  };
-
   const togglePersistence = () => {
     const next = !persistSession;
     setPersistSession(next);
@@ -712,7 +707,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
               {sessionName}
             </span>
           )}
-          {safeMode && <span className="px-1.5 py-0.5 rounded bg-green-900/50 text-green-400 text-[10px] uppercase tracking-wider">Safe Mode</span>}
           {persistSession && <span className="px-1.5 py-0.5 rounded bg-blue-900/50 text-blue-300 text-[10px] uppercase tracking-wider">Persisted</span>}
         </div>
         <div className="flex items-center gap-1 relative">
@@ -740,16 +734,6 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
               role="dialog"
               aria-label="Terminal settings"
             >
-              <div className="flex items-center justify-between py-1">
-                <span>Safe Mode</span>
-                <button
-                  type="button"
-                  className={`rounded px-2 py-0.5 text-[10px] uppercase ${safeMode ? 'bg-green-900/60 text-green-300' : 'bg-red-900/60 text-red-200'}`}
-                  onClick={toggleSafeMode}
-                >
-                  {safeMode ? 'On' : 'Off'}
-                </button>
-              </div>
               <div className="flex items-center justify-between py-1">
                 <span>Persistence</span>
                 <button

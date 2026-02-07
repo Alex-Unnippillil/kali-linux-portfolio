@@ -54,7 +54,7 @@ function alias(args: string, ctx: CommandContext) {
 }
 
 const help: CommandHandler = (args, ctx) => {
-  const termWidth = 80;
+  const termWidth = ctx.getTermCols?.() ?? 80;
   const commands = ctx.listCommands();
   const query = args.trim();
   if (query) {
@@ -74,10 +74,7 @@ const help: CommandHandler = (args, ctx) => {
     const line = `${padded}${description}`;
     ctx.writeLine(line.slice(0, termWidth));
   }
-  ctx.writeLine(
-    `Safe mode is ${ctx.safeMode ? 'ON' : 'OFF'} — simulated network commands are ${ctx.safeMode ? 'blocked' : 'available'}.`,
-  );
-  ctx.writeLine('Tip: toggle Safe Mode from the toolbar if you need simulated networking.');
+  ctx.writeLine('This terminal is a simulation. Network and privileged operations never run for real.');
   ctx.writeLine(
     'Example scripts: https://github.com/unnippillil/kali-linux-portfolio/tree/main/scripts/examples',
   );
@@ -279,11 +276,7 @@ const sudo: CommandHandler = async (args, ctx) => {
     return;
   }
 
-  ctx.writeLine(
-    ctx.safeMode
-      ? `Safe mode: "${commandLine}" blocked. Toggle Safe Mode to run simulated privileged commands.`
-      : `sudo: simulated privilege escalation for "${commandLine}".`,
-  );
+  ctx.writeLine(`sudo: simulated privilege escalation for "${commandLine}".`);
 };
 
 const rm: CommandHandler = async (args, ctx) => {
@@ -341,7 +334,6 @@ const registerAll = () => {
       description: 'Start a simulated SSH session.',
       usage: 'ssh <user@host>',
       handler: ssh,
-      safeModeBypass: true,
     },
     { name: 'whoami', description: 'Print the current demo user.', handler: whoami },
     { name: 'sudo', description: 'Execute a command with elevated privileges.', usage: 'sudo <command>', handler: sudo },
@@ -351,6 +343,8 @@ const registerAll = () => {
     { name: 'date', description: 'Print the current date.', handler: date },
     { name: 'grep', description: 'Search through text.', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
     { name: 'jq', description: 'Filter JSON input.', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
+    { name: 'sort', description: 'Sort input lines.', usage: 'sort', handler: (_args, ctx) => ctx.runWorker('sort') },
+    { name: 'uniq', description: 'Filter repeated lines.', usage: 'uniq', handler: (_args, ctx) => ctx.runWorker('uniq') },
   ];
 
   list.forEach(cmd => registry.register(cmd));

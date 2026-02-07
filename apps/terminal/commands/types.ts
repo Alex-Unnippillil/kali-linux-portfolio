@@ -9,12 +9,12 @@ export interface CommandContext {
   setCwd: (path: string) => void;
   history: string[];
   aliases: Record<string, string>;
-  safeMode: boolean;
   setAlias: (name: string, value: string) => void;
   runWorker: (command: string) => Promise<void>;
   clear: () => void;
   openApp?: (id: string) => void;
   listCommands: () => CommandDefinition[];
+  getTermCols?: () => number | undefined;
 }
 
 export type CommandHandler = (args: string, ctx: CommandContext) => void | Promise<void>;
@@ -24,5 +24,4 @@ export interface CommandDefinition {
   description: string;
   usage?: string;
   handler: CommandHandler;
-  safeModeBypass?: boolean;
 }

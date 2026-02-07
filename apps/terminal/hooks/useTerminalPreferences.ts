@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import useOPFS from '../../../hooks/useOPFS';
 
 export interface TerminalPrefs {
-  safeMode: boolean;
   fontSize: number;
   scrollback: number;
   screenReaderMode: boolean;
@@ -21,11 +20,17 @@ export interface TerminalPersistence {
 }
 
 const DEFAULT_PREFS: TerminalPrefs = {
-  safeMode: true,
   fontSize: 15,
   scrollback: 1200,
   screenReaderMode: false,
 };
+
+const sanitizePrefs = (input: Partial<TerminalPrefs> | null | undefined): TerminalPrefs => ({
+  fontSize: typeof input?.fontSize === 'number' ? input.fontSize : DEFAULT_PREFS.fontSize,
+  scrollback: typeof input?.scrollback === 'number' ? input.scrollback : DEFAULT_PREFS.scrollback,
+  screenReaderMode:
+    typeof input?.screenReaderMode === 'boolean' ? input.screenReaderMode : DEFAULT_PREFS.screenReaderMode,
+});
 
 const readLocal = <T,>(key: string, fallback: T): T => {
   try {
@@ -92,7 +97,7 @@ export const useTerminalPreferences = (): TerminalPersistence => {
         const aliasRaw = await loadFromOpfs('aliases.json');
         const scriptsRaw = await loadFromOpfs('scripts.json');
         if (!mounted) return;
-        if (prefsRaw) setPrefs({ ...DEFAULT_PREFS, ...(JSON.parse(prefsRaw) as TerminalPrefs) });
+        if (prefsRaw) setPrefs(sanitizePrefs(JSON.parse(prefsRaw) as Partial<TerminalPrefs>));
         if (historyRaw) setHistory(JSON.parse(historyRaw));
         if (aliasRaw) setAliases(JSON.parse(aliasRaw));
         if (scriptsRaw) setScripts(JSON.parse(scriptsRaw));
@@ -100,7 +105,7 @@ export const useTerminalPreferences = (): TerminalPersistence => {
         return;
       }
       if (!mounted) return;
-      setPrefs({ ...DEFAULT_PREFS, ...readLocal('kali-terminal-prefs', DEFAULT_PREFS) });
+      setPrefs(sanitizePrefs(readLocal('kali-terminal-prefs', DEFAULT_PREFS)));
       setHistory(readLocal('kali-terminal-history', [] as string[]));
       setAliases(readLocal('kali-terminal-aliases', {} as Record<string, string>));
       setScripts(readLocal('kali-terminal-scripts', {} as Record<string, string>));

@@ -13,7 +13,7 @@ const TerminalTabs: React.FC<TerminalProps> = ({ openApp }) => {
     return {
       id,
       title: label,
-      content: <Terminal openApp={openApp} sessionName={label} />,
+      content: <Terminal openApp={openApp} sessionName={label} sessionId={id} />,
     };
   };
 
