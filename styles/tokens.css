@@ -148,3 +148,11 @@
     --color-ub-border-orange: #ffff00;
   }
 }
+
+/* Kali theme tokens */
+:root {
+  --kali-neutral: #0f1317;
+  --kali-surface: #1a1f26;
+  --kali-text: #f5f5f5;
+  --kali-accent: #1793d1;
+}
