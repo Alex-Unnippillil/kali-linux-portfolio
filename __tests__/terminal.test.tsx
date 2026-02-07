@@ -13,6 +13,7 @@ jest.mock(
       onScroll: jest.fn(),
       dispose: jest.fn(),
       clear: jest.fn(),
+      attachCustomKeyEventHandler: jest.fn(),
       options: { scrollback: 0 },
     })),
   }),
@@ -56,7 +57,7 @@ describe('Terminal component', () => {
   it('renders container and exposes runCommand', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
-    await act(async () => {});
+    await act(async () => { });
     expect(ref.current).toBeTruthy();
     await act(async () => {
       await ref.current.runCommand('help');
@@ -67,7 +68,7 @@ describe('Terminal component', () => {
   it('invokes openApp for open command', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
-    await act(async () => {});
+    await act(async () => { });
     await act(async () => {
       await ref.current.runCommand('open calculator');
     });
@@ -77,7 +78,7 @@ describe('Terminal component', () => {
   it('handles ls and cat commands via registry', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
-    await act(async () => {});
+    await act(async () => { });
     await act(async () => {
       await ref.current.runCommand('ls');
     });
@@ -92,7 +93,7 @@ describe('Terminal component', () => {
     jest.useFakeTimers().setSystemTime(new Date('2023-01-01T00:00:00Z'));
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
-    await act(async () => {});
+    await act(async () => { });
     await act(async () => {
       await ref.current.runCommand('about');
     });
@@ -111,7 +112,7 @@ describe('Terminal component', () => {
   it('prints projects and runs simulated ssh/sudo commands', async () => {
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
-    await act(async () => {});
+    await act(async () => { });
     await act(async () => {
       await ref.current.runCommand('projects');
     });
@@ -128,7 +129,7 @@ describe('Terminal component', () => {
 
   it('supports tab management shortcuts', async () => {
     const { container } = render(<TerminalTabs openApp={openApp} />);
-    await act(async () => {});
+    await act(async () => { });
     const root = container.firstChild as HTMLElement;
     root.focus();
     fireEvent.keyDown(root, { ctrlKey: true, key: 't' });
