@@ -48,138 +48,164 @@ const readNodePosition = (node: HTMLElement): { x: number; y: number } | null =>
   return null;
 };
 
-const DesktopWindow = React.forwardRef<BaseWindowInstance, BaseWindowProps>(
-  (props, forwardedRef) => {
-    const {
-      id,
-      focus: focusProp,
-      isFocused,
-      zIndex: _ignoredZIndex,
-      ...rest
-    } = props;
-    const innerRef = useRef<BaseWindowInstance>(null);
-    const {
-      baseZIndex,
-      registerWindow,
-      unregisterWindow,
-      focusWindow: focusZIndex,
-      getZIndex,
-    } = useDesktopZIndex();
-    const windowId = id ?? null;
+const DesktopWindow = React.memo(
+  React.forwardRef<BaseWindowInstance, BaseWindowProps>(
+    (props, forwardedRef) => {
+      const {
+        id,
+        focus: focusProp,
+        isFocused,
+        zIndex: _ignoredZIndex,
+        onPositionChange,
+        onSizeChange,
+        ...rest
+      } = props;
+      const innerRef = useRef<BaseWindowInstance>(null);
+      const {
+        baseZIndex,
+        registerWindow,
+        unregisterWindow,
+        focusWindow: focusZIndex,
+        getZIndex,
+      } = useDesktopZIndex();
+      const windowId = id ?? null;
 
-    const assignRef = useCallback(
-      (instance: BaseWindowInstance) => {
-        innerRef.current = instance;
-        if (!forwardedRef) return;
-        if (typeof forwardedRef === "function") {
-          forwardedRef(instance);
-        } else {
-          (forwardedRef as MutableRef<BaseWindowInstance>).current = instance;
-        }
-      },
-      [forwardedRef],
-    );
-
-    const clampToViewport = useCallback(() => {
-      if (typeof window === "undefined") return;
-      const instance = innerRef.current;
-      const node = instance && typeof instance.getWindowNode === "function"
-        ? instance.getWindowNode()
-        : null;
-      if (!node || typeof node.getBoundingClientRect !== "function") return;
-
-      const rect = node.getBoundingClientRect();
-      const topOffset = measureWindowTopOffset();
-      const visualViewport = window.visualViewport;
-      const viewportWidth = visualViewport?.width ?? window.innerWidth;
-      const viewportHeight = visualViewport?.height ?? window.innerHeight;
-      const viewportLeft = visualViewport?.offsetLeft ?? 0;
-      const viewportTop = visualViewport?.offsetTop ?? 0;
-      const combinedTopOffset = viewportTop + topOffset;
-      const storedPosition = readNodePosition(node);
-      const fallbackPosition = {
-        x: typeof props.initialX === "number"
-          ? props.initialX + viewportLeft
-          : viewportLeft,
-        y: clampWindowTopPosition(props.initialY, combinedTopOffset),
-      };
-      const currentPosition = storedPosition || fallbackPosition;
-      const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
-        viewportWidth,
-        viewportHeight,
-        viewportLeft,
-        viewportTop,
-        topOffset,
-      });
-      if (!clamped) return;
-      if (clamped.x === currentPosition.x && clamped.y === currentPosition.y) {
-        return;
-      }
-
-      node.style.transform = `translate(${clamped.x}px, ${clamped.y}px)`;
-      if (typeof node.style.setProperty === "function") {
-        node.style.setProperty("--window-transform-x", `${clamped.x}px`);
-        node.style.setProperty("--window-transform-y", `${clamped.y}px`);
-      } else {
-        (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${clamped.x}px`;
-        (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
-      }
-
-      if (typeof props.onPositionChange === "function") {
-        props.onPositionChange(clamped.x, clamped.y);
-      }
-    }, [props.initialX, props.initialY, props.onPositionChange]);
-
-    useEffect(() => {
-      if (!windowId) return;
-      registerWindow(windowId);
-      return () => {
-        unregisterWindow(windowId);
-      };
-    }, [windowId, registerWindow, unregisterWindow]);
-
-    useEffect(() => {
-      if (!windowId || !isFocused) return;
-      focusZIndex(windowId);
-    }, [windowId, isFocused, focusZIndex]);
-
-    const handleFocus = useCallback(
-      (targetId?: string | null) => {
-        const resolvedId = targetId ?? windowId;
-        if (resolvedId) {
-          focusZIndex(resolvedId);
-          if (typeof focusProp === "function") {
-            focusProp(resolvedId);
+      const assignRef = useCallback(
+        (instance: BaseWindowInstance) => {
+          innerRef.current = instance;
+          if (!forwardedRef) return;
+          if (typeof forwardedRef === "function") {
+            forwardedRef(instance);
+          } else {
+            (forwardedRef as MutableRef<BaseWindowInstance>).current = instance;
           }
-        } else if (typeof focusProp === "function") {
-          focusProp(targetId ?? undefined);
+        },
+        [forwardedRef],
+      );
+
+      const handleSizeChange = useCallback(
+        (width: number, height: number) => {
+          if (typeof onSizeChange === "function") {
+            onSizeChange(id, width, height);
+          }
+        },
+        [id, onSizeChange],
+      );
+
+      const clampToViewport = useCallback(() => {
+        if (typeof window === "undefined") return;
+        const instance = innerRef.current;
+        const node = instance && typeof instance.getWindowNode === "function"
+          ? instance.getWindowNode()
+          : null;
+        if (!node || typeof node.getBoundingClientRect !== "function") return;
+
+        const rect = node.getBoundingClientRect();
+        const topOffset = measureWindowTopOffset();
+        const visualViewport = window.visualViewport;
+        const viewportWidth = visualViewport?.width ?? window.innerWidth;
+        const viewportHeight = visualViewport?.height ?? window.innerHeight;
+        const viewportLeft = visualViewport?.offsetLeft ?? 0;
+        const viewportTop = visualViewport?.offsetTop ?? 0;
+        const combinedTopOffset = viewportTop + topOffset;
+        const storedPosition = readNodePosition(node);
+        const fallbackPosition = {
+          x: typeof props.initialX === "number"
+            ? props.initialX + viewportLeft
+            : viewportLeft,
+          y: clampWindowTopPosition(props.initialY, combinedTopOffset),
+        };
+        const currentPosition = storedPosition || fallbackPosition;
+        const clamped = clampWindowPositionWithinViewport(currentPosition, rect, {
+          viewportWidth,
+          viewportHeight,
+          viewportLeft,
+          viewportTop,
+          topOffset,
+        });
+        if (!clamped) return;
+        if (clamped.x === currentPosition.x && clamped.y === currentPosition.y) {
+          return;
         }
-      },
-      [focusProp, focusZIndex, windowId],
-    );
 
-    const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
+        node.style.transform = `translate(${clamped.x}px, ${clamped.y}px)`;
+        if (typeof node.style.setProperty === "function") {
+          node.style.setProperty("--window-transform-x", `${clamped.x}px`);
+          node.style.setProperty("--window-transform-y", `${clamped.y}px`);
+        } else {
+          (node.style as unknown as Record<string, string>)["--window-transform-x"] = `${clamped.x}px`;
+          (node.style as unknown as Record<string, string>)["--window-transform-y"] = `${clamped.y}px`;
+        }
 
-    useEffect(() => {
-      if (typeof window === "undefined") return undefined;
-      const handler = () => clampToViewport();
-      window.addEventListener("resize", handler);
-      return () => {
-        window.removeEventListener("resize", handler);
-      };
-    }, [clampToViewport]);
+        if (typeof onPositionChange === "function") {
+          onPositionChange(id, clamped.x, clamped.y);
+        }
+      }, [props.initialX, props.initialY, onPositionChange, id]);
 
-    return (
-      <BaseWindow
-        ref={assignRef}
-        {...rest}
-        id={id}
-        focus={handleFocus}
-        isFocused={isFocused}
-        zIndex={computedZIndex}
-      />
-    );
-  },
+      useEffect(() => {
+        if (!windowId) return;
+        registerWindow(windowId);
+        return () => {
+          unregisterWindow(windowId);
+        };
+      }, [windowId, registerWindow, unregisterWindow]);
+
+      useEffect(() => {
+        if (!windowId || !isFocused) return;
+        focusZIndex(windowId);
+      }, [windowId, isFocused, focusZIndex]);
+
+      const handleFocus = useCallback(
+        (targetId?: string | null) => {
+          const resolvedId = targetId ?? windowId;
+          if (resolvedId) {
+            focusZIndex(resolvedId);
+            if (typeof focusProp === "function") {
+              focusProp(resolvedId);
+            }
+          } else if (typeof focusProp === "function") {
+            focusProp(targetId ?? undefined);
+          }
+        },
+        [focusProp, focusZIndex, windowId],
+      );
+
+      const computedZIndex = windowId ? getZIndex(windowId) : baseZIndex;
+
+      useEffect(() => {
+        if (typeof window === "undefined") return undefined;
+        let rafId: number | null = null;
+
+        const performClamp = () => {
+          rafId = null;
+          clampToViewport();
+        };
+
+        const handler = () => {
+          if (rafId) return;
+          rafId = window.requestAnimationFrame(performClamp);
+        };
+
+        window.addEventListener("resize", handler);
+        return () => {
+          window.removeEventListener("resize", handler);
+          if (rafId) window.cancelAnimationFrame(rafId);
+        };
+      }, [clampToViewport]);
+
+      return (
+        <BaseWindow
+          ref={assignRef}
+          {...rest}
+          id={id}
+          focus={handleFocus}
+          isFocused={isFocused}
+          zIndex={computedZIndex}
+          onSizeChange={handleSizeChange}
+        />
+      );
+    },
+  )
 );
 
 DesktopWindow.displayName = "DesktopWindow";

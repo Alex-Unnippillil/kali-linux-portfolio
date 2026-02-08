@@ -3379,50 +3379,66 @@ export class Desktop extends Component {
         const selectionState = this.desktopSelectionState;
         if (!selectionState || event.pointerId !== selectionState.pointerId) return;
         event.stopPropagation();
-
-        const deltaX = event.clientX - selectionState.startClientX;
-        const deltaY = event.clientY - selectionState.startClientY;
-        if (!selectionState.moved) {
-            const threshold = 4;
-            if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
-                return;
-            }
-            selectionState.moved = true;
-        }
-
         event.preventDefault();
 
-        const rect = selectionState.rect;
-        const clampX = (value) => {
-            const relative = value - rect.left;
-            if (!Number.isFinite(relative)) return 0;
-            return Math.min(Math.max(relative, 0), Math.max(rect.width, 0));
-        };
-        const clampY = (value) => {
-            const relative = value - rect.top;
-            if (!Number.isFinite(relative)) return 0;
-            return Math.min(Math.max(relative, 0), Math.max(rect.height, 0));
-        };
+        const { clientX, clientY } = event;
 
-        const originX = clampX(selectionState.startClientX);
-        const originY = clampY(selectionState.startClientY);
-        const currentX = clampX(event.clientX);
-        const currentY = clampY(event.clientY);
+        if (this.desktopMoveRaf) {
+            cancelAnimationFrame(this.desktopMoveRaf);
+        }
 
-        const marqueeRect = {
-            left: Math.min(originX, currentX),
-            top: Math.min(originY, currentY),
-            width: Math.abs(currentX - originX),
-            height: Math.abs(currentY - originY),
-        };
+        this.desktopMoveRaf = requestAnimationFrame(() => {
+            if (!this.desktopSelectionState) return;
+            const state = this.desktopSelectionState;
 
-        this.updateMarqueeSelection(marqueeRect, selectionState);
+            const deltaX = clientX - state.startClientX;
+            const deltaY = clientY - state.startClientY;
+
+            if (!state.moved) {
+                const threshold = 4;
+                if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+                    return;
+                }
+                state.moved = true;
+            }
+
+            const rect = state.rect;
+            const clampX = (value) => {
+                const relative = value - rect.left;
+                if (!Number.isFinite(relative)) return 0;
+                return Math.min(Math.max(relative, 0), Math.max(rect.width, 0));
+            };
+            const clampY = (value) => {
+                const relative = value - rect.top;
+                if (!Number.isFinite(relative)) return 0;
+                return Math.min(Math.max(relative, 0), Math.max(rect.height, 0));
+            };
+
+            const originX = clampX(state.startClientX);
+            const originY = clampY(state.startClientY);
+            const currentX = clampX(clientX);
+            const currentY = clampY(clientY);
+
+            const marqueeRect = {
+                left: Math.min(originX, currentX),
+                top: Math.min(originY, currentY),
+                width: Math.abs(currentX - originX),
+                height: Math.abs(currentY - originY),
+            };
+
+            this.updateMarqueeSelection(marqueeRect, state);
+        });
     };
 
     handleDesktopPointerUp = (event) => {
         const selectionState = this.desktopSelectionState;
         if (!selectionState || event.pointerId !== selectionState.pointerId) return;
         event.stopPropagation();
+
+        if (this.desktopMoveRaf) {
+            cancelAnimationFrame(this.desktopMoveRaf);
+            this.desktopMoveRaf = null;
+        }
 
         selectionState.container?.releasePointerCapture?.(selectionState.pointerId);
 
@@ -3438,6 +3454,11 @@ export class Desktop extends Component {
         const selectionState = this.desktopSelectionState;
         if (!selectionState) return;
         event?.stopPropagation?.();
+
+        if (this.desktopMoveRaf) {
+            cancelAnimationFrame(this.desktopMoveRaf);
+            this.desktopMoveRaf = null;
+        }
 
         selectionState.container?.releasePointerCapture?.(selectionState.pointerId);
         this.desktopSelectionState = null;
@@ -3512,25 +3533,43 @@ export class Desktop extends Component {
 
     handleIconPointerMove = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
-        const dragState = this.iconDragState;
-        const deltaX = event.clientX - dragState.startX;
-        const deltaY = event.clientY - dragState.startY;
-        if (!dragState.moved) {
-            const threshold = 4;
-            if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
-                return;
-            }
-            dragState.moved = true;
-        }
         event.preventDefault();
-        const position = this.calculateIconPosition(event.clientX, event.clientY, dragState);
-        dragState.lastPosition = position;
-        this.updateIconPosition(dragState.id, position.x, position.y, false);
+
+        const { clientX, clientY } = event;
+
+        if (this.iconMoveRaf) {
+            cancelAnimationFrame(this.iconMoveRaf);
+        }
+
+        this.iconMoveRaf = requestAnimationFrame(() => {
+            const dragState = this.iconDragState;
+            if (!dragState) return;
+
+            const deltaX = clientX - dragState.startX;
+            const deltaY = clientY - dragState.startY;
+            if (!dragState.moved) {
+                const threshold = 4;
+                if (Math.abs(deltaX) < threshold && Math.abs(deltaY) < threshold) {
+                    return;
+                }
+                dragState.moved = true;
+            }
+
+            const position = this.calculateIconPosition(clientX, clientY, dragState);
+            dragState.lastPosition = position;
+            this.updateIconPosition(dragState.id, position.x, position.y, false);
+        });
     };
 
     handleIconPointerUp = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         event.stopPropagation();
+
+        if (this.iconMoveRaf) {
+            cancelAnimationFrame(this.iconMoveRaf);
+            this.iconMoveRaf = null;
+        }
+
         const dragState = this.iconDragState;
         const moved = dragState.moved;
         const selectionChanged = Boolean(dragState.selectionChangedOnPointerDown);
@@ -3574,6 +3613,12 @@ export class Desktop extends Component {
     handleIconPointerCancel = (event) => {
         if (!this.iconDragState || event.pointerId !== this.iconDragState.pointerId) return;
         event.preventDefault();
+
+        if (this.iconMoveRaf) {
+            cancelAnimationFrame(this.iconMoveRaf);
+            this.iconMoveRaf = null;
+        }
+
         this.cancelIconDrag(true);
     };
 
@@ -5061,7 +5106,7 @@ export class Desktop extends Component {
         if (!orderedIds.length) return null;
 
         const appMap = new Map(apps.map((app) => [app.id, app]));
-        const snapGrid = this.getSnapGrid();
+        const snapGrid = this.props.snapGrid || [8, 8];
 
         return orderedIds.map((id, index) => {
             const app = appMap.get(id);
@@ -5090,8 +5135,8 @@ export class Desktop extends Component {
                 responsiveHeight: app.responsiveHeight,
                 initialX: pos ? pos.x : undefined,
                 initialY: pos ? clampWindowTopPosition(pos.y, safeTopOffset) : safeTopOffset,
-                onPositionChange: (x, y) => this.updateWindowPosition(id, x, y),
-                onSizeChange: (width, height) => this.updateWindowSize(id, width, height),
+                onPositionChange: this.updateWindowPosition,
+                onSizeChange: this.updateWindowSize,
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
                 context: this.state.window_context[id],
@@ -5279,18 +5324,7 @@ export class Desktop extends Component {
     }
 
     getSnapGrid = () => {
-        const fallback = [8, 8];
-        if (!Array.isArray(this.props.snapGrid)) {
-            return [...fallback];
-        }
-        const [gridX, gridY] = this.props.snapGrid;
-        const normalize = (size, fallbackSize) => {
-            if (typeof size !== 'number') return fallbackSize;
-            if (!Number.isFinite(size)) return fallbackSize;
-            if (size <= 0) return fallbackSize;
-            return size;
-        };
-        return [normalize(gridX, fallback[0]), normalize(gridY, fallback[1])];
+        return this.props.snapGrid || [8, 8];
     }
 
     saveSession = () => {
@@ -5491,7 +5525,7 @@ export class Desktop extends Component {
             if (currentApp) {
                 frequentApps.forEach((app) => {
                     if (app.id === currentApp.id) {
-                        app.frequency += 1; // increase the frequency if app is found 
+                        app.frequency += 1; // increase the frequency if app is found
                     }
                 });
             } else {
@@ -6059,11 +6093,22 @@ export default function DesktopWithSnap(props) {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+
+    const memoizedSnapGrid = React.useMemo(() => {
+        const fallback = [8, 8];
+        if (!Array.isArray(snapGrid)) return fallback;
+        const normalized = [
+            (typeof snapGrid[0] === 'number' && Number.isFinite(snapGrid[0]) && snapGrid[0] > 0) ? snapGrid[0] : 8,
+            (typeof snapGrid[1] === 'number' && Number.isFinite(snapGrid[1]) && snapGrid[1] > 0) ? snapGrid[1] : 8
+        ];
+        return normalized;
+    }, [snapGrid]);
+
     return (
         <Desktop
             {...props}
             snapEnabled={snapEnabled}
-            snapGrid={snapGrid}
+            snapGrid={memoizedSnapGrid}
             density={density}
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
