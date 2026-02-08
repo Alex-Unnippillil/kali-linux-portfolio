@@ -62,13 +62,16 @@ describe('ProjectGallery', () => {
     await screen.findByText('Kali Linux Portfolio');
 
     // Featured projects should have the featured badge
-    const featuredBadges = screen.getAllByText(/Featured/i);
+    const featuredBadges = screen.getAllByText('⭐');
     expect(featuredBadges.length).toBeGreaterThan(0);
   });
 
   it('displays technology stack tags', async () => {
     render(<ProjectGallery />);
     await screen.findByText('Kali Linux Portfolio');
+    // Check for featured star emoji
+    const featuredBadges = screen.getAllByText('⭐');
+    expect(featuredBadges.length).toBeGreaterThan(0);
 
     // Should show stack tags
     expect(screen.getAllByText('Next.js').length).toBeGreaterThan(0);

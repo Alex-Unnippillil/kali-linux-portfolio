@@ -521,6 +521,17 @@ exports[`HydraPreview layout renders the hydra workbench layout 1`] = `
                     class="sr-only"
                     role="status"
                   />
+                  <pre
+                    class="mt-4 bg-black text-green-400 p-4 overflow-auto h-64 whitespace-pre-wrap font-mono text-sm border border-gray-700 rounded"
+                  >
+                    Hydra v9.5 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes.
+
+[DATA] max 16 tasks per 1 server, overall 16 tasks, 1 login try (l:1/p:1), ~1 try per task
+[DATA] attacking ssh://target:22/
+[STATUS] Simulation mode - no network traffic generated
+[INFO] This is a portfolio simulation. Configure the target and lists above, then click "Start Attack".
+
+                  </pre>
                 </div>
               </div>
             </div>

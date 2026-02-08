@@ -91,11 +91,11 @@ describe('connect four solver', () => {
 
   it('avoids losing next turn when possible', () => {
     const board = createEmptyBoard();
-    board[5][3] = 'yellow';
-    board[5][4] = 'yellow';
-    board[5][5] = 'yellow';
+    board[5][0] = 'yellow';
+    board[5][1] = 'yellow';
+    board[5][2] = 'yellow';
 
     const { column } = getBestMove(board, 4, 'red');
-    expect([2, 6]).toContain(column);
+    expect(column).toBe(3);
   });
 });

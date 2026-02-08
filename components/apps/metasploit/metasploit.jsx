@@ -8,6 +8,7 @@ import ConsolePane from './ConsolePane';
 import {
   defaultMetasploitState,
   parseMetasploitCommand,
+  getRandomBanner,
 } from './commandParser';
 
 const severities = ['critical', 'high', 'medium', 'low'];
@@ -22,18 +23,9 @@ const moduleTypes = ['auxiliary', 'exploit', 'post'];
 
 const timelineSteps = 5;
 
-const banner = `
-       =[ metasploit v6.3.44-dev                          ]
-+ -- --=[ 2376 exploits - 1232 auxiliary - 416 post       ]
-+ -- --=[ 1405 payloads - 46 encoders - 11 nops           ]
-+ -- --=[ 9 evasion                                        ]
 
-Metasploit Documentation: https://docs.metasploit.com/
 
-[*] This is a simulated MSF console for educational purposes.
-[*] No network connections are made. All outputs are deterministic.
-
-msf6 > `;
+const banner = getRandomBanner();
 
 const simulationScenarios = [
   {
@@ -268,10 +260,10 @@ const MetasploitApp = ({
 
   const applyScenario = () => {
     if (!activeScenario) return;
-    setCommand(`set RHOSTS ${activeScenario.target}`);
+    setCommand(`set RHOSTS ${activeScenario.target} `);
     recordSimulation({
       tool: 'metasploit',
-      title: `Scenario: ${activeScenario.label}`,
+      title: `Scenario: ${activeScenario.label} `,
       summary: activeScenario.intro,
       data: { target: activeScenario.target },
     });
@@ -281,9 +273,9 @@ const MetasploitApp = ({
     if (!activeScenario) return;
     setLoading(true);
     try {
-      setOutput((prev) => `${prev}\n# Scenario: ${activeScenario.label}`);
+      setOutput((prev) => `${prev} \n# Scenario: ${activeScenario.label} `);
       for (const step of activeScenario.steps) {
-        setOutput((prev) => `${prev}\nmsf6 > ${step.command}\n${step.output}`);
+        setOutput((prev) => `${prev} \nmsf6 > ${step.command} \n${step.output} `);
         recordSimulation({
           tool: 'metasploit',
           title: step.command,
@@ -315,7 +307,7 @@ const MetasploitApp = ({
         );
         setDemoState(nextState);
         setOutput((prev) => {
-          const next = `${prev}\nmsf6 > ${cmd}\n${demoOutput || '[demo] no output'}`;
+          const next = `${prev} \nmsf6 > ${cmd} \n${demoOutput || '[demo] no output'} `;
           recordSimulation({
             tool: 'metasploit',
             title: cmd || 'msf6',
@@ -332,7 +324,7 @@ const MetasploitApp = ({
         });
         const data = await res.json();
         setOutput((prev) => {
-          const next = `${prev}\nmsf6 > ${cmd}\n${data.output || ''}`;
+          const next = `${prev} \nmsf6 > ${cmd} \n${data.output || ''} `;
           recordSimulation({
             tool: 'metasploit',
             title: cmd || 'msf6',
@@ -343,7 +335,7 @@ const MetasploitApp = ({
         });
       }
     } catch (e) {
-      setOutput((prev) => `${prev}\nError: ${e.message}`);
+      setOutput((prev) => `${prev} \nError: ${e.message} `);
     } finally {
       setLoading(false);
     }
@@ -358,22 +350,22 @@ const MetasploitApp = ({
       recordSimulation({
         tool: 'metasploit',
         title: 'Guided demo',
-        summary: `${exploit.name} → ${post.name}`,
+        summary: `${exploit.name} → ${post.name} `,
         data: { exploit: exploit.name, post: post.name },
       });
       setOutput(
         (prev) =>
-          `${prev}\nmsf6 > use ${exploit.name}\n${exploit.transcript || ''}`
+          `${prev} \nmsf6 > use ${exploit.name} \n${exploit.transcript || ''} `
       );
       await new Promise((r) => setTimeout(r, 500));
       setOutput(
         (prev) =>
-          `${prev}\nmsf6 exploit(${exploit.name}) > sessions -i 1\n[*] Session 1 opened`
+          `${prev} \nmsf6 exploit(${exploit.name}) > sessions - i 1\n[*] Session 1 opened`
       );
       await new Promise((r) => setTimeout(r, 500));
       setOutput(
         (prev) =>
-          `${prev}\nmsf6 exploit(${exploit.name}) > run ${post.name}\n${post.transcript || ''}`
+          `${prev} \nmsf6 exploit(${exploit.name}) > run ${post.name} \n${post.transcript || ''} `
       );
     } finally {
       setLoading(false);
@@ -382,10 +374,10 @@ const MetasploitApp = ({
 
   const showModule = (mod) => {
     setSelectedModule(mod);
-    setOutput((prev) => `${prev}\nmsf6 > use ${mod.name}\n${mod.transcript || ''}`);
+    setOutput((prev) => `${prev} \nmsf6 > use ${mod.name} \n${mod.transcript || ''} `);
     recordSimulation({
       tool: 'metasploit',
-      title: `Module ${mod.name}`,
+      title: `Module ${mod.name} `,
       summary: `Opened ${mod.type} module for review`,
       data: { tags: mod.tags, platform: mod.platform },
     });
@@ -575,7 +567,7 @@ const MetasploitApp = ({
                   <button
                     type="button"
                     onClick={() =>
-                      setOutput((prev) => `${prev}\nmsf6 > sessions -i ${s.id}`)
+                      setOutput((prev) => `${prev}\nmsf6 > sessions - i ${s.id} `)
                     }
                     className="px-1 text-black rounded"
                     style={{ background: 'var(--color-primary)' }}
@@ -672,10 +664,10 @@ const MetasploitApp = ({
                   key={s}
                   onClick={() => setSelectedSeverity(s)}
                   aria-pressed={selectedSeverity === s}
-                  className={`px-2 py-1 rounded-full text-xs font-bold mr-2 mb-2 focus:outline-none ${severityStyles[s]} ${selectedSeverity === s
+                  className={`px - 2 py - 1 rounded - full text - xs font - bold mr - 2 mb - 2 focus: outline - none ${severityStyles[s]} ${selectedSeverity === s
                       ? 'ring-2 ring-white motion-safe:transition-transform motion-safe:duration-300 motion-safe:scale-110 motion-reduce:transition-none motion-reduce:scale-100'
                       : ''
-                    }`}
+                    } `}
                 >
                   {s}
                 </button>
@@ -693,7 +685,7 @@ const MetasploitApp = ({
                       key={m.name}
                       type="button"
                       onClick={() => showModule(m)}
-                      aria-label={`Select module ${m.name}`}
+                      aria-label={`Select module $ { m.name } `}
                       className="p-2 text-left bg-ub-grey rounded flex"
                     >
                       <svg
@@ -707,7 +699,7 @@ const MetasploitApp = ({
                       <div>
                         <div className="flex items-center mb-1">
                           <span
-                            className={`px-1 rounded mr-1 ${severityStyles[m.severity]}`}
+                            className={`px - 1 rounded mr - 1 ${severityStyles[m.severity]} `}
                           >
                             {m.severity}
                           </span>
@@ -748,7 +740,7 @@ const MetasploitApp = ({
                   aria-valuenow={Math.round(progress)}
                   aria-label="Exploit replay progress"
                 >
-                  <div className="h-full bg-ub-orange" style={{ width: `${progress}%` }} />
+                  <div className="h-full bg-ub-orange" style={{ width: `${progress}% ` }} />
                 </div>
               </>
             )}

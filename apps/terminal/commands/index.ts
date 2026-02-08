@@ -351,6 +351,56 @@ const registerAll = () => {
     { name: 'date', description: 'Print the current date.', handler: date },
     { name: 'grep', description: 'Search through text.', usage: 'grep <pattern> [file]', handler: (args, ctx) => ctx.runWorker(`grep ${args}`) },
     { name: 'jq', description: 'Filter JSON input.', usage: 'jq <path> [file]', handler: (args, ctx) => ctx.runWorker(`jq ${args}`) },
+    {
+      name: 'neofetch',
+      description: 'Display system information.',
+      handler: (_args, ctx) => {
+        const logo = [
+          '\x1b[1;34m      ..............',
+          '            ..,;:;,.',
+          '         ...;:;::;...',
+          '      ...;:;::;::;...',
+          '     ..;:;::;::;::;..',
+          '    .;:;::;::;::;::;.',
+          '   .;:;::;::;::;::;:.',
+          '   ..;:;::;::;::;::;.',
+          '    ..;:;::;::;::;...',
+          '      ..............\x1b[0m'
+        ];
+
+        const info = [
+          `\x1b[1;34mroot\x1b[0m@\x1b[1;34mkali\x1b[0m`,
+          '---------',
+          '\x1b[1;34mOS\x1b[0m: Kali GNU/Linux Rolling 2024.1 x86_64',
+          '\x1b[1;34mHost\x1b[0m: Portfolio Virtual Machine',
+          '\x1b[1;34mKernel\x1b[0m: 6.6.9-amd64',
+          '\x1b[1;34mUptime\x1b[0m: ' + Math.floor((Date.now() - 1704067200000) / 60000) + ' mins',
+          '\x1b[1;34mPackages\x1b[0m: 3200 (dpkg)',
+          '\x1b[1;34mShell\x1b[0m: zsh 5.9',
+          '\x1b[1;34mResolution\x1b[0m: 1920x1080',
+          '\x1b[1;34mDE\x1b[0m: Xfce 4.18',
+          '\x1b[1;34mWM\x1b[0m: Xfwm4',
+          '\x1b[1;34mTheme\x1b[0m: Kali-Dark [GTK2/3]',
+          '\x1b[1;34mIcons\x1b[0m: Flat-Remix-Blue-Dark [GTK2/3]',
+          '\x1b[1;34mTerminal\x1b[0m: xterm.js',
+          '\x1b[1;34mCPU\x1b[0m: Virtual Core (1) @ 3.40GHz',
+          '\x1b[1;34mGPU\x1b[0m: VMware SVGA II Adapter',
+          '\x1b[1;34mMemory\x1b[0m: 124MiB / 4096MiB',
+          '',
+          '\x1b[30m███\x1b[31m███\x1b[32m███\x1b[33m███\x1b[34m███\x1b[35m███\x1b[36m███\x1b[37m███\x1b[0m'
+        ];
+
+        // Combine logic
+        const height = Math.max(logo.length, info.length);
+        for (let i = 0; i < height; i++) {
+          const l = logo[i] || ' '.repeat(logo[0].replace(/\x1b\[.*?m/g, '').length);
+          const r = info[i] || '';
+          // Simple padding for logo to roughly 24 chars
+          const pad = ' '.repeat(Math.max(0, 26 - l.replace(/\x1b\[.*?m/g, '').length));
+          ctx.writeLine(`${l}${pad}${r}`);
+        }
+      }
+    }
   ];
 
   list.forEach(cmd => registry.register(cmd));

@@ -1,15 +1,16 @@
 // @jest-environment node
 import { promises as fs } from 'fs';
 import path from 'path';
+import os from 'os';
 
-const USER_PATH = '/tmp/hydra-users-test-uuid.txt';
-const PASS_PATH = '/tmp/hydra-pass-test-uuid.txt';
+const USER_PATH = path.join(os.tmpdir(), 'hydra-users-test-uuid.txt');
+const PASS_PATH = path.join(os.tmpdir(), 'hydra-pass-test-uuid.txt');
 const SESSION_DIR = path.join(process.cwd(), 'hydra');
 
 async function cleanup() {
-  await fs.unlink(USER_PATH).catch(() => {});
-  await fs.unlink(PASS_PATH).catch(() => {});
-  await fs.rm(SESSION_DIR, { recursive: true, force: true }).catch(() => {});
+  await fs.unlink(USER_PATH).catch(() => { });
+  await fs.unlink(PASS_PATH).catch(() => { });
+  await fs.rm(SESSION_DIR, { recursive: true, force: true }).catch(() => { });
 }
 
 describe('Hydra API temp file cleanup', () => {

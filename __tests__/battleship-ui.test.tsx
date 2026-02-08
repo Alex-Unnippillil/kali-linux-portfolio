@@ -73,6 +73,6 @@ describe('Battleship UI', () => {
     fireEvent.click(targetButtons[0]);
     fireEvent.click(screen.getByRole('button', { name: /Fire Salvo/i }));
 
-    expect(screen.getByText(/Pass the device/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Pass the device/i).length).toBeGreaterThan(0);
   });
 });

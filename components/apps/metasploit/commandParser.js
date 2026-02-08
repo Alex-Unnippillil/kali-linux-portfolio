@@ -28,8 +28,77 @@ const formatModuleInfo = (module) => {
   return lines.join('\n');
 };
 
+const banners = [
+  `
+       =[ metasploit v6.3.44-dev                          ]
++ -- --=[ 2376 exploits - 1232 auxiliary - 416 post       ]
++ -- --=[ 1405 payloads - 46 encoders - 11 nops           ]
++ -- --=[ 9 evasion                                        ]
+
+Metasploit Documentation: https://docs.metasploit.com/
+`,
+  `
+    __________________
+   < metasploit >
+    ------------------
+       \\   ^__^
+        \\  (oo)\\_______
+           (__)\\       )\\/\\
+               ||----w |
+               ||     ||
+
+       =[ metasploit v6.3.44-dev                          ]
++ -- --=[ 2376 exploits - 1232 auxiliary - 416 post       ]
+`,
+  `
+      .:okOOOkdc'           'cdkOOOko:.
+    .xOOOOOOOOOOOOc       cOOOOOOOOOOOOx.
+   :OOOOOOOOOOOOOOOk,   ,kOOOOOOOOOOOOOOO:
+  'OOOOOOOOOkkkkOOOOO: :OOOOOOOOOOOOOOOOOO'
+  oOOOOOOOO.    .oOOOOoOOOOl.    ,OOOOOOOOo
+  dOOOOOOOO.      .cOOOOOc.      ,OOOOOOOOx
+  lOOOOOOOO.         ;d;         ,OOOOOOOOl
+  .OOOOOOOO.         .;.         ;OOOOOOOO.
+   cOOOOOOO.                     ;OOOOOOOc
+    oOOOOOO.                     ;OOOOOOo
+     lOOOOO.                     ;OOOOOl
+      ;OOOO'                     'OOOO;
+       .dOOo                     oOOd.
+         .ok                     ko.
+           .                     .
+
+       =[ metasploit v6.3.44-dev                          ]
++ -- --=[ 2376 exploits - 1232 auxiliary - 416 post       ]
+`,
+  `
+                                   .,;,.
+                                 ;:::::;
+                               ;:::::;
+                             ;:::::;
+                           ;:::::;
+                         ;:::::;
+                       ;:::::;
+      ,;..,;..,;..,;.;:::::;
+    ,;:::::::::::::::::::::;
+  ,;:::::::::::::::::::::;
+ ;:::::::::::::::::::::;
+ ;:::::::::::::::::::;
+  ;::::::::::::::::;
+    ;::::::::::::;
+      ;::::::::;
+
+       =[ metasploit v6.3.44-dev                          ]
++ -- --=[ 2376 exploits - 1232 auxiliary - 416 post       ]
+`
+];
+
+export const getRandomBanner = () => {
+  return banners[Math.floor(Math.random() * banners.length)];
+};
+
 const formatHelp = () => `Available demo commands:
   help, ?
+  banner
   search <term> [type:auxiliary|exploit|post]
   use <module>
   info
@@ -56,6 +125,10 @@ export const parseMetasploitCommand = (
   const lower = trimmed.toLowerCase();
   if (lower === 'help' || lower === '?') {
     return { output: formatHelp(), nextState: state };
+  }
+
+  if (lower === 'banner') {
+    return { output: getRandomBanner(), nextState: state };
   }
 
   if (lower.startsWith('search')) {
@@ -96,6 +169,8 @@ export const parseMetasploitCommand = (
       nextState: state,
     };
   }
+
+
 
   if (lower.startsWith('use ')) {
     const moduleName = trimmed.slice(4).trim();

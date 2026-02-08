@@ -91,6 +91,7 @@ const HydraApp = () => {
 [DATA] max 16 tasks per 1 server, overall 16 tasks, 1 login try (l:1/p:1), ~1 try per task
 [DATA] attacking ssh://target:22/
 [STATUS] Simulation mode - no network traffic generated
+[INFO] This is a portfolio simulation. Configure the target and lists above, then click "Start Attack".
 `;
   const [output, setOutput] = useState(hydraBanner);
   const [running, setRunning] = useState(false);

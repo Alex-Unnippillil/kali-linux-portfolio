@@ -90,7 +90,7 @@ describe('Terminal component', () => {
   });
 
   it('clears history and prints about/date messages', async () => {
-    jest.useFakeTimers().setSystemTime(new Date('2023-01-01T00:00:00Z'));
+    jest.useFakeTimers().setSystemTime(new Date('2023-01-01T12:00:00Z'));
     const ref = createRef<any>();
     render(<Terminal ref={ref} openApp={openApp} />);
     await act(async () => { });

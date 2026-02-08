@@ -15,6 +15,8 @@ beforeAll(() => {
 beforeEach(() => {
   window.localStorage.clear();
   window.localStorage.setItem('settings:quality', JSON.stringify(0));
+  // @ts-ignore
+  global.Worker = undefined;
 });
 
 describe('connect four app', () => {

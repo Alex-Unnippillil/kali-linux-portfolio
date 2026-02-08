@@ -3,6 +3,7 @@ import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { promisify } from 'util';
 import path from 'path';
+import os from 'os';
 
 const execFileAsync = promisify(execFile);
 const allowed = new Set([
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
       const msg = error.stderr?.toString() || error.message;
       res.status(500).json({ error: msg });
     } finally {
-      await fs.copyFile(restoreFile, sessionFile).catch(() => {});
+      await fs.copyFile(restoreFile, sessionFile).catch(() => { });
     }
     return;
   }
@@ -74,8 +75,8 @@ export default async function handler(req, res) {
     return;
   }
 
-  const userPath = `/tmp/hydra-users-${randomUUID()}.txt`;
-  const passPath = `/tmp/hydra-pass-${randomUUID()}.txt`;
+  const userPath = path.join(os.tmpdir(), `hydra-users-${randomUUID()}.txt`);
+  const passPath = path.join(os.tmpdir(), `hydra-pass-${randomUUID()}.txt`);
 
   try {
     await fs.writeFile(userPath, userList);
@@ -89,8 +90,8 @@ export default async function handler(req, res) {
     await execFileAsync('which', ['hydra']);
   } catch {
     await Promise.all([
-      fs.unlink(userPath).catch(() => {}),
-      fs.unlink(passPath).catch(() => {}),
+      fs.unlink(userPath).catch(() => { }),
+      fs.unlink(passPath).catch(() => { }),
     ]);
     res.status(500).json({ error: 'Hydra not installed' });
     return;
@@ -109,9 +110,9 @@ export default async function handler(req, res) {
     res.status(500).json({ error: msg });
   } finally {
     await Promise.all([
-      fs.unlink(userPath).catch(() => {}),
-      fs.unlink(passPath).catch(() => {}),
+      fs.unlink(userPath).catch(() => { }),
+      fs.unlink(passPath).catch(() => { }),
     ]);
-    await fs.copyFile(restoreFile, sessionFile).catch(() => {});
+    await fs.copyFile(restoreFile, sessionFile).catch(() => { });
   }
 }

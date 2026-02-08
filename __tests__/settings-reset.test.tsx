@@ -2,12 +2,20 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Settings } from '../components/apps/settings';
 import { SettingsProvider } from '../hooks/useSettings';
+jest.mock('../utils/settingsStore', () => ({
+  __esModule: true,
+  ...jest.requireActual('../utils/settingsStore'),
+  resetSettings: jest.fn().mockResolvedValue(undefined),
+}));
+
 import { defaults, resetSettings } from '../utils/settingsStore';
 
 describe('Settings reset flow', () => {
   beforeEach(async () => {
     window.localStorage.clear();
-    await resetSettings();
+    // Mock window.confirm since jsdom doesn't implement it
+    window.confirm = jest.fn(() => true);
+    (resetSettings as jest.Mock).mockClear();
   });
 
   test('Reset Desktop restores toggles and slider to defaults', async () => {
