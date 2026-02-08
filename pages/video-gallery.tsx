@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface Video {
   id: string;
@@ -12,6 +12,8 @@ const VideoGallery: React.FC = () => {
   const [videos, setVideos] = useState<Video[]>([]);
   const [query, setQuery] = useState('');
   const [playing, setPlaying] = useState<string | null>(null);
+  const [focusIndex, setFocusIndex] = useState(0);
+  const buttonRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -37,6 +39,35 @@ const VideoGallery: React.FC = () => {
     v.title.toLowerCase().includes(query.toLowerCase())
   );
 
+  useEffect(() => {
+    setFocusIndex(0);
+  }, [filtered.length]);
+
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLButtonElement>,
+    index: number
+  ) => {
+    if (['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) {
+      e.preventDefault();
+    }
+    if (e.key === 'ArrowRight') {
+      const next = (index + 1) % filtered.length;
+      buttonRefs.current[next]?.focus();
+      setFocusIndex(next);
+    } else if (e.key === 'ArrowLeft') {
+      const prev = (index - 1 + filtered.length) % filtered.length;
+      buttonRefs.current[prev]?.focus();
+      setFocusIndex(prev);
+    } else if (e.key === 'Home') {
+      buttonRefs.current[0]?.focus();
+      setFocusIndex(0);
+    } else if (e.key === 'End') {
+      const last = filtered.length - 1;
+      buttonRefs.current[last]?.focus();
+      setFocusIndex(last);
+    }
+  };
+
   return (
     <main className="p-4">
       <input
@@ -60,10 +91,14 @@ const VideoGallery: React.FC = () => {
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filtered.map((video) => (
+        {filtered.map((video, index) => (
           <button
             key={video.id}
             type="button"
+            ref={(el) => (buttonRefs.current[index] = el)}
+            tabIndex={index === focusIndex ? 0 : -1}
+            onFocus={() => setFocusIndex(index)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
             className="text-left rounded outline outline-2 outline-offset-2 outline-transparent hover:outline-blue-500 focus-visible:outline-blue-500"
             onClick={() => setPlaying(video.id)}
           >
