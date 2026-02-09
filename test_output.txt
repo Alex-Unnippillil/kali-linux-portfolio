@@ -1,0 +1,101 @@
+﻿
+> unnippillil@2.1.0 test
+> jest __tests__/window.test.tsx --no-coverage
+
+node.exe : Missing env vars; running without validation
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~
+    + CategoryInfo          : NotSpecified: (Missing env var... 
+   hout validation:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAIL __tests__/window.test.tsx
+  Window lifecycle
+    ΓêÜ invokes callbacks on close (56 ms)
+    ΓêÜ focuses the frame when mounting a focused window (7 ms)
+  Window snap grid configuration
+    ΓêÜ applies custom grid to draggable when snapping is 
+enabled (6 ms)
+    ΓêÜ excludes resize handles from draggable interactions (6 
+ms)
+    ΓêÜ snaps dimensions using axis-specific grid values (5 ms)
+  Window drag position synchronization
+    ΓêÜ updates transform when a drag begins (12 ms)
+  Window snapping preview
+    ΓêÜ shows preview when dragged near left edge (9 ms)
+    ΓêÜ hides preview when away from edge (8 ms)
+    ΓêÜ shows top preview when dragged near top edge (8 ms)
+    ΓêÜ shows corner preview when dragged near the top-left 
+edge (7 ms)
+    ΓêÜ shows bottom-right preview when dragged near the 
+bottom-right edge (9 ms)
+  Window snapping finalize and release
+    ΓêÜ snaps window on drag stop near left edge (9 ms)
+    ΓêÜ snaps window on drag stop near right edge on large 
+viewport (8 ms)
+    ΓêÜ aligns snapped window with offset parent inset (7 ms)
+    ΓêÜ snaps window on drag stop near top edge (8 ms)
+    ΓêÜ snaps window on drag stop near the top-left corner (7 
+ms)
+    ΓêÜ snaps window on drag stop near the bottom-right corner 
+(8 ms)
+    ΓêÜ releases snap with Alt+ArrowDown restoring size (10 ms)
+    ΓêÜ releases snap when starting drag (10 ms)
+  Window maximize behavior
+    ΓêÜ respects safe-area aware top offset when maximizing (10 
+ms)
+    ΓêÜ keeps maximized windows within the desktop padding when 
+navbar height is under-reported (8 ms)
+  Window keyboard dragging
+    ΓêÜ moves window using arrow keys with grabbed state (12 ms)
+  Edge resistance
+    ΓêÜ clamps drag movement near boundaries (7 ms)
+  Window viewport constraints
+    ├ù clamps window transform when viewport shrinks (7 ms)
+    ΓêÜ uses visual viewport size when available (12 ms)
+    ΓêÜ respects visual viewport offsets when storing transform 
+values (11 ms)
+  Window overlay inert behaviour
+    ΓêÜ sets and removes inert on default __next root restoring 
+focus (6 ms)
+    ΓêÜ respects overlayRoot prop when provided (6 ms)
+
+  ΓùÅ Window viewport constraints ΓÇ║ clamps window transform 
+when viewport shrinks
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 500
+    Received:    1100
+
+    [0m [90m 1043 |[39m     [36mconst[39m minY [33m=[39m 
+offset[33m.[39mtop [33m+[39m ref[33m.[39mcurrent[33m![39
+m[33m.[39mstate[33m.[39msafeAreaTop[33m;[39m
+     [90m 1044 |[39m
+    [31m[1m>[22m[39m[90m 1045 |[39m     expect(parseFloat(
+winEl[33m.[39mstyle[33m.[39mgetPropertyValue([32m'--window-
+transform-x'[39m)))[33m.[39mtoBeCloseTo(offset[33m.[39mleft
+[33m,[39m [35m1[39m)[33m;[39m
+     [90m      |[39m                          
+[31m[1m^[22m[39m
+     [90m 1046 |[39m     expect(parseFloat(winEl[33m.[39msty
+le[33m.[39mgetPropertyValue([32m'--window-transform-y'[39m))
+)[33m.[39mtoBeCloseTo(minY[33m,[39m [35m1[39m)[33m;[39m
+     [90m 1047 |[39m   })[33m;[39m
+     [90m 1048 |[39m })[33m;[39m[0m
+
+      at Object.<anonymous> (__tests__/window.test.tsx:1045:26)
+
+A worker process has failed to exit gracefully and has been 
+force exited. This is likely caused by tests leaking due to 
+improper teardown. Try running with --detectOpenHandles to find 
+leaks. Active timers can also cause this, ensure that .unref() 
+was called on them.
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 27 passed, 28 total
+Snapshots:   0 total
+Time:        2.037 s
+Ran all test suites matching __tests__/window.test.tsx.

@@ -6089,7 +6089,7 @@ export class Desktop extends Component {
     }
 }
 
-export default function DesktopWithSnap(props) {
+const DesktopWithSnap = React.forwardRef((props, ref) => {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
     const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
@@ -6106,6 +6106,7 @@ export default function DesktopWithSnap(props) {
 
     return (
         <Desktop
+            ref={ref}
             {...props}
             snapEnabled={snapEnabled}
             snapGrid={memoizedSnapGrid}
@@ -6115,4 +6116,8 @@ export default function DesktopWithSnap(props) {
             desktopTheme={desktopTheme}
         />
     );
-}
+});
+
+DesktopWithSnap.displayName = 'DesktopWithSnap';
+
+export default DesktopWithSnap;

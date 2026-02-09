@@ -121,10 +121,10 @@ describe('Window lifecycle', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
         closed={closed}
-        openApp={() => {}}
+        openApp={() => { }}
       />
     );
 
@@ -149,9 +149,9 @@ describe('Window lifecycle', () => {
         screen={() => <div>content</div>}
         focus={focus}
         isFocused
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
       />
     );
 
@@ -169,10 +169,10 @@ describe('Window snap grid configuration', () => {
         id="grid-test"
         title="Grid Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         snapEnabled
         snapGrid={[16, 24]}
       />
@@ -188,10 +188,10 @@ describe('Window snap grid configuration', () => {
         id="grid-cancel-test"
         title="Grid Cancel"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
       />
     );
 
@@ -206,10 +206,10 @@ describe('Window snap grid configuration', () => {
         id="grid-snap-test"
         title="Grid Snap"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         snapEnabled
         snapGrid={[16, 24]}
         ref={ref}
@@ -229,10 +229,10 @@ describe('Window drag position synchronization', () => {
         id="drag-sync-test"
         title="Drag Sync"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -268,10 +268,10 @@ describe('Window snapping preview', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -300,10 +300,10 @@ describe('Window snapping preview', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -328,10 +328,10 @@ describe('Window snapping preview', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -359,10 +359,10 @@ describe('Window snapping preview', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -391,10 +391,10 @@ describe('Window snapping preview', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -426,10 +426,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -462,10 +462,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -494,10 +494,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -549,10 +549,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -580,10 +580,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -611,10 +611,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -644,10 +644,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -698,10 +698,10 @@ describe('Window snapping finalize and release', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -738,10 +738,10 @@ describe('Window maximize behavior', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
       />
     );
 
@@ -760,10 +760,10 @@ describe('Window maximize behavior', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
       />
     );
 
@@ -808,10 +808,10 @@ describe('Window keyboard dragging', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -872,10 +872,10 @@ describe('Edge resistance', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -892,6 +892,14 @@ describe('Edge resistance', () => {
 });
 
 describe('Window viewport constraints', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('clamps window transform when viewport shrinks', () => {
     const ref = React.createRef<any>();
     const onPositionChange = jest.fn();
@@ -901,10 +909,10 @@ describe('Window viewport constraints', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
         onPositionChange={onPositionChange}
       />
@@ -920,7 +928,7 @@ describe('Window viewport constraints', () => {
       height: 200,
       x: 0,
       y: 0,
-      toJSON: () => {}
+      toJSON: () => { }
     });
 
     act(() => {
@@ -933,6 +941,11 @@ describe('Window viewport constraints', () => {
 
     act(() => {
       window.dispatchEvent(new Event('resize'));
+    });
+
+    // Flush the requestAnimationFrame that clampToViewport schedules
+    act(() => {
+      jest.runAllTimers();
     });
 
     const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(winEl.style.transform);
@@ -952,7 +965,7 @@ describe('Window viewport constraints', () => {
     expect(clampedX).toBeLessThanOrEqual(maxX);
     expect(clampedY).toBeGreaterThanOrEqual(topOffset);
     expect(clampedY).toBeLessThanOrEqual(maxY);
-    expect(onPositionChange).toHaveBeenCalledWith(clampedX, clampedY);
+    expect(onPositionChange).toHaveBeenCalledWith('test-window', clampedX, clampedY);
   });
 
   it('uses visual viewport size when available', () => {
@@ -963,10 +976,10 @@ describe('Window viewport constraints', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -1007,10 +1020,10 @@ describe('Window viewport constraints', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />
     );
@@ -1025,7 +1038,7 @@ describe('Window viewport constraints', () => {
       height: 100,
       x: 10,
       y: 10,
-      toJSON: () => {},
+      toJSON: () => { },
     });
 
     setVisualViewport(600, 500, 40, 30);
@@ -1063,10 +1076,10 @@ describe('Window overlay inert behaviour', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
       />,
       { container: root }
@@ -1103,10 +1116,10 @@ describe('Window overlay inert behaviour', () => {
         id="test-window"
         title="Test"
         screen={() => <div>content</div>}
-        focus={() => {}}
-        hasMinimised={() => {}}
-        closed={() => {}}
-        openApp={() => {}}
+        focus={() => { }}
+        hasMinimised={() => { }}
+        closed={() => { }}
+        openApp={() => { }}
         ref={ref}
         overlayRoot="custom-root"
       />,

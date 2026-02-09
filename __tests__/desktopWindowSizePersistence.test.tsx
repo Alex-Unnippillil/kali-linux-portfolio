@@ -90,8 +90,8 @@ describe('Desktop window size persistence', () => {
       initialRender = render(
         <Desktop
           ref={desktopRef}
-          clearSession={() => {}}
-          changeBackgroundImage={() => {}}
+          clearSession={() => { }}
+          changeBackgroundImage={() => { }}
           bg_image_name="aurora"
           snapEnabled
         />
@@ -124,24 +124,37 @@ describe('Desktop window size persistence', () => {
     expect(stored.terminal).toEqual({ width: 72, height: 64 });
 
     unmount();
+
+    // Allow first Desktop to fully unmount and clean up
+    await act(async () => {
+      jest.runAllTimers();
+      await Promise.resolve();
+    });
+
     windowPropsById.clear();
     windowRenderMock.mockClear();
 
     const desktopRefReloaded = React.createRef<Desktop>();
+    let reloadedRender: ReturnType<typeof render> | undefined;
     await act(async () => {
-      render(
+      reloadedRender = render(
         <Desktop
           ref={desktopRefReloaded}
-          clearSession={() => {}}
-          changeBackgroundImage={() => {}}
+          clearSession={() => { }}
+          changeBackgroundImage={() => { }}
           bg_image_name="aurora"
           snapEnabled
         />
       );
     });
+
+    // Ensure component has fully mounted and ref is attached
     await act(async () => {
+      jest.runOnlyPendingTimers();
       await Promise.resolve();
     });
+
+    expect(reloadedRender).toBeDefined();
     expect(desktopRefReloaded.current).toBeDefined();
     act(() => {
       desktopRefReloaded.current?.openApp('terminal');
