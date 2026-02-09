@@ -16,6 +16,7 @@ Production site: https://unnippillil.com/
 - Quality Gates & Tooling
 - Security Hardening
 - Troubleshooting
+- Developer Documentation
 - License
 
 ## Legal Notice & Risk Overview
@@ -423,6 +424,10 @@ CSP whitelists origins for embedded tools: stackblitz.com, youtube-nocookie.com,
 | Gamepad input not detected | Confirm the browser supports `navigator.getGamepads()` and update bindings in `components/apps/Games/common/input-remap`. |
 | Analytics not reporting | Verify `NEXT_PUBLIC_ENABLE_ANALYTICS` is true and check ad blockers. |
 | External embeds refuse to load | Remote site may send X-Frame-Options headers. |
+
+## Developer Documentation
+
+- [Terminal Simulation](docs/terminal-simulation.md)
 
 ## License
 

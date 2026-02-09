@@ -154,6 +154,7 @@ npx playwright test   # E2E, if tooling is available locally
 3. Prefer Yarn scripts over raw binaries.
 4. Document commands run (lint/tests/build) in the PR message.
 5. Update any shorthand docs (`agent.md`, README pointers) when you change global guidance like this file.
+6. Keep developer docs pointers up to date (see `docs/terminal-simulation.md`).
 
 ### Commit & PR rules
 
