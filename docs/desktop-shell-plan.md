@@ -26,6 +26,43 @@
 | Accessibility hooks | Provide ARIA live regions for workspace changes, announce overlay focus shifts, and expose keyboard shortcuts in context menus. | `components/screen/desktop.js`, context menu components, accessibility utilities |
 | Touch and pen gestures | Support touch-friendly snapping, long-press context menus, and pen/stylus drag heuristics without regressing mouse/keyboard behavior. | `components/base/window.js`, `components/screen/desktop.js`, gesture utilities |
 
+## Actionable Backlog (Goal-Driven)
+
+> Product goals: reduce time-to-find (apps/settings/content), reduce time-to-complete (common actions), keep the shell responsive
+> under heavy interaction, and maintain simulation-only safety boundaries with default-off networking.
+
+### P1 — Search & Launch Speed (Time-to-Find)
+| Backlog Item | Outcome | Definition of Done | Success Metric |
+| --- | --- | --- | --- |
+| Instrument launcher flow timing | Capture `launcher_opened → app_launched` timing locally (no network) with opt-in analytics gating. | Timing events emitted via existing analytics wrapper; storage-only when analytics disabled. | Median time from launcher open to app launched. |
+| Launcher ranking model (offline) | Rank apps by recent usage + pinned favorites; reduce scan time. | Deterministic ranking, local persistence, no outbound calls; toggleable in settings. | ↓ median launcher-to-app time vs. baseline. |
+| Search UX improvements | Improve search feedback and keyboard navigation in launcher and command palette. | Highlight matches, ensure arrow/enter behavior is consistent, add "no results" hints. | Launcher search success rate, keyboard-only completion. |
+
+### P1 — Responsiveness & UI Latency (Time-to-Complete)
+| Backlog Item | Outcome | Definition of Done | Success Metric |
+| --- | --- | --- | --- |
+| Long-task and frame-drop tracking | Identify jank during drag/resize and overlay transitions. | Client-only performance marks + sampling that never calls external endpoints by default. | Reduced long tasks; smoother drag/resize under load. |
+| Window interaction optimization | Reduce layout thrash on drag/resize by batching state updates. | Verified fewer layout recalcs; no regression in snapping or focus. | Improved frame stability during heavy interaction. |
+| Overlay transition audit | Ensure overlay open/close transitions are minimal and non-blocking. | Reduce synchronous work in transitions, maintain focus handling. | Fewer long tasks during overlay transitions. |
+
+### P2 — Accessibility & Keyboard-Only Completion
+| Backlog Item | Outcome | Definition of Done | Success Metric |
+| --- | --- | --- | --- |
+| Keyboard-only happy-paths | Core flows (launcher, window switcher, settings) are fully keyboard-driven. | Documented test steps; ARIA labels for chrome, menus, overlays. | Keyboard-only completion of core flows. |
+| Automated a11y checks | Integrate targeted checks for overlays and window chrome. | Pa11y/Axe checks run in CI (or documented manual) with zero new violations. | Reduced accessibility regression rate. |
+
+### P2 — Safety Boundaries & Default-Off Networking
+| Backlog Item | Outcome | Definition of Done | Success Metric |
+| --- | --- | --- | --- |
+| Simulated tool audit | Confirm every security tool remains demo-only with deterministic outputs. | No outbound requests; "lab mode" flags remain off by default. | Zero violations of safety boundary checklist. |
+| Feature flag review | Align analytics/tool APIs with explicit opt-in flags. | Flags documented; toggles present in settings or env config. | No data sent when flags are disabled. |
+
+### P3 — Shell Architecture & Observability
+| Backlog Item | Outcome | Definition of Done | Success Metric |
+| --- | --- | --- | --- |
+| Overlay registry module | Centralize overlay IDs and metadata. | Overlay registry consumed by desktop shell and analytics wrappers. | Reduced duplicate string usage. |
+| Workspace event bus | Replace ad hoc window events with a typed event layer. | Publish/subscribe hooks replace raw listeners. | Cleaner integrations + testable events. |
+
 ## Internal APIs & Refactor Opportunities
 
 - **Overlay registry** — IDs such as `overlay-launcher`, `overlay-shortcut-selector`, `overlay-window-switcher`, and `overlay-command-palette` are centralized for consistency; consider extracting them into a typed module so overlays and analytics share the same contract.【F:components/screen/desktop.js†L108-L135】
