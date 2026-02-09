@@ -32,6 +32,7 @@ import { buildPinnedAppsPayload } from '../../utils/taskbarPayload';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { useNotificationBadges } from '../../hooks/useNotifications';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -168,6 +169,21 @@ const BADGE_TONE_MAP = Object.freeze({
     muted: 'neutral',
     default: 'accent',
 });
+
+const BADGE_TONE_COLORS = Object.freeze({
+    accent: { bg: '#3b82f6', fg: '#020817', glow: 'rgba(59,130,246,0.45)', track: 'rgba(8,15,26,0.82)' },
+    info: { bg: '#38bdf8', fg: '#04121f', glow: 'rgba(56,189,248,0.45)', track: 'rgba(8,15,26,0.82)' },
+    success: { bg: '#22c55e', fg: '#032014', glow: 'rgba(34,197,94,0.48)', track: 'rgba(8,15,26,0.82)' },
+    warning: { bg: '#fbbf24', fg: '#111827', glow: 'rgba(251,191,36,0.45)', track: 'rgba(8,15,26,0.82)' },
+    danger: { bg: '#f97316', fg: '#ffffff', glow: 'rgba(249,115,22,0.52)', track: 'rgba(8,15,26,0.82)' },
+    neutral: { bg: '#94a3b8', fg: '#0f172a', glow: 'rgba(148,163,184,0.4)', track: 'rgba(8,15,26,0.82)' },
+});
+
+const resolveBadgeTone = (tone) => {
+    if (typeof tone !== 'string') return BADGE_TONE_COLORS.accent;
+    const normalized = tone.trim().toLowerCase();
+    return BADGE_TONE_COLORS[normalized] || BADGE_TONE_COLORS.accent;
+};
 
 const clamp = (value, min = 0, max = 1) => {
     if (typeof value !== 'number' || Number.isNaN(value)) return min;
@@ -1542,7 +1558,6 @@ export class Desktop extends Component {
             minimized_windows = {},
             focused_windows = {},
             overlayWindows = {},
-            appBadges = {},
         } = this.state;
         const summaries = [];
         const appIndex = new Map(apps.map((app) => [app.id, app]));
@@ -1552,7 +1567,7 @@ export class Desktop extends Component {
         orderedIds.forEach((id) => {
             const app = appIndex.get(id);
             if (!app) return;
-            const badge = appBadges[id];
+            const badge = this.getEffectiveAppBadge(id);
             const summary = {
                 id,
                 title: app.title,
@@ -1577,7 +1592,7 @@ export class Desktop extends Component {
             const isFocused = typeof state.focused === 'boolean'
                 ? state.focused
                 : Boolean(focused_windows[overlay.id]);
-            const badge = appBadges[overlay.id];
+            const badge = this.getEffectiveAppBadge(overlay.id);
             const summary = {
                 id: overlay.id,
                 title: overlay.title,
@@ -1592,6 +1607,96 @@ export class Desktop extends Component {
             summaries.push(summary);
         });
         return summaries;
+    };
+
+    getEffectiveAppBadge = (appId) => {
+        if (!appId) return null;
+        const current = this.state.appBadges || {};
+        const notificationBadges = this.props.notificationBadges || {};
+        return current[appId] || notificationBadges[appId] || null;
+    };
+
+    renderAppBadge = (badge) => {
+        if (!badge || typeof badge !== 'object') return null;
+        const tone = resolveBadgeTone(badge.tone);
+        const style = {
+            '--taskbar-badge-bg': tone.bg,
+            '--taskbar-badge-fg': tone.fg,
+            '--taskbar-badge-glow': tone.glow,
+            '--taskbar-badge-track': tone.track,
+        };
+        const shouldPulse = Boolean(badge.pulse);
+        const classes = ['taskbar-badge'];
+        if (shouldPulse) {
+            classes.push('taskbar-badge--pulse');
+        }
+
+        const resolvedLabel = typeof badge.label === 'string' && badge.label.trim()
+            ? badge.label.trim()
+            : undefined;
+
+        if (badge.type === 'count') {
+            classes.push('taskbar-badge--count');
+            const displayValue = typeof badge.displayValue === 'string' && badge.displayValue.trim()
+                ? badge.displayValue.trim()
+                : (typeof badge.count === 'number' ? String(badge.count) : '');
+            if (!displayValue) return null;
+            const label = resolvedLabel
+                || (() => {
+                    const numeric = Number(displayValue.replace(/\D+/g, ''));
+                    if (Number.isFinite(numeric)) {
+                        return numeric === 1 ? '1 notification' : `${displayValue} notifications`;
+                    }
+                    return `${displayValue} updates`;
+                })();
+
+            return (
+                <span
+                    className={classes.join(' ')}
+                    style={style}
+                    role="status"
+                    aria-label={label}
+                    title={label}
+                >
+                    <span aria-hidden="true">{displayValue}</span>
+                </span>
+            );
+        }
+
+        if (badge.type === 'ring') {
+            classes.push('taskbar-badge--ring');
+            const progress = typeof badge.progress === 'number' ? Math.max(0, Math.min(1, badge.progress)) : 0;
+            style['--taskbar-badge-progress'] = `${Math.round(progress * 360)}deg`;
+            const displayValue = typeof badge.displayValue === 'string' && badge.displayValue.trim()
+                ? badge.displayValue.trim()
+                : `${Math.round(progress * 100)}%`;
+            const label = resolvedLabel || `${displayValue} complete`;
+
+            return (
+                <span
+                    className={classes.join(' ')}
+                    style={style}
+                    role="status"
+                    aria-label={label}
+                    title={label}
+                >
+                    <span className="taskbar-badge__value" aria-hidden="true">{displayValue}</span>
+                </span>
+            );
+        }
+
+        classes.push('taskbar-badge--dot');
+        const label = resolvedLabel || 'Attention needed';
+
+        return (
+            <span
+                className={classes.join(' ')}
+                style={style}
+                role="status"
+                aria-label={label}
+                title={label}
+            />
+        );
     };
 
     setWorkspaceState = (updater, callback) => {
@@ -5016,6 +5121,7 @@ export class Desktop extends Component {
             const isSelected = selectionSet.has(appId);
             const isHovered = hoveredIconId === appId;
             const assistiveHint = this.buildKeyboardMoveHint(app, isKeyboardMoving, position);
+            const badgeNode = this.renderAppBadge(this.getEffectiveAppBadge(appId));
             const wrapperStyle = {
                 position: 'absolute',
                 left: `${position.x}px`,
@@ -5047,6 +5153,7 @@ export class Desktop extends Component {
                         isSelected={isSelected}
                         isHovered={isHovered}
                     />
+                    {badgeNode}
                 </div>
             );
         }).filter(Boolean);
@@ -6092,7 +6199,18 @@ export class Desktop extends Component {
 const DesktopWithSnap = React.forwardRef((props, ref) => {
     const [snapEnabled] = useSnapSetting();
     const [snapGrid] = useSnapGridSetting();
-    const { density, fontScale, largeHitAreas, desktopTheme } = useSettings();
+    const {
+        density,
+        fontScale,
+        largeHitAreas,
+        desktopTheme,
+        showNotificationBadges,
+        reducedMotion,
+    } = useSettings();
+    const notificationBadges = useNotificationBadges({
+        enabled: showNotificationBadges,
+        disablePulse: reducedMotion,
+    });
 
     const memoizedSnapGrid = React.useMemo(() => {
         const fallback = [8, 8];
@@ -6114,6 +6232,7 @@ const DesktopWithSnap = React.forwardRef((props, ref) => {
             fontScale={fontScale}
             largeHitAreas={largeHitAreas}
             desktopTheme={desktopTheme}
+            notificationBadges={notificationBadges}
         />
     );
 });

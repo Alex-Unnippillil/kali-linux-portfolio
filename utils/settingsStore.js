@@ -16,6 +16,7 @@ const DEFAULT_SETTINGS = {
   allowNetwork: false,
   haptics: true,
   volume: 100,
+  showNotificationBadges: true,
 };
 
 let hasLoggedStorageWarning = false;
@@ -196,6 +197,19 @@ export async function setVolume(value) {
   storage.setItem('volume', String(value));
 }
 
+export async function getShowNotificationBadges() {
+  const storage = getLocalStorage();
+  if (!storage) return DEFAULT_SETTINGS.showNotificationBadges;
+  const stored = storage.getItem('show-notification-badges');
+  return stored === null ? DEFAULT_SETTINGS.showNotificationBadges : stored === 'true';
+}
+
+export async function setShowNotificationBadges(value) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  storage.setItem('show-notification-badges', value ? 'true' : 'false');
+}
+
 export async function resetSettings() {
   const storage = getLocalStorage();
   if (!storage) return;
@@ -213,6 +227,7 @@ export async function resetSettings() {
   storage.removeItem('haptics');
   storage.removeItem('use-kali-wallpaper');
   storage.removeItem('volume');
+  storage.removeItem('show-notification-badges');
 }
 
 export async function exportSettings() {
@@ -229,6 +244,7 @@ export async function exportSettings() {
     allowNetwork,
     haptics,
     volume,
+    showNotificationBadges,
   ] = await Promise.all([
     getAccent(),
     getWallpaper(),
@@ -242,6 +258,7 @@ export async function exportSettings() {
     getAllowNetwork(),
     getHaptics(),
     getVolume(),
+    getShowNotificationBadges(),
   ]);
   const theme = getTheme();
   return JSON.stringify({
@@ -257,6 +274,7 @@ export async function exportSettings() {
     haptics,
     volume,
     useKaliWallpaper,
+    showNotificationBadges,
     theme,
   });
 }
@@ -283,6 +301,7 @@ export async function importSettings(json) {
     allowNetwork,
     haptics,
     volume,
+    showNotificationBadges,
     theme,
   } = settings;
   if (accent !== undefined) await setAccent(accent);
@@ -297,6 +316,7 @@ export async function importSettings(json) {
   if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
   if (haptics !== undefined) await setHaptics(haptics);
   if (volume !== undefined) await setVolume(volume);
+  if (showNotificationBadges !== undefined) await setShowNotificationBadges(showNotificationBadges);
   if (theme !== undefined) setTheme(theme);
 }
 
