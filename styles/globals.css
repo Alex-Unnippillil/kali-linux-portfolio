@@ -42,23 +42,35 @@
   --kali-bg-alpha: 0.9;
 
   /* Existing tokens computed from RGB values */
-  --color-bg: rgb(var(--color-bg-rgb)); /* kali background */
-  --color-text: rgb(var(--color-text-rgb)); /* text on dark backgrounds */
-  --color-primary: rgb(var(--color-primary-rgb)); /* kali blue accent */
-  --color-secondary: rgb(var(--color-secondary-rgb)); /* complementary dark */
-  --color-accent: rgb(var(--color-accent-rgb)); /* accent matches primary */
-  --color-error: rgb(var(--color-error-rgb)); /* alert and error states */
+  --color-bg: rgb(var(--color-bg-rgb));
+  /* kali background */
+  --color-text: rgb(var(--color-text-rgb));
+  /* text on dark backgrounds */
+  --color-primary: rgb(var(--color-primary-rgb));
+  /* kali blue accent */
+  --color-secondary: rgb(var(--color-secondary-rgb));
+  /* complementary dark */
+  --color-accent: rgb(var(--color-accent-rgb));
+  /* accent matches primary */
+  --color-error: rgb(var(--color-error-rgb));
+  /* alert and error states */
   --kali-blue: var(--color-primary);
-  --color-muted: rgb(var(--color-muted-rgb)); /* muted surfaces */
-  --color-surface: rgb(var(--color-surface-rgb)); /* panel surfaces */
-  --color-inverse: rgb(var(--color-inverse-rgb)); /* inverse of text */
-  --color-border: rgb(var(--color-border-rgb) / var(--color-border-alpha)); /* subtle borders */
+  --color-muted: rgb(var(--color-muted-rgb));
+  /* muted surfaces */
+  --color-surface: rgb(var(--color-surface-rgb));
+  /* panel surfaces */
+  --color-inverse: rgb(var(--color-inverse-rgb));
+  /* inverse of text */
+  --color-border: rgb(var(--color-border-rgb) / var(--color-border-alpha));
+  /* subtle borders */
   --kali-border: var(--color-border);
-  --color-terminal: rgb(var(--color-terminal-rgb)); /* terminal green */
+  --color-terminal: rgb(var(--color-terminal-rgb));
+  /* terminal green */
   --color-success: rgb(var(--color-success-rgb));
   --color-warning: rgb(var(--color-warning-rgb));
   --color-danger: rgb(var(--color-danger-rgb));
-  --color-dark: rgb(var(--color-dark-rgb)); /* card back */
+  --color-dark: rgb(var(--color-dark-rgb));
+  /* card back */
   --color-focus-ring: rgb(var(--color-focus-ring-rgb));
   --color-selection: rgb(var(--color-selection-rgb));
   --color-control-accent: rgb(var(--color-control-accent-rgb));
@@ -230,14 +242,17 @@ html {
     transform: rotate(0deg) scale(1);
     opacity: 0.5;
   }
+
   35% {
     transform: rotate(6deg) scale(1.06);
     opacity: 0.7;
   }
+
   68% {
     transform: rotate(-4deg) scale(1.04);
     opacity: 0.62;
   }
+
   100% {
     transform: rotate(2deg) scale(1.02);
     opacity: 0.55;
@@ -274,33 +289,43 @@ html {
   0% {
     transform: translate3d(0, 0, 0);
   }
+
   10% {
     transform: translate3d(-2px, 1px, 0);
   }
+
   20% {
     transform: translate3d(2px, -1px, 0);
   }
+
   30% {
     transform: translate3d(-2px, -1px, 0);
   }
+
   40% {
     transform: translate3d(2px, 1px, 0);
   }
+
   50% {
     transform: translate3d(-1px, 0, 0);
   }
+
   60% {
     transform: translate3d(1px, 0, 0);
   }
+
   70% {
     transform: translate3d(-1px, 1px, 0);
   }
+
   80% {
     transform: translate3d(1px, -1px, 0);
   }
+
   90% {
     transform: translate3d(-1px, -1px, 0);
   }
+
   100% {
     transform: translate3d(0, 0, 0);
   }
@@ -324,7 +349,7 @@ html {
   box-shadow: 0 12px 28px -18px rgba(15, 23, 42, 0.92), 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
-.taskbar-badge--count > span {
+.taskbar-badge--count>span {
   display: inline-block;
   font-weight: 700;
 }
@@ -354,10 +379,8 @@ html {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: conic-gradient(
-    var(--taskbar-badge-bg, #3b82f6) var(--taskbar-badge-progress, 0deg),
-    rgba(255, 255, 255, 0.08) var(--taskbar-badge-progress, 0deg)
-  );
+  background: conic-gradient(var(--taskbar-badge-bg, #3b82f6) var(--taskbar-badge-progress, 0deg),
+      rgba(255, 255, 255, 0.08) var(--taskbar-badge-progress, 0deg));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 10px 24px -16px rgba(15, 23, 42, 0.85);
 }
 
@@ -397,6 +420,7 @@ html {
 }
 
 @keyframes taskbarBadgePulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -405,6 +429,7 @@ html {
       0 0 0 1px rgba(255, 255, 255, 0.18),
       0 0 0 0 var(--taskbar-badge-glow, rgba(59, 130, 246, 0.4));
   }
+
   50% {
     transform: scale(1.08);
     box-shadow:
@@ -432,9 +457,11 @@ html {
   0% {
     background-position: 0px 0px, 0px 0px;
   }
+
   50% {
     background-position: 80px 40px, -60px 30px;
   }
+
   100% {
     background-position: 0px 0px, 0px 0px;
   }
@@ -444,9 +471,11 @@ html {
   0% {
     opacity: 0.1;
   }
+
   50% {
     opacity: 0.2;
   }
+
   100% {
     opacity: 0.12;
   }
@@ -461,4 +490,345 @@ html {
 ::-webkit-scrollbar-thumb {
   background-color: var(--kali-border, var(--color-border));
   border-radius: 6px;
+}
+
+/* ========================================
+   ENHANCED MICRO-ANIMATIONS & POLISH
+   ======================================== */
+
+/* Smooth hover lift effect for interactive elements */
+.hover-lift {
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.4, 1),
+    box-shadow 200ms ease-out;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.4),
+    0 4px 16px -4px rgba(0, 0, 0, 0.2);
+}
+
+/* Glassmorphism effect for panels and modals */
+.glass {
+  background: rgba(var(--color-surface-rgb), 0.75);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-subtle {
+  background: rgba(var(--color-surface-rgb), 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Premium button styles */
+.btn-premium {
+  position: relative;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  background: linear-gradient(135deg,
+      rgba(var(--color-primary-rgb), 0.9) 0%,
+      rgba(var(--color-primary-rgb), 0.7) 100%);
+  color: var(--color-bg);
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 200ms cubic-bezier(0.2, 0.8, 0.4, 1);
+  box-shadow: 0 4px 16px -4px rgba(var(--color-primary-rgb), 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.btn-premium::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.2) 0%,
+      transparent 50%);
+  opacity: 0;
+  transition: opacity 200ms ease-out;
+}
+
+.btn-premium:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px -6px rgba(var(--color-primary-rgb), 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-premium:hover::before {
+  opacity: 1;
+}
+
+.btn-premium:active {
+  transform: translateY(0);
+}
+
+/* Glow effect for accent elements */
+.glow-accent {
+  box-shadow: 0 0 20px -4px rgba(var(--color-primary-rgb), 0.4),
+    0 0 40px -8px rgba(var(--color-primary-rgb), 0.2);
+}
+
+/* Animated gradient border */
+@keyframes gradientShift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.gradient-border {
+  position: relative;
+  border-radius: 0.75rem;
+}
+
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+      rgba(var(--color-primary-rgb), 0.6),
+      rgba(var(--color-accent-rgb), 0.4),
+      rgba(var(--color-terminal-rgb), 0.5),
+      rgba(var(--color-primary-rgb), 0.6));
+  background-size: 300% 300%;
+  animation: gradientShift 4s ease infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Smooth fade-in animation */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 400ms cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+/* Scale bounce animation */
+@keyframes scaleBounce {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  60% {
+    transform: scale(1.02);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.scale-bounce {
+  animation: scaleBounce 300ms cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
+}
+
+/* Pulse glow for notifications/alerts */
+@keyframes pulseGlow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb), 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(var(--color-primary-rgb), 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Shimmer loading effect */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(90deg,
+      rgba(var(--color-surface-rgb), 0.4) 25%,
+      rgba(var(--color-surface-rgb), 0.8) 50%,
+      rgba(var(--color-surface-rgb), 0.4) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Card hover with perspective */
+.card-3d {
+  transition: transform 300ms ease-out;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.card-3d:hover {
+  transform: perspective(1000px) rotateX(2deg) rotateY(-2deg) translateZ(10px);
+}
+
+/* Smooth icon transitions */
+.icon-interactive {
+  transition: transform 150ms ease-out, color 150ms ease-out;
+}
+
+.icon-interactive:hover {
+  transform: scale(1.1);
+  color: var(--color-primary);
+}
+
+.icon-interactive:active {
+  transform: scale(0.95);
+}
+
+/* Enhanced focus states */
+.focus-ring-premium:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-bg),
+    0 0 0 4px var(--color-primary),
+    0 0 16px -4px rgba(var(--color-primary-rgb), 0.5);
+}
+
+/* Status indicator animations */
+@keyframes statusPulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-online::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  margin-right: 8px;
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* Text gradient effect */
+.text-gradient {
+  background: linear-gradient(135deg,
+      var(--color-primary) 0%,
+      var(--color-accent) 50%,
+      var(--color-terminal) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Typewriter cursor effect */
+@keyframes blink {
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.cursor-blink::after {
+  content: '|';
+  animation: blink 1s step-end infinite;
+  color: var(--color-terminal);
+}
+
+/* Enhanced tooltip styling */
+.tooltip-premium {
+  position: relative;
+}
+
+.tooltip-premium::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 6px 12px;
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 6px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.tooltip-premium:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(-4px);
+}
+
+/* Reduce motion preference */
+@media (prefers-reduced-motion: reduce) {
+
+  .hover-lift,
+  .fade-in-up,
+  .scale-bounce,
+  .pulse-glow,
+  .shimmer,
+  .card-3d,
+  .icon-interactive,
+  .gradient-border::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+.reduce-motion .hover-lift,
+.reduce-motion .fade-in-up,
+.reduce-motion .scale-bounce,
+.reduce-motion .pulse-glow,
+.reduce-motion .shimmer,
+.reduce-motion .card-3d,
+.reduce-motion .icon-interactive,
+.reduce-motion .gradient-border::before {
+  animation: none !important;
+  transition: none !important;
 }
