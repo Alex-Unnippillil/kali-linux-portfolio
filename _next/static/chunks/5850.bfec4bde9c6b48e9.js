@@ -1,0 +1,1 @@
+self.onmessage=e=>{let{hosts:s=[],filter:l="All"}=e.data||{},a=("All"===l?s:s.filter(e=>e.severity===l)).map((e,s)=>({...e,radius:5*e.cvss,index:s}));self.postMessage(a)},_N_E={};

@@ -1,0 +1,10 @@
+{
+  "loot": [
+    { "host": "10.0.0.2", "type": "ssh_private_key", "path": "/home/user/.ssh/id_rsa" },
+    { "host": "10.0.0.3", "type": "password", "data": "admin:admin123" }
+  ],
+  "notes": [
+    { "host": "10.0.0.2", "note": "Potential privileged account" },
+    { "host": "10.0.0.3", "note": "Web server credentials found" }
+  ]
+}

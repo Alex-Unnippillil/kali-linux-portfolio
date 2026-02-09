@@ -1,0 +1,1 @@
+self.onmessage=e=>{let{data:s}=e,t=[],{cellSize:l=10,cols:a=100,rows:h=60,segments:o=[]}=s||{},i=0,n=0;for(let e=0;e<h;e++)for(let s=0;s<a;s++){var r;o[i]&&n>=o[i].size&&(i=Math.min(i+1,o.length-1),n=0);let a=(null==(r=o[i])?void 0:r.type)||"process";t.push({x:s*l,y:e*l,width:l,height:l,value:Math.random(),type:a}),n++}self.postMessage(t)},_N_E={};

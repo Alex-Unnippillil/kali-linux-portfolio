@@ -1,0 +1,67 @@
+{
+  "hosts": [
+    {
+      "ip": "192.0.2.10",
+      "ports": [
+        {
+          "port": 80,
+          "service": "http",
+          "cvss": 5.0,
+          "scripts": [
+            {
+              "name": "http-title",
+              "output": "Example Domain"
+            },
+            {
+              "name": "http-enum",
+              "output": "/admin/: Potential admin interface\n/images/: Potentially interesting directory w/ listing"
+            }
+          ]
+        },
+        {
+          "port": 443,
+          "service": "https",
+          "cvss": 3.1,
+          "scripts": [
+            {
+              "name": "ssl-cert",
+              "output": "Subject: commonName=example.com\nNot valid before: 2020-06-01\nNot valid after: 2022-06-01"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ip": "192.0.2.20",
+      "ports": [
+        {
+          "port": 21,
+          "service": "ftp",
+          "cvss": 7.5,
+          "scripts": [
+            {
+              "name": "ftp-anon",
+              "output": "Anonymous FTP login allowed\nwelcome.msg"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ip": "192.0.2.30",
+      "ports": [
+        {
+          "port": 445,
+          "service": "microsoft-ds",
+          "cvss": 4.0,
+          "scripts": [
+            {
+              "name": "smb-os-discovery",
+              "output": "OS: Windows 10 Pro\nComputer name: HOST\nWorkgroup: WORKGROUP"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

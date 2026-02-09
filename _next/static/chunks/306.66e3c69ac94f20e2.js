@@ -1,0 +1,1 @@
+self.onmessage=e=>{var l,a,t;if(null==(l=e.data)?void 0:l.cancel)return;let s=null!=(t=null==(a=e.data)?void 0:a.target)?t:100,n=0,o=()=>{n+=1,self.postMessage(n),n<s&&setTimeout(o,100)};o()},_N_E={};

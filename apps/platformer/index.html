@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Platformer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="game" width="640" height="360"></canvas>
+  <div id="hud">
+    <div id="timer" aria-live="off"></div>
+    <div id="hints">Move: ←/→ Jump: Space</div>
+  </div>
+  <div id="complete" class="hidden" role="status" aria-live="polite">Level Complete!</div>
+  <div id="controls" class="hidden">
+    <button id="btnLeft" aria-label="Move left">◀</button>
+    <button id="btnRight" aria-label="Move right">▶</button>
+    <button id="btnJump" aria-label="Jump">⮝</button>
+  </div>
+  <div id="settings">
+    <div>
+      Buffer:
+      <input id="bufferSlider" type="range" min="0" max="300" />
+      <span id="bufferLabel"></span>ms
+    </div>
+    <div>
+      Gravity:
+      <input id="gravitySlider" type="range" min="500" max="4000" />
+      <span id="gravityLabel"></span>
+    </div>
+    <div>
+      Accel:
+      <input id="accelSlider" type="range" min="200" max="2000" />
+      <span id="accelLabel"></span>
+    </div>
+    <div>
+      Friction:
+      <input id="frictionSlider" type="range" min="100" max="2000" />
+      <span id="frictionLabel"></span>
+    </div>
+    <div>
+      Max Speed:
+      <input id="speedSlider" type="range" min="50" max="400" />
+      <span id="speedLabel"></span>
+    </div>
+    <div>
+      Jump Speed:
+      <input id="jumpSlider" type="range" min="100" max="1000" />
+      <span id="jumpLabel"></span>
+    </div>
+    <div>
+      Coin Value:
+      <input id="coinSlider" type="range" min="1" max="10" />
+      <span id="coinLabel"></span>
+    </div>
+    <div>
+      Jump Cost:
+      <input id="jumpCostSlider" type="range" min="0" max="5" />
+      <span id="jumpCostLabel"></span>
+    </div>
+    <div>
+      Fast Forward: <button id="fastBtn">1x</button>
+    </div>
+    <div>
+      Balance: <span id="balanceLabel">0</span>
+    </div>
+    <div>
+      <label><input type="checkbox" id="buttonsToggle" /> Show Buttons</label>
+    </div>
+    <div>
+      Pad Left: <button id="padLeft" aria-label="Move left"></button>
+    </div>
+    <div>
+      Pad Right: <button id="padRight" aria-label="Move right"></button>
+    </div>
+    <div>
+      Pad Jump: <button id="padJump" aria-label="Jump"></button>
+    </div>
+  </div>
+  <a href="editor.html" id="editorLink">Level Editor</a>
+  <div id="announcer" class="sr-only" aria-live="polite"></div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

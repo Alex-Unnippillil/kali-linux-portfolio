@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Car Racer</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div id="menu">
+    <h2>Select Track</h2>
+  </div>
+  <canvas id="game" width="800" height="800"></canvas>
+  <div id="hud">
+    <div>Seed: <span id="seedDisp"></span></div>
+    <label>Steering curve:
+      <select id="curve">
+        <option value="linear">Linear</option>
+        <option value="ease">Ease-in</option>
+        <option value="aggressive">Aggressive</option>
+      </select>
+    </label>
+    <label>
+      <input type="checkbox" id="assist" /> Traction assist
+    </label>
+    <div>Lap: <span id="lapTime">0.00</span>s Best: <span id="bestTime">--</span>s</div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

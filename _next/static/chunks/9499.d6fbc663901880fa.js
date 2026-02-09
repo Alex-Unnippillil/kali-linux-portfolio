@@ -1,0 +1,1 @@
+self.onmessage=e=>{let{id:a,code:t}=e.data;postMessage({id:a,hex:Array.from(new TextEncoder().encode(t)).map(e=>e.toString(16).padStart(2,"0")).join(" ")})},_N_E={};

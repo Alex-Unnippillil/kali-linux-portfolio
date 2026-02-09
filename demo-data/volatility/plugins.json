@@ -1,0 +1,50 @@
+[
+  {
+    "name": "pslist",
+    "category": "Processes",
+    "description": "Lists running processes with details.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pslist.html",
+    "minVersion": "3.0",
+    "output": "System (4)\\nsmss.exe (248)"
+  },
+  {
+    "name": "pstree",
+    "category": "Processes",
+    "description": "Displays hierarchical parent-child relationships of running processes.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/pstree.html",
+    "minVersion": "3.0",
+    "output": "System (4)\\n└─ smss.exe (248)\\n   └─ csrss.exe (612)  # child process"
+  },
+  {
+    "name": "dlllist",
+    "category": "Processes",
+    "description": "Lists loaded DLLs for each process to spot rogue modules.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/dlllist.html",
+    "minVersion": "3.0",
+    "output": "csrss.exe (PID 612)\n  0x3000 csrss.exe\n  0x4000 kernel32.dll  # common system library"
+  },
+  {
+    "name": "netscan",
+    "category": "Network",
+    "description": "Scans for active network connections and sockets.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/netscan.html",
+    "minVersion": "3.0",
+    "output": "Proto LocalAddr          ForeignAddr         State\nTCP   0.0.0.0:80         0.0.0.0:0           LISTENING\nUDP   127.0.0.1:53       0.0.0.0:0           NONE\nTCP   192.168.1.5:445    192.168.1.10:51234  ESTABLISHED  # outbound SMB"
+  },
+  {
+    "name": "malfind",
+    "category": "Malware",
+    "description": "Detects memory regions with characteristics of injected code.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/malfind.html",
+    "minVersion": "3.0",
+    "output": "PID   Address     Protection Description\n612   0x7f12a000  RWX        Injected Code  # suspect\n700   0x401000    RWX        Suspicious Section"
+  },
+  {
+    "name": "yara",
+    "category": "Malware",
+    "description": "Matches memory content against YARA signatures.",
+    "doc": "https://volatility3.readthedocs.io/en/latest/plugins/windows/yarascan.html",
+    "minVersion": "3.0",
+    "output": "PID  Rule             Address    Heuristic\n612  SuspiciousAPIs   0x401000   suspicious\n248  EncodedPayload   0x500000   malicious  # encoded payload"
+  }
+]

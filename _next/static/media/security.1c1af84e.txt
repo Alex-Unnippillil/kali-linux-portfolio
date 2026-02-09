@@ -1,0 +1,4 @@
+security
+This terminal is a safe simulation for portfolio demos.
+Commands like curl, wget, nmap, ping, and ssh never perform real network access.
+When Safe Mode is off, outputs remain simulated but may appear more realistic.

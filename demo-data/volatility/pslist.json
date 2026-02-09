@@ -1,0 +1,12 @@
+{
+  "columns": [
+    { "key": "pid", "label": "PID" },
+    { "key": "ppid", "label": "PPID" },
+    { "key": "name", "label": "Name" }
+  ],
+  "rows": [
+    { "pid": 4, "ppid": 0, "name": "System" },
+    { "pid": 248, "ppid": 4, "name": "smss.exe" },
+    { "pid": 612, "ppid": 248, "name": "csrss.exe" }
+  ]
+}

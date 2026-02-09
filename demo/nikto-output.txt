@@ -1,0 +1,5 @@
++ Server: Apache/2.4.41 (Ubuntu)
++ The X-XSS-Protection header is not defined. This can allow XSS.
++ /login.php: Database error reveals SQL injection vulnerability.
++ /etc/passwd: Local File Inclusion vulnerability.
++ http://example.com/remote.txt: Remote File Inclusion vulnerability.

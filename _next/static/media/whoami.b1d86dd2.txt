@@ -1,0 +1,2 @@
+whoami
+Print the current demo username for this terminal session.

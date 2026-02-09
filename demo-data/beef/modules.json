@@ -1,0 +1,26 @@
+{
+  "modules": [
+    {
+      "id": "commands",
+      "name": "Commands",
+      "children": [
+        {
+          "id": "alert",
+          "name": "Alert Dialog",
+          "output": "Alert executed on target."
+        }
+      ]
+    },
+    {
+      "id": "network",
+      "name": "Network",
+      "children": [
+        {
+          "id": "get-cookie",
+          "name": "Get Cookies",
+          "output": "sessionid=demo123; csrftoken=demo456"
+        }
+      ]
+    }
+  ]
+}

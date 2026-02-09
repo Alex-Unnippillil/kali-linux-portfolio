@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tetris</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <h1>Tetris</h1>
+  <div id="game">
+    <canvas id="board" width="240" height="480"></canvas>
+    <div class="side">
+      <div>
+        <div>Hold</div>
+        <canvas id="hold"></canvas>
+      </div>
+      <div>
+        <div>Next</div>
+        <canvas id="next1"></canvas>
+        <canvas id="next2"></canvas>
+        <canvas id="next3"></canvas>
+      </div>
+    </div>
+  </div>
+  <div id="info"></div>
+  <div>
+    <button id="mode-sprint">40 Line Sprint</button>
+    <button id="mode-marathon">Marathon</button>
+    <button id="hold-btn">Hold</button>
+  </div>
+  <div id="leaderboard"></div>
+  <script src="main.js"></script>
+</body>
+</html>

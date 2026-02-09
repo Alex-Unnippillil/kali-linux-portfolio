@@ -1,0 +1,48 @@
+{
+  "segments": [
+    { "size": 2000, "type": "process" },
+    { "size": 2000, "type": "dll" },
+    { "size": 2000, "type": "socket" }
+  ],
+  "pstree": [
+    {
+      "pid": 4,
+      "name": "System",
+      "children": [
+        {
+          "pid": 248,
+          "name": "smss.exe",
+          "children": [
+            { "pid": 612, "name": "csrss.exe", "children": [] }
+          ]
+        }
+      ]
+    }
+  ],
+  "dlllist": {
+    "4": [{ "base": "0x1000", "name": "ntoskrnl.exe" }],
+    "248": [{ "base": "0x2000", "name": "smss.exe" }],
+    "612": [
+      { "base": "0x3000", "name": "csrss.exe" },
+      { "base": "0x4000", "name": "kernel32.dll" }
+    ]
+  },
+  "netscan": [
+    { "proto": "TCP", "local": "0.0.0.0:80", "foreign": "0.0.0.0:0", "state": "LISTENING" },
+    { "proto": "UDP", "local": "127.0.0.1:53", "foreign": "0.0.0.0:0", "state": "NONE" },
+    {
+      "proto": "TCP",
+      "local": "192.168.1.5:445",
+      "foreign": "192.168.1.10:51234",
+      "state": "ESTABLISHED"
+    }
+  ],
+  "malfind": [
+    { "pid": 612, "address": "0x7f12a000", "protection": "RWX", "description": "Injected Code" },
+    { "pid": 700, "address": "0x401000", "protection": "RWX", "description": "Suspicious Section" }
+  ],
+  "yarascan": [
+    { "pid": 612, "rule": "SuspiciousAPIs", "address": "0x401000", "heuristic": "suspicious" },
+    { "pid": 248, "rule": "EncodedPayload", "address": "0x500000", "heuristic": "malicious" }
+  ]
+}

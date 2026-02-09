@@ -1,0 +1,1 @@
+self.onmessage=e=>{let{type:s}=e.data||{};if("move"!==s)return;let{groups:t,from:l,to:a,id:i}=e.data,f={...t,[l]:[...t[l]],[a]:[...t[a]]},o=f[l].findIndex(e=>e.id===i);if(o>-1){let[e]=f[l].splice(o,1);f[a].push(e),self.postMessage({groups:f,taskTitle:e.title,to:a})}else self.postMessage({groups:f})},_N_E={};

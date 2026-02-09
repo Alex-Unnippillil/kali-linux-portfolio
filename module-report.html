@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Module Report</title>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; }
+    h2 { margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Module Report</h1>
+  
+  <section>
+    <h2>Port Scanner</h2>
+    <p>Scans for open network ports</p>
+    <h3>Logs</h3>
+    <ul>
+      <li>[info] Starting port scan...</li><li>[success] Found open port 22 on 192.168.0.1</li><li>[info] Scan complete.</li>
+    </ul>
+    <h3>Results</h3>
+    <ul>
+      <li>192.168.0.1: Ports 22,80 open</li><li>192.168.0.2: No open ports</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Brute Force</h2>
+    <p>Attempts common passwords</p>
+    <h3>Logs</h3>
+    <ul>
+      <li>[info] Starting brute force...</li><li>[warning] Tried 100 passwords</li><li>[error] No valid credentials found.</li>
+    </ul>
+    <h3>Results</h3>
+    <ul>
+      <li>admin@example.com: Login failed</li><li>root@example.com: Login failed</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Vuln Check</h2>
+    <p>Checks for known CVEs</p>
+    <h3>Logs</h3>
+    <ul>
+      <li>[info] Checking for vulnerabilities...</li><li>[success] CVE-2024-1234 found on host1</li><li>[info] Check complete.</li>
+    </ul>
+    <h3>Results</h3>
+    <ul>
+      <li>host1: CVE-2024-1234</li><li>host2: No issues</li>
+    </ul>
+  </section>
+</body>
+</html>

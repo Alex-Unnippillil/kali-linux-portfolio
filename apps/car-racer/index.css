@@ -1,0 +1,5 @@
+body { margin:0; background:#222; color:white; font-family:sans-serif; }
+#hud { position:fixed; top:8px; left:8px; background:rgba(0,0,0,0.5); padding:4px 8px; font-size:14px; }
+canvas { background:#000; display:block; margin:0 auto; }
+#menu { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; background:rgba(0,0,0,0.8); }
+#menu button { margin:4px; padding:8px 12px; }

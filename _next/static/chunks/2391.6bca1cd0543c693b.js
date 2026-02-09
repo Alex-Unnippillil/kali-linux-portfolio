@@ -1,0 +1,1 @@
+(()=>{let e=0,t=0;onmessage=s=>{let{type:a,total:i,amount:l=1,phase:n}=s.data;if("init"===a)e=i||0,t=0,postMessage({percent:0,phase:"wordlist"});else if("increment"===a){t+=l;let s=e?t/e:0;s>1&&(s=1),postMessage({percent:100*(1-Math.pow(1-s,2)),phase:n})}},_N_E={}})();

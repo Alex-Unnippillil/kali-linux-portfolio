@@ -1,0 +1,1 @@
+self.onmessage=s=>{try{let e=JSON.parse(s.data);self.postMessage(e.artifacts||[])}catch(s){self.postMessage([])}},_N_E={};

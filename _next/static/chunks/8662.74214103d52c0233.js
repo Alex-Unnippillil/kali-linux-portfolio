@@ -1,0 +1,1 @@
+onmessage=()=>{let e=["Initializing exploit...","Checking target...","Sending payload...","Gaining access...","Session established."],s={host:"10.0.0.3",data:"ssh-creds.txt"},t=0,a=()=>{t<e.length?(postMessage({step:e[t]}),2===t&&postMessage({loot:s}),t+=1,setTimeout(a,1e3)):postMessage({done:!0})};a()},_N_E={};

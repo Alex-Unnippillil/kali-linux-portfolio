@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[7483],{97483:e=>{e.exports=JSON.parse('{"USD":1,"EUR":0.9,"GBP":0.8,"JPY":110}')}}]);

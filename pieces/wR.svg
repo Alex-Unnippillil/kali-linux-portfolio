@@ -1,0 +1,24 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="wRookBody" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ecf1ff" />
+      <stop offset="50%" stop-color="#cdd9f5" />
+      <stop offset="100%" stop-color="#a2b2d5" />
+    </linearGradient>
+    <linearGradient id="wRookBase" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#97a7c8" />
+      <stop offset="100%" stop-color="#637292" />
+    </linearGradient>
+    <filter id="wRookShadow" x="-15%" y="-15%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0a0d1a" flood-opacity="0.45" />
+    </filter>
+  </defs>
+  <g filter="url(#wRookShadow)">
+    <path
+      d="M34 26h60v16h-12v10H46V42H34V26zm12 20h36l4 56H42l4-56z"
+      fill="url(#wRookBody)"
+    />
+    <rect x="30" y="102" width="68" height="12" rx="6" fill="url(#wRookBase)" />
+    <rect x="24" y="112" width="80" height="10" rx="5" fill="#4a556f" />
+  </g>
+</svg>

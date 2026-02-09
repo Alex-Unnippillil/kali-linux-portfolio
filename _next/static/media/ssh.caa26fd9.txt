@@ -1,0 +1,2 @@
+ssh <user@host>
+Connect to a simulated SSH session and print a scripted scenario. No real network calls.

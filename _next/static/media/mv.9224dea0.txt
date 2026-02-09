@@ -1,0 +1,2 @@
+mv <source> <destination>
+Move or rename a file within the terminal's virtual filesystem.

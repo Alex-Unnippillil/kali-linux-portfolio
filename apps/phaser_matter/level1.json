@@ -1,0 +1,23 @@
+{
+  "spawn": { "x": 100, "y": 100 },
+  "parallaxLayers": [
+    { "color": "#99ccff", "scrollFactor": 0.2 },
+    { "color": "#6699cc", "scrollFactor": 0.5 }
+  ],
+  "platforms": [
+    { "x": 400, "y": 580, "width": 800, "height": 40 },
+    { "x": 400, "y": 400, "width": 200, "height": 20 }
+  ],
+  "hazards": [
+    { "x": 600, "y": 570, "width": 40, "height": 40 }
+  ],
+  "coins": [
+    { "x": 500, "y": 540, "width": 20, "height": 20 },
+    { "x": 900, "y": 540, "width": 20, "height": 20 }
+  ],
+  "checkpoints": [
+    { "x": 700, "y": 540, "width": 20, "height": 60 },
+    { "x": 1200, "y": 540, "width": 20, "height": 60 }
+  ],
+  "bounds": { "width": 1600, "height": 600, "deadZoneWidth": 200, "deadZoneHeight": 100, "fallY": 800 }
+}

@@ -1,0 +1,27 @@
+{
+  "chain": {
+    "nodes": [
+      { "data": { "id": "dns", "label": "DNS Enumeration" } },
+      { "data": { "id": "whois", "label": "WHOIS Lookup" } },
+      { "data": { "id": "reverseip", "label": "Reverse IP Lookup" } }
+    ],
+    "edges": [
+      { "data": { "id": "c1", "source": "dns", "target": "whois" } },
+      { "data": { "id": "c2", "source": "whois", "target": "reverseip" } }
+    ]
+  },
+  "entities": {
+    "nodes": [
+      { "data": { "id": "domains", "label": "Domains" } },
+      { "data": { "id": "ips", "label": "IPs" } },
+      { "data": { "id": "entities", "label": "Entities" } },
+      { "data": { "id": "example.com", "label": "example.com", "parent": "domains", "type": "domain" } },
+      { "data": { "id": "93.184.216.34", "label": "93.184.216.34", "parent": "ips", "type": "ip" } },
+      { "data": { "id": "Jane Smith", "label": "Jane Smith", "parent": "entities", "type": "entity" } }
+    ],
+    "edges": [
+      { "data": { "id": "e1", "source": "example.com", "target": "93.184.216.34" } },
+      { "data": { "id": "e2", "source": "93.184.216.34", "target": "Jane Smith" } }
+    ]
+  }
+}

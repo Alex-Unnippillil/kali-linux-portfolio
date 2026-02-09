@@ -1,0 +1,8 @@
+body { background: #111; color: #fff; font-family: sans-serif; text-align: center; }
+canvas { background: #222; }
+#game { display: flex; justify-content: center; gap: 12px; }
+.side { display: flex; flex-direction: column; gap: 12px; }
+.side canvas { display: block; margin: 0 auto; }
+#info { margin-top: 12px; }
+#leaderboard { margin-top: 12px; }
+button { margin: 6px; }

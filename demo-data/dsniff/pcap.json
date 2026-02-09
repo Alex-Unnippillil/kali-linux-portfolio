@@ -1,0 +1,15 @@
+{
+  "summary": [
+    {
+      "src": "192.168.0.5",
+      "dst": "192.168.0.10",
+      "protocol": "HTTP",
+      "info": "POST /login username=demo password=demo123"
+    }
+  ],
+  "remediation": [
+    "Use HTTPS/TLS to encrypt credentials in transit",
+    "Avoid reusing passwords and implement MFA",
+    "Monitor network for sniffing and unauthorized devices"
+  ]
+}

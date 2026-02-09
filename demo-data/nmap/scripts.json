@@ -1,0 +1,48 @@
+{
+  "discovery": [
+    {
+      "name": "http-title",
+      "description": "Fetches page titles from HTTP services.",
+      "example": "80/tcp open  http\n| http-title: Example Domain\n|_Requested resource was /"
+    },
+    {
+      "name": "ssh-hostkey",
+      "description": "Retrieves the SSH host key.",
+      "example": "22/tcp open  ssh\n| ssh-hostkey:\n|   2048 SHA256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA (RSA)\n|  256 SHA256:BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB (ED25519)"
+    },
+    {
+      "name": "http-enum",
+      "description": "Enumerates directories on web servers.",
+      "example": "80/tcp open  http\n| http-enum:\n|   /admin/: Potential admin interface\n|_  /images/: Potentially interesting directory w/ listing"
+    },
+    {
+      "name": "dns-brute",
+      "description": "Performs DNS subdomain brute force enumeration.",
+      "example": "Host scripts results:\n| dns-brute:\n|   mail.example.com - 192.0.2.10\n|   dev.example.com - 192.0.2.20\n|_  shop.example.com - 192.0.2.30"
+    }
+  ],
+  "vuln": [
+    {
+      "name": "smb-vuln-ms17-010",
+      "description": "Detects MS17-010 SMB vulnerabilities.",
+      "example": "445/tcp open  microsoft-ds\n| smb-vuln-ms17-010: VULNERABLE\n|   MS17-010: Microsoft SMBv1 Multiple Vulnerabilities\n|_  State: VULNERABLE"
+    },
+    {
+      "name": "http-vuln-cve2009-3960",
+      "description": "Checks for directory traversal vulnerability in HTTP servers.",
+      "example": "80/tcp open  http\n| http-vuln-cve2009-3960:\n|   VULNERABLE: Directory traversal\n|_  State: VULNERABLE"
+    }
+  ],
+  "safe": [
+    {
+      "name": "ftp-anon",
+      "description": "Checks for anonymous FTP access.",
+      "example": "21/tcp open  ftp\n| ftp-anon: Anonymous FTP login allowed (FTP code 230)\n|_-rw-r--r--   1 ftp      ftp            0 Jan 01 00:00 readme.txt"
+    },
+    {
+      "name": "ssl-cert",
+      "description": "Retrieves TLS certificate information.",
+      "example": "443/tcp open  https\n| ssl-cert: Subject: commonName=example.com\n| Not valid before: 2020-06-01T00:00:00\n|_Not valid after: 2022-06-01T12:00:00"
+    }
+  ]
+}

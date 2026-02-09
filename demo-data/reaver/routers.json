@@ -1,0 +1,14 @@
+[
+  {
+    "model": "Linksys WRT54G",
+    "notes": "Early models can derive the default WPS PIN from the MAC address."
+  },
+  {
+    "model": "Netgear R7000",
+    "notes": "Locks WPS for 60 seconds after three failed PIN attempts."
+  },
+  {
+    "model": "TP-Link Archer C7",
+    "notes": "Imposes a five minute delay after five failed guesses."
+  }
+]

@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk_N_E=self.webpackChunk_N_E||[]).push([[5590],{45590:(e,a,r)=>{r.r(a),r.d(a,{default:()=>_});var t=r(37876);r(14232);var s=r(34051);let _=()=>(0,t.jsx)(s.default,{showExit:!1,showNewShoe:!0,streakStorageKey:"bj_trainer_best_streak",revealStorageKey:"bj_trainer_reveal_count",title:"Blackjack Trainer"})}}]);

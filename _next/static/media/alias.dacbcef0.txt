@@ -1,0 +1,2 @@
+alias [name]=[value]
+Define or display aliases. With no arguments, prints existing aliases.

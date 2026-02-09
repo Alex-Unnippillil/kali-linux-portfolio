@@ -1,0 +1,1 @@
+self.onmessage=e=>{let{events:s=[]}=e.data||{},t=s.slice().sort((e,s)=>new Date(e.timestamp)-new Date(s.timestamp));self.postMessage(t)},_N_E={};

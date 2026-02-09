@@ -1,0 +1,4 @@
+[
+  { "id": "hash", "name": "Hash Analyzer", "description": "Computes hashes of files." },
+  { "id": "metadata", "name": "Metadata Extractor", "description": "Extracts file metadata." }
+]

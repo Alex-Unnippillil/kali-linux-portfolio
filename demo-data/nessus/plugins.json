@@ -1,0 +1,7 @@
+[
+  {"id": 1001, "name": "SSL Certificate Expiry", "severity": "High", "cwe": ["295"], "cve": ["2024-0001"], "tags": ["ssl", "certificate"]},
+  {"id": 1002, "name": "Weak SSH Ciphers", "severity": "Medium", "cwe": ["327"], "cve": ["2023-0002"], "tags": ["ssh", "crypto"]},
+  {"id": 1003, "name": "Default Credentials", "severity": "Critical", "cwe": ["1392"], "tags": ["auth"]},
+  {"id": 1004, "name": "Outdated Web Server", "severity": "Low", "cwe": ["200"], "cve": ["2022-0004"], "tags": ["web", "server"]},
+  {"id": 1005, "name": "Informational Banner", "severity": "Info", "tags": ["info"]}
+]

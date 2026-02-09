@@ -1,0 +1,11 @@
+{
+  "tactics": [
+    {
+      "id": "TA0001",
+      "name": "Initial Access",
+      "techniques": [
+        { "id": "T1190", "name": "Exploit Public-Facing Application" }
+      ]
+    }
+  ]
+}

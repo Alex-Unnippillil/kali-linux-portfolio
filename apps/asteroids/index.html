@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Asteroids</title>
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <!-- Legacy implementation; not used by the app registry. -->
+  <canvas id="game" width="800" height="600"></canvas>
+  <div id="hud" class="hud">
+    <div id="score">Score: 0</div>
+    <div id="level">Level: 1</div>
+    <div class="shield-bar">
+      <div id="shield" class="shield"></div>
+    </div>
+    <label class="hud-label">
+      <input type="checkbox" id="particlesToggle" checked /> particles
+    </label>
+    <div id="controls" class="controls">
+      Move: arrows or left stick. Shoot: space or buttons. Pause: P or Start.
+      Hyperspace: H or B. Shield: S or X.
+    </div>
+  </div>
+  <div id="paused" class="paused">
+    Paused
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>

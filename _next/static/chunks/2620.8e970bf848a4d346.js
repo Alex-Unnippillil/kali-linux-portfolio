@@ -1,0 +1,1 @@
+(()=>{"use strict";let e=null;self.onmessage=l=>{let{data:t}=l;if("start"===t.action){let{interval:l}=t;"number"==typeof l&&(null!==e&&clearInterval(e),e=self.setInterval(()=>self.postMessage("tick"),l))}else"stop"===t.action&&null!==e&&(clearInterval(e),e=null)}})(),_N_E={};

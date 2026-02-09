@@ -1,0 +1,11 @@
+{
+  "name": "root",
+  "children": [
+    {
+      "name": "Docs",
+      "children": [
+        { "name": "notes.txt", "content": "SGVsbG8gY2FzZSE=" }
+      ]
+    }
+  ]
+}
