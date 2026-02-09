@@ -27,10 +27,10 @@ describe('Settings reset flow', () => {
       </SettingsProvider>
     );
 
-    await screen.findByRole('button', { name: 'Reset Desktop' });
+    await screen.findByRole('button', { name: 'Reset' });
 
     const densitySelect = screen.getByRole('combobox');
-    const fontSlider = screen.getByRole('slider');
+    const fontSlider = screen.getByLabelText('Adjust font scale');
     const defaultAccentRadio = screen.getByRole('radio', {
       name: `select-accent-${defaults.accent}`,
     });
@@ -38,13 +38,13 @@ describe('Settings reset flow', () => {
       name: 'select-accent-#e53e3e',
     });
 
-    const kaliWallpaperToggle = screen.getByLabelText('Kali Gradient Wallpaper');
-    const reducedMotionToggle = screen.getByLabelText('Reduced Motion');
-    const largeHitAreasToggle = screen.getByLabelText('Large Hit Areas');
-    const highContrastToggle = screen.getByLabelText('High Contrast');
-    const allowNetworkToggle = screen.getByLabelText('Allow Network Requests');
-    const hapticsToggle = screen.getByLabelText('Haptics');
-    const pongSpinToggle = screen.getByLabelText('Pong Spin');
+    const kaliWallpaperToggle = screen.getByLabelText('Enable Kali gradient wallpaper');
+    const reducedMotionToggle = screen.getByLabelText('Enable reduced motion');
+    const largeHitAreasToggle = screen.getByLabelText('Enable large hit areas');
+    const highContrastToggle = screen.getByLabelText('Enable high contrast mode');
+    const allowNetworkToggle = screen.getByLabelText('Allow simulated network requests');
+    const hapticsToggle = screen.getByLabelText('Enable haptics');
+    const pongSpinToggle = screen.getByLabelText('Enable pong spin');
 
     await waitFor(() => expect(hapticsToggle).toBeChecked());
     await waitFor(() => expect(pongSpinToggle).toBeChecked());
@@ -71,7 +71,7 @@ describe('Settings reset flow', () => {
     expect(hapticsToggle).not.toBeChecked();
     expect(pongSpinToggle).not.toBeChecked();
 
-    await user.click(screen.getByRole('button', { name: 'Reset Desktop' }));
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
 
     await waitFor(() => expect(densitySelect).toHaveValue(defaults.density));
     expect(fontSlider).toHaveValue(String(defaults.fontScale));
