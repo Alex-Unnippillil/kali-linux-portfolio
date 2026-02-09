@@ -61,16 +61,17 @@ function DesktopMenu(props) {
             id="desktop-menu"
             role="menu"
             aria-label="Desktop context menu"
-            className={(props.active ? " block " : " hidden ") + " cursor-default w-52 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm"}
+            className={(props.active ? " block " : " hidden ") + " cursor-default w-56 context-menu-bg border text-left font-light border-gray-900 rounded text-white py-4 absolute z-50 text-sm shadow-lg backdrop-blur-sm"}
         >
             <button
                 onClick={props.addNewFolder}
                 type="button"
                 role="menuitem"
                 aria-label="New Folder"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between group"
             >
                 <span className="ml-5">New Folder</span>
+                <span className="mr-4 text-xs text-gray-500 group-hover:text-gray-400">Ctrl+Shift+N</span>
             </button>
             <button
                 onClick={props.openShortcutSelector}
@@ -125,9 +126,10 @@ function DesktopMenu(props) {
                 type="button"
                 role="menuitem"
                 aria-label="Open in Terminal"
-                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5"
+                className="w-full text-left py-0.5 hover:bg-ub-warm-grey hover:bg-opacity-20 mb-1.5 flex items-center justify-between group"
             >
                 <span className="ml-5">Open in Terminal</span>
+                <span className="mr-4 text-xs text-gray-500 group-hover:text-gray-400">Ctrl+Alt+T</span>
             </button>
             <Devider />
             <button
