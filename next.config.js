@@ -144,10 +144,16 @@ const runtimeCaching = [
   })),
 ];
 
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const isProd = process.env.NODE_ENV === 'production';
+const isVercelPreview =
+  process.env.VERCEL_TARGET_ENV === 'preview' ||
+  process.env.VERCEL_ENV === 'preview';
+
 const withPWA = withPWAInit({
   dest: 'public',
   sw: 'sw.js',
-  disable: process.env.NODE_ENV === 'development',
+  disable: process.env.NODE_ENV === 'development' || isVercelPreview,
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',
@@ -169,9 +175,6 @@ const withPWA = withPWAInit({
   },
   dynamicStartUrl: false,
 });
-
-const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
-const isProd = process.env.NODE_ENV === 'production';
 
 // Merge experiment settings and production optimizations into a single function.
 function configureWebpack(config, { isServer }) {

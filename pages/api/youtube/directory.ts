@@ -35,9 +35,9 @@ export default async function handler(
 
   const apiKey = resolveApiKey();
   if (!apiKey) {
-    return res
-      .status(500)
-      .json({ error: 'YouTube API key not configured. Set YOUTUBE_API_KEY on the server.' });
+    return res.status(503).json({
+      error: 'YouTube API key not configured. Set YOUTUBE_API_KEY on the server to enable this API.',
+    });
   }
 
   const envChannelId = parseYouTubeChannelId(process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID ?? '');

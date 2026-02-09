@@ -12,7 +12,7 @@ export default async function handler(
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) {
-    res.status(500).json({ ok: false, code: "missing_supabase_env" });
+    res.status(503).json({ ok: false, code: "missing_supabase_env" });
     return;
   }
 

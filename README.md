@@ -75,6 +75,11 @@ npx serve out             # Optional: serve the exported site locally
 
 Verify that features relying on /api/* degrade gracefully when served statically.
 
+## Deployments
+
+- **Vercel Preview & Production:** See [docs/vercel.md](docs/vercel.md) for ignored build steps, deterministic install/build commands, and Preview environment guidance.
+- **Verification checklist:** Use [docs/preview-verification.md](docs/preview-verification.md) to confirm local, CI, and Preview behavior before merging.
+
 ### Install as a Progressive Web App
 
 1. Open the deployed site in a supported browser (Chrome, Edge, Brave, etc.).
