@@ -39,9 +39,9 @@ test('merging two 2s creates one 4', async () => {
 
   render(<Game2048 />);
 
-  // Run all pending timers and effects to allow component to load from localStorage
+  // Run pending timers to allow component to load from localStorage
   await act(async () => {
-    jest.runAllTimers();
+    jest.advanceTimersByTime(500);
   });
 
   // Trigger the key event
@@ -51,7 +51,7 @@ test('merging two 2s creates one 4', async () => {
 
   // Allow move animation and state updates
   await act(async () => {
-    jest.runAllTimers();
+    jest.advanceTimersByTime(500);
   });
 
   // After merging [2,2,0,0] left, result should be [4,0,0,0] with a new tile added
@@ -59,6 +59,7 @@ test('merging two 2s creates one 4', async () => {
   // Check first row has a 4 (merged tile)
   expect(board[0].includes(4) || board.flat().includes(4)).toBe(true);
 });
+
 
 test('merge triggers animation', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
@@ -100,7 +101,7 @@ test('score persists in localStorage', async () => {
   expect(parseInt(score || '0', 10)).toBeGreaterThanOrEqual(4);
 });
 
-test('ignores browser key repeat events', () => {
+test('ignores browser key repeat events', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -108,9 +109,16 @@ test('ignores browser key repeat events', () => {
     [0, 0, 0, 0],
   ]));
   const { getByText } = render(<Game2048 />);
-  fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
+  await act(async () => {
+    jest.advanceTimersByTime(100);
+  });
+  await act(async () => {
+    fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
+    jest.advanceTimersByTime(100);
+  });
   expect(getByText(/Moves: 0/)).toBeTruthy();
 });
+
 
 
 test('tracks moves and allows multiple undos', async () => {
