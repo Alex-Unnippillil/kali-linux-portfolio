@@ -32,6 +32,8 @@ import {
   setHaptics as saveHaptics,
   getVolume as loadVolume,
   setVolume as saveVolume,
+  getShowNotificationBadges as loadShowNotificationBadges,
+  setShowNotificationBadges as saveShowNotificationBadges,
   defaults,
 } from '../utils/settingsStore';
 import { Howler } from 'howler';
@@ -85,6 +87,7 @@ interface SettingsContextValue {
   allowNetwork: boolean;
   haptics: boolean;
   volume: number;
+  showNotificationBadges: boolean;
   theme: string;
   desktopTheme: DesktopTheme;
   setAccent: (accent: string) => void;
@@ -99,6 +102,7 @@ interface SettingsContextValue {
   setAllowNetwork: (value: boolean) => void;
   setHaptics: (value: boolean) => void;
   setVolume: (value: number) => void;
+  setShowNotificationBadges: (value: boolean) => void;
   setTheme: (value: string) => void;
 }
 
@@ -124,6 +128,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   volume: defaults.volume,
+  showNotificationBadges: defaults.showNotificationBadges,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => { },
@@ -138,6 +143,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   setAllowNetwork: () => { },
   setHaptics: () => { },
   setVolume: () => { },
+  setShowNotificationBadges: () => { },
   setTheme: () => { },
 });
 
@@ -154,6 +160,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [volume, setVolume] = useState<number>(defaults.volume);
+  const [showNotificationBadges, setShowNotificationBadges] = useState<boolean>(
+    defaults.showNotificationBadges,
+  );
   const [theme, setTheme] = useState<string>('default');
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
@@ -172,6 +181,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setVolume(await loadVolume());
+      setShowNotificationBadges(await loadShowNotificationBadges());
       setTheme(loadTheme());
     })();
   }, []);
@@ -320,6 +330,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveVolume(volume);
   }, [volume]);
 
+  useEffect(() => {
+    saveShowNotificationBadges(showNotificationBadges);
+  }, [showNotificationBadges]);
+
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
   const desktopTheme = useMemo(
     () =>
@@ -380,6 +394,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         allowNetwork,
         haptics,
         volume,
+        showNotificationBadges,
         theme,
         desktopTheme,
         setAccent,
@@ -394,6 +409,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         setAllowNetwork,
         setHaptics,
         setVolume,
+        setShowNotificationBadges,
         setTheme,
       }}
     >
