@@ -1,8 +1,17 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "git": {
+    "deploymentEnabled": {
+      "gh-pages": false
+    }
+  },
   "functions": {
-    "pages/api/**/*.{js,ts}": { "runtime": "@vercel/node@5.3.20" },
-    "app/api/**/route.{js,ts}": { "runtime": "@vercel/node@5.3.20" }
+    "pages/api/**/*.{js,ts}": {
+      "runtime": "@vercel/node@5.3.20"
+    },
+    "app/api/**/route.{js,ts}": {
+      "runtime": "@vercel/node@5.3.20"
+    }
   }
 }
