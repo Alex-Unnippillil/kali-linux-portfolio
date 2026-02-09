@@ -27,7 +27,11 @@ const StrategyTrainer: React.FC<StrategyTrainerProps> = ({ className = '' }) => 
 
   const path = points
     .map(
-      (p) => `${(p.t / STEPS) * WIDTH},${HEIGHT - p.success * HEIGHT}`
+      (p) => {
+        const x = Math.round((p.t / STEPS) * WIDTH * 100) / 100;
+        const y = Math.round((HEIGHT - p.success * HEIGHT) * 100) / 100;
+        return `${x},${y}`;
+      }
     )
     .join(' ');
 
