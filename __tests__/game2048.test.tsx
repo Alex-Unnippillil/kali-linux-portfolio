@@ -9,7 +9,7 @@ beforeEach(() => {
   window.localStorage.setItem('2048-seed', new Date().toISOString().slice(0, 10));
 });
 
-test.skip('merging two 2s creates one 4', async () => {
+test('merging two 2s creates one 4', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -26,7 +26,7 @@ test.skip('merging two 2s creates one 4', async () => {
   expect(board[0][0]).toBe(4);
 });
 
-test.skip('merge triggers animation', async () => {
+test('merge triggers animation', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -43,7 +43,7 @@ test.skip('merge triggers animation', async () => {
   expect(firstCell?.querySelector('.merge-ripple')).toBeTruthy();
 });
 
-test.skip('score persists in localStorage', async () => {
+test('score persists in localStorage', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
@@ -101,7 +101,7 @@ test('tracks moves and allows multiple undos', async () => {
   expect(board).toEqual(initial);
 });
 
-test.skip('skin selection changes tile class', async () => {
+test('skin selection changes tile class', async () => {
   window.localStorage.setItem('2048-board', JSON.stringify([
     [2, 0, 0, 0],
     [0, 0, 0, 0],
