@@ -48,11 +48,13 @@ type Density = 'regular' | 'compact';
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
   '#1793d1', // kali blue (default)
-  '#e53e3e', // red
-  '#d97706', // orange
-  '#38a169', // green
-  '#805ad5', // purple
-  '#ed64a6', // pink
+  '#0ea5e9', // sky
+  '#ef4444', // red
+  '#f97316', // orange
+  '#22c55e', // green
+  '#8b5cf6', // violet
+  '#e11d48', // rose
+  '#f59e0b', // amber
 ];
 
 // Utility to lighten or darken a hex color by a percentage
