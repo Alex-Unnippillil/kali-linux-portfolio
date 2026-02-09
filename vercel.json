@@ -1,6 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
+  "installCommand": "corepack enable && yarn install --immutable",
+  "buildCommand": "yarn build",
   "git": {
     "deploymentEnabled": {
       "gh-pages": false

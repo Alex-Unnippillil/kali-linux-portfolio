@@ -21,9 +21,9 @@ export default async function handler(
 
   const apiKey = resolveApiKey();
   if (!apiKey) {
-    return res
-      .status(500)
-      .json({ error: 'YouTube API key not configured. Set YOUTUBE_API_KEY on the server.' });
+    return res.status(503).json({
+      error: 'YouTube API key not configured. Set YOUTUBE_API_KEY on the server to enable this API.',
+    });
   }
 
   const playlistId = (req.query.playlistId as string | undefined)?.trim();
