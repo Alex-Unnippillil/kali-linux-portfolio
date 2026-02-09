@@ -118,11 +118,10 @@ function CityTile({
             {city.name}
           </div>
           <div
-            className={`mt-2 text-4xl font-bold ${
-              hasReading
+            className={`mt-2 text-4xl font-bold ${hasReading
                 ? 'text-[color:var(--kali-text)]'
                 : 'text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)]'
-            }`}
+              }`}
           >
             {tempLabel}
           </div>
@@ -551,23 +550,23 @@ export default function WeatherApp() {
         const readingTime = response?.meta?.timestamp ?? Date.now();
         const nextReading: WeatherReading | undefined =
           typeof current.temperature === 'number' &&
-          typeof current.weathercode === 'number'
+            typeof current.weathercode === 'number'
             ? {
-                temp: current.temperature,
-                condition: current.weathercode,
-                time: readingTime,
-              }
+              temp: current.temperature,
+              condition: current.weathercode,
+              time: readingTime,
+            }
             : city.lastReading;
 
         const forecast: ForecastDay[] = Array.isArray(data?.daily?.time)
           ? data.daily.time.reduce((acc: ForecastDay[], date: string, idx: number) => {
-              const temp = data.daily.temperature_2m_max?.[idx];
-              const condition = data.daily.weathercode?.[idx];
-              if (typeof temp === 'number' && typeof condition === 'number') {
-                acc.push({ date, temp, condition });
-              }
-              return acc;
-            }, [])
+            const temp = data.daily.temperature_2m_max?.[idx];
+            const condition = data.daily.weathercode?.[idx];
+            if (typeof temp === 'number' && typeof condition === 'number') {
+              acc.push({ date, temp, condition });
+            }
+            return acc;
+          }, [])
           : [];
 
         updateCity(city.id, {
@@ -585,25 +584,25 @@ export default function WeatherApp() {
             const nextCurrent = nextData?.current_weather ?? {};
             const nextReading: WeatherReading | undefined =
               typeof nextCurrent.temperature === 'number' &&
-              typeof nextCurrent.weathercode === 'number'
+                typeof nextCurrent.weathercode === 'number'
                 ? {
-                    temp: nextCurrent.temperature,
-                    condition: nextCurrent.weathercode,
-                    time: next.meta?.timestamp ?? Date.now(),
-                  }
+                  temp: nextCurrent.temperature,
+                  condition: nextCurrent.weathercode,
+                  time: next.meta?.timestamp ?? Date.now(),
+                }
                 : city.lastReading;
             const nextForecast: ForecastDay[] = Array.isArray(nextData?.daily?.time)
               ? nextData.daily.time.reduce(
-                  (acc: ForecastDay[], date: string, idx: number) => {
-                    const temp = nextData.daily.temperature_2m_max?.[idx];
-                    const condition = nextData.daily.weathercode?.[idx];
-                    if (typeof temp === 'number' && typeof condition === 'number') {
-                      acc.push({ date, temp, condition });
-                    }
-                    return acc;
-                  },
-                  [],
-                )
+                (acc: ForecastDay[], date: string, idx: number) => {
+                  const temp = nextData.daily.temperature_2m_max?.[idx];
+                  const condition = nextData.daily.weathercode?.[idx];
+                  if (typeof temp === 'number' && typeof condition === 'number') {
+                    acc.push({ date, temp, condition });
+                  }
+                  return acc;
+                },
+                [],
+              )
               : [];
             updateCity(city.id, {
               lastReading: nextReading,
@@ -656,6 +655,12 @@ export default function WeatherApp() {
         fetchCityWeather(city);
       }
     });
+
+    // Cleanup on unmount
+    return () => {
+      controllersRef.current.forEach((controller) => controller.abort());
+      controllersRef.current.clear();
+    };
   }, [cities, fetchCityWeather]);
 
   const addCity = useCallback(
@@ -750,12 +755,13 @@ export default function WeatherApp() {
       setSearchStatus('idle');
       setSearchError(null);
       lastSearchRef.current = '';
-      if (searchDebounceRef.current) {
+      if (searchDebounceRef.current !== null) {
         window.clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
       }
       return;
     }
-    if (searchDebounceRef.current) {
+    if (searchDebounceRef.current !== null) {
       window.clearTimeout(searchDebounceRef.current);
     }
     searchDebounceRef.current = window.setTimeout(() => {
@@ -764,8 +770,9 @@ export default function WeatherApp() {
       runSearch(searchQuery);
     }, 350);
     return () => {
-      if (searchDebounceRef.current) {
+      if (searchDebounceRef.current !== null) {
         window.clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = null;
       }
     };
   }, [searchQuery, runSearch]);
@@ -934,11 +941,10 @@ export default function WeatherApp() {
           {groups.map((g) => (
             <button
               key={g.name}
-              className={`rounded px-3 py-1 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] ${
-                currentGroup === g.name
+              className={`rounded px-3 py-1 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] ${currentGroup === g.name
                   ? 'bg-kali-control text-black shadow-[0_0_12px_rgba(15,148,210,0.35)]'
                   : 'bg-[color:color-mix(in_srgb,var(--kali-panel)_85%,transparent)] text-[color:color-mix(in_srgb,var(--kali-text)_85%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,transparent)]'
-              }`}
+                }`}
               onClick={() => switchGroup(g.name)}
             >
               {g.name}

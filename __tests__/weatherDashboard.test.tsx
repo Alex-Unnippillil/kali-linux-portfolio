@@ -30,18 +30,18 @@ const baseSettings = {
   haptics: defaults.haptics,
   theme: 'default',
   desktopTheme,
-  setAccent: () => {},
-  setWallpaper: () => {},
-  setUseKaliWallpaper: () => {},
-  setDensity: () => {},
-  setReducedMotion: () => {},
-  setFontScale: () => {},
-  setHighContrast: () => {},
-  setLargeHitAreas: () => {},
-  setPongSpin: () => {},
-  setAllowNetwork: () => {},
-  setHaptics: () => {},
-  setTheme: () => {},
+  setAccent: () => { },
+  setWallpaper: () => { },
+  setUseKaliWallpaper: () => { },
+  setDensity: () => { },
+  setReducedMotion: () => { },
+  setFontScale: () => { },
+  setHighContrast: () => { },
+  setLargeHitAreas: () => { },
+  setPongSpin: () => { },
+  setAllowNetwork: () => { },
+  setHaptics: () => { },
+  setTheme: () => { },
 };
 
 function renderWithSettings(
@@ -64,9 +64,23 @@ describe('WeatherDashboard', () => {
   beforeEach(() => {
     localStorage.clear();
     jest.restoreAllMocks();
+    jest.clearAllTimers();
     globalThis.caches = originalCaches;
     if (originalOnLine) {
       Object.defineProperty(navigator, 'onLine', originalOnLine);
+    }
+  });
+
+  afterEach(() => {
+    // Comprehensive cleanup to prevent memory leaks
+    jest.clearAllTimers();
+    jest.clearAllMocks();
+    localStorage.clear();
+    // Clear any pending timeouts/intervals
+    const highestId = setTimeout(() => { }, 0);
+    for (let i = 0; i < highestId; i++) {
+      clearTimeout(i);
+      clearInterval(i);
     }
   });
 
