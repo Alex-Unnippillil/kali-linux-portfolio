@@ -9,6 +9,7 @@ import {
   defaults,
   exportSettings as exportSettingsData,
   importSettings as importSettingsData,
+  normalizeSettingsPayload,
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import ToggleSwitch from "../../components/ToggleSwitch";
@@ -126,14 +127,15 @@ export default function Settings() {
     accent, setAccent,
     wallpaper, setWallpaper,
     useKaliWallpaper, setUseKaliWallpaper,
-    // density, setDensity, // Unused in new UI but kept in store
+    density, setDensity,
     reducedMotion, setReducedMotion,
     fontScale, setFontScale,
     highContrast, setHighContrast,
     largeHitAreas, setLargeHitAreas,
-    // pongSpin, setPongSpin, // Specific game setting, maybe hide
+    pongSpin, setPongSpin,
     allowNetwork, setAllowNetwork,
     haptics, setHaptics,
+    volume, setVolume,
     theme, setTheme,
   } = useSettings();
 
@@ -144,8 +146,7 @@ export default function Settings() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showKeymap, setShowKeymap] = useState(false);
 
-  // Simulated Volume/Brightness state for "Quick Actions"
-  const [volume, setVolume] = useState(75);
+  // Simulated Brightness state for "Quick Actions"
   const [brightness, setBrightness] = useState(100);
 
   const wallpapers = ["wall-1", "wall-2", "wall-3", "wall-4", "wall-5", "wall-6", "wall-7", "wall-8"];
@@ -166,27 +167,69 @@ export default function Settings() {
 
   const handleImport = async (file: File) => {
     const text = await file.text();
-    await importSettingsData(text);
+    const imported = await importSettingsData(text);
     try {
       const parsed = JSON.parse(text);
-      if (parsed.theme) setTheme(parsed.theme);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+      const normalized = normalizeSettingsPayload(parsed) ?? imported;
+      if (normalized) {
+        if (Object.prototype.hasOwnProperty.call(normalized, "theme")) {
+          setTheme(normalized.theme);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "accent")) {
+          setAccent(normalized.accent);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "wallpaper")) {
+          setWallpaper(normalized.wallpaper);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "useKaliWallpaper")) {
+          setUseKaliWallpaper(normalized.useKaliWallpaper);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "density")) {
+          setDensity(normalized.density);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "reducedMotion")) {
+          setReducedMotion(normalized.reducedMotion);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "fontScale")) {
+          setFontScale(normalized.fontScale);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "highContrast")) {
+          setHighContrast(normalized.highContrast);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "largeHitAreas")) {
+          setLargeHitAreas(normalized.largeHitAreas);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "pongSpin")) {
+          setPongSpin(normalized.pongSpin);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "allowNetwork")) {
+          setAllowNetwork(normalized.allowNetwork);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "haptics")) {
+          setHaptics(normalized.haptics);
+        }
+        if (Object.prototype.hasOwnProperty.call(normalized, "volume")) {
+          setVolume(normalized.volume);
+        }
+      }
     } catch (e) { console.error("Import failed", e); }
   };
 
   const handleReset = async () => {
     if (!window.confirm("Reset all settings to default?")) return;
     await resetSettings();
-    window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setUseKaliWallpaper(defaults.useKaliWallpaper);
+    setDensity(defaults.density);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setLargeHitAreas(defaults.largeHitAreas);
+    setPongSpin(defaults.pongSpin);
+    setAllowNetwork(defaults.allowNetwork);
+    setHaptics(defaults.haptics);
+    setVolume(defaults.volume);
     setTheme("default");
   };
 
@@ -295,12 +338,14 @@ export default function Settings() {
                       <SettingRow label="Brightness" description="Adjust display brightness">
                         <input
                           type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
+                          aria-label="Brightness"
                           className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
                         />
                       </SettingRow>
                       <SettingRow label="System Volume" description="Main output volume">
                         <input
                           type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
+                          aria-label="System Volume"
                           className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
                         />
                       </SettingRow>
@@ -392,6 +437,7 @@ export default function Settings() {
                         <input
                           type="range" min="0.75" max="1.5" step="0.05"
                           value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                          aria-label="Interface Zoom"
                           className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
                         />
                         <span className="text-lg opacity-80 font-bold">A</span>

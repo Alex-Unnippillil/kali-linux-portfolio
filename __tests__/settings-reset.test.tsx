@@ -1,25 +1,31 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Settings } from '../components/apps/settings';
+import Settings from '../apps/settings';
 import { SettingsProvider } from '../hooks/useSettings';
-jest.mock('../utils/settingsStore', () => ({
-  __esModule: true,
-  ...jest.requireActual('../utils/settingsStore'),
-  resetSettings: jest.fn().mockResolvedValue(undefined),
-}));
-
-import { defaults, resetSettings } from '../utils/settingsStore';
+import {
+  exportSettings,
+  getAllowNetwork,
+  getDensity,
+  getFontScale,
+  getVolume,
+  importSettings,
+  resetSettings,
+  setAllowNetwork,
+  setDensity,
+  setFontScale,
+  setVolume,
+} from '../utils/settingsStore';
 
 describe('Settings reset flow', () => {
   beforeEach(async () => {
     window.localStorage.clear();
     // Mock window.confirm since jsdom doesn't implement it
     window.confirm = jest.fn(() => true);
-    (resetSettings as jest.Mock).mockClear();
   });
 
-  test('Reset Desktop restores toggles and slider to defaults', async () => {
+  test('Reset preserves unrelated localStorage keys', async () => {
     const user = userEvent.setup();
+    window.localStorage.setItem('unrelated-app-key', 'keep-me');
 
     render(
       <SettingsProvider>
@@ -27,61 +33,74 @@ describe('Settings reset flow', () => {
       </SettingsProvider>
     );
 
-    await screen.findByRole('button', { name: 'Reset' });
+    await screen.findByRole('button', { name: 'Appearance' });
+    await user.click(screen.getByRole('button', { name: 'Privacy' }));
 
-    const densitySelect = screen.getByRole('combobox');
-    const fontSlider = screen.getByLabelText('Adjust font scale');
-    const defaultAccentRadio = screen.getByRole('radio', {
-      name: `select-accent-${defaults.accent}`,
+    await user.click(
+      screen.getByRole('button', { name: 'Reset all settings to default' }),
+    );
+
+    await waitFor(() => {
+      expect(window.localStorage.getItem('unrelated-app-key')).toBe('keep-me');
     });
-    const alternateAccentRadio = screen.getByRole('radio', {
-      name: 'select-accent-#e53e3e',
+  });
+
+  test('Import applies representative settings safely', async () => {
+    const user = userEvent.setup();
+    const payload = JSON.stringify({
+      volume: 150,
+      density: 'compact',
+      allowNetwork: true,
+      fontScale: 2.5,
+      reducedMotion: true,
+    });
+    const file = new File([payload], 'settings.json', { type: 'application/json' });
+    Object.defineProperty(file, 'text', {
+      value: () => Promise.resolve(payload),
     });
 
-    const kaliWallpaperToggle = screen.getByLabelText('Enable Kali gradient wallpaper');
-    const reducedMotionToggle = screen.getByLabelText('Enable reduced motion');
-    const largeHitAreasToggle = screen.getByLabelText('Enable large hit areas');
-    const highContrastToggle = screen.getByLabelText('Enable high contrast mode');
-    const allowNetworkToggle = screen.getByLabelText('Allow simulated network requests');
-    const hapticsToggle = screen.getByLabelText('Enable haptics');
-    const pongSpinToggle = screen.getByLabelText('Enable pong spin');
+    render(
+      <SettingsProvider>
+        <Settings />
+      </SettingsProvider>
+    );
 
-    await waitFor(() => expect(hapticsToggle).toBeChecked());
-    await waitFor(() => expect(pongSpinToggle).toBeChecked());
+    await user.click(screen.getByRole('button', { name: 'Privacy' }));
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).toBeTruthy();
 
-    await user.click(alternateAccentRadio);
-    await user.selectOptions(densitySelect, 'compact');
-    fireEvent.change(fontSlider, { target: { value: '1.5' } });
-    await user.click(kaliWallpaperToggle);
-    await user.click(reducedMotionToggle);
-    await user.click(largeHitAreasToggle);
-    await user.click(highContrastToggle);
-    await user.click(allowNetworkToggle);
-    await user.click(hapticsToggle);
-    await user.click(pongSpinToggle);
+    fireEvent.change(fileInput, { target: { files: [file] } });
 
-    expect(alternateAccentRadio).toHaveAttribute('aria-checked', 'true');
-    expect(densitySelect).toHaveValue('compact');
-    expect(fontSlider).toHaveValue('1.5');
-    expect(kaliWallpaperToggle).toBeChecked();
-    expect(reducedMotionToggle).toBeChecked();
-    expect(largeHitAreasToggle).toBeChecked();
-    expect(highContrastToggle).toBeChecked();
-    expect(allowNetworkToggle).toBeChecked();
-    expect(hapticsToggle).not.toBeChecked();
-    expect(pongSpinToggle).not.toBeChecked();
+    await waitFor(() => {
+      expect(window.localStorage.getItem('density')).toBe('compact');
+      expect(window.localStorage.getItem('allow-network')).toBe('true');
+    });
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Accessibility' }));
+    const fontSlider = screen.getByLabelText('Interface Zoom');
+    await waitFor(() => expect(fontSlider).toHaveValue('1.5'));
 
-    await waitFor(() => expect(densitySelect).toHaveValue(defaults.density));
-    expect(fontSlider).toHaveValue(String(defaults.fontScale));
-    expect(kaliWallpaperToggle.checked).toBe(defaults.useKaliWallpaper);
-    expect(reducedMotionToggle.checked).toBe(defaults.reducedMotion);
-    expect(largeHitAreasToggle.checked).toBe(defaults.largeHitAreas);
-    expect(highContrastToggle.checked).toBe(defaults.highContrast);
-    expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
-    expect(hapticsToggle.checked).toBe(defaults.haptics);
-    expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
+    await user.click(screen.getByRole('button', { name: 'Appearance' }));
+    const volumeSlider = screen.getByLabelText('System Volume');
+    await waitFor(() => expect(volumeSlider).toHaveValue('100'));
+  });
+
+  test('Export/import round-trip keeps core settings', async () => {
+    await resetSettings();
+    await setDensity('compact');
+    await setAllowNetwork(true);
+    await setFontScale(1.25);
+    await setVolume(45);
+
+    const exported = await exportSettings();
+    await resetSettings();
+    await importSettings(exported);
+
+    await expect(getDensity()).resolves.toBe('compact');
+    await expect(getAllowNetwork()).resolves.toBe(true);
+    await expect(getFontScale()).resolves.toBe(1.25);
+    await expect(getVolume()).resolves.toBe(45);
+    expect(JSON.parse(exported).theme).toBeDefined();
   });
 });
 
