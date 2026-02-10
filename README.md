@@ -1,450 +1,513 @@
 # Kali Linux Portfolio
 
-A desktop-style portfolio built with Next.js and Tailwind that recreates the look and feel of a Kali/Ubuntu workstation. It ships with resizable windows, a dock, context menus, and a catalog of security tool simulations, utilities, and retro games. This document is aimed at engineers preparing production deployments or long-term maintenance.
+A desktop-style portfolio built with Next.js and Tailwind CSS that recreates the look and feel of a Kali Linux or Ubuntu workstation. It ships with a window manager, dock, launcher, context menus, theming, and a curated catalog of security-tool simulations, utilities, and retro games. This README is for contributors, operators, and anyone running the portfolio in production or preview environments.
 
-Production site: https://unnippillil.com/
+Live site: https://unnippillil.com/
+Repository: https://github.com/Alex-Unnippillil/kali-linux-portfolio
 
-## Table of Contents
+## Table of contents
 
-- Legal Notice & Risk Overview
-- Quick Start
-- Project Architecture
-- Desktop UX
-- App Catalog
-- Configuration & Environment
-- Deployment Guides
-- Quality Gates & Tooling
-- Security Hardening
-- Troubleshooting
-- Developer Documentation
-- License
+- [Project goals](#project-goals)
+- [Legal notice and risk overview](#legal-notice-and-risk-overview)
+- [What you get](#what-you-get)
+- [App catalog](#app-catalog)
+- [Tech stack](#tech-stack)
+- [Repository layout](#repository-layout)
+- [How it works](#how-it-works)
+  - [Desktop shell](#desktop-shell)
+  - [App runtime and dynamic loading](#app-runtime-and-dynamic-loading)
+  - [Simulation-first security model](#simulation-first-security-model)
+  - [Persistence model](#persistence-model)
+  - [PWA and offline](#pwa-and-offline)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+  - [Environment variables](#environment-variables)
+  - [Feature flags](#feature-flags)
+  - [Content Security Policy and security headers](#content-security-policy-and-security-headers)
+- [Developer workflows](#developer-workflows)
+  - [Scripts](#scripts)
+  - [Testing](#testing)
+  - [Accessibility](#accessibility)
+  - [Linting and type safety](#linting-and-type-safety)
+- [Deployment](#deployment)
+  - [Vercel](#vercel)
+  - [GitHub Pages export](#github-pages-export)
+- [Operations](#operations)
+  - [Analytics](#analytics)
+  - [Error reporting](#error-reporting)
+- [Contributing](#contributing)
+- [Changelog and versioning](#changelog-and-versioning)
+- [Security](#security)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-## Legal Notice & Risk Overview
+## Project goals
 
-This repository showcases static, non-operational simulations of common security tools. The demo UI is intended for education, portfolio review, and safe experimentation only. Running real offensive tooling against systems without explicit authorization is illegal and may cause damage or service disruption.
+1. Provide a portfolio that demonstrates product engineering depth through a complex, OS-like user interface.
+2. Keep security tooling demonstrative and non-operational. The project is safe to run on personal devices and safe to share publicly.
+3. Maintain strong quality gates: type safety, tests, accessibility checks, and secure-by-default deployment headers.
+4. Keep the codebase approachable for long-term iteration with documentation, checklists, and repeatable workflows.
 
-Potential risks when adapting this project:
-- Triggering IDS/IPS systems if real network scans are introduced.
-- Locking user accounts or corrupting data if password brute-force logic is enabled.
-- Confusing end users if canned output is mistaken for live data.
+## Legal notice and risk overview
 
-Always run experiments inside a controlled lab and obtain written permission before performing any security assessment. Do not add real exploitation logic or uncontrolled outbound traffic to this project.
+This repository includes UI simulations inspired by common security tools. These experiences are for education, portfolio review, and safe experimentation only. Do not adapt this codebase to perform real offensive actions, brute-force attempts, scanning, exploitation, or any unauthorized activity.
 
-## Quick Start
+If you contribute new tool experiences, they must remain self-contained demos. Prefer fixtures, offline datasets, and deterministic output generation over any real network behavior.
+
+## What you get
+
+### Desktop UX
+
+- Window management with draggable, resizable, snapping, focus, and z-index handling.
+- Dock and launcher experiences for organizing apps and favorites.
+- Context menus and panels for system controls and notifications.
+- Theming and personalization: accent color, wallpaper, density, motion, contrast, audio, and haptics.
+
+### App ecosystem
+
+The app catalog is defined in `apps.config.js` and implemented primarily in `components/apps/**` plus a small set of specialized modules in `apps/**`, `modules/**`, and `workers/**`.
+
+Representative apps include:
+
+- Productivity and media: Notes, Sticky Notes, YouTube, Spotify, Todoist, File Explorer, Camera, Screen Recorder.
+- Developer tools: Terminal, VSCode embed, request builders, ASCII tools.
+- Simulations: Wireshark, Kismet, Nessus, Nikto, Recon-ng, Mimikatz, Metasploit (simulated), password tooling (simulated).
+- Games: Minesweeper, Snake, Solitaire, Tetris, Pacman, Asteroids, Candy Crush, Chess, Checkers, Battleship, Tower Defense.
+
+### Safety, privacy, and controls
+
+- External network access from the client is guarded behind `allowNetwork` in Settings.
+- Optional integrations are explicitly gated behind environment variables.
+- Production deployments ship with security headers and CSP constraints.
+
+## App catalog
+
+All applications are lazy-loaded via `apps.config.js` to ensure optimal initial load performance. The lists below are representative and include the primary implementation paths used by the desktop shell or builder pages.
+
+### Security tools (simulations)
+
+These tools are simulations designed for educational purposes. They do not perform real network attacks.
+
+| App | Implementation details | Primary path |
+| --- | --- | --- |
+| Autopsy | Digital forensics interface mockup that simulates file analysis reports and evidence browsing using static data. | `components/apps/autopsy` |
+| BeEF | Browser Exploitation Framework simulation that renders a static control panel to demonstrate hooked browser management. | `components/apps/beef` |
+| Bluetooth | Simulates `bluetoothctl` and `hcitool` scanning/pairing sequences using pre-recorded device lists. | `components/apps/ble-sensor` |
+| Dsniff | Network auditing tool simulation that displays static packet capture logs and example credentials. | `components/apps/dsniff` |
+| Ettercap | Man-in-the-middle suite simulation that visualizes host lists and ARP poisoning workflows without actual packets. | `components/apps/ettercap` |
+| Ghidra | Reverse engineering suite simulation with drag-and-drop analysis and optional WASM decompiler wiring. | `components/apps/ghidra` |
+| Hashcat | Password recovery simulation with progress bars and deterministic outputs. | `components/apps/hashcat` |
+| Hydra | Login cracker simulation with adjustable speed and thread settings against a dummy service. | `components/apps/hydra` |
+| John the Ripper | Offline password cracking simulation with terminal-style output. | `components/apps/john` |
+| Kismet | Wireless network detector simulation with randomized network lists. | `components/apps/kismet.jsx` |
+| Metasploit | Console-based simulation with command parsing, sessions, jobs, and mock exploit metadata. | `components/apps/metasploit` |
+| Metasploit Post | Post-exploitation module extension for Metasploit simulation. | `components/apps/msf-post` |
+| Mimikatz | Credential tool simulation with deterministic output for credential and token commands. | `components/apps/mimikatz` |
+| Mimikatz Offline | Offline credential simulation data set. | `components/apps/mimikatz/offline` |
+| Nessus | Vulnerability scanner simulation with dashboard reports and charts. | `components/apps/nessus` |
+| Nikto | Web scanner simulation with canned findings and metadata. | `components/apps/nikto` |
+| Nmap NSE | Script-engine scan simulation with deterministic service outputs. | `components/apps/nmap-nse` |
+| OpenVAS | Vulnerability scanner simulation with task management and report panels. | `components/apps/openvas` |
+| Radare2 | Reverse engineering console simulation with disassembly output. | `components/apps/radare2` |
+| Reaver | WPS brute-force simulation with progress updates and mock results. | `components/apps/reaver` |
+| Recon-ng | OSINT workflow simulation with dummy targets and module flows. | `components/apps/reconng` |
+| Volatility | Memory forensics simulation for memory image inspection. | `components/apps/volatility` |
+| Wireshark | Packet analyzer simulation with virtualized packet lists and details. | `components/apps/wireshark` |
+
+### Utilities and productivity
+
+| App | Implementation details | Primary path |
+| --- | --- | --- |
+| About Alex | Profile and portfolio overview window. | `components/apps/alex` |
+| ASCII Art | ASCII art generator for terminal-style output. | `components/apps/ascii_art` |
+| Calculator | Scientific calculator with unit conversions using `math.js`. | `components/apps/calculator` |
+| Camera | Uses `navigator.mediaDevices.getUserMedia` to capture images locally. | `components/apps/camera` |
+| Contact (Gedit) | Text editor simulation that doubles as a contact form via EmailJS. | `components/apps/contact` |
+| Converter | Unit converter with shared definitions for length, mass, temperature, and more. | `components/apps/converter` |
+| Desktop Folder | Folder window for desktop items and shortcuts. | `components/apps/desktop-folder` |
+| Evidence Vault | Evidence storage and review surfaces for forensics flows. | `components/apps/evidence-vault` |
+| File Explorer | File manager with navigation, preview, and basic operations. | `components/apps/file-explorer` |
+| Firefox | Iframe-based browser shell with allow-listed destinations. | `components/apps/firefox` |
+| Figlet | ASCII banner generator. | `components/apps/figlet` |
+| Input Lab | Input component testing and demo surface. | `components/apps/input-lab` |
+| Notepad | Lightweight note editor. | `components/apps/notepad` |
+| Plugin Manager | Plugin catalog and management surface. | `components/apps/plugin-manager` |
+| Project Gallery | Project and work showcase gallery. | `components/apps/project-gallery` |
+| QR Tool | QR code generator and decoder. | `components/apps/qr` |
+| Quote | Quote generator and display surface. | `components/apps/quote` |
+| Resource Monitor | System-style resource charts and telemetry. | `components/apps/resource_monitor` |
+| Screen Recorder | Uses `MediaRecorder` for screen capture and local saving. | `components/apps/screen-recorder` |
+| Serial Terminal | Serial console simulation for device communication. | `components/apps/serial-terminal` |
+| Settings | Desktop settings and personalization controls. | `components/apps/settings` |
+| Spotify | Embedded Spotify web player with constrained iframe permissions. | `components/apps/spotify` |
+| Sticky Notes | Sticky notes widget with local persistence. | `components/apps/sticky_notes` |
+| Subnet Calculator | IPv4 subnetting calculator and reference tables. | `components/apps/subnet-calculator` |
+| Terminal | `xterm.js` shell simulation with custom parsing and OPFS integration. | `components/apps/terminal` |
+| Todoist | Embedded Todoist web interface. | `components/apps/todoist` |
+| Trash | Virtual trash bin with restore and delete actions. | `components/apps/trash` |
+| Visual Studio Code | Embedded StackBlitz editor for repository browsing. | `components/apps/vscode` |
+| Weather | Weather dashboard with live or demo data. | `components/apps/weather` |
+| Weather Widget | Compact weather widget for the desktop. | `components/apps/weather_widget` |
+| X | Social feed simulation with static or API-fed timelines. | `components/apps/x` |
+| YouTube | YouTube player and channel browser via iframe API. | `components/apps/youtube` |
+
+### Builder apps (standalone pages)
+
+These apps live under `pages/apps` and are accessed via `/apps/*` routes.
+
+| App | Implementation details | Primary path |
+| --- | --- | --- |
+| SSH Command Builder | Compose SSH commands with structured inputs. | `apps/ssh` |
+| HTTP Request Builder | Build HTTP requests with headers and payloads. | `apps/http` |
+| HTML Rewriter | Client-side HTML transformation playground. | `apps/html-rewriter` |
+
+### Games
+
+Most games use React state for logic and HTML, CSS, or Canvas for rendering. Some complex games use Phaser.
+
+| Game | Engine or logic | Details | Primary path |
+| --- | --- | --- | --- |
+| 2048 | React grid | Tile-sliding game with persistent high scores. | `components/apps/2048` |
+| Asteroids | Canvas | Arcade shooter with a custom game loop. | `components/apps/asteroids` |
+| Battleship | React | Grid-based strategy with localized AI state. | `components/apps/battleship.js` |
+| Blackjack | React | Card game logic using a shuffled deck state. | `components/apps/blackjack` |
+| Breakout | Canvas | Brick breaker with physics collision detection. | `components/apps/breakout` |
+| Candy Crush | React grid | Match-3 logic with cascades and animations. | `components/apps/candy-crush` |
+| Car Racer | Canvas | Top-down racing game with scrolling track. | `components/apps/car-racer` |
+| Checkers | React | Move validation and capture logic. | `components/apps/checkers` |
+| Chess | WASM and canvas | Uses `chess.js` for validation and Stockfish for AI. | `components/apps/chess` |
+| Connect Four | React | Grid logic with four-in-a-row detection. | `components/apps/connect-four` |
+| Flappy Bird | Canvas | Side-scroller with gravity and collision loops. | `components/apps/flappy-bird` |
+| Frogger | Canvas | Lane-based entity movement logic. | `components/apps/frogger` |
+| Gomoku | React | Five-in-a-row board state logic. | `components/apps/gomoku` |
+| Hangman | React | Word guessing with dictionary-backed word selection. | `components/apps/hangman` |
+| Lane Runner | Canvas | Endless runner lane-switching game. | `components/apps/lane-runner` |
+| Memory | React | Card matching with flipped-state tracking. | `components/apps/memory` |
+| Minesweeper | React | Recursive flood-fill logic for empty squares. | `components/apps/minesweeper` |
+| Nonogram | React | Grid validation against row and column hints. | `components/apps/nonogram` |
+| Pacman | React and HTML | Maze navigation and ghost pathfinding logic. | `components/apps/pacman` |
+| Pinball | Canvas and Matter.js | Physics simulation with a 2D engine. | `components/apps/pinball` |
+| Platformer | Phaser | Side-scrolling platformer with physics and sprites. | `components/apps/platformer` |
+| Pong | Canvas | Classic paddle game with simple collisions. | `components/apps/pong` |
+| Reversi | React | Valid move highlighting and piece flipping. | `components/apps/reversi` |
+| Simon | React | Sequence memory with timed playback. | `components/apps/simon` |
+| Snake | React grid | Grid-based movement with queue data structure. | `components/apps/snake` |
+| Sokoban | React | Box-pushing puzzle logic. | `components/apps/sokoban` |
+| Solitaire | React | Klondike implementation with drag-and-drop stacks. | `components/apps/solitaire/index` |
+| Space Invaders | Canvas | Shooter with entity manager for waves and collisions. | `components/apps/space-invaders` |
+| Sudoku | React | Backtracking generator for valid puzzles. | `components/apps/sudoku` |
+| Tetris | React grid | Matrix rotation and collision logic. | `components/apps/tetris` |
+| Tic Tac Toe | React | Minimax for unbeatable difficulty. | `components/apps/tictactoe` |
+| Tower Defense | Canvas | Pathing, targeting, and wave management. | `components/apps/tower-defense` |
+| Word Search | React | Grid generation with multi-direction placement. | `components/apps/word-search` |
+| Wordle | React | Dictionary validation and streak persistence. | `components/apps/wordle` |
+
+## Tech stack
+
+- Next.js (pages router for UI, plus `app/api` for route handlers where appropriate)
+- React (hybrid JS and TS codebase)
+- Tailwind CSS for styling
+- TypeScript for typed modules and tests
+- PWA build pipeline via `@ducanh2912/next-pwa` (service worker generated at build time)
+- Testing
+  - Jest unit tests: `__tests__/**`
+  - Playwright end-to-end and accessibility tests: `playwright/**`
+  - Pa11y-ci checks: `pa11yci.json`
+- Tooling
+  - ESLint (including custom rules in `eslint-plugin-no-top-level-window`)
+  - Corepack-managed Yarn 4 with immutable installs
+
+## Repository layout
+
+High-level map (not exhaustive):
+
+```text
+.
+├─ pages/                  # Primary UI routes and API routes
+│  ├─ api/                 # Serverless handlers (fixtures, simulations, integrations)
+│  └─ index.tsx            # Desktop entry point
+├─ app/api/                # Route handlers (Next app router API)
+├─ components/             # Desktop shell, apps, shared UI building blocks
+├─ hooks/                  # Shared React hooks (settings, guards, etc.)
+├─ utils/                  # Cross-cutting utilities (storage, analytics, CSP helpers)
+├─ public/                 # Static assets, fixtures, PWA assets, demo data
+├─ docs/                   # Architecture notes, checklists, and deep dives
+├─ __tests__/              # Jest tests
+├─ playwright/             # Playwright tests and helpers
+├─ scripts/                # Dev/build automation, lint tooling, CI helpers
+├─ plugins/                # Plugin catalog and sandboxed plugin demos
+└─ vercel.json             # Vercel build and runtime configuration
+```
+
+## How it works
+
+### Desktop shell
+
+The desktop experience is mounted from `pages/index.tsx`, which renders `components/ubuntu.js` as the top-level shell. That shell coordinates boot and lock screens, desktop layout, and system-level UI concerns.
+
+### App runtime and dynamic loading
+
+Apps are loaded with dynamic imports via the registry defined in `apps.config.js` (see the `createDynamicApp` helpers in `utils/createDynamicApp.js`). This keeps the initial bundle lean and makes the system feel responsive because large apps compile and load only when opened.
+
+### Simulation-first security model
+
+This repo is intentionally structured so security tooling remains demonstrative:
+
+- UI flows are designed to look authentic while producing deterministic, safe output.
+- API routes in `pages/api/**` are gated behind feature flags and are implemented as simulation endpoints with fixtures, offline datasets, or deterministic generators.
+- The Settings provider can block off-origin network requests in the browser when `allowNetwork` is disabled.
+
+If you are extending the platform, treat the simulation boundary as a hard requirement. The maintainer playbook in `AGENTS.md` is the contract for contributions.
+
+### Persistence model
+
+User preferences are stored client-side:
+
+- Settings use IndexedDB (via `idb-keyval`) and safe local-storage fallbacks where appropriate.
+- The desktop experience may also persist layout and recent items through utilities in `utils/**` (see `utils/safeStorage.ts`, `utils/recentStorage.ts`, and related modules).
+
+### PWA and offline
+
+A service worker is generated during `yarn build` and emitted to `public/sw.js`. Offline fallback assets live in `public/offline.*` and are used to keep the experience usable even when network access is limited.
+
+## Quick start
 
 ### Prerequisites
 
-- Node.js 20.19.5 (tracked in .nvmrc); install via nvm install.
-- Yarn (the repo ships with yarn.lock). Other package managers are not supported by CI.
-- Copy .env.local.example to .env.local and fill in any keys for the features you intend to test.
+- Node.js 20 (see `.nvmrc`)
+- Yarn 4.9.2 via Corepack (see `package.json#packageManager`)
 
-### Install & Run (Development)
+### Install
 
 ```bash
-nvm install          # Ensures Node 20.19.5 is available
-nvm use              # Activates the matching runtime
-cp .env.local.example .env.local
-# Populate keys: analytics, EmailJS, Supabase, etc.
-yarn install
-yarn dev             # Starts Next.js with hot reload
+corepack enable
+corepack prepare yarn@4.9.2 --activate
+yarn install --immutable
 ```
 
-### Production Build (Serverful)
+### Run (development)
 
-Serverful deployments run the compiled Next.js server so API stubs are available.
+```bash
+yarn dev
+```
+
+The dev server runs at http://localhost:3000.
+
+Development convenience flags:
+
+- Clean dev dist directory: `yarn dev --clean` (also accepts `--clean-dist` or `--reset-cache`)
+- Control Turbopack forwarding: `yarn dev --turbo` or `yarn dev --no-turbo`
+
+### Build and run (production)
 
 ```bash
 yarn build
-yarn start           # Boots the production server on port 3000 by default
+yarn start
 ```
 
-After the server starts, probe any API stub to verify server routes are alive:
+### One-command verification
+
+Runs the full local quality gate pipeline (lint, typecheck, tests, smoke checks as configured):
 
 ```bash
-curl -X POST http://localhost:3000/api/dummy
+yarn verify:all
 ```
 
-### Static Export (GitHub Pages, S3, etc.)
+## Configuration
 
-The project supports fully static export. API routes are omitted, so the UI falls back to demo data or hides unsupported actions.
+### Environment variables
 
-```bash
-yarn export               # Builds static output into ./out with NEXT_PUBLIC_STATIC_EXPORT=true
-npx serve out             # Optional: serve the exported site locally
-```
+Start from `.env.local.example` (local) or `.env.example` (reference). The project is designed to run with no secrets in demo mode, but some integrations require keys.
 
-Verify that features relying on /api/* degrade gracefully when served statically.
+Core flags and integrations:
 
-## Deployments
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| NEXT_PUBLIC_DEMO_MODE | false | Enables safe demo fallbacks for integrations (recommended for Preview). |
+| NEXT_PUBLIC_ENABLE_ANALYTICS | false | Enables `@vercel/analytics` wiring. |
+| NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS | false | Enables Vercel Speed Insights wiring. |
+| NEXT_PUBLIC_UI_EXPERIMENTS | false | Enables optional UI experiments. |
+| NEXT_PUBLIC_STATIC_EXPORT | false | Enables static export mode (used for GitHub Pages builds). |
+| NEXT_PUBLIC_BASE_PATH / BASE_PATH | empty | Base path override for subpath deployments. |
+| NEXT_PUBLIC_RECAPTCHA_SITE_KEY / RECAPTCHA_SECRET | empty | Contact form spam protection. |
+| NEXT_PUBLIC_USER_ID / NEXT_PUBLIC_SERVICE_ID / NEXT_PUBLIC_TEMPLATE_ID | empty | EmailJS configuration for contact forms. |
+| NEXT_PUBLIC_YOUTUBE_API_KEY / YOUTUBE_API_KEY | empty | YouTube API usage (optional). |
+| NEXT_PUBLIC_YOUTUBE_CHANNEL_ID | empty | Channel scoping for YouTube app. |
+| NEXT_PUBLIC_CURRENCY_API_URL | empty | Currency conversion API endpoint (optional). |
+| NEXT_PUBLIC_GHIDRA_WASM / NEXT_PUBLIC_GHIDRA_URL | empty | Ghidra simulation wiring (optional). |
+| NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY | empty | Supabase client configuration. |
+| SUPABASE_SERVICE_ROLE_KEY | empty | Server-side Supabase operations where needed. |
 
-- **Vercel Preview & Production:** See [docs/vercel.md](docs/vercel.md) for ignored build steps, deterministic install/build commands, and Preview environment guidance.
-- **Verification checklist:** Use [docs/preview-verification.md](docs/preview-verification.md) to confirm local, CI, and Preview behavior before merging.
+### Feature flags
 
-### Install as a Progressive Web App
+Feature flags intentionally keep potentially sensitive functionality inert unless explicitly enabled:
 
-1. Open the deployed site in a supported browser (Chrome, Edge, Brave, etc.).
-2. Use the browser's Install / Add to Home Screen action.
-3. On mobile, share text/links to the installed app to create sticky notes automatically.
+| Variable | Values | Scope |
+| --- | --- | --- |
+| FEATURE_TOOL_APIS | enabled or disabled | Wraps simulation API routes that present tool-like outputs. Default should remain disabled for safety. |
+| FEATURE_HYDRA | enabled or disabled | Additional gating for the Hydra simulation surfaces. Default should remain disabled. |
 
-The service worker is generated during next build by @ducanh2912/next-pwa and outputs to public/sw.js.
+### Content Security Policy and security headers
 
-## Project Architecture
+This repo takes a secure-by-default posture with CSP and other headers configured in:
 
-## Project Architecture
+- `next.config.js` (static header policies)
+- `middleware.ts` (per-request nonce generation and CSP assembly)
 
-### Directory Structure
+If you add new embeds, external media, analytics, or script sources, update the CSP allowlists accordingly. Keep the set as small as possible and prefer same-origin hosting for assets.
 
-```
-pages/
-  _app.jsx            # Global providers (desktop shell, analytics, legal banner)
-  _document.jsx       # HTML scaffold
-  index.jsx           # Mounts <Ubuntu /> desktop
-  api/                # Demo-only API routes (disabled during static export)
-  apps/               # Example conventional pages
+## Developer workflows
 
-components/
-  ubuntu.js           # Boot -> lock -> desktop state machine
-  base/               # Window frame, chrome, and focus manager
-  screen/             # Boot splash, lock screen, desktop, navbar
-  apps/               # App catalog: games, utilities, and security simulations
-  apps/terminal/      # Terminal wrapper component
-  context-menus/      # Desktop and dock context menus
-  SEO/Meta.js         # Structured metadata and JSON-LD helpers
-  util-components/    # Reusable UI primitives (buttons, layout helpers, etc.)
+### Scripts
 
-hooks/
-  usePersistentState.ts   # Validated localStorage state with reset helper
-  useSettings.tsx         # User preferences (theme, wallpaper, accent)
-  useAssetLoader.ts       # Lazy asset loading for canvas games
-  useCanvasResize.ts      # Responsive canvas sizing for games
-  useOPFS.ts              # Origin Private File System hooks for persistent storage
+The most common scripts (see `package.json#scripts` for the full list):
 
-public/
-  images/             # Wallpapers, icons, avatars
-  themes/             # Yaru and other theme assets
+- `yarn dev`: local development server (custom wrapper in `scripts/dev.mjs`)
+- `yarn build`: production build (Next.js)
+- `yarn start`: run production server
+- `yarn test`: Jest test suite
+- `yarn test:watch`: Jest watch mode
+- `yarn lint`: repo lint gate (changed-file aware wrapper in `scripts/lint-changed.mjs`)
+- `yarn typecheck`: TypeScript no-emit check
+- `yarn a11y`: local accessibility run (Pa11y and Playwright)
+- `yarn smoke`: smoke tests that open and validate the entire app catalog
+- `yarn analyze`: bundle analysis build (sets `ANALYZE=true`)
+- `yarn module-report`: generates module report artifacts
+- `yarn verify:all`: run the local CI-equivalent suite
 
-utils/
-  storage.ts          # Abstraction over IDB-Keyval and localStorage
-  gamepad.ts          # Gamepad API normalization
-  analytics.ts        # Google Analytics 4 wrapper
+### Testing
 
-apps/                 # Heavy application logic (dynamic imports)
-  terminal/           # xterm.js implementation, command history, and session management
-  vscode/             # External iframe embed logic
-```
+- Jest unit tests live in `__tests__/`.
+- Playwright tests live in `playwright/` and `playwright.config.ts`.
+- Accessibility pipeline can run locally via `yarn a11y` and in GitHub Actions via `.github/workflows/a11y.yml`.
 
-### Core Systems Deep Dive
+### Accessibility
 
-#### 🖥️ Desktop Environment (`components/ubuntu.js`)
-The `Ubuntu` component acts as the root state machine, managing the high-level lifecycle of the desktop:
--   **Boot Sequence**: Simulates a BIOS/OS boot screen (`screen/booting_screen.js`) with configurable delays.
--   **Lock Screen**: Handles authentication simulation (`screen/lock_screen.js`).
--   **Desktop**: The main workspace (`components/desktop/Layout.js`) where windows are mounted.
--   **Backgrounds**: Persists user-selected wallpapers to `localStorage` via `safeLocalStorage`.
+Accessibility is treated as a first-class requirement:
 
-#### 🪟 Window Management (`components/base/window.js`)
-Windows are distinct React components wrapped in `react-draggable`. Key features include:
--   **Snap-to-Grid**: Dragging a window to screen edges (left, right, top) triggers visual snap previews (`computeSnapRegions`).
--   **Responsive Sizing**: Windows calculate their initial size based on the viewport (`getViewportMetrics`), ensuring usability on mobile vs. desktop (`maxWidth`, `minWidth`).
--   **State Preservation**: Window positions and dimensions are volatile (per session), but app state (like open tabs) is often persisted via app-specific logic.
+- Automated checks: Pa11y-ci plus Playwright accessibility coverage.
+- Keyboard navigation: skip links and desktop landmarks are implemented in the shell; see `docs/keyboard-only-test-plan.md` and `docs/desktop-layout-landmarks.md`.
 
-#### 💾 File System & Persistence
-The project uses a hybrid persistence strategy to ensure data survives updates while maintaining privacy:
-1.  **Origin Private File System (OPFS)**:
-    -   Accessed via `hooks/useOPFS.ts`.
-    -   Used by the **Terminal** to store command history (`history.txt`) and session logs.
-    -   Provides a high-performance, sandboxed file system that mimics a real OS disk.
-2.  **IndexedDB (`idb-keyval`)**:
-    -   Managed via `utils/storage.ts`.
-    -   Stores structured data like **Game Saves** (`progress`), **Keybinds**, and **Replays**.
-3.  **LocalStorage**:
-    -   Used for lightweight user preferences (Theme, Wallpaper, "Shut Down" state).
+### Linting and type safety
 
-#### ⌨️ Terminal Emulation (`apps/terminal`)
-The terminal is a robust application built on `xterm.js`:
--   **Web Workers**: Heavy commands (like hash cracking simulations) run in a dedicated worker (`workers/terminal-worker.ts`) to prevent UI blocking.
--   **Session Manager**: `utils/sessionManager.ts` handles command parsing, history traversal, and simulating a shell environment.
--   **Safe Mode**: A "Safe Mode" toggle prevents the execution of simulated "dangerous" commands (like `rm -rf /`) unless explicitly disabled by the user.
+- ESLint is enforced in CI and locally with `yarn lint`.
+- TypeScript no-emit checks are enforced with `yarn typecheck`.
+- `eslint-plugin-no-top-level-window` prevents patterns that break SSR or static analysis.
 
-#### 🎨 Theming & Tailwind
-Styles are defined in `tailwind.config.js` and extend the standard palette with Kali Linux specific colors:
--   **Colors**: Custom tokens like `ub-cool-grey`, `kali-panel`, and `kali-accent`.
--   **Dark Mode**: Supported via the `class` strategy, enabling system-wide theme switching.
--   **Animations**: Custom keyframes for `glow`, `flourish`, and `mine` (used in Minesweeper).
+## Deployment
 
-#### 🔍 SEO & Metadata (`components/SEO/Meta.js`)
-The application implements a full SEO strategy:
--   **OpenGraph**: Dynamic OG tags for social sharing (Twitter, Facebook).
--   **JSON-LD**: Structured data for "Person" schema to enhance search engine understanding.
--   **CSP**: Generates a content security policy nonce for safe script execution.
+### Vercel
 
-## Desktop UX
+This repo is configured for deterministic Vercel builds:
 
-**Boot & Lock Flow**: The desktop boots through a splash animation, transitions to a lock screen, and finally reveals the workspace. Authentication is simulated; unlocking simply animates the transition.
+- `vercel.json` sets `installCommand` to `corepack enable && yarn install --immutable`.
+- `vercel.json` sets `buildCommand` to `yarn build`.
+- Functions runtime is pinned for both `pages/api` and `app/api` routes.
 
-**Window Controls**: Windows are draggable, resizable, and keyboard focusable using `framer-motion` and `react-draggable`. Header controls hook into desktop state to minimize, maximize, or close.
+Preview environment recommendations:
 
-**Context Menus**: Right-click menus are powered by `components/context-menus/desktopContextMenu.tsx` and adjust options based on what is selected (wallpapers, new notes, etc.).
+- `NEXT_PUBLIC_DEMO_MODE=true`
+- `FEATURE_TOOL_APIS=disabled`
+- `NEXT_PUBLIC_ENABLE_ANALYTICS=false`
+- `NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS=false`
 
-**Dock & Favorites**: Dock entries and "All Applications" tiles are sourced from `apps.config.js`. Favorites persist through `usePersistentState`.
+Preview deployments are designed to be shareable and isolated from production. The repo includes documentation on keeping Preview builds deterministic and avoiding accidental builds of `gh-pages`: see `docs/vercel.md`.
 
-**Terminal**: `/components/apps/terminal` emulates a robust shell using **xterm.js**.
--   **Sandboxed Execution**: Commands run in a secure sandbox, simulating network activity (e.g., `ping`, `nmap`) ensuring no real outbound malicious traffic.
--   **Web Workers**: Heavy command processing is offloaded to Web Workers to keep the UI thread responsive.
--   **History**: Command history resides in OPFS/localStorage.
+### GitHub Pages export
 
-**Gamepad Support**: `utils/gamepad.ts` polls `navigator.getGamepads()` and normalizes input across different controllers. Games may expose haptic feedback via `gamepad.vibrationActuator` where available.
+A static export path exists for demos where serverless APIs are not required:
 
-## App Catalog
+- Use `yarn export` to build with `NEXT_PUBLIC_STATIC_EXPORT=true`.
+- The workflow `.github/workflows/gh-deploy.yml` can publish the output to a `gh-pages` branch.
 
-All applications are lazy-loaded via `apps.config.js` to ensure optimal initial load performance.
+If you are using both Vercel and GitHub Pages in the same repo, ensure Vercel is not attempting to build the `gh-pages` branch (see `docs/vercel.md` and `scripts/vercel-ignore-build.sh`).
 
-### 🛡️ Security Tools (Simulations)
-
-These tools are **simulations** designed for educational purposes. They do NOT perform real network attacks.
-
-| App | Implementation Details |
-| :--- | :--- |
-| **Autopsy** | Digital forensics interface mockup. Simulates file analysis reports and evidence browsing using static JSON data. |
-| **BeEF** | Browser Exploitation Framework simulation. Renders a static control panel to demonstrate XSS hooked browser management. |
-| **Bluetooth** | Simulates `bluetoothctl` and `hcitool` scanning/pairing sequences using pre-recorded device lists. |
-| **Dsniff** | Network auditing tool simulation. Displays static packet capture logs and "sniffed" credentials. |
-| **Ettercap** | Man-in-the-middle attack suite simulation. Visualizes host lists and ARP poisoning workflows without actual network packets. |
-| **Ghidra** | Reverse engineering suite. Implements a drag-and-drop interface for binary analysis (using mock data) or optionally embeds a WASM-based decompiler if configured. |
-| **Hashcat** | Password recovery tool. Simulates hash cracking progress bars and "success" states using a web worker to prevent UI freezing. |
-| **Hydra** | Login cracker simulation. demonstrates brute-force attack logic against a dummy service with adjustable speed/threads. |
-| **John the Ripper** | Password cracker. Simulates offline password cracking sessions with terminal-like output. |
-| **Kismet** | Wireless network detector. Renders a dashboard of "detected" Wi-Fi networks using random data generation. |
-| **Metasploit** | **Complex Simulation**. Implements a console-based interface (`msfconsole`) with command parsing, state management for sessions/jobs, and a database of ~50 mock exploits defined in `modules.json`. output is deterministic. |
-| **Metasploit Post** | Post-exploitation module extension for the Metasploit app, simulating data exfiltration steps. |
-| **Mimikatz** | Windows credential tool. Simulates `sekurlsa::logonpasswords` output and token manipulation commands in a text-based interface. |
-| **Nessus** | Vulnerability scanner. Renders a reporting dashboard with charts (using Recharts) showing "discovered" vulnerabilities. |
-| **Nmap NSE** | Network mapper. Simulates script engine scans (`-sC`) with hardcoded output for common services (HTTP, SSH, SMB). |
-| **OpenVAS** | Open-source vulnerability scanner. detailed dashboard mockup showing task management and security reports. |
-| **Radare2** | Unix-like reverse engineering framework. Simulates the `r2` shell environment and disassembly output. |
-| **Reaver** | WPS bruteforce tool. Simulates the pin cracking process with progress updates and "cracked" WPA keys. |
-| **Recon-ng** | Web reconnaissance framework. Simulates module usage for OSINT gathering against dummy targets. |
-| **Volatility** | Memory forensics. Simulates analysis of memory dump image files (`.mem`) to list processes and connections. |
-| **Wireshark** | Packet analyzer. Renders a detailed table of "captured" packets with inspectable headers, utilizing virtualized lists for performance. |
-
-### 🛠️ Utilities & Productivity
-
-| App | Implementation Details |
-| :--- | :--- |
-| **Calculator** | Functional calculator supporting scientific operations. Uses `math.js` for expression evaluation and supports unit conversions (e.g., `5cm to inch`). |
-| **Camera** | Accesses the user's webcam via `navigator.mediaDevices.getUserMedia`. Supports taking photos which are saved to the local gallery. |
-| **Clipboard Manager** | Tracks clipboard history using the Permissions API. Allows specific formatted pasting functionality. |
-| **Contact / Gedit** | Text editor simulation that doubles as a contact form, sending messages via EmailJS. |
-| **Converter** | Universal unit converter. Shares a single definition file (`units.js`) for centralized logic across Length, Mass, Temperature, etc. |
-| **File Explorer** | Fully functional file manager for the mock file system. Supports navigation, file preview, and basic operations (delete/rename). |
-| **Firefox** | **Iframe Container**. Simulates a web browser UI with tabs and an address bar. Loads allow-listed sites (e.g., Wikipedia) in iframes. |
-| **PDF Viewer** | Renders PDF files using `react-pdf` with zoom and pagination controls. |
-| **Screen Recorder** | Uses `MediaRecorder` API to capture the desktop stream. Supports saving recordings as WebM or MP4 (via client-side transcoding). |
-| **Settings** | Control panel for desktop customization (wallpaper, theme colors, dock sizing). Persists state to `localStorage`. |
-| **Spotify** | **Iframe Integration**. Embeds the Spotify Web Player in a window. supports playlist selection and basic playback controls. |
-| **Terminal** | **Core Component**. Built on `xterm.js`. Implements a custom shell parser, file system interaction (OPFS), and pseudo-commands (`apt`, `git`, `ls`). |
-| **Todoist** | Task manager. Embeds the Todoist web UI in an iframe for full task management capabilities. |
-| **Trash** | Virtual trash bin. Manages "deleted" items from the File Explorer, allowing restoration or permanent deletion. |
-| **VS Code** | **Embed**. Embeds the StackBlitz IDE via iframe, pointing to this repository. Security permissions are restricted via `sandbox` attribute. |
-| **Weather** | Fetches real-time weather data from a public API based on IP geolocation or user input. Visualized with weather icons. |
-| **X (Twitter)** | Social media feed simulation. Renders a static or API-fed timeline of posts with "like" and "retweet" interactions. |
-| **YouTube** | Video player. Uses the YouTube IFrame Player API to browse channels and play videos within a desktop window. |
-
-### 🎮 Games
-
-Most games are implemented using **React state** for logic and HTML/CSS/Canvas for rendering. Some complex games use **Phaser**.
-
-| Game | Engine/Logic | Details |
-| :--- | :--- | :--- |
-| **2048** | React/Grid | Clone of the tile-sliding game. Uses persistent state for high scores. |
-| **Asteroids** | Canvas | Arcade shooter. Custom game loop engine rendering to a 2D canvas. |
-| **Battleship** | React | Grid-based strategy. Implements "AI" opponent with localized state for board tracking. |
-| **Blackjack** | React | Card game logic using a shuffled deck array state. |
-| **Breakout** | Canvas | Brick breaker. Physics-based collision detection on a canvas. |
-| **Candy Crush** | React/Grid | Match-3 logic. Handles complex grid state updates and animations for matches/cascades. |
-| **Car Racer** | Canvas | Top-down racing game. Scroller implementation. |
-| **Checkers** | React | Classic board game. Enforces move validation and capture logic. |
-| **Chess** | **WASM + Canvas** | Uses `chess.js` for rule validation and a WebAssembly-based Stockfish engine for AI. Renders via HTML/SVG. |
-| **Connect Four** | React | Grid logic. Checks 4-in-a-row conditions after every move. |
-| **Flappy Bird** | Canvas | Side-scroller. Physics loop for gravity and collision detection. |
-| **Frogger** | Canvas | Arcade clone. Lane-based entity movement logic. |
-| **Gomoku** | React | "Five in a Row". Board state matrix with win condition checking. |
-| **Hangman** | React | Word guessing. JSON dictionary for word selection. |
-| **Memory** | React | Card matching. tracks flipped states and matches. |
-| **Minesweeper** | React | Logic-heavy implementation. Recursive flood-fill algorithm for revealing empty squares. |
-| **Nonogram** | React | Logic puzzle. Grid state validation against row/column hints. |
-| **Pacman** | React/HTML | Maze game. Pathfinding implementation for ghost AI. |
-| **Pinball** | Canvas/Matter.js | Physics simulation using a 2D physics engine library. |
-| **Platformer** | **Phaser** | Side-scrolling platformer using the Phaser 3 engine for physics and sprite animation. |
-| **Pong** | Canvas | Classic paddle game. Simple 1D collision physics. |
-| **Reversi** | React | Othello clone. Valid move highlighting and piece flipping logic. |
-| **Simon** | React | Sequence memory. Relies on `setTimeout` for pattern playback and user input validation. |
-| **Snake** | React/Grid | Grid-based movement. Queue data structure for snake body segments. |
-| **Sokoban** | React | Puzzle game. State management for player position and box coordinates vs walls. |
-| **Solitaire** | React | Klondike implementation. Drag-and-drop stack logic. |
-| **Space Invaders** | Canvas | Shooter. Entity manager for alien waves and projectile collisions. |
-| **Sudoku** | React | Backtracking algorithm generator for valid puzzles. |
-| **Tetris** | React/Grid | Block stacking. Matrix rotation algorithms and collision checks. |
-| **Tic Tac Toe** | React | Simple grid state. Minimax algorithm for "Unbeatable" difficulty. |
-| **Tower Defense** | Canvas | Strategy game. Path following enemies and turret targeting logic. |
-| **Word Search** | React | Grid generation. matrix algorithm to place words in random directions. |
-| **Wordle** | React | Word guessing. Dictionary validation and state persistence for daily streaks. |
-
-## Configuration & Environment
-
-### Environment Variables
-
-Copy `.env.local.example` to `.env.local` and populate the keys relevant to your deployment.
-
-| Variable | Purpose |
-| :--- | :--- |
-| NEXT_PUBLIC_ENABLE_ANALYTICS | Toggles Google Analytics 4 tracking on the client. |
-| NEXT_PUBLIC_SERVICE_ID | EmailJS service ID for contact forms. |
-| NEXT_PUBLIC_TEMPLATE_ID | EmailJS template ID. |
-| NEXT_PUBLIC_USER_ID | EmailJS public key. |
-| NEXT_PUBLIC_YOUTUBE_API_KEY | Loads the YouTube app playlist directory. |
-| YOUTUBE_API_KEY | Server-side YouTube Data API key used by /api/youtube/*. |
-| NEXT_PUBLIC_BEEF_URL | Optional remote iframe target for BeEF simulation. |
-| NEXT_PUBLIC_GHIDRA_URL | Optional remote iframe target for Ghidra simulation. |
-| NEXT_PUBLIC_GHIDRA_WASM | Optional remote WASM target for Ghidra. |
-| NEXT_PUBLIC_UI_EXPERIMENTS | Enables experimental UI heuristics. |
-| NEXT_PUBLIC_STATIC_EXPORT | Set to 'true' during static export to disable server APIs. |
-| NEXT_PUBLIC_SHOW_BETA | Displays a beta badge when truthy. |
-| NEXT_PUBLIC_RECAPTCHA_SITE_KEY | Client-side ReCAPTCHA key for contact form. |
-| NEXT_PUBLIC_SUPABASE_URL | Client-side Supabase URL (optional). |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY | Client-side Supabase anonymous key (optional). |
-| FEATURE_TOOL_APIS | 'enabled' or 'disabled'; wraps all tool API routes. |
-| FEATURE_HYDRA | Additional toggle for /api/hydra demo route. |
-| RECAPTCHA_SECRET | Server-side verification for ReCAPTCHA. |
-| SUPABASE_URL | Server-side Supabase URL. |
-| ADMIN_READ_KEY | Secret for admin message APIs; configure in hosting platform. |
-
-**Security Note**: Never commit secrets. Use local `.env.local`, CI secrets, or host-level configuration.
-
-### Feature Flags & Static Export
-
-Set `NEXT_PUBLIC_STATIC_EXPORT=true` during `yarn export` to disable API routes. UI components guard their behaviour with this flag or the presence of required environment variables.
+## Operations
 
 ### Analytics
 
-`utils/analytics.ts` dispatches events to `window.gtag` when available. Analytics only fire when `NEXT_PUBLIC_ENABLE_ANALYTICS` is truthy. The project also renders `<Analytics />` and `<SpeedInsights />` from `@vercel/analytics` inside `_app.jsx`.
+Analytics are opt-in:
 
-## Deployment Guides
+- `NEXT_PUBLIC_ENABLE_ANALYTICS=true` enables Vercel Analytics.
+- `NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS=true` enables Vercel Speed Insights.
 
-### GitHub Pages (Static Export)
+Keep analytics disabled by default for local development and previews unless you explicitly need the data.
 
-Workflow: `.github/workflows/gh-deploy.yml`
+### Error reporting
 
-1.  Installs Node 20.19.5 to match `.nvmrc`.
-2.  Runs `yarn install`, `yarn export`, and copies `out/` to the `gh-pages` branch.
-3.  Creates `.nojekyll` to bypass GitHub Pages Jekyll processing.
+Client error logging is routed through a Next route handler in `app/api/log-client-error/route.ts`. Keep error payloads minimal and avoid including sensitive user data.
 
-Required secrets include any public keys needed at build time.
+## Contributing
 
-### Vercel (Serverless)
+Read these first:
 
-1.  Connect the repository to a Vercel project.
-2.  Build command: `yarn build`.
-3.  Runtime: Next.js 15.5 (serverless functions handle API stubs).
-4.  Configure environment variables in the Vercel dashboard.
+- `AGENTS.md` (maintainer playbook and contribution contract)
+- `docs/new-app-checklist.md` (how to add new apps without degrading UX or performance)
+- `docs/terminal-simulation.md` (terminal UX and output design constraints)
 
-If you prefer a static deployment on Vercel, run `yarn export` and serve the output with a static hosting provider or Vercel's static project type.
+General principles:
 
-### Docker
+- Preserve the simulation boundary: no real offensive logic, no uncontrolled outbound network traffic.
+- Keep the desktop responsive: prefer dynamic imports, chunk boundaries, and small shared primitives.
+- Maintain quality gates: tests, linting, typecheck, and accessibility should remain green.
 
-```dockerfile
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
-COPY . .
-RUN yarn build
+## Changelog and versioning
 
-FROM node:20-alpine
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app ./
-EXPOSE 3000
-CMD ["yarn", "start", "-p", "3000"]
-```
+Human-readable changes are tracked in `CHANGELOG.md`. The changelog format follows Keep a Changelog and should remain curated rather than auto-dumped from git logs.
 
-Build and run locally:
+## Security
 
-```bash
-docker build -t kali-portfolio .
-docker run -p 3000:3000 \
-  -e NEXT_PUBLIC_SERVICE_ID=... \
-  kali-portfolio
-```
+- Default-deny for external network access from the client (`allowNetwork` in Settings).
+- Serverless routes intended for tool-like outputs are feature-gated behind environment flags.
+- CSP and security headers are configured in `next.config.js` and `middleware.ts`.
 
-## Quality Gates & Tooling
-
-| Command | Purpose |
-| :--- | :--- |
-| yarn lint | ESLint (configured via eslint.config.mjs). |
-| yarn test | Jest unit tests (jsdom environment; see jest.setup.ts). |
-| yarn test:watch | Watch mode for Jest. |
-| yarn smoke | Manual smoke runner that opens each /apps/* route. |
-| npx playwright test | Playwright end-to-end suite. |
-
-**Guidelines**:
--   Fix lint and type issues instead of silencing rules.
--   Co-locate new tests with related code under `__tests__/` or feature folders.
--   For major UI updates, capture screenshots for reviewers.
--   Accessibility checks using Pa11y (`pa11yci.json`) are encouraged.
-
-## Security Hardening
-
-### Security Headers & CSP
-
-Default headers are configured in `next.config.js`:
-
--   Content-Security-Policy
--   X-Content-Type-Options: nosniff
--   Referrer-Policy: strict-origin-when-cross-origin
--   Permissions-Policy: camera=(), microphone=(), geolocation=()
--   X-Frame-Options: SAMEORIGIN
-
-CSP whitelists origins for embedded tools: stackblitz.com, youtube-nocookie.com, spotify.com, todoist.com, twitter.com, vercel.live, and Kali partner sites.
-
-### Production Checklist
-
-- [ ] Pin Node.js to 20.19.5 across local, CI, and hosting environments.
-- [ ] Track Node.js DEP0170 deprecations for custom protocol URLs.
-- [ ] Rotate EmailJS and other public keys regularly.
-- [ ] Tighten CSP (connect-src, frame-src).
-- [ ] Disable or feature-flag demo API routes in production.
-- [ ] Rate-limit any future server routes and sanitize input.
-- [ ] Enforce HTTPS and HSTS at the edge.
-- [ ] Keep dynamic imports for heavy apps to protect initial load performance.
-- [ ] Back up large static assets used by the portfolio.
+If you discover a security issue, open a GitHub Security Advisory or contact the maintainer privately.
 
 ## Troubleshooting
 
-| Symptom | Fix |
-| :--- | :--- |
-| Usage Error: Couldn't find the node_modules state file | Install dependencies first with `yarn install`. Yarn 4 requirement. |
-| Blank app grid after static export | Ensure `NEXT_PUBLIC_STATIC_EXPORT=true` and confirm API dependent apps leverage feature flags. |
-| Service worker ignores new assets | Clear site data or bump the cache version in the PWA config. |
-| Gamepad input not detected | Confirm the browser supports `navigator.getGamepads()` and update bindings in `components/apps/Games/common/input-remap`. |
-| Analytics not reporting | Verify `NEXT_PUBLIC_ENABLE_ANALYTICS` is true and check ad blockers. |
-| External embeds refuse to load | Remote site may send X-Frame-Options headers. |
+### Node version mismatch
 
-## Developer Documentation
+If installs or builds fail, ensure Node 20 is active:
 
-- [Terminal Simulation](docs/terminal-simulation.md)
+```bash
+nvm install
+nvm use
+node -v
+```
+
+### Yarn immutable install failures
+
+If `yarn install --immutable` fails:
+
+- Ensure you did not modify `yarn.lock` without committing it.
+- Delete `node_modules` and retry with a clean install.
+- Avoid mixing package managers.
+
+### Preview deployments failing on Vercel
+
+Common causes:
+
+- Vercel attempting to build the `gh-pages` branch (should be disabled or ignored).
+- Missing Corepack or Yarn version pinning.
+- Optional integrations enabled without providing required environment variables.
+
+See `docs/vercel.md` for a hardened configuration checklist.
+
+### Playwright browser install issues
+
+In CI or on fresh machines:
+
+```bash
+npx playwright install --with-deps
+```
+
+### CSP breaks embeds or external content
+
+If a new embed fails to load:
+
+- Update the CSP allowlists in `middleware.ts` and `next.config.js`.
+- Prefer same-origin assets whenever possible.
 
 ## License
 
-Distributed under the MIT License.
-
-Last updated: February 2026
-
-### Calculator Syntax Appendix
-
-The calculator app supports a subset of math.js expressions:
--   **Operators**: +, -, *, /, ^, and parenthesis grouping.
--   **Built-in functions**: sin, cos, tan, sqrt, abs, ceil, floor, round, exp, log, and more per math.js defaults.
--   **Unit-aware math**: Suffix values with units like cm, m, in, or ft to mix measurements (e.g., `2m + 30cm`).
--   **History**: The previous answer is accessible via `Ans`.
--   **Validation**: Invalid syntax is highlighted in the calculator input, selecting the character where parsing failed.
+See [LICENSE](LICENSE).
