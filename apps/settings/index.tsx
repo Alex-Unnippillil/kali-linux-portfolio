@@ -184,9 +184,13 @@ export default function Settings() {
     window.localStorage.clear();
     setAccent(defaults.accent);
     setWallpaper(defaults.wallpaper);
+    setUseKaliWallpaper(defaults.useKaliWallpaper);
     setReducedMotion(defaults.reducedMotion);
     setFontScale(defaults.fontScale);
     setHighContrast(defaults.highContrast);
+    setLargeHitAreas(defaults.largeHitAreas);
+    setAllowNetwork(defaults.allowNetwork);
+    setHaptics(defaults.haptics);
     setTheme("default");
   };
 
