@@ -10,6 +10,7 @@ Repository: https://github.com/Alex-Unnippillil/kali-linux-portfolio
 - [Project goals](#project-goals)
 - [Legal notice and risk overview](#legal-notice-and-risk-overview)
 - [What you get](#what-you-get)
+- [App catalog](#app-catalog)
 - [Tech stack](#tech-stack)
 - [Repository layout](#repository-layout)
 - [How it works](#how-it-works)
@@ -78,6 +79,128 @@ Representative apps include:
 - External network access from the client is guarded behind `allowNetwork` in Settings.
 - Optional integrations are explicitly gated behind environment variables.
 - Production deployments ship with security headers and CSP constraints.
+
+## App catalog
+
+All applications are lazy-loaded via `apps.config.js` to ensure optimal initial load performance. The lists below are representative and include the primary implementation paths used by the desktop shell or builder pages.
+
+### Security tools (simulations)
+
+These tools are simulations designed for educational purposes. They do not perform real network attacks.
+
+| App | Implementation details | Primary path |
+| --- | --- | --- |
+| Autopsy | Digital forensics interface mockup that simulates file analysis reports and evidence browsing using static data. | `components/apps/autopsy` |
+| BeEF | Browser Exploitation Framework simulation that renders a static control panel to demonstrate hooked browser management. | `components/apps/beef` |
+| Bluetooth | Simulates `bluetoothctl` and `hcitool` scanning/pairing sequences using pre-recorded device lists. | `components/apps/ble-sensor` |
+| Dsniff | Network auditing tool simulation that displays static packet capture logs and example credentials. | `components/apps/dsniff` |
+| Ettercap | Man-in-the-middle suite simulation that visualizes host lists and ARP poisoning workflows without actual packets. | `components/apps/ettercap` |
+| Ghidra | Reverse engineering suite simulation with drag-and-drop analysis and optional WASM decompiler wiring. | `components/apps/ghidra` |
+| Hashcat | Password recovery simulation with progress bars and deterministic outputs. | `components/apps/hashcat` |
+| Hydra | Login cracker simulation with adjustable speed and thread settings against a dummy service. | `components/apps/hydra` |
+| John the Ripper | Offline password cracking simulation with terminal-style output. | `components/apps/john` |
+| Kismet | Wireless network detector simulation with randomized network lists. | `components/apps/kismet.jsx` |
+| Metasploit | Console-based simulation with command parsing, sessions, jobs, and mock exploit metadata. | `components/apps/metasploit` |
+| Metasploit Post | Post-exploitation module extension for Metasploit simulation. | `components/apps/msf-post` |
+| Mimikatz | Credential tool simulation with deterministic output for credential and token commands. | `components/apps/mimikatz` |
+| Mimikatz Offline | Offline credential simulation data set. | `components/apps/mimikatz/offline` |
+| Nessus | Vulnerability scanner simulation with dashboard reports and charts. | `components/apps/nessus` |
+| Nikto | Web scanner simulation with canned findings and metadata. | `components/apps/nikto` |
+| Nmap NSE | Script-engine scan simulation with deterministic service outputs. | `components/apps/nmap-nse` |
+| OpenVAS | Vulnerability scanner simulation with task management and report panels. | `components/apps/openvas` |
+| Radare2 | Reverse engineering console simulation with disassembly output. | `components/apps/radare2` |
+| Reaver | WPS brute-force simulation with progress updates and mock results. | `components/apps/reaver` |
+| Recon-ng | OSINT workflow simulation with dummy targets and module flows. | `components/apps/reconng` |
+| Volatility | Memory forensics simulation for memory image inspection. | `components/apps/volatility` |
+| Wireshark | Packet analyzer simulation with virtualized packet lists and details. | `components/apps/wireshark` |
+
+### Utilities and productivity
+
+| App | Implementation details | Primary path |
+| --- | --- | --- |
+| About Alex | Profile and portfolio overview window. | `components/apps/alex` |
+| ASCII Art | ASCII art generator for terminal-style output. | `components/apps/ascii_art` |
+| Calculator | Scientific calculator with unit conversions using `math.js`. | `components/apps/calculator` |
+| Camera | Uses `navigator.mediaDevices.getUserMedia` to capture images locally. | `components/apps/camera` |
+| Contact (Gedit) | Text editor simulation that doubles as a contact form via EmailJS. | `components/apps/contact` |
+| Converter | Unit converter with shared definitions for length, mass, temperature, and more. | `components/apps/converter` |
+| Desktop Folder | Folder window for desktop items and shortcuts. | `components/apps/desktop-folder` |
+| Evidence Vault | Evidence storage and review surfaces for forensics flows. | `components/apps/evidence-vault` |
+| File Explorer | File manager with navigation, preview, and basic operations. | `components/apps/file-explorer` |
+| Firefox | Iframe-based browser shell with allow-listed destinations. | `components/apps/firefox` |
+| Figlet | ASCII banner generator. | `components/apps/figlet` |
+| Input Lab | Input component testing and demo surface. | `components/apps/input-lab` |
+| Notepad | Lightweight note editor. | `components/apps/notepad` |
+| Plugin Manager | Plugin catalog and management surface. | `components/apps/plugin-manager` |
+| Project Gallery | Project and work showcase gallery. | `components/apps/project-gallery` |
+| QR Tool | QR code generator and decoder. | `components/apps/qr` |
+| Quote | Quote generator and display surface. | `components/apps/quote` |
+| Resource Monitor | System-style resource charts and telemetry. | `components/apps/resource_monitor` |
+| Screen Recorder | Uses `MediaRecorder` for screen capture and local saving. | `components/apps/screen-recorder` |
+| Serial Terminal | Serial console simulation for device communication. | `components/apps/serial-terminal` |
+| Settings | Desktop settings and personalization controls. | `components/apps/settings` |
+| Spotify | Embedded Spotify web player with constrained iframe permissions. | `components/apps/spotify` |
+| Sticky Notes | Sticky notes widget with local persistence. | `components/apps/sticky_notes` |
+| Subnet Calculator | IPv4 subnetting calculator and reference tables. | `components/apps/subnet-calculator` |
+| Terminal | `xterm.js` shell simulation with custom parsing and OPFS integration. | `components/apps/terminal` |
+| Todoist | Embedded Todoist web interface. | `components/apps/todoist` |
+| Trash | Virtual trash bin with restore and delete actions. | `components/apps/trash` |
+| Visual Studio Code | Embedded StackBlitz editor for repository browsing. | `components/apps/vscode` |
+| Weather | Weather dashboard with live or demo data. | `components/apps/weather` |
+| Weather Widget | Compact weather widget for the desktop. | `components/apps/weather_widget` |
+| X | Social feed simulation with static or API-fed timelines. | `components/apps/x` |
+| YouTube | YouTube player and channel browser via iframe API. | `components/apps/youtube` |
+
+### Builder apps (standalone pages)
+
+These apps live under `pages/apps` and are accessed via `/apps/*` routes.
+
+| App | Implementation details | Primary path |
+| --- | --- | --- |
+| SSH Command Builder | Compose SSH commands with structured inputs. | `apps/ssh` |
+| HTTP Request Builder | Build HTTP requests with headers and payloads. | `apps/http` |
+| HTML Rewriter | Client-side HTML transformation playground. | `apps/html-rewriter` |
+
+### Games
+
+Most games use React state for logic and HTML, CSS, or Canvas for rendering. Some complex games use Phaser.
+
+| Game | Engine or logic | Details | Primary path |
+| --- | --- | --- | --- |
+| 2048 | React grid | Tile-sliding game with persistent high scores. | `components/apps/2048` |
+| Asteroids | Canvas | Arcade shooter with a custom game loop. | `components/apps/asteroids` |
+| Battleship | React | Grid-based strategy with localized AI state. | `components/apps/battleship.js` |
+| Blackjack | React | Card game logic using a shuffled deck state. | `components/apps/blackjack` |
+| Breakout | Canvas | Brick breaker with physics collision detection. | `components/apps/breakout` |
+| Candy Crush | React grid | Match-3 logic with cascades and animations. | `components/apps/candy-crush` |
+| Car Racer | Canvas | Top-down racing game with scrolling track. | `components/apps/car-racer` |
+| Checkers | React | Move validation and capture logic. | `components/apps/checkers` |
+| Chess | WASM and canvas | Uses `chess.js` for validation and Stockfish for AI. | `components/apps/chess` |
+| Connect Four | React | Grid logic with four-in-a-row detection. | `components/apps/connect-four` |
+| Flappy Bird | Canvas | Side-scroller with gravity and collision loops. | `components/apps/flappy-bird` |
+| Frogger | Canvas | Lane-based entity movement logic. | `components/apps/frogger` |
+| Gomoku | React | Five-in-a-row board state logic. | `components/apps/gomoku` |
+| Hangman | React | Word guessing with dictionary-backed word selection. | `components/apps/hangman` |
+| Lane Runner | Canvas | Endless runner lane-switching game. | `components/apps/lane-runner` |
+| Memory | React | Card matching with flipped-state tracking. | `components/apps/memory` |
+| Minesweeper | React | Recursive flood-fill logic for empty squares. | `components/apps/minesweeper` |
+| Nonogram | React | Grid validation against row and column hints. | `components/apps/nonogram` |
+| Pacman | React and HTML | Maze navigation and ghost pathfinding logic. | `components/apps/pacman` |
+| Pinball | Canvas and Matter.js | Physics simulation with a 2D engine. | `components/apps/pinball` |
+| Platformer | Phaser | Side-scrolling platformer with physics and sprites. | `components/apps/platformer` |
+| Pong | Canvas | Classic paddle game with simple collisions. | `components/apps/pong` |
+| Reversi | React | Valid move highlighting and piece flipping. | `components/apps/reversi` |
+| Simon | React | Sequence memory with timed playback. | `components/apps/simon` |
+| Snake | React grid | Grid-based movement with queue data structure. | `components/apps/snake` |
+| Sokoban | React | Box-pushing puzzle logic. | `components/apps/sokoban` |
+| Solitaire | React | Klondike implementation with drag-and-drop stacks. | `components/apps/solitaire/index` |
+| Space Invaders | Canvas | Shooter with entity manager for waves and collisions. | `components/apps/space-invaders` |
+| Sudoku | React | Backtracking generator for valid puzzles. | `components/apps/sudoku` |
+| Tetris | React grid | Matrix rotation and collision logic. | `components/apps/tetris` |
+| Tic Tac Toe | React | Minimax for unbeatable difficulty. | `components/apps/tictactoe` |
+| Tower Defense | Canvas | Pathing, targeting, and wave management. | `components/apps/tower-defense` |
+| Word Search | React | Grid generation with multi-direction placement. | `components/apps/word-search` |
+| Wordle | React | Dictionary validation and streak persistence. | `components/apps/wordle` |
 
 ## Tech stack
 
