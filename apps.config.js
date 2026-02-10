@@ -208,7 +208,7 @@ const ContactApp = createDynamicApp(() => import('./components/apps/contact'), '
 const DesktopFolderApp = createDynamicApp(() => import('./components/apps/desktop-folder'), 'Folder');
 const XApp = createDynamicApp(() => import('./components/apps/x'), 'X');
 const SpotifyApp = createDynamicApp(() => import('./components/apps/spotify'), 'Spotify');
-const SettingsApp = createDynamicApp(() => import('./components/apps/settings'), 'Settings');
+const SettingsApp = createDynamicApp(() => import('./apps/settings'), 'Settings');
 const FirefoxApp = createDynamicApp(() => import('./components/apps/firefox'), 'Firefox');
 const TodoistApp = createDynamicApp(() => import('./components/apps/todoist'), 'Todoist');
 const WeatherApp = createDynamicApp(() => import('./components/apps/weather'), 'Weather');
