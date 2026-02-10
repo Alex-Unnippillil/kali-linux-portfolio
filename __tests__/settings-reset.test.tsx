@@ -10,6 +10,10 @@ jest.mock('../utils/settingsStore', () => ({
 
 import { defaults, resetSettings } from '../utils/settingsStore';
 
+const expectSwitchState = (element: HTMLElement, value: boolean) => {
+  expect(element).toHaveAttribute('aria-checked', value ? 'true' : 'false');
+};
+
 describe('Settings reset flow', () => {
   beforeEach(async () => {
     window.localStorage.clear();
@@ -27,61 +31,79 @@ describe('Settings reset flow', () => {
       </SettingsProvider>
     );
 
-    await screen.findByRole('button', { name: 'Reset' });
+    await screen.findByRole('button', { name: 'Appearance' });
 
-    const densitySelect = screen.getByRole('combobox');
-    const fontSlider = screen.getByLabelText('Adjust font scale');
-    const defaultAccentRadio = screen.getByRole('radio', {
-      name: `select-accent-${defaults.accent}`,
+    const volumeSlider = screen.getByLabelText('System volume');
+    const kaliWallpaperToggle = screen.getByRole('switch', {
+      name: 'Use Kali gradient overlay',
     });
-    const alternateAccentRadio = screen.getByRole('radio', {
-      name: 'select-accent-#e53e3e',
+    const alternateAccentButton = screen.getByRole('button', {
+      name: 'Set accent color to #e53e3e',
     });
 
-    const kaliWallpaperToggle = screen.getByLabelText('Enable Kali gradient wallpaper');
-    const reducedMotionToggle = screen.getByLabelText('Enable reduced motion');
-    const largeHitAreasToggle = screen.getByLabelText('Enable large hit areas');
-    const highContrastToggle = screen.getByLabelText('Enable high contrast mode');
-    const allowNetworkToggle = screen.getByLabelText('Allow simulated network requests');
-    const hapticsToggle = screen.getByLabelText('Enable haptics');
-    const pongSpinToggle = screen.getByLabelText('Enable pong spin');
+    fireEvent.change(volumeSlider, { target: { value: '55' } });
+    await user.click(kaliWallpaperToggle);
+    await user.click(alternateAccentButton);
 
-    await waitFor(() => expect(hapticsToggle).toBeChecked());
-    await waitFor(() => expect(pongSpinToggle).toBeChecked());
+    fireEvent.click(screen.getByRole('button', { name: 'Accessibility' }));
 
-    await user.click(alternateAccentRadio);
+    const densitySelect = screen.getByLabelText('Interface density');
+    const fontSlider = screen.getByLabelText('Interface zoom');
+    const reducedMotionToggle = screen.getByRole('switch', { name: 'Reduced Motion' });
+    const largeHitAreasToggle = screen.getByRole('switch', { name: 'Large Hit Areas' });
+    const highContrastToggle = screen.getByRole('switch', { name: 'High Contrast' });
+    const hapticsToggle = screen.getByRole('switch', { name: 'Haptic Feedback' });
+
     await user.selectOptions(densitySelect, 'compact');
     fireEvent.change(fontSlider, { target: { value: '1.5' } });
-    await user.click(kaliWallpaperToggle);
     await user.click(reducedMotionToggle);
     await user.click(largeHitAreasToggle);
     await user.click(highContrastToggle);
-    await user.click(allowNetworkToggle);
     await user.click(hapticsToggle);
+
+    fireEvent.click(screen.getByRole('button', { name: 'System' }));
+    const pongSpinToggle = screen.getByRole('switch', { name: 'Pong spin effect' });
     await user.click(pongSpinToggle);
 
-    expect(alternateAccentRadio).toHaveAttribute('aria-checked', 'true');
-    expect(densitySelect).toHaveValue('compact');
-    expect(fontSlider).toHaveValue('1.5');
-    expect(kaliWallpaperToggle).toBeChecked();
-    expect(reducedMotionToggle).toBeChecked();
-    expect(largeHitAreasToggle).toBeChecked();
-    expect(highContrastToggle).toBeChecked();
-    expect(allowNetworkToggle).toBeChecked();
-    expect(hapticsToggle).not.toBeChecked();
-    expect(pongSpinToggle).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Privacy' }));
+    const allowNetworkToggle = screen.getByRole('switch', {
+      name: 'Allow network requests',
+    });
+    await user.click(allowNetworkToggle);
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Reset all settings to default' }));
 
-    await waitFor(() => expect(densitySelect).toHaveValue(defaults.density));
-    expect(fontSlider).toHaveValue(String(defaults.fontScale));
-    expect(kaliWallpaperToggle.checked).toBe(defaults.useKaliWallpaper);
-    expect(reducedMotionToggle.checked).toBe(defaults.reducedMotion);
-    expect(largeHitAreasToggle.checked).toBe(defaults.largeHitAreas);
-    expect(highContrastToggle.checked).toBe(defaults.highContrast);
-    expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
-    expect(hapticsToggle.checked).toBe(defaults.haptics);
-    expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
+    await waitFor(() => expectSwitchState(allowNetworkToggle, defaults.allowNetwork));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Accessibility' }));
+    await screen.findByText('Display & Legibility');
+    const densitySelectAfter = screen.getByLabelText('Interface density');
+    const fontSliderAfter = screen.getByLabelText('Interface zoom');
+    const reducedMotionAfter = screen.getByRole('switch', { name: 'Reduced Motion' });
+    const largeHitAreasAfter = screen.getByRole('switch', { name: 'Large Hit Areas' });
+    const highContrastAfter = screen.getByRole('switch', { name: 'High Contrast' });
+    const hapticsAfter = screen.getByRole('switch', { name: 'Haptic Feedback' });
+
+    expect(densitySelectAfter).toHaveValue(defaults.density);
+    expect(fontSliderAfter).toHaveValue(String(defaults.fontScale));
+    expectSwitchState(reducedMotionAfter, defaults.reducedMotion);
+    expectSwitchState(largeHitAreasAfter, defaults.largeHitAreas);
+    expectSwitchState(highContrastAfter, defaults.highContrast);
+    expectSwitchState(hapticsAfter, defaults.haptics);
+
+    fireEvent.click(screen.getByRole('button', { name: 'System' }));
+    await screen.findByText('Games & Simulations');
+    const pongSpinAfter = screen.getByRole('switch', { name: 'Pong spin effect' });
+    expectSwitchState(pongSpinAfter, defaults.pongSpin);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Appearance' }));
+    await screen.findByText('Wallpaper & Background');
+    const kaliWallpaperAfter = screen.getByRole('switch', {
+      name: 'Use Kali gradient overlay',
+    });
+    const volumeAfter = screen.getByLabelText('System volume');
+    expectSwitchState(kaliWallpaperAfter, defaults.useKaliWallpaper);
+    expect(volumeAfter).toHaveValue(String(defaults.volume));
   });
 });
 

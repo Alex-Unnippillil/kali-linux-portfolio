@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ReactNode, useEffect } from "react";
+import { useState, useRef, ReactNode } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import SystemInfo from "./components/SystemInfo";
@@ -12,7 +12,6 @@ import {
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import ToggleSwitch from "../../components/ToggleSwitch";
-import KaliWallpaper from "../../components/util-components/kali-wallpaper";
 import usePersistentState from "../../hooks/usePersistentState";
 
 // Icons --------------------------------------------------------
@@ -126,14 +125,15 @@ export default function Settings() {
     accent, setAccent,
     wallpaper, setWallpaper,
     useKaliWallpaper, setUseKaliWallpaper,
-    // density, setDensity, // Unused in new UI but kept in store
+    density, setDensity,
     reducedMotion, setReducedMotion,
     fontScale, setFontScale,
     highContrast, setHighContrast,
     largeHitAreas, setLargeHitAreas,
-    // pongSpin, setPongSpin, // Specific game setting, maybe hide
+    pongSpin, setPongSpin,
     allowNetwork, setAllowNetwork,
     haptics, setHaptics,
+    volume, setVolume,
     theme, setTheme,
   } = useSettings();
 
@@ -143,14 +143,63 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<"appearance" | "accessibility" | "privacy" | "system">("appearance");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showKeymap, setShowKeymap] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Simulated Volume/Brightness state for "Quick Actions"
-  const [volume, setVolume] = useState(75);
   const [brightness, setBrightness] = useState(100);
 
   const wallpapers = ["wall-1", "wall-2", "wall-3", "wall-4", "wall-5", "wall-6", "wall-7", "wall-8"];
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
   const changeBackground = (name: string) => setWallpaper(name);
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (...values: string[]) => {
+    if (!normalizedQuery) return true;
+    return values.some((value) => value.toLowerCase().includes(normalizedQuery));
+  };
+  const hasSearchQuery = normalizedQuery.length > 0;
+
+  const appearanceMatches = {
+    theme: matchesQuery("theme", "appearance", "preset"),
+    quick: matchesQuery("quick", "brightness", "volume", "audio"),
+    accent: matchesQuery("accent", "color"),
+    wallpaper: matchesQuery("wallpaper", "background", "slideshow", "gradient", "kali"),
+  };
+  const accessibilityMatches = {
+    display: matchesQuery("zoom", "font", "scale", "density", "contrast", "motion", "hit"),
+    input: matchesQuery("haptic", "feedback", "keyboard", "keymap", "shortcut"),
+  };
+  const privacyMatches = {
+    data: matchesQuery("privacy", "network", "requests", "data", "storage", "local"),
+    backup: matchesQuery("backup", "export", "import", "restore"),
+    danger: matchesQuery("reset", "default", "danger"),
+  };
+  const systemMatches = {
+    notifications: matchesQuery("do not disturb", "focus", "notifications"),
+    games: matchesQuery("pong", "spin", "games", "simulation"),
+    info: matchesQuery("system", "hardware", "stats"),
+  };
+
+  const appearanceHasResults = Object.values(appearanceMatches).some(Boolean);
+  const accessibilityHasResults = Object.values(accessibilityMatches).some(Boolean);
+  const privacyHasResults = Object.values(privacyMatches).some(Boolean);
+  const systemHasResults = Object.values(systemMatches).some(Boolean);
+
+  const applySettings = (settings: Partial<typeof defaults> & { theme?: string }) => {
+    if (settings.theme !== undefined) setTheme(settings.theme);
+    if (settings.accent !== undefined) setAccent(settings.accent);
+    if (settings.wallpaper !== undefined) setWallpaper(settings.wallpaper);
+    if (settings.useKaliWallpaper !== undefined) setUseKaliWallpaper(settings.useKaliWallpaper);
+    if (settings.density !== undefined) setDensity(settings.density);
+    if (settings.reducedMotion !== undefined) setReducedMotion(settings.reducedMotion);
+    if (settings.fontScale !== undefined) setFontScale(settings.fontScale);
+    if (settings.highContrast !== undefined) setHighContrast(settings.highContrast);
+    if (settings.largeHitAreas !== undefined) setLargeHitAreas(settings.largeHitAreas);
+    if (settings.pongSpin !== undefined) setPongSpin(settings.pongSpin);
+    if (settings.allowNetwork !== undefined) setAllowNetwork(settings.allowNetwork);
+    if (settings.haptics !== undefined) setHaptics(settings.haptics);
+    if (settings.volume !== undefined) setVolume(settings.volume);
+  };
 
   // Import/Export Handlers
   const handleExport = async () => {
@@ -169,25 +218,18 @@ export default function Settings() {
     await importSettingsData(text);
     try {
       const parsed = JSON.parse(text);
-      if (parsed.theme) setTheme(parsed.theme);
-      if (parsed.accent !== undefined) setAccent(parsed.accent);
-      if (parsed.wallpaper !== undefined) setWallpaper(parsed.wallpaper);
-      if (parsed.reducedMotion !== undefined) setReducedMotion(parsed.reducedMotion);
-      if (parsed.fontScale !== undefined) setFontScale(parsed.fontScale);
-      if (parsed.highContrast !== undefined) setHighContrast(parsed.highContrast);
+      applySettings(parsed);
     } catch (e) { console.error("Import failed", e); }
   };
 
   const handleReset = async () => {
     if (!window.confirm("Reset all settings to default?")) return;
     await resetSettings();
-    window.localStorage.clear();
-    setAccent(defaults.accent);
-    setWallpaper(defaults.wallpaper);
-    setReducedMotion(defaults.reducedMotion);
-    setFontScale(defaults.fontScale);
-    setHighContrast(defaults.highContrast);
-    setTheme("default");
+    applySettings({
+      ...defaults,
+      theme: "default",
+      useKaliWallpaper: defaults.useKaliWallpaper,
+    });
   };
 
   const tabs = [
@@ -271,241 +313,345 @@ export default function Settings() {
 
         <div className="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
           <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <section className="rounded-2xl border border-[var(--kali-panel-border)] bg-[var(--kali-panel)]/30 p-5 backdrop-blur-md">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-white/50">Search</p>
+                  <h2 className="text-lg font-semibold">Find a setting</h2>
+                  <p className="text-xs text-white/50">Filter the current tab by keyword.</p>
+                </div>
+                <div className="flex w-full max-w-md items-center gap-3">
+                  <label htmlFor="settings-search" className="sr-only">
+                    Search settings
+                  </label>
+                  <input
+                    id="settings-search"
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Try “volume”, “wallpaper”, “network”…"
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/90 placeholder:text-white/40 focus:border-[var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[var(--kali-control)]/40"
+                  />
+                  {hasSearchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-white/70 hover:bg-white/10"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
 
             {activeTab === "appearance" && (
               <>
+                {hasSearchQuery && !appearanceHasResults && (
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                    No appearance settings match “{searchQuery}”.
+                  </div>
+                )}
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Theme Selector */}
-                  <Card title="Theme" className="lg:col-span-2">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {['default', 'dark', 'neon', 'matrix'].map((t) => (
-                        <ThemeCard
-                          key={t}
-                          theme={t}
-                          active={theme === t}
-                          onClick={() => setTheme(t)}
-                        />
-                      ))}
-                    </div>
-                  </Card>
+                  {appearanceMatches.theme && (
+                    <Card title="Theme" className="lg:col-span-2">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {['default', 'dark', 'neon', 'matrix'].map((t) => (
+                          <ThemeCard
+                            key={t}
+                            theme={t}
+                            active={theme === t}
+                            onClick={() => setTheme(t)}
+                          />
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
-                  {/* Quick Actions (Simulated) */}
-                  <Card title="Quick Adjustments">
-                    <div className="space-y-6">
-                      <SettingRow label="Brightness" description="Adjust display brightness">
-                        <input
-                          type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
-                          className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
-                        />
-                      </SettingRow>
-                      <SettingRow label="System Volume" description="Main output volume">
-                        <input
-                          type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
-                          className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
-                        />
-                      </SettingRow>
-                    </div>
-                  </Card>
+                  {appearanceMatches.quick && (
+                    <Card title="Quick Adjustments">
+                      <div className="space-y-6">
+                        <SettingRow label="Brightness" description="Adjust display brightness">
+                          <input
+                            type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
+                            className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                            aria-label="Brightness"
+                          />
+                        </SettingRow>
+                        <SettingRow label={`System Volume (${Math.round(volume)}%)`} description="Main output volume">
+                          <input
+                            type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
+                            className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                            aria-label="System volume"
+                          />
+                        </SettingRow>
+                      </div>
+                    </Card>
+                  )}
 
-                  {/* Accent Color */}
-                  <Card title="Accent Color">
-                    <div className="flex flex-wrap gap-4 justify-center py-2">
-                      {ACCENT_OPTIONS.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => setAccent(c)}
-                          className={`
-                            h-10 w-10 rounded-full border-2 transition-all duration-300 transform hover:scale-110
-                            ${accent === c
-                              ? "border-white shadow-[0_0_0_4px_rgba(255,255,255,0.1)] scale-110"
-                              : "border-transparent opacity-80 hover:opacity-100"
-                            }
-                          `}
-                          style={{ backgroundColor: c }}
-                          aria-label={`Set accent color to ${c}`}
-                        />
-                      ))}
-                    </div>
-                  </Card>
+                  {appearanceMatches.accent && (
+                    <Card title="Accent Color">
+                      <div className="flex flex-wrap gap-4 justify-center py-2">
+                        {ACCENT_OPTIONS.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setAccent(c)}
+                            className={`
+                              h-10 w-10 rounded-full border-2 transition-all duration-300 transform hover:scale-110
+                              ${accent === c
+                                ? "border-white shadow-[0_0_0_4px_rgba(255,255,255,0.1)] scale-110"
+                                : "border-transparent opacity-80 hover:opacity-100"
+                              }
+                            `}
+                            style={{ backgroundColor: c }}
+                            aria-label={`Set accent color to ${c}`}
+                          />
+                        ))}
+                      </div>
+                    </Card>
+                  )}
                 </section>
 
-                {/* Wallpaper */}
-                <Card title="Wallpaper & Background">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                      <div>
-                        <span className="font-medium text-sm">Kali Gradient Overlay</span>
-                        <p className="text-xs text-white/50 mt-0.5">Use the signature Kali Linux gradient background</p>
+                {appearanceMatches.wallpaper && (
+                  <Card title="Wallpaper & Background">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <div>
+                          <span className="font-medium text-sm">Kali Gradient Overlay</span>
+                          <p className="text-xs text-white/50 mt-0.5">Use the signature Kali Linux gradient background</p>
+                        </div>
+                        <ToggleSwitch checked={useKaliWallpaper} onChange={setUseKaliWallpaper} ariaLabel="Use Kali gradient overlay" />
                       </div>
-                      <ToggleSwitch checked={useKaliWallpaper} onChange={setUseKaliWallpaper} ariaLabel="Toggle Gradient" />
-                    </div>
 
-                    {!useKaliWallpaper && (
-                      <div className="space-y-4">
-                        <div className="h-48 w-full rounded-xl overflow-hidden border border-white/10 shadow-2xl relative">
-                          <div
-                            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
-                            style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
-                          />
-                          <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-lg border border-white/10 flex items-center gap-3">
-                            <span className="text-xs font-mono opacity-70">Current: {wallpaper}</span>
-                            <input
-                              type="range" min="0" max={wallpapers.length - 1} step="1" value={wallpaperIndex}
-                              onChange={(e) => changeBackground(wallpapers[parseInt(e.target.value, 10)])}
-                              className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                      {!useKaliWallpaper && (
+                        <div className="space-y-4">
+                          <div className="h-48 w-full rounded-xl overflow-hidden border border-white/10 shadow-2xl relative">
+                            <div
+                              className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+                              style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
                             />
+                            <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-lg border border-white/10 flex items-center gap-3">
+                              <span className="text-xs font-mono opacity-70">Current: {wallpaper}</span>
+                              <input
+                                type="range" min="0" max={wallpapers.length - 1} step="1" value={wallpaperIndex}
+                                onChange={(e) => changeBackground(wallpapers[parseInt(e.target.value, 10)])}
+                                className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                aria-label="Wallpaper selection"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
+                            {wallpapers.map((name) => (
+                              <button
+                                key={name}
+                                onClick={() => changeBackground(name)}
+                                className={`
+                                  relative aspect-video rounded-lg overflow-hidden border-2 transition-all
+                                  ${name === wallpaper ? "border-[var(--kali-control)] opacity-100 ring-2 ring-[var(--kali-control)]/30" : "border-transparent opacity-60 hover:opacity-100"}
+                                `}
+                              >
+                                <img src={`/wallpapers/${name}.webp`} className="h-full w-full object-cover" alt={name} />
+                              </button>
+                            ))}
                           </div>
                         </div>
-
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
-                          {wallpapers.map((name) => (
-                            <button
-                              key={name}
-                              onClick={() => changeBackground(name)}
-                              className={`
-                                relative aspect-video rounded-lg overflow-hidden border-2 transition-all
-                                ${name === wallpaper ? "border-[var(--kali-control)] opacity-100 ring-2 ring-[var(--kali-control)]/30" : "border-transparent opacity-60 hover:opacity-100"}
-                              `}
-                            >
-                              <img src={`/wallpapers/${name}.webp`} className="h-full w-full object-cover" alt={name} />
-                            </button>
-                          ))}
-                        </div>
+                      )}
+                      <div className="pt-4 border-t border-white/5">
+                        <p className="mb-3 text-sm font-medium">Slideshow</p>
+                        <BackgroundSlideshow />
                       </div>
-                    )}
-                    <div className="pt-4 border-t border-white/5">
-                      <p className="mb-3 text-sm font-medium">Slideshow</p>
-                      <BackgroundSlideshow />
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                )}
               </>
             )}
 
             {activeTab === "accessibility" && (
               <div className="space-y-6">
-                <Card title="Display & Legibility">
-                  <div className="space-y-6">
-                    <SettingRow label="Interface Zoom" description="Adjust the scale of UI elements">
-                      <div className="flex items-center gap-3 w-48">
-                        <span className="text-xs opacity-50">A</span>
-                        <input
-                          type="range" min="0.75" max="1.5" step="0.05"
-                          value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                          className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
-                        />
-                        <span className="text-lg opacity-80 font-bold">A</span>
-                      </div>
-                    </SettingRow>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                        <span className="text-sm font-medium">Reduced Motion</span>
-                        <ToggleSwitch checked={reducedMotion} onChange={setReducedMotion} ariaLabel="Reduced Motion" />
-                      </div>
-                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                        <span className="text-sm font-medium">High Contrast</span>
-                        <ToggleSwitch checked={highContrast} onChange={setHighContrast} ariaLabel="High Contrast" />
-                      </div>
-                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                        <span className="text-sm font-medium">Large Hit Areas</span>
-                        <ToggleSwitch checked={largeHitAreas} onChange={setLargeHitAreas} ariaLabel="Large Hit Areas" />
+                {hasSearchQuery && !accessibilityHasResults && (
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                    No accessibility settings match “{searchQuery}”.
+                  </div>
+                )}
+                {accessibilityMatches.display && (
+                  <Card title="Display & Legibility">
+                    <div className="space-y-6">
+                      <SettingRow label={`Interface Zoom (${Math.round(fontScale * 100)}%)`} description="Adjust the scale of UI elements">
+                        <div className="flex items-center gap-3 w-56">
+                          <span className="text-xs opacity-50">A</span>
+                          <input
+                            type="range" min="0.75" max="1.5" step="0.05"
+                            value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                            className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                            aria-label="Interface zoom"
+                          />
+                          <span className="text-lg opacity-80 font-bold">A</span>
+                        </div>
+                      </SettingRow>
+                      <SettingRow label="Interface Density" description="Tighten or loosen overall spacing">
+                        <select
+                          value={density}
+                          onChange={(e) => setDensity(e.target.value as "regular" | "compact")}
+                          className="w-full sm:w-40 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80 focus:border-[var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[var(--kali-control)]/40"
+                          aria-label="Interface density"
+                        >
+                          <option value="regular">Regular</option>
+                          <option value="compact">Compact</option>
+                        </select>
+                      </SettingRow>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                          <span className="text-sm font-medium">Reduced Motion</span>
+                          <ToggleSwitch checked={reducedMotion} onChange={setReducedMotion} ariaLabel="Reduced Motion" />
+                        </div>
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                          <span className="text-sm font-medium">High Contrast</span>
+                          <ToggleSwitch checked={highContrast} onChange={setHighContrast} ariaLabel="High Contrast" />
+                        </div>
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                          <span className="text-sm font-medium">Large Hit Areas</span>
+                          <ToggleSwitch checked={largeHitAreas} onChange={setLargeHitAreas} ariaLabel="Large Hit Areas" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                )}
 
-                <Card title="Input & Feedback">
-                  <SettingRow label="Haptic Feedback" description="Vibration on supported devices">
-                    <ToggleSwitch checked={haptics} onChange={setHaptics} ariaLabel="Haptics" />
-                  </SettingRow>
-                  <div className="h-px bg-white/5 my-2" />
-                  <SettingRow label="Keymap Helper" description="Show keyboard shortcuts overlay">
-                    <button
-                      onClick={() => setShowKeymap(true)}
-                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors border border-white/5"
-                    >
-                      Show Shortcuts
-                    </button>
-                  </SettingRow>
-                </Card>
+                {accessibilityMatches.input && (
+                  <Card title="Input & Feedback">
+                    <SettingRow label="Haptic Feedback" description="Vibration on supported devices">
+                      <ToggleSwitch checked={haptics} onChange={setHaptics} ariaLabel="Haptic Feedback" />
+                    </SettingRow>
+                    <div className="h-px bg-white/5 my-2" />
+                    <SettingRow label="Keymap Helper" description="Show keyboard shortcuts overlay">
+                      <button
+                        onClick={() => setShowKeymap(true)}
+                        className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors border border-white/5"
+                      >
+                        Show Shortcuts
+                      </button>
+                    </SettingRow>
+                  </Card>
+                )}
               </div>
             )}
 
             {activeTab === "privacy" && (
               <div className="space-y-6">
-                <Card title="Data & Synchronization">
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-[var(--kali-control)]/10 to-transparent border border-[var(--kali-control)]/20 mb-6 flex items-start gap-4">
-                    <div className="p-2 bg-[var(--kali-control)]/20 rounded-full text-[var(--kali-control)]">
-                      {Icons.privacy}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">Local Storage Only</h4>
-                      <p className="text-xs opacity-70 mt-1 max-w-md">Your settings are saved directly to your browser's local storage. No data is sent to external servers unless you explicitly enable network requests.</p>
-                    </div>
+                {hasSearchQuery && !privacyHasResults && (
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                    No privacy settings match “{searchQuery}”.
                   </div>
+                )}
+                {privacyMatches.data && (
+                  <Card title="Data & Synchronization">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-[var(--kali-control)]/10 to-transparent border border-[var(--kali-control)]/20 mb-6 flex items-start gap-4">
+                      <div className="p-2 bg-[var(--kali-control)]/20 rounded-full text-[var(--kali-control)]">
+                        {Icons.privacy}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Local Storage Only</h4>
+                        <p className="text-xs opacity-70 mt-1 max-w-md">
+                          Your settings are saved directly to your browser&apos;s local storage. Network access is blocked unless you enable the limited allowlist.
+                        </p>
+                      </div>
+                    </div>
 
-                  <SettingRow label="Allow Network Requests" description="Permit specific apps to fetch external data">
-                    <ToggleSwitch checked={allowNetwork} onChange={setAllowNetwork} ariaLabel="Network" />
-                  </SettingRow>
-                </Card>
-
-                <Card title="Backup & Restore">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <button
-                      onClick={handleExport}
-                      className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                    <SettingRow
+                      label="Allow Network Requests"
+                      description="Only same-origin requests and api.github.com are permitted."
                     >
-                      Export Settings JSON
-                    </button>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 py-3 px-4 rounded-xl bg-[var(--kali-control)]/80 hover:bg-[var(--kali-control)] text-white transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-[var(--kali-control)]/20"
-                    >
-                      Import Settings JSON
-                    </button>
-                  </div>
-                  <input
-                    type="file"
-                    accept="application/json"
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      const file = e.target.files && e.target.files[0];
-                      if (file) handleImport(file);
-                      e.target.value = "";
-                    }}
-                    className="hidden"
-                  />
-                </Card>
+                      <ToggleSwitch checked={allowNetwork} onChange={setAllowNetwork} ariaLabel="Allow network requests" />
+                    </SettingRow>
+                  </Card>
+                )}
 
-                <div className="flex justify-end pt-4">
-                  <button
-                    onClick={handleReset}
-                    className="text-red-400 text-xs hover:text-red-300 underline underline-offset-4 decoration-red-400/30 hover:decoration-red-400 transition-all"
+                {privacyMatches.backup && (
+                  <Card title="Backup & Restore">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <button
+                        onClick={handleExport}
+                        className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                      >
+                        Export Settings JSON
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 py-3 px-4 rounded-xl bg-[var(--kali-control)]/80 hover:bg-[var(--kali-control)] text-white transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-[var(--kali-control)]/20"
+                      >
+                        Import Settings JSON
+                      </button>
+                    </div>
+                    <input
+                      type="file"
+                      accept="application/json"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files && e.target.files[0];
+                        if (file) handleImport(file);
+                        e.target.value = "";
+                      }}
+                      className="hidden"
+                    />
+                  </Card>
+                )}
+
+                {privacyMatches.danger && (
+                  <Card
+                    title="Danger Zone"
+                    description="This will reset all appearance, accessibility, and system preferences."
+                    className="border-red-500/40 bg-red-500/10"
                   >
-                    Reset all settings to default
-                  </button>
-                </div>
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                      <span className="text-xs text-red-100/80">This action cannot be undone.</span>
+                      <button
+                        onClick={handleReset}
+                        className="rounded-xl border border-red-400/40 bg-red-500/20 px-4 py-2 text-xs font-semibold text-red-100 hover:bg-red-500/30"
+                      >
+                        Reset all settings to default
+                      </button>
+                    </div>
+                  </Card>
+                )}
               </div>
             )}
 
             {activeTab === "system" && (
               <div className="space-y-6">
-                <Card title="Notifications & Focus">
-                  <SettingRow label="Do Not Disturb" description="Silence all notifications and badges">
-                    <ToggleSwitch checked={dndEnabled} onChange={setDndEnabled} ariaLabel="Do Not Disturb" />
-                  </SettingRow>
-                </Card>
-                <SystemInfo />
-                <Card title="Simulated Hardware">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {["CPU: 12% Util", "RAM: 4.2GB / 16GB", "Network: 1Gbps", "Storage: 45% Free"].map((stat, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-black/20 border border-white/5 text-center">
-                        <div className="text-xs text-white/40 mb-1">{stat.split(":")[0]}</div>
-                        <div className="text-sm font-mono text-[var(--kali-control)]">{stat.split(":")[1]}</div>
-                      </div>
-                    ))}
+                {hasSearchQuery && !systemHasResults && (
+                  <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-white/70">
+                    No system settings match “{searchQuery}”.
                   </div>
-                </Card>
+                )}
+                {systemMatches.notifications && (
+                  <Card title="Notifications & Focus">
+                    <SettingRow label="Do Not Disturb" description="Silence all notifications and badges">
+                      <ToggleSwitch checked={dndEnabled} onChange={setDndEnabled} ariaLabel="Do Not Disturb" />
+                    </SettingRow>
+                  </Card>
+                )}
+                {systemMatches.games && (
+                  <Card title="Games & Simulations">
+                    <SettingRow label="Pong Spin Effect" description="Adds rotational flair to Pong gameplay">
+                      <ToggleSwitch checked={pongSpin} onChange={setPongSpin} ariaLabel="Pong spin effect" />
+                    </SettingRow>
+                  </Card>
+                )}
+                {systemMatches.info && (
+                  <>
+                    <SystemInfo />
+                    <Card title="Simulated Hardware">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {["CPU: 12% Util", "RAM: 4.2GB / 16GB", "Network: 1Gbps", "Storage: 45% Free"].map((stat, i) => (
+                          <div key={i} className="p-3 rounded-lg bg-black/20 border border-white/5 text-center">
+                            <div className="text-xs text-white/40 mb-1">{stat.split(":")[0]}</div>
+                            <div className="text-sm font-mono text-[var(--kali-control)]">{stat.split(":")[1]}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  </>
+                )}
               </div>
             )}
 
