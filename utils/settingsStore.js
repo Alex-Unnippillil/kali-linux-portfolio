@@ -18,6 +18,67 @@ const DEFAULT_SETTINGS = {
   volume: 100,
 };
 
+const FONT_SCALE_RANGE = { min: 0.75, max: 1.5 };
+const VOLUME_RANGE = { min: 0, max: 100 };
+const DENSITY_OPTIONS = new Set(['regular', 'compact']);
+
+const clampNumber = (value, { min, max }) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+  return Math.min(max, Math.max(min, value));
+};
+
+const normalizeBoolean = (value) => (typeof value === 'boolean' ? value : undefined);
+
+const normalizeString = (value) => (typeof value === 'string' ? value : undefined);
+
+export function normalizeSettingsPayload(payload) {
+  if (!payload || typeof payload !== 'object') return null;
+  const normalized = {};
+
+  const accent = normalizeString(payload.accent);
+  if (accent !== undefined) normalized.accent = accent;
+
+  const wallpaper = normalizeString(payload.wallpaper);
+  if (wallpaper !== undefined) normalized.wallpaper = wallpaper;
+
+  const useKaliWallpaper = normalizeBoolean(payload.useKaliWallpaper);
+  if (useKaliWallpaper !== undefined) normalized.useKaliWallpaper = useKaliWallpaper;
+
+  const density = normalizeString(payload.density);
+  if (density !== undefined && DENSITY_OPTIONS.has(density)) {
+    normalized.density = density;
+  }
+
+  const reducedMotion = normalizeBoolean(payload.reducedMotion);
+  if (reducedMotion !== undefined) normalized.reducedMotion = reducedMotion;
+
+  const fontScale = clampNumber(payload.fontScale, FONT_SCALE_RANGE);
+  if (fontScale !== undefined) normalized.fontScale = fontScale;
+
+  const highContrast = normalizeBoolean(payload.highContrast);
+  if (highContrast !== undefined) normalized.highContrast = highContrast;
+
+  const largeHitAreas = normalizeBoolean(payload.largeHitAreas);
+  if (largeHitAreas !== undefined) normalized.largeHitAreas = largeHitAreas;
+
+  const pongSpin = normalizeBoolean(payload.pongSpin);
+  if (pongSpin !== undefined) normalized.pongSpin = pongSpin;
+
+  const allowNetwork = normalizeBoolean(payload.allowNetwork);
+  if (allowNetwork !== undefined) normalized.allowNetwork = allowNetwork;
+
+  const haptics = normalizeBoolean(payload.haptics);
+  if (haptics !== undefined) normalized.haptics = haptics;
+
+  const volume = clampNumber(payload.volume, VOLUME_RANGE);
+  if (volume !== undefined) normalized.volume = volume;
+
+  const theme = normalizeString(payload.theme);
+  if (theme !== undefined) normalized.theme = theme;
+
+  return normalized;
+}
+
 let hasLoggedStorageWarning = false;
 
 function getLocalStorage() {
@@ -270,34 +331,48 @@ export async function importSettings(json) {
     console.error('Invalid settings', e);
     return;
   }
-  const {
-    accent,
-    wallpaper,
-    useKaliWallpaper,
-    density,
-    reducedMotion,
-    fontScale,
-    highContrast,
-    largeHitAreas,
-    pongSpin,
-    allowNetwork,
-    haptics,
-    volume,
-    theme,
-  } = settings;
-  if (accent !== undefined) await setAccent(accent);
-  if (wallpaper !== undefined) await setWallpaper(wallpaper);
-  if (useKaliWallpaper !== undefined) await setUseKaliWallpaper(useKaliWallpaper);
-  if (density !== undefined) await setDensity(density);
-  if (reducedMotion !== undefined) await setReducedMotion(reducedMotion);
-  if (fontScale !== undefined) await setFontScale(fontScale);
-  if (highContrast !== undefined) await setHighContrast(highContrast);
-  if (largeHitAreas !== undefined) await setLargeHitAreas(largeHitAreas);
-  if (pongSpin !== undefined) await setPongSpin(pongSpin);
-  if (allowNetwork !== undefined) await setAllowNetwork(allowNetwork);
-  if (haptics !== undefined) await setHaptics(haptics);
-  if (volume !== undefined) await setVolume(volume);
-  if (theme !== undefined) setTheme(theme);
+  const normalized = normalizeSettingsPayload(settings);
+  if (!normalized) return null;
+  if (Object.prototype.hasOwnProperty.call(normalized, 'accent')) {
+    await setAccent(normalized.accent);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'wallpaper')) {
+    await setWallpaper(normalized.wallpaper);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'useKaliWallpaper')) {
+    await setUseKaliWallpaper(normalized.useKaliWallpaper);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'density')) {
+    await setDensity(normalized.density);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'reducedMotion')) {
+    await setReducedMotion(normalized.reducedMotion);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'fontScale')) {
+    await setFontScale(normalized.fontScale);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'highContrast')) {
+    await setHighContrast(normalized.highContrast);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'largeHitAreas')) {
+    await setLargeHitAreas(normalized.largeHitAreas);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'pongSpin')) {
+    await setPongSpin(normalized.pongSpin);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'allowNetwork')) {
+    await setAllowNetwork(normalized.allowNetwork);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'haptics')) {
+    await setHaptics(normalized.haptics);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'volume')) {
+    await setVolume(normalized.volume);
+  }
+  if (Object.prototype.hasOwnProperty.call(normalized, 'theme')) {
+    setTheme(normalized.theme);
+  }
+  return normalized;
 }
 
 export const defaults = DEFAULT_SETTINGS;
