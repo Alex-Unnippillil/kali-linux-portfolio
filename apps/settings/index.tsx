@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, ReactNode, useEffect } from "react";
+import { useState, useRef, ReactNode } from "react";
 import { useSettings, ACCENT_OPTIONS } from "../../hooks/useSettings";
 import BackgroundSlideshow from "./components/BackgroundSlideshow";
 import SystemInfo from "./components/SystemInfo";
@@ -12,7 +12,6 @@ import {
 } from "../../utils/settingsStore";
 import KeymapOverlay from "./components/KeymapOverlay";
 import ToggleSwitch from "../../components/ToggleSwitch";
-import KaliWallpaper from "../../components/util-components/kali-wallpaper";
 import usePersistentState from "../../hooks/usePersistentState";
 
 // Icons --------------------------------------------------------
@@ -143,6 +142,7 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState<"appearance" | "accessibility" | "privacy" | "system">("appearance");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showKeymap, setShowKeymap] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Simulated Volume/Brightness state for "Quick Actions"
   const [volume, setVolume] = useState(75);
@@ -196,6 +196,45 @@ export default function Settings() {
     { id: "privacy", label: "Privacy", icon: Icons.privacy },
     { id: "system", label: "System", icon: Icons.system },
   ] as const;
+
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (...values: string[]) =>
+    normalizedQuery.length === 0
+    || values.some((value) => value.toLowerCase().includes(normalizedQuery));
+
+  const appearanceMatches = {
+    theme: matchesQuery("theme", "appearance", "default", "dark", "neon", "matrix"),
+    quickAdjustments: matchesQuery("quick", "brightness", "volume", "audio"),
+    brightness: matchesQuery("brightness", "display", "screen"),
+    volume: matchesQuery("volume", "audio", "sound"),
+    accent: matchesQuery("accent", "color", "highlight"),
+    wallpaper: matchesQuery("wallpaper", "background", "slideshow", "gradient", "kali"),
+  };
+  const showQuickAdjustments = appearanceMatches.quickAdjustments
+    || appearanceMatches.brightness
+    || appearanceMatches.volume;
+
+  const accessibilityMatches = {
+    zoom: matchesQuery("zoom", "interface", "scale", "legibility"),
+    reducedMotion: matchesQuery("reduced motion", "motion", "animation"),
+    highContrast: matchesQuery("high contrast", "contrast"),
+    largeHitAreas: matchesQuery("large hit", "hit areas", "touch"),
+    haptics: matchesQuery("haptic", "vibration", "feedback"),
+    keymap: matchesQuery("keymap", "shortcuts", "keyboard"),
+  };
+
+  const privacyMatches = {
+    data: matchesQuery("data", "storage", "synchronization", "local storage"),
+    network: matchesQuery("network", "requests", "privacy"),
+    backup: matchesQuery("backup", "export", "import", "restore"),
+    reset: matchesQuery("reset", "danger", "defaults"),
+  };
+
+  const systemMatches = {
+    notifications: matchesQuery("notifications", "focus", "do not disturb"),
+    hardware: matchesQuery("hardware", "cpu", "ram", "network", "storage"),
+    systemInfo: matchesQuery("system info", "info", "system"),
+  };
 
   return (
     <div className="flex h-full w-full bg-[var(--kali-bg-solid)] text-[var(--color-text)] font-sans overflow-hidden selection:bg-[var(--kali-control)] selection:text-white">
@@ -271,241 +310,324 @@ export default function Settings() {
 
         <div className="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
           <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex flex-col gap-3">
+              <label htmlFor="settings-search" className="text-xs font-semibold uppercase tracking-wide text-white/60">
+                Search settings
+              </label>
+              <input
+                id="settings-search"
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder={`Filter ${tabs.find((tab) => tab.id === activeTab)?.label.toLowerCase()} settings`}
+                className="w-full rounded-xl border border-white/10 bg-[var(--kali-panel)]/60 px-4 py-3 text-sm text-[var(--color-text)] placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[var(--kali-control)]/60"
+                aria-label="Filter settings"
+              />
+              {normalizedQuery.length > 0 && (
+                <p className="text-xs text-white/50">
+                  Showing results for “{searchQuery.trim()}” in {tabs.find((tab) => tab.id === activeTab)?.label}.
+                </p>
+              )}
+            </div>
 
             {activeTab === "appearance" && (
               <>
                 <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Theme Selector */}
-                  <Card title="Theme" className="lg:col-span-2">
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                      {['default', 'dark', 'neon', 'matrix'].map((t) => (
-                        <ThemeCard
-                          key={t}
-                          theme={t}
-                          active={theme === t}
-                          onClick={() => setTheme(t)}
-                        />
-                      ))}
-                    </div>
-                  </Card>
+                  {appearanceMatches.theme && (
+                    <Card title="Theme" className="lg:col-span-2">
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        {['default', 'dark', 'neon', 'matrix'].map((t) => (
+                          <ThemeCard
+                            key={t}
+                            theme={t}
+                            active={theme === t}
+                            onClick={() => setTheme(t)}
+                          />
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
                   {/* Quick Actions (Simulated) */}
-                  <Card title="Quick Adjustments">
-                    <div className="space-y-6">
-                      <SettingRow label="Brightness" description="Adjust display brightness">
-                        <input
-                          type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
-                          className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
-                        />
-                      </SettingRow>
-                      <SettingRow label="System Volume" description="Main output volume">
-                        <input
-                          type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
-                          className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
-                        />
-                      </SettingRow>
-                    </div>
-                  </Card>
+                  {showQuickAdjustments && (
+                    <Card title="Quick Adjustments">
+                      <div className="space-y-6">
+                        {appearanceMatches.brightness && (
+                          <SettingRow label="Brightness" description="Adjust display brightness">
+                            <input
+                              type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
+                              className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                              aria-label="Adjust brightness"
+                            />
+                          </SettingRow>
+                        )}
+                        {appearanceMatches.volume && (
+                          <SettingRow label="System Volume" description="Main output volume">
+                            <input
+                              type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
+                              className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                              aria-label="Adjust system volume"
+                            />
+                          </SettingRow>
+                        )}
+                      </div>
+                    </Card>
+                  )}
 
                   {/* Accent Color */}
-                  <Card title="Accent Color">
-                    <div className="flex flex-wrap gap-4 justify-center py-2">
-                      {ACCENT_OPTIONS.map((c) => (
-                        <button
-                          key={c}
-                          onClick={() => setAccent(c)}
-                          className={`
-                            h-10 w-10 rounded-full border-2 transition-all duration-300 transform hover:scale-110
-                            ${accent === c
-                              ? "border-white shadow-[0_0_0_4px_rgba(255,255,255,0.1)] scale-110"
-                              : "border-transparent opacity-80 hover:opacity-100"
-                            }
-                          `}
-                          style={{ backgroundColor: c }}
-                          aria-label={`Set accent color to ${c}`}
-                        />
-                      ))}
-                    </div>
-                  </Card>
+                  {appearanceMatches.accent && (
+                    <Card title="Accent Color">
+                      <div className="flex flex-wrap gap-4 justify-center py-2">
+                        {ACCENT_OPTIONS.map((c) => (
+                          <button
+                            key={c}
+                            onClick={() => setAccent(c)}
+                            className={`
+                              h-10 w-10 rounded-full border-2 transition-all duration-300 transform hover:scale-110
+                              ${accent === c
+                                ? "border-white shadow-[0_0_0_4px_rgba(255,255,255,0.1)] scale-110"
+                                : "border-transparent opacity-80 hover:opacity-100"
+                              }
+                            `}
+                            style={{ backgroundColor: c }}
+                            aria-label={`Set accent color to ${c}`}
+                          />
+                        ))}
+                      </div>
+                    </Card>
+                  )}
                 </section>
 
                 {/* Wallpaper */}
-                <Card title="Wallpaper & Background">
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                      <div>
-                        <span className="font-medium text-sm">Kali Gradient Overlay</span>
-                        <p className="text-xs text-white/50 mt-0.5">Use the signature Kali Linux gradient background</p>
+                {appearanceMatches.wallpaper && (
+                  <Card title="Wallpaper & Background">
+                    <div className="space-y-6">
+                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                        <div>
+                          <span className="font-medium text-sm">Kali Gradient Overlay</span>
+                          <p className="text-xs text-white/50 mt-0.5">Use the signature Kali Linux gradient background</p>
+                        </div>
+                        <ToggleSwitch checked={useKaliWallpaper} onChange={setUseKaliWallpaper} ariaLabel="Toggle Kali gradient overlay" />
                       </div>
-                      <ToggleSwitch checked={useKaliWallpaper} onChange={setUseKaliWallpaper} ariaLabel="Toggle Gradient" />
-                    </div>
 
-                    {!useKaliWallpaper && (
-                      <div className="space-y-4">
-                        <div className="h-48 w-full rounded-xl overflow-hidden border border-white/10 shadow-2xl relative">
-                          <div
-                            className="absolute inset-0 bg-cover bg-center transition-all duration-500"
-                            style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
-                          />
-                          <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-lg border border-white/10 flex items-center gap-3">
-                            <span className="text-xs font-mono opacity-70">Current: {wallpaper}</span>
-                            <input
-                              type="range" min="0" max={wallpapers.length - 1} step="1" value={wallpaperIndex}
-                              onChange={(e) => changeBackground(wallpapers[parseInt(e.target.value, 10)])}
-                              className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                      {!useKaliWallpaper && (
+                        <div className="space-y-4">
+                          <div className="h-48 w-full rounded-xl overflow-hidden border border-white/10 shadow-2xl relative">
+                            <div
+                              className="absolute inset-0 bg-cover bg-center transition-all duration-500"
+                              style={{ backgroundImage: `url(/wallpapers/${wallpaper}.webp)` }}
                             />
+                            <div className="absolute bottom-4 left-4 right-4 bg-black/50 backdrop-blur-md p-3 rounded-lg border border-white/10 flex items-center gap-3">
+                              <span className="text-xs font-mono opacity-70">Current: {wallpaper}</span>
+                              <input
+                                type="range" min="0" max={wallpapers.length - 1} step="1" value={wallpaperIndex}
+                                onChange={(e) => changeBackground(wallpapers[parseInt(e.target.value, 10)])}
+                                className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
+                                aria-label="Select wallpaper"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
+                            {wallpapers.map((name) => (
+                              <button
+                                key={name}
+                                onClick={() => changeBackground(name)}
+                                className={`
+                                  relative aspect-video rounded-lg overflow-hidden border-2 transition-all
+                                  ${name === wallpaper ? "border-[var(--kali-control)] opacity-100 ring-2 ring-[var(--kali-control)]/30" : "border-transparent opacity-60 hover:opacity-100"}
+                                `}
+                                aria-label={`Set wallpaper ${name}`}
+                              >
+                                <img src={`/wallpapers/${name}.webp`} className="h-full w-full object-cover" alt={name} />
+                              </button>
+                            ))}
                           </div>
                         </div>
-
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
-                          {wallpapers.map((name) => (
-                            <button
-                              key={name}
-                              onClick={() => changeBackground(name)}
-                              className={`
-                                relative aspect-video rounded-lg overflow-hidden border-2 transition-all
-                                ${name === wallpaper ? "border-[var(--kali-control)] opacity-100 ring-2 ring-[var(--kali-control)]/30" : "border-transparent opacity-60 hover:opacity-100"}
-                              `}
-                            >
-                              <img src={`/wallpapers/${name}.webp`} className="h-full w-full object-cover" alt={name} />
-                            </button>
-                          ))}
-                        </div>
+                      )}
+                      <div className="pt-4 border-t border-white/5">
+                        <p className="mb-3 text-sm font-medium">Slideshow</p>
+                        <BackgroundSlideshow />
                       </div>
-                    )}
-                    <div className="pt-4 border-t border-white/5">
-                      <p className="mb-3 text-sm font-medium">Slideshow</p>
-                      <BackgroundSlideshow />
                     </div>
-                  </div>
-                </Card>
+                  </Card>
+                )}
               </>
             )}
 
             {activeTab === "accessibility" && (
               <div className="space-y-6">
-                <Card title="Display & Legibility">
+                {(accessibilityMatches.zoom
+                  || accessibilityMatches.reducedMotion
+                  || accessibilityMatches.highContrast
+                  || accessibilityMatches.largeHitAreas) && (
+                  <Card title="Display & Legibility">
                   <div className="space-y-6">
-                    <SettingRow label="Interface Zoom" description="Adjust the scale of UI elements">
-                      <div className="flex items-center gap-3 w-48">
-                        <span className="text-xs opacity-50">A</span>
-                        <input
-                          type="range" min="0.75" max="1.5" step="0.05"
-                          value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
-                          className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
-                        />
-                        <span className="text-lg opacity-80 font-bold">A</span>
+                    {accessibilityMatches.zoom && (
+                      <SettingRow label="Interface Zoom" description="Adjust the scale of UI elements">
+                        <div className="flex items-center gap-3 w-48">
+                          <span className="text-xs opacity-50">A</span>
+                          <input
+                            type="range" min="0.75" max="1.5" step="0.05"
+                            value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                            className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
+                            aria-label="Adjust interface zoom"
+                          />
+                          <span className="text-lg opacity-80 font-bold">A</span>
+                        </div>
+                      </SettingRow>
+                    )}
+                    {(accessibilityMatches.reducedMotion
+                      || accessibilityMatches.highContrast
+                      || accessibilityMatches.largeHitAreas) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {accessibilityMatches.reducedMotion && (
+                          <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                            <span className="text-sm font-medium">Reduced Motion</span>
+                            <ToggleSwitch checked={reducedMotion} onChange={setReducedMotion} ariaLabel="Toggle reduced motion" />
+                          </div>
+                        )}
+                        {accessibilityMatches.highContrast && (
+                          <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                            <span className="text-sm font-medium">High Contrast</span>
+                            <ToggleSwitch checked={highContrast} onChange={setHighContrast} ariaLabel="Toggle high contrast" />
+                          </div>
+                        )}
+                        {accessibilityMatches.largeHitAreas && (
+                          <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                            <span className="text-sm font-medium">Large Hit Areas</span>
+                            <ToggleSwitch checked={largeHitAreas} onChange={setLargeHitAreas} ariaLabel="Toggle large hit areas" />
+                          </div>
+                        )}
                       </div>
-                    </SettingRow>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                        <span className="text-sm font-medium">Reduced Motion</span>
-                        <ToggleSwitch checked={reducedMotion} onChange={setReducedMotion} ariaLabel="Reduced Motion" />
-                      </div>
-                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                        <span className="text-sm font-medium">High Contrast</span>
-                        <ToggleSwitch checked={highContrast} onChange={setHighContrast} ariaLabel="High Contrast" />
-                      </div>
-                      <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                        <span className="text-sm font-medium">Large Hit Areas</span>
-                        <ToggleSwitch checked={largeHitAreas} onChange={setLargeHitAreas} ariaLabel="Large Hit Areas" />
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </Card>
+                  </Card>
+                )}
 
-                <Card title="Input & Feedback">
-                  <SettingRow label="Haptic Feedback" description="Vibration on supported devices">
-                    <ToggleSwitch checked={haptics} onChange={setHaptics} ariaLabel="Haptics" />
-                  </SettingRow>
-                  <div className="h-px bg-white/5 my-2" />
-                  <SettingRow label="Keymap Helper" description="Show keyboard shortcuts overlay">
-                    <button
-                      onClick={() => setShowKeymap(true)}
-                      className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors border border-white/5"
-                    >
-                      Show Shortcuts
-                    </button>
-                  </SettingRow>
-                </Card>
+                {(accessibilityMatches.haptics || accessibilityMatches.keymap) && (
+                  <Card title="Input & Feedback">
+                    {accessibilityMatches.haptics && (
+                      <SettingRow label="Haptic Feedback" description="Vibration on supported devices">
+                        <ToggleSwitch checked={haptics} onChange={setHaptics} ariaLabel="Toggle haptic feedback" />
+                      </SettingRow>
+                    )}
+                    {accessibilityMatches.haptics && accessibilityMatches.keymap && (
+                      <div className="h-px bg-white/5 my-2" />
+                    )}
+                    {accessibilityMatches.keymap && (
+                      <SettingRow label="Keymap Helper" description="Show keyboard shortcuts overlay">
+                        <button
+                          onClick={() => setShowKeymap(true)}
+                          className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors border border-white/5"
+                        >
+                          Show Shortcuts
+                        </button>
+                      </SettingRow>
+                    )}
+                  </Card>
+                )}
               </div>
             )}
 
             {activeTab === "privacy" && (
               <div className="space-y-6">
-                <Card title="Data & Synchronization">
-                  <div className="p-4 rounded-xl bg-gradient-to-r from-[var(--kali-control)]/10 to-transparent border border-[var(--kali-control)]/20 mb-6 flex items-start gap-4">
-                    <div className="p-2 bg-[var(--kali-control)]/20 rounded-full text-[var(--kali-control)]">
-                      {Icons.privacy}
+                {(privacyMatches.data || privacyMatches.network) && (
+                  <Card title="Data & Synchronization">
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-[var(--kali-control)]/10 to-transparent border border-[var(--kali-control)]/20 mb-6 flex items-start gap-4">
+                      <div className="p-2 bg-[var(--kali-control)]/20 rounded-full text-[var(--kali-control)]">
+                        {Icons.privacy}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Local Storage Only</h4>
+                        <p className="text-xs opacity-70 mt-1 max-w-md">Your settings are saved directly to your browser’s local storage. No data is sent to external servers unless you explicitly enable network requests.</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-sm">Local Storage Only</h4>
-                      <p className="text-xs opacity-70 mt-1 max-w-md">Your settings are saved directly to your browser's local storage. No data is sent to external servers unless you explicitly enable network requests.</p>
+
+                    {privacyMatches.network && (
+                      <SettingRow label="Allow Network Requests" description="Permit specific apps to fetch external data">
+                        <ToggleSwitch checked={allowNetwork} onChange={setAllowNetwork} ariaLabel="Toggle network requests" />
+                      </SettingRow>
+                    )}
+                  </Card>
+                )}
+
+                {privacyMatches.backup && (
+                  <Card title="Backup & Restore">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <button
+                        onClick={handleExport}
+                        className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                      >
+                        Export Settings JSON
+                      </button>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex-1 py-3 px-4 rounded-xl bg-[var(--kali-control)]/80 hover:bg-[var(--kali-control)] text-white transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-[var(--kali-control)]/20"
+                      >
+                        Import Settings JSON
+                      </button>
                     </div>
-                  </div>
+                    <input
+                      type="file"
+                      accept="application/json"
+                      ref={fileInputRef}
+                      onChange={(e) => {
+                        const file = e.target.files && e.target.files[0];
+                        if (file) handleImport(file);
+                        e.target.value = "";
+                      }}
+                      aria-label="Import settings JSON file"
+                      className="hidden"
+                    />
+                  </Card>
+                )}
 
-                  <SettingRow label="Allow Network Requests" description="Permit specific apps to fetch external data">
-                    <ToggleSwitch checked={allowNetwork} onChange={setAllowNetwork} ariaLabel="Network" />
-                  </SettingRow>
-                </Card>
-
-                <Card title="Backup & Restore">
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    <button
-                      onClick={handleExport}
-                      className="flex-1 py-3 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-                    >
-                      Export Settings JSON
-                    </button>
-                    <button
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex-1 py-3 px-4 rounded-xl bg-[var(--kali-control)]/80 hover:bg-[var(--kali-control)] text-white transition-colors text-sm font-medium flex items-center justify-center gap-2 shadow-lg shadow-[var(--kali-control)]/20"
-                    >
-                      Import Settings JSON
-                    </button>
-                  </div>
-                  <input
-                    type="file"
-                    accept="application/json"
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      const file = e.target.files && e.target.files[0];
-                      if (file) handleImport(file);
-                      e.target.value = "";
-                    }}
-                    className="hidden"
-                  />
-                </Card>
-
-                <div className="flex justify-end pt-4">
-                  <button
-                    onClick={handleReset}
-                    className="text-red-400 text-xs hover:text-red-300 underline underline-offset-4 decoration-red-400/30 hover:decoration-red-400 transition-all"
+                {privacyMatches.reset && (
+                  <Card
+                    title="Danger Zone"
+                    description="Resetting will remove all saved preferences and clear local settings in this browser."
+                    className="border border-red-500/40 bg-red-500/5"
                   >
-                    Reset all settings to default
-                  </button>
-                </div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm text-red-200/80">
+                        This action cannot be undone. Export a backup before resetting.
+                      </div>
+                      <button
+                        onClick={handleReset}
+                        className="px-4 py-2 rounded-lg bg-red-500/20 border border-red-400/40 text-red-100 text-sm font-semibold hover:bg-red-500/30 transition-colors"
+                      >
+                        Reset to defaults
+                      </button>
+                    </div>
+                  </Card>
+                )}
               </div>
             )}
 
             {activeTab === "system" && (
               <div className="space-y-6">
-                <Card title="Notifications & Focus">
-                  <SettingRow label="Do Not Disturb" description="Silence all notifications and badges">
-                    <ToggleSwitch checked={dndEnabled} onChange={setDndEnabled} ariaLabel="Do Not Disturb" />
-                  </SettingRow>
-                </Card>
-                <SystemInfo />
-                <Card title="Simulated Hardware">
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {["CPU: 12% Util", "RAM: 4.2GB / 16GB", "Network: 1Gbps", "Storage: 45% Free"].map((stat, i) => (
-                      <div key={i} className="p-3 rounded-lg bg-black/20 border border-white/5 text-center">
-                        <div className="text-xs text-white/40 mb-1">{stat.split(":")[0]}</div>
-                        <div className="text-sm font-mono text-[var(--kali-control)]">{stat.split(":")[1]}</div>
-                      </div>
-                    ))}
-                  </div>
-                </Card>
+                {systemMatches.notifications && (
+                  <Card title="Notifications & Focus">
+                    <SettingRow label="Do Not Disturb" description="Silence all notifications and badges">
+                      <ToggleSwitch checked={dndEnabled} onChange={setDndEnabled} ariaLabel="Toggle do not disturb" />
+                    </SettingRow>
+                  </Card>
+                )}
+                {systemMatches.systemInfo && <SystemInfo />}
+                {systemMatches.hardware && (
+                  <Card title="Simulated Hardware">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                      {["CPU: 12% Util", "RAM: 4.2GB / 16GB", "Network: 1Gbps", "Storage: 45% Free"].map((stat, i) => (
+                        <div key={i} className="p-3 rounded-lg bg-black/20 border border-white/5 text-center">
+                          <div className="text-xs text-white/40 mb-1">{stat.split(":")[0]}</div>
+                          <div className="text-sm font-mono text-[var(--kali-control)]">{stat.split(":")[1]}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
               </div>
             )}
 
