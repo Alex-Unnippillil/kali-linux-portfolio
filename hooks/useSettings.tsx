@@ -44,6 +44,18 @@ import {
   setTheme as saveTheme,
 } from '../utils/theme';
 type Density = 'regular' | 'compact';
+const clampNumber = (value: number, min: number, max: number): number =>
+  Math.min(max, Math.max(min, value));
+
+const normalizeVolume = (value: number): number => {
+  if (!Number.isFinite(value)) return 1;
+  if (value > 1) {
+    return clampNumber(value / 100, 0, 1);
+  }
+  return clampNumber(value, 0, 1);
+};
+
+const DEFAULT_VOLUME = normalizeVolume(defaults.volume);
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
@@ -123,7 +135,7 @@ export const SettingsContext = createContext<SettingsContextValue>({
   pongSpin: defaults.pongSpin,
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
-  volume: defaults.volume,
+  volume: DEFAULT_VOLUME,
   theme: 'default',
   desktopTheme: DEFAULT_DESKTOP_THEME,
   setAccent: () => { },
@@ -153,7 +165,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
-  const [volume, setVolume] = useState<number>(defaults.volume);
+  const [volume, setVolume] = useState<number>(DEFAULT_VOLUME);
   const [theme, setTheme] = useState<string>('default');
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
@@ -171,7 +183,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setPongSpin(await loadPongSpin());
       setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
-      setVolume(await loadVolume());
+      setVolume(normalizeVolume(await loadVolume()));
       setTheme(loadTheme());
     })();
   }, []);
@@ -312,12 +324,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [haptics]);
 
   useEffect(() => {
-    const vol = volume / 100;
+    const vol = normalizeVolume(volume);
     if (typeof Howler !== 'undefined') {
       Howler.volume(vol);
     }
     setMasterVolume(vol);
-    saveVolume(volume);
+    saveVolume(Math.round(vol * 100));
   }, [volume]);
 
   const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;

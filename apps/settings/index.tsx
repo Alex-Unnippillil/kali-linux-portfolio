@@ -126,14 +126,15 @@ export default function Settings() {
     accent, setAccent,
     wallpaper, setWallpaper,
     useKaliWallpaper, setUseKaliWallpaper,
-    // density, setDensity, // Unused in new UI but kept in store
+    density, setDensity,
     reducedMotion, setReducedMotion,
     fontScale, setFontScale,
     highContrast, setHighContrast,
     largeHitAreas, setLargeHitAreas,
-    // pongSpin, setPongSpin, // Specific game setting, maybe hide
+    pongSpin, setPongSpin,
     allowNetwork, setAllowNetwork,
     haptics, setHaptics,
+    volume, setVolume,
     theme, setTheme,
   } = useSettings();
 
@@ -145,8 +146,9 @@ export default function Settings() {
   const [showKeymap, setShowKeymap] = useState(false);
 
   // Simulated Volume/Brightness state for "Quick Actions"
-  const [volume, setVolume] = useState(75);
   const [brightness, setBrightness] = useState(100);
+  const clampedVolume = Math.min(1, Math.max(0, volume));
+  const volumePercent = Math.round(clampedVolume * 100);
 
   const wallpapers = ["wall-1", "wall-2", "wall-3", "wall-4", "wall-5", "wall-6", "wall-7", "wall-8"];
   const wallpaperIndex = Math.max(0, wallpapers.indexOf(wallpaper));
@@ -295,12 +297,14 @@ export default function Settings() {
                       <SettingRow label="Brightness" description="Adjust display brightness">
                         <input
                           type="range" min="0" max="100" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))}
+                          aria-label="Brightness"
                           className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
                         />
                       </SettingRow>
                       <SettingRow label="System Volume" description="Main output volume">
                         <input
-                          type="range" min="0" max="100" value={volume} onChange={(e) => setVolume(Number(e.target.value))}
+                          type="range" min="0" max="100" value={volumePercent} onChange={(e) => setVolume(Math.min(1, Math.max(0, Number(e.target.value) / 100)))}
+                          aria-label="System volume"
                           className="w-full sm:w-32 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
                         />
                       </SettingRow>
@@ -352,6 +356,7 @@ export default function Settings() {
                             <input
                               type="range" min="0" max={wallpapers.length - 1} step="1" value={wallpaperIndex}
                               onChange={(e) => changeBackground(wallpapers[parseInt(e.target.value, 10)])}
+                              aria-label="Wallpaper selection"
                               className="flex-1 h-1 bg-white/30 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white"
                             />
                           </div>
@@ -392,9 +397,34 @@ export default function Settings() {
                         <input
                           type="range" min="0.75" max="1.5" step="0.05"
                           value={fontScale} onChange={(e) => setFontScale(parseFloat(e.target.value))}
+                          aria-label="Interface zoom"
                           className="flex-1 h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--kali-control)]"
                         />
                         <span className="text-lg opacity-80 font-bold">A</span>
+                      </div>
+                    </SettingRow>
+                    <SettingRow label="Density" description="Switch between regular and compact spacing">
+                      <div className="flex items-center gap-2 rounded-lg bg-white/5 p-1 border border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setDensity("regular")}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${density === "regular"
+                            ? "bg-[var(--kali-control)] text-white shadow shadow-[var(--kali-control)]/30"
+                            : "text-white/70 hover:text-white"
+                            }`}
+                        >
+                          Regular
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDensity("compact")}
+                          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${density === "compact"
+                            ? "bg-[var(--kali-control)] text-white shadow shadow-[var(--kali-control)]/30"
+                            : "text-white/70 hover:text-white"
+                            }`}
+                        >
+                          Compact
+                        </button>
                       </div>
                     </SettingRow>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -440,11 +470,11 @@ export default function Settings() {
                     </div>
                     <div>
                       <h4 className="font-semibold text-sm">Local Storage Only</h4>
-                      <p className="text-xs opacity-70 mt-1 max-w-md">Your settings are saved directly to your browser's local storage. No data is sent to external servers unless you explicitly enable network requests.</p>
+                      <p className="text-xs opacity-70 mt-1 max-w-md">Your settings are saved directly to your browser&apos;s local storage. No data is sent to external servers unless you explicitly enable network requests.</p>
                     </div>
                   </div>
 
-                  <SettingRow label="Allow Network Requests" description="Permit specific apps to fetch external data">
+                  <SettingRow label="Allow Network Requests" description="Permit allowlisted apps to reach approved external hosts">
                     <ToggleSwitch checked={allowNetwork} onChange={setAllowNetwork} ariaLabel="Network" />
                   </SettingRow>
                 </Card>
@@ -468,6 +498,7 @@ export default function Settings() {
                     type="file"
                     accept="application/json"
                     ref={fileInputRef}
+                    aria-label="Import settings JSON"
                     onChange={(e) => {
                       const file = e.target.files && e.target.files[0];
                       if (file) handleImport(file);
@@ -493,6 +524,11 @@ export default function Settings() {
                 <Card title="Notifications & Focus">
                   <SettingRow label="Do Not Disturb" description="Silence all notifications and badges">
                     <ToggleSwitch checked={dndEnabled} onChange={setDndEnabled} ariaLabel="Do Not Disturb" />
+                  </SettingRow>
+                </Card>
+                <Card title="Game Preferences">
+                  <SettingRow label="Pong Spin" description="Enable spin physics in the Pong demo">
+                    <ToggleSwitch checked={pongSpin} onChange={setPongSpin} ariaLabel="Pong Spin" />
                   </SettingRow>
                 </Card>
                 <SystemInfo />
