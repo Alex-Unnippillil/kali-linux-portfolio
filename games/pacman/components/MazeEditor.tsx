@@ -1,19 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { LevelDefinition, Tile } from '../../../apps/pacman/types';
 
-// 0: empty, 1: wall, 2: pellet, 3: energizer
-const defaultMaze: number[][] = [
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,3,2,2,1,2,2,2,2,2,1,2,2,3,1],
-  [1,2,1,2,1,2,1,1,1,2,1,2,1,2,1],
-  [1,2,1,2,2,2,2,0,1,2,2,2,1,2,1],
-  [1,2,1,1,1,1,2,1,1,2,1,1,1,2,1],
-  [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
-  [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-];
+const STORAGE_PREFIX = 'pacman:level:v2:';
 
-type Maze = number[][];
+const defaultLevel: LevelDefinition = {
+  name: 'Custom',
+  maze: [
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+    [1,3,2,2,1,2,2,2,2,2,1,2,2,3,1],
+    [1,2,1,2,1,2,1,1,1,2,1,2,1,2,1],
+    [1,2,1,2,2,2,2,0,1,2,2,2,1,2,1],
+    [1,2,1,1,1,1,2,1,1,2,1,1,1,2,1],
+    [1,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
+    [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+  ],
+  fruit: { x: 7, y: 3 },
+  fruitTimes: [12, 28],
+  fruitRuleMode: 'time',
+  pacStart: { x: 1, y: 1 },
+  ghostStart: { x: 7, y: 3 },
+};
 
-const tileOptions = [
+const tileOptions: { value: Tile; label: string }[] = [
   { value: 0, label: 'Empty' },
   { value: 1, label: 'Wall' },
   { value: 2, label: 'Pellet' },
@@ -21,172 +29,196 @@ const tileOptions = [
 ];
 
 interface MazeEditorProps {
-  onPlay?: (maze: number[][]) => void;
+  onPlay?: (level: LevelDefinition) => void;
 }
 
-const isValidMaze = (value: unknown): value is number[][] => {
-  if (!Array.isArray(value) || value.length === 0) return false;
-  const width = Array.isArray(value[0]) ? value[0].length : 0;
-  if (!width) return false;
-  return value.every(
-    (row) =>
-      Array.isArray(row) &&
-      row.length === width &&
-      row.every((cell) => [0, 1, 2, 3].includes(cell)),
-  );
+const safeStorage = {
+  get(key: string) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  },
+  set(key: string, value: string) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // ignore quota errors
+    }
+  },
+};
+
+const cloneLevel = (level: LevelDefinition): LevelDefinition => ({
+  ...level,
+  maze: level.maze.map((row) => row.slice()) as Tile[][],
+  fruit: level.fruit ? { ...level.fruit } : undefined,
+  pacStart: level.pacStart ? { ...level.pacStart } : undefined,
+  ghostStart: level.ghostStart ? { ...level.ghostStart } : undefined,
+  fruitTimes: level.fruitTimes?.slice(),
+  fruitPelletThresholds: level.fruitPelletThresholds?.slice(),
+});
+
+const validateLevel = (level: LevelDefinition): string | null => {
+  if (!level.maze.length || !level.maze[0]?.length) return 'Maze must have at least one row and one column.';
+  const width = level.maze[0].length;
+  if (!level.maze.every((row) => row.length === width)) return 'Maze must be rectangular.';
+  const pellets = level.maze.flat().filter((tile) => tile === 2 || tile === 3).length;
+  if (pellets === 0) return 'Add at least one pellet or energizer.';
+  if (!level.maze.flat().some((tile) => tile !== 1)) return 'Maze needs walkable tiles for spawns.';
+  return null;
 };
 
 const MazeEditor: React.FC<MazeEditorProps> = ({ onPlay }) => {
-  const [maze, setMaze] = useState<Maze>(() => defaultMaze.map((r) => r.slice()));
-  const [paint, setPaint] = useState<number>(1);
+  const [level, setLevel] = useState<LevelDefinition>(() => cloneLevel(defaultLevel));
+  const [paint, setPaint] = useState<Tile>(1);
   const [saved, setSaved] = useState<string[]>([]);
   const [jsonText, setJsonText] = useState('');
   const [importName, setImportName] = useState('Imported');
+  const [symmetry, setSymmetry] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
+  const refreshSaved = () => {
     const names: string[] = [];
-    for (let i = 0; i < window.localStorage.length; i++) {
+    for (let i = 0; i < window.localStorage.length; i += 1) {
       const key = window.localStorage.key(i);
-      if (key && key.startsWith('pacmanMaze:')) {
-        names.push(key.split(':')[1]);
-      }
+      if (key?.startsWith(STORAGE_PREFIX)) names.push(key.replace(STORAGE_PREFIX, ''));
     }
     names.sort();
     setSaved(names);
+  };
+
+  useEffect(() => {
+    refreshSaved();
   }, []);
 
-  const handleClick = (x: number, y: number) => {
-    setMaze((m) => {
-      const copy = m.map((r) => r.slice());
-      copy[y][x] = paint;
-      return copy;
+  const paintedLevel = useMemo(() => cloneLevel(level), [level]);
+
+  const applyTile = (x: number, y: number) => {
+    setLevel((current) => {
+      const next = cloneLevel(current);
+      next.maze[y][x] = paint;
+      if (symmetry) {
+        const mirroredX = next.maze[0].length - 1 - x;
+        next.maze[y][mirroredX] = paint;
+      }
+      return next;
     });
   };
 
-  const saveMaze = () => {
-    const name = window.prompt('Maze name?');
-    if (!name) return;
-    window.localStorage.setItem(`pacmanMaze:${name}`, JSON.stringify(maze));
-    setSaved((s) => (s.includes(name) ? s : [...s, name].sort()));
+  const resize = (rows: number, cols: number) => {
+    setLevel((current) => {
+      const targetRows = Math.max(3, current.maze.length + rows);
+      const targetCols = Math.max(3, current.maze[0].length + cols);
+      const nextMaze = Array.from({ length: targetRows }, (_, y) =>
+        Array.from({ length: targetCols }, (_, x) => current.maze[y]?.[x] ?? (y === 0 || y === targetRows - 1 || x === 0 || x === targetCols - 1 ? 1 : 2)),
+      ) as Tile[][];
+      return { ...cloneLevel(current), maze: nextMaze };
+    });
   };
 
-  const loadMaze = (name: string) => {
-    if (!name) return;
-    const data = window.localStorage.getItem(`pacmanMaze:${name}`);
-    if (data) {
-      try {
-        const parsed = JSON.parse(data);
-        if (Array.isArray(parsed)) setMaze(parsed);
-      } catch {
-        // ignore
-      }
-    }
+  const saveLevel = () => {
+    const name = window.prompt('Level name?')?.trim() || level.name || 'custom';
+    safeStorage.set(`${STORAGE_PREFIX}${name}`, JSON.stringify(level));
+    refreshSaved();
   };
 
-  const resetMaze = () => setMaze(defaultMaze.map((r) => r.slice()));
-
-  const exportMaze = () => {
-    setJsonText(JSON.stringify(maze, null, 2));
-  };
-
-  const importMaze = () => {
-    if (!jsonText) return;
+  const loadLevel = (name: string) => {
+    const raw = safeStorage.get(`${STORAGE_PREFIX}${name}`);
+    if (!raw) return;
     try {
-      const parsed = JSON.parse(jsonText);
-      if (!isValidMaze(parsed)) return;
-      setMaze(parsed);
-      const name = importName?.trim() || `Imported-${Date.now()}`;
-      window.localStorage.setItem(`pacmanMaze:${name}`, JSON.stringify(parsed));
-      setSaved((s) => (s.includes(name) ? s : [...s, name].sort()));
+      const parsed = JSON.parse(raw) as LevelDefinition;
+      setLevel(cloneLevel(parsed));
+      setErrorMessage('');
     } catch {
-      // ignore invalid JSON
+      setErrorMessage('Saved level is invalid JSON.');
     }
+  };
+
+  const exportLevel = () => setJsonText(JSON.stringify(level, null, 2));
+
+  const importLevel = () => {
+    try {
+      const parsed = JSON.parse(jsonText) as LevelDefinition;
+      const validation = validateLevel(parsed);
+      if (validation) {
+        setErrorMessage(validation);
+        return;
+      }
+      setLevel(cloneLevel(parsed));
+      const name = importName.trim() || `Imported-${Date.now()}`;
+      safeStorage.set(`${STORAGE_PREFIX}${name}`, JSON.stringify(parsed));
+      refreshSaved();
+      setErrorMessage('');
+    } catch {
+      setErrorMessage('Import JSON is malformed.');
+    }
+  };
+
+  const handlePlay = () => {
+    const validation = validateLevel(level);
+    if (validation) {
+      setErrorMessage(validation);
+      return;
+    }
+    onPlay?.(paintedLevel);
   };
 
   return (
-    <div>
-      <div className="mb-2 space-x-2">
-        {tileOptions.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setPaint(t.value)}
-            className={`px-2 py-1 border ${paint === t.value ? 'bg-gray-300' : ''}`}
-          >
-            {t.label}
+    <div className="space-y-3 rounded bg-slate-950/70 p-3">
+      <div className="grid grid-cols-2 gap-2 text-xs text-slate-200">
+        <label className="flex flex-col gap-1">Level name
+          <input className="rounded bg-slate-800 px-2 py-1" value={level.name ?? ''} onChange={(event) => setLevel((current) => ({ ...current, name: event.target.value }))} />
+        </label>
+        <label className="flex items-end gap-2">
+          <input type="checkbox" checked={symmetry} onChange={(event) => setSymmetry(event.target.checked)} />
+          Symmetry paint
+        </label>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {tileOptions.map((tile) => (
+          <button key={tile.value} type="button" onClick={() => setPaint(tile.value)} className={`rounded px-2 py-1 text-xs ${paint === tile.value ? 'bg-emerald-500 text-slate-900' : 'bg-slate-700 text-slate-100'}`}>
+            {tile.label}
           </button>
         ))}
       </div>
-      <div
-        className="inline-block"
-        style={{ display: 'grid', gridTemplateColumns: `repeat(${maze[0].length}, 20px)` }}
-      >
-        {maze.map((row, y) =>
-          row.map((cell, x) => (
-            <div
-              key={`${x}-${y}`}
-              data-testid={`cell-${x}-${y}`}
-              data-tile={cell}
-              onClick={() => handleClick(x, y)}
-              className={`w-5 h-5 border border-gray-800 flex items-center justify-center ${
-                cell === 1 ? 'bg-blue-500' : 'bg-black'
-              }`}
-            >
-              {cell === 2 && <div className="w-1 h-1 bg-white rounded-full" />}
-              {cell === 3 && <div className="w-2 h-2 bg-white rounded-full" />}
-            </div>
-          ))
-        )}
-      </div>
-      <div className="mt-2 space-x-2">
-        <button onClick={saveMaze} className="px-2 py-1 border">
-          Save Maze
-        </button>
-        <button onClick={exportMaze} className="px-2 py-1 border">
-          Export JSON
-        </button>
-        <select
-          aria-label="Load maze"
-          onChange={(e) => loadMaze(e.target.value)}
-          className="border px-2 py-1"
-          defaultValue=""
-        >
-          <option value="">Load...</option>
-          {saved.map((n) => (
-            <option key={n} value={n}>
-              {n}
-            </option>
-          ))}
-        </select>
-        <button onClick={resetMaze} className="px-2 py-1 border">
-          Reset
-        </button>
-        {onPlay && (
-          <button onClick={() => onPlay(maze)} className="px-2 py-1 border">
-            Play This Maze
+      <div className="inline-grid border border-slate-700" style={{ gridTemplateColumns: `repeat(${level.maze[0].length}, 20px)` }}>
+        {level.maze.map((row, y) => row.map((cell, x) => (
+          <button
+            key={`${x}-${y}`}
+            type="button"
+            data-testid={`cell-${x}-${y}`}
+            data-tile={cell}
+            onClick={() => applyTile(x, y)}
+            className={`h-5 w-5 border border-slate-800 ${cell === 1 ? 'bg-blue-700' : 'bg-slate-950'} flex items-center justify-center`}
+          >
+            {cell === 2 && <span className="h-1 w-1 rounded-full bg-slate-100" />}
+            {cell === 3 && <span className="h-2 w-2 rounded-full bg-amber-200" />}
           </button>
-        )}
+        )))}
       </div>
-      <div className="mt-3 space-y-2">
-        <label className="block text-sm">
-          Import name
-          <input
-            type="text"
-            aria-label="Import name"
-            value={importName}
-            onChange={(e) => setImportName(e.target.value)}
-            className="ml-2 border px-2 py-1 text-sm"
-          />
-        </label>
-        <textarea
-          aria-label="Maze JSON"
-          value={jsonText}
-          onChange={(e) => setJsonText(e.target.value)}
-          className="w-full h-32 border px-2 py-1 text-xs font-mono"
-        />
-        <button onClick={importMaze} className="px-2 py-1 border">
-          Import JSON
-        </button>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={() => resize(1, 0)}>+ Row</button>
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={() => resize(-1, 0)}>- Row</button>
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={() => resize(0, 1)}>+ Col</button>
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={() => resize(0, -1)}>- Col</button>
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={() => setLevel(cloneLevel(defaultLevel))}>Reset</button>
       </div>
+      <div className="flex flex-wrap gap-2 text-xs">
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={saveLevel}>Save Level</button>
+        <button type="button" className="rounded bg-slate-700 px-2 py-1" onClick={exportLevel}>Export JSON</button>
+        <select aria-label="Load maze" className="rounded bg-slate-800 px-2 py-1" defaultValue="" onChange={(event) => loadLevel(event.target.value)}>
+          <option value="">Load...</option>
+          {saved.map((name) => <option key={name} value={name}>{name}</option>)}
+        </select>
+        {onPlay && <button type="button" className="rounded bg-emerald-500 px-2 py-1 text-slate-900" onClick={handlePlay}>Play This Maze</button>}
+      </div>
+      <label className="block text-xs text-slate-200">Import name
+        <input aria-label="Import name" className="mt-1 w-full rounded bg-slate-800 px-2 py-1" value={importName} onChange={(event) => setImportName(event.target.value)} />
+      </label>
+      <textarea aria-label="Maze JSON" className="h-28 w-full rounded bg-slate-900 px-2 py-1 font-mono text-xs" value={jsonText} onChange={(event) => setJsonText(event.target.value)} />
+      <button type="button" className="rounded bg-slate-700 px-2 py-1 text-xs" onClick={importLevel}>Import JSON</button>
+      {errorMessage && <p className="text-xs text-rose-300">{errorMessage}</p>}
     </div>
   );
 };
