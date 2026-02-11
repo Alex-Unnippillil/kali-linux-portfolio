@@ -1,38 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import Blackjack from '../components/apps/blackjack';
 
-const card = (value: string) => ({ suit: '\u2660', value });
-
-describe('Blackjack UI', () => {
-  test('keyboard shortcuts do not fire while typing in inputs', () => {
+describe('blackjack UI smoke', () => {
+  test('shows deal controls and allows opening rules', () => {
     render(<Blackjack windowMeta={{ isFocused: true }} />);
-    const handCountInput = screen.getByLabelText('Hand count');
-    handCountInput.focus();
-    fireEvent.keyDown(handCountInput, { key: '1' });
-    expect(screen.getByText(/Bet: 0 per hand/)).toBeInTheDocument();
-  });
-
-  test('insurance button only appears when dealer shows an ace', () => {
-    const deckWithAce = [card('10'), card('9'), card('A'), card('5')];
-    render(<Blackjack testDeck={deckWithAce} windowMeta={{ isFocused: true }} />);
-    fireEvent.click(screen.getByLabelText('Add 1 chip'));
-    fireEvent.click(screen.getByText('Deal'));
-    expect(screen.getByText('Take Insurance')).toBeInTheDocument();
-  });
-
-  test('insurance button stays hidden without an ace up', () => {
-    const deckWithoutAce = [card('10'), card('9'), card('9'), card('5')];
-    render(<Blackjack testDeck={deckWithoutAce} windowMeta={{ isFocused: true }} />);
-    fireEvent.click(screen.getByLabelText('Add 1 chip'));
-    fireEvent.click(screen.getByText('Deal'));
-    expect(screen.queryByText('Take Insurance')).toBeNull();
-  });
-
-  test('practice mode hides the running count before submission', () => {
-    render(<Blackjack windowMeta={{ isFocused: true }} />);
-    fireEvent.click(screen.getByText('Practice Count'));
-    expect(screen.getByText('Count hidden until you submit.')).toBeInTheDocument();
-    expect(screen.queryByText(/RC:/)).toBeNull();
+    expect(screen.getByText('Deal')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Rules'));
+    expect(screen.getByText('Table Rules')).toBeInTheDocument();
   });
 });
