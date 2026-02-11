@@ -244,7 +244,61 @@ behavior in both serverful and static-export modes.
 - [ ] Docs updated for new flags/apps
 - [ ] Reviewed in both serverful and static builds when `/api/*` is involved
 
+
 ---
+
+## 13. Product polish priorities (final touches)
+
+When a task asks for “final touches” or broad quality improvements, treat the following as the default execution order:
+
+1. **Finish visual polish first.**
+   * Normalize spacing, typography rhythm, icon sizing, and panel/window alignment.
+   * Prefer small, deliberate Tailwind adjustments over large-scale rewrites.
+   * Keep the Kali/Ubuntu desktop aesthetic cohesive (dark surfaces, readable contrast, restrained accent colors).
+2. **Then improve layout and responsiveness.**
+   * Verify desktop shell behavior at common breakpoints (mobile, tablet, laptop, widescreen).
+   * Ensure draggable windows, dock items, launchers, and context menus avoid overlap traps and clipping.
+   * Preserve keyboard flows while changing layout (focus order, escape behavior, arrow key handling).
+3. **Then harden functionality and UX quality.**
+   * Remove avoidable jank: reduce unnecessary renders, debounce heavy handlers, and avoid blocking interactions.
+   * Validate fallback behavior in static export mode when `/api/*` is unavailable.
+   * Favor deterministic demo data and clear empty/error states over silent failures.
+
+**Definition of done for polish tasks**
+
+- [ ] UI feels visually consistent across core desktop views.
+- [ ] Interaction quality is improved (fewer mis-clicks, clearer affordances, stable focus behavior).
+- [ ] Performance impact is neutral or better (especially drag/move/open/close flows).
+- [ ] Notes include what changed in styling, layout, and behavior.
+
+---
+
+## 14. AI-suggested feature queue (next priorities)
+
+If the request includes “integrate the next AI-suggested features,” implement from this queue in order unless product constraints override it:
+
+1. **Desktop onboarding and discoverability**
+   * Add a first-run helper (dismissible) that explains launcher, dock, window controls, and keyboard shortcuts.
+   * Include a “show again” toggle in settings.
+2. **Window/session persistence upgrades**
+   * Persist open apps, window bounds, z-order intent, and favorites safely in local storage.
+   * Recover gracefully when app definitions change between releases.
+3. **Global command/search palette**
+   * Provide a keyboard-invoked palette (e.g., `Ctrl/Cmd+K`) to launch apps, switch windows, and run quick actions.
+   * Keep results deterministic and local-only (no remote querying).
+4. **Accessibility pass for desktop primitives**
+   * Add/verify ARIA labels, roles, and screen-reader announcements for window state changes.
+   * Improve visible focus states and support reduced-motion preferences.
+5. **Performance instrumentation and guardrails**
+   * Add lightweight timing markers around high-frequency interactions (open, drag, resize).
+   * Use feature flags for optional instrumentation and keep analytics opt-in behavior intact.
+
+### Feature queue guardrails
+
+* Every new capability must work in demo/offline mode.
+* Any feature depending on secrets or network services must be behind explicit flags and disabled by default.
+* Never introduce real offensive security behavior; simulations only.
+* Add/update tests for any non-trivial state or interaction logic.
 
 ## Source notes for maintainers
 
