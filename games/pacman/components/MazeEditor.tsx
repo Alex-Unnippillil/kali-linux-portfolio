@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 
-// 0: empty, 1: wall, 2: pellet, 3: energizer
+// 0: empty, 1: wall, 2: pellet, 3: energizer, 4: power-up
 const defaultMaze: number[][] = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-  [1,3,2,2,1,2,2,2,2,2,1,2,2,3,1],
+  [1,3,2,4,1,2,2,2,2,2,1,4,2,3,1],
   [1,2,1,2,1,2,1,1,1,2,1,2,1,2,1],
   [1,2,1,2,2,2,2,0,1,2,2,2,1,2,1],
   [1,2,1,1,1,1,2,1,1,2,1,1,1,2,1],
@@ -18,6 +18,7 @@ const tileOptions = [
   { value: 1, label: 'Wall' },
   { value: 2, label: 'Pellet' },
   { value: 3, label: 'Energizer' },
+  { value: 4, label: 'Power-up' },
 ];
 
 interface MazeEditorProps {
@@ -32,7 +33,7 @@ const isValidMaze = (value: unknown): value is number[][] => {
     (row) =>
       Array.isArray(row) &&
       row.length === width &&
-      row.every((cell) => [0, 1, 2, 3].includes(cell)),
+      row.every((cell) => [0, 1, 2, 3, 4].includes(cell)),
   );
 };
 
@@ -133,6 +134,7 @@ const MazeEditor: React.FC<MazeEditorProps> = ({ onPlay }) => {
             >
               {cell === 2 && <div className="w-1 h-1 bg-white rounded-full" />}
               {cell === 3 && <div className="w-2 h-2 bg-white rounded-full" />}
+              {cell === 4 && <div className="w-3 h-3 bg-fuchsia-400 rotate-45" />}
             </div>
           ))
         )}

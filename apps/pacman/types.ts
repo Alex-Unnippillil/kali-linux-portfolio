@@ -1,4 +1,4 @@
-export type Tile = 0 | 1 | 2 | 3;
+export type Tile = 0 | 1 | 2 | 3 | 4;
 
 export interface Point {
   x: number;
@@ -19,7 +19,7 @@ export interface LevelData {
 }
 
 export const isValidTile = (value: unknown): value is Tile =>
-  value === 0 || value === 1 || value === 2 || value === 3;
+  value === 0 || value === 1 || value === 2 || value === 3 || value === 4;
 
 export const sanitizeLevel = (level: LevelDefinition): LevelDefinition => ({
   name: level.name || 'Untitled',

@@ -30,6 +30,8 @@ export interface FruitState {
   timer: number;
 }
 
+export type PowerUpType = 'speed' | 'shield';
+
 export interface GameState {
   maze: Tile[][];
   width: number;
@@ -48,6 +50,10 @@ export interface GameState {
   fruit: FruitState;
   fruitTimes: number[];
   status: 'playing' | 'dead' | 'gameover' | 'complete';
+  deadTimer: number;
+  speedTimer: number;
+  shieldTimer: number;
+  powerMode: PowerUpType | null;
   spawns: {
     pac: Point;
     ghosts: Record<GhostName, Point>;
@@ -65,6 +71,10 @@ export interface EngineOptions {
   levelIndex: number;
   fruitDuration: number;
   turnTolerance: number;
+  powerUpDuration: number;
+  shieldDuration: number;
+  speedBoostMultiplier: number;
+  deathPauseDuration: number;
   random?: () => number;
 }
 
@@ -76,10 +86,13 @@ export interface StepEvents {
   pellet?: boolean;
   energizer?: boolean;
   fruit?: boolean;
+  powerUp?: PowerUpType;
+  shieldUsed?: boolean;
   ghostEaten?: GhostName;
   lifeLost?: boolean;
   gameOver?: boolean;
   levelComplete?: boolean;
+  respawned?: boolean;
 }
 
 export const DIRECTIONS: Direction[] = [
@@ -108,6 +121,25 @@ const isWalkable = (maze: Tile[][], x: number, y: number) => {
 
 export const canMove = (maze: Tile[][], tileX: number, tileY: number) =>
   isWalkable(maze, tileX, tileY);
+
+const resetEntitiesToSpawn = (state: GameState) => {
+  const pac = {
+    ...state.pac,
+    x: state.spawns.pac.x + 0.5,
+    y: state.spawns.pac.y + 0.5,
+    dir: { x: 0, y: 0 },
+    nextDir: { x: 0, y: 0 },
+  };
+
+  const ghosts = state.ghosts.map((ghost) => ({
+    ...ghost,
+    x: state.spawns.ghosts[ghost.name].x + 0.5,
+    y: state.spawns.ghosts[ghost.name].y + 0.5,
+    dir: { x: 0, y: -1 },
+  }));
+
+  return { pac, ghosts };
+};
 
 const findSpawn = (maze: Tile[][], fallback: Point) => {
   if (isWalkable(maze, fallback.x, fallback.y)) return { ...fallback };
@@ -196,7 +228,7 @@ export const createInitialState = (
   const maze = cloneMaze(level.maze);
   const width = maze[0]?.length ?? 0;
   const height = maze.length;
-  const pelletsRemaining = maze.flat().filter((t) => t === 2 || t === 3).length;
+  const pelletsRemaining = maze.flat().filter((t) => t === 2 || t === 3 || t === 4).length;
   const pacSpawn = findSpawn(maze, level.pacStart ?? { x: 1, y: 1 });
   const ghostSpawn = findSpawn(maze, level.ghostStart ?? { x: 7, y: 3 });
   const ghostNames: GhostName[] = ['blinky', 'pinky', 'inky', 'clyde'];
@@ -238,6 +270,10 @@ export const createInitialState = (
       ? level.fruitTimes.slice()
       : [],
     status: 'playing',
+    deadTimer: 0,
+    speedTimer: 0,
+    shieldTimer: 0,
+    powerMode: null,
     spawns: {
       pac: pacSpawn,
       ghosts: {
@@ -256,6 +292,27 @@ export const step = (
   dt: number,
   options: EngineOptions,
 ): { state: GameState; events: StepEvents } => {
+  if (state.status === 'dead') {
+    state.deadTimer = Math.max(0, state.deadTimer - dt);
+    if (state.deadTimer === 0) {
+      const reset = resetEntitiesToSpawn(state);
+      state.modeIndex = 0;
+      state.modeTimer = options.scatterChaseSchedule[0]?.duration ?? 0;
+      state.mode = options.scatterChaseSchedule[0]?.mode ?? 'scatter';
+      state.frightenedTimer = 0;
+      state.frightenedCombo = 0;
+      state.status = 'playing';
+      return {
+        state: {
+          ...state,
+          ...reset,
+        },
+        events: { respawned: true },
+      };
+    }
+    return { state, events: {} };
+  }
+
   if (state.status !== 'playing') {
     return { state, events: {} };
   }
@@ -271,6 +328,14 @@ export const step = (
   }
 
   state.levelTime += dt;
+  state.speedTimer = Math.max(0, state.speedTimer - dt);
+  state.shieldTimer = Math.max(0, state.shieldTimer - dt);
+  if (state.speedTimer === 0 && state.powerMode === 'speed') {
+    state.powerMode = null;
+  }
+  if (state.shieldTimer === 0 && state.powerMode === 'shield') {
+    state.powerMode = null;
+  }
 
   let pacTile = { x: Math.floor(pac.x), y: Math.floor(pac.y) };
   const recoveryTile = findNearestWalkableTile(maze, pacTile);
@@ -308,6 +373,7 @@ export const step = (
   const pacSpeed =
     options.pacSpeed *
     options.speedMultiplier *
+    (state.speedTimer > 0 ? options.speedBoostMultiplier : 1) *
     (isTunnel(maze, pacTile.x, pacTile.y) ? options.tunnelSpeed : 1);
 
   const nextPac = {
@@ -329,7 +395,11 @@ export const step = (
     x: Math.floor(pac.x),
     y: Math.floor(pac.y),
   };
-  if (maze[pacCell.y]?.[pacCell.x] === 2 || maze[pacCell.y]?.[pacCell.x] === 3) {
+  if (
+    maze[pacCell.y]?.[pacCell.x] === 2 ||
+    maze[pacCell.y]?.[pacCell.x] === 3 ||
+    maze[pacCell.y]?.[pacCell.x] === 4
+  ) {
     const tile = maze[pacCell.y][pacCell.x];
     const updatedMaze = cloneMaze(maze);
     updatedMaze[pacCell.y][pacCell.x] = 0;
@@ -339,10 +409,22 @@ export const step = (
       state.score += 10;
       events.pellet = true;
     } else {
-      state.score += 50;
-      state.frightenedTimer = options.frightenedDuration;
-      state.frightenedCombo = 0;
-      events.energizer = true;
+      if (tile === 3) {
+        state.score += 50;
+        state.frightenedTimer = options.frightenedDuration;
+        state.frightenedCombo = 0;
+        events.energizer = true;
+      } else {
+        state.score += 200;
+        const powerUp: PowerUpType = rand() > 0.5 ? 'speed' : 'shield';
+        if (powerUp === 'speed') {
+          state.speedTimer = options.powerUpDuration;
+        } else {
+          state.shieldTimer = options.shieldDuration;
+        }
+        state.powerMode = powerUp;
+        events.powerUp = powerUp;
+      }
     }
   }
 
@@ -423,7 +505,9 @@ export const step = (
   });
 
   const pacTileCheck = { x: Math.floor(pac.x), y: Math.floor(pac.y) };
+  let collisionResolved = false;
   ghosts.forEach((g) => {
+    if (collisionResolved) return;
     if (Math.floor(g.x) === pacTileCheck.x && Math.floor(g.y) === pacTileCheck.y) {
       if (state.frightenedTimer > 0) {
         const comboMultiplier = Math.pow(2, state.frightenedCombo);
@@ -434,26 +518,32 @@ export const step = (
         g.x = spawn.x + 0.5;
         g.y = spawn.y + 0.5;
         g.dir = { x: 0, y: -1 };
+        collisionResolved = true;
       } else {
-        pac.lives -= 1;
-        events.lifeLost = true;
-        if (pac.lives <= 0) {
-          state.status = 'gameover';
-          events.gameOver = true;
+        if (state.shieldTimer > 0) {
+          state.score += 150;
+          state.shieldTimer = 0;
+          if (state.powerMode === 'shield') {
+            state.powerMode = null;
+          }
+          events.shieldUsed = true;
+          const spawn = state.spawns.ghosts[g.name];
+          g.x = spawn.x + 0.5;
+          g.y = spawn.y + 0.5;
+          g.dir = { x: 0, y: -1 };
+          collisionResolved = true;
         } else {
-          pac.x = state.spawns.pac.x + 0.5;
-          pac.y = state.spawns.pac.y + 0.5;
-          pac.dir = { x: 0, y: 0 };
-          pac.nextDir = { x: 0, y: 0 };
-          ghosts = ghosts.map((ghost) => ({
-            ...ghost,
-            x: state.spawns.ghosts[ghost.name].x + 0.5,
-            y: state.spawns.ghosts[ghost.name].y + 0.5,
-            dir: { x: 0, y: -1 },
-          }));
-          state.modeIndex = 0;
-          state.modeTimer = options.scatterChaseSchedule[0]?.duration ?? 0;
-          state.frightenedTimer = 0;
+          pac.lives -= 1;
+          events.lifeLost = true;
+          if (pac.lives <= 0) {
+            state.status = 'gameover';
+            events.gameOver = true;
+          } else {
+            state.status = 'dead';
+            state.deadTimer = options.deathPauseDuration;
+            state.frightenedTimer = 0;
+          }
+          collisionResolved = true;
         }
       }
     }

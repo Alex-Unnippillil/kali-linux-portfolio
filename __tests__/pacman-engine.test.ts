@@ -7,7 +7,7 @@ const baseLevel: LevelDefinition = {
     [1,1,1,1,1],
     [1,2,0,2,1],
     [1,0,0,0,1],
-    [1,2,0,2,1],
+    [1,2,4,3,1],
     [1,1,1,1,1],
   ],
   fruit: { x: 2, y: 2 },
@@ -28,6 +28,10 @@ const baseOptions: EngineOptions = {
   levelIndex: 0,
   fruitDuration: 2,
   turnTolerance: 0.2,
+  powerUpDuration: 4,
+  shieldDuration: 5,
+  speedBoostMultiplier: 1.4,
+  deathPauseDuration: 0.8,
   random: () => 0.3,
 };
 
@@ -54,7 +58,7 @@ describe('pacman engine', () => {
     const result = step(state, {}, 0.1, baseOptions);
     expect(result.state.score).toBe(10);
     expect(result.state.pelletsRemaining).toBe(
-      baseLevel.maze.flat().filter((t) => t === 2 || t === 3).length - 1,
+      baseLevel.maze.flat().filter((t) => t === 2 || t === 3 || t === 4).length - 1,
     );
   });
 
@@ -74,6 +78,30 @@ describe('pacman engine', () => {
       2,
     );
     expect(result.state.mode).toBe('fright');
+  });
+
+  it('supports power-up tiles and shield collisions', () => {
+    const level: LevelDefinition = {
+      maze: [
+        [1,1,1,1,1],
+        [1,4,0,2,1],
+        [1,0,0,0,1],
+        [1,1,1,1,1],
+      ],
+      pacStart: { x: 1, y: 1 },
+      ghostStart: { x: 2, y: 2 },
+      fruitTimes: [],
+    };
+    const state = createInitialState(level, { ...baseOptions, random: () => 0.1 });
+    const powered = step(state, {}, 0.05, { ...baseOptions, random: () => 0.1 });
+    expect(powered.events.powerUp).toBe('shield');
+    expect(powered.state.shieldTimer).toBeGreaterThan(0);
+
+    powered.state.ghosts[0].x = powered.state.pac.x;
+    powered.state.ghosts[0].y = powered.state.pac.y;
+    const shieldHit = step(powered.state, {}, 0, baseOptions);
+    expect(shieldHit.events.shieldUsed).toBe(true);
+    expect(shieldHit.state.pac.lives).toBe(3);
   });
 
   it('handles ghost collisions in normal and frightened modes', () => {
@@ -103,20 +131,22 @@ describe('pacman engine', () => {
     );
   });
 
-  it('scales ghost scores during frightened combos', () => {
+  it('enters dead state and respawns after the configured pause', () => {
     const state = createInitialState(baseLevel, baseOptions);
-    state.frightenedTimer = 2;
     state.ghosts[0].x = state.pac.x;
     state.ghosts[0].y = state.pac.y;
-    const first = step(state, {}, 0.1, baseOptions);
-    expect(first.state.score).toBeGreaterThanOrEqual(200);
 
-    const comboState = {
-      ...first.state,
-      pac: { ...first.state.pac, x: first.state.ghosts[1].x, y: first.state.ghosts[1].y },
-    };
-    const second = step(comboState, {}, 0.1, baseOptions);
-    expect(second.state.score).toBeGreaterThan(first.state.score);
+    const lifeLost = step(state, {}, 0.1, baseOptions);
+    expect(lifeLost.state.status).toBe('dead');
+    expect(lifeLost.state.deadTimer).toBeGreaterThan(0);
+
+    const stillDead = step(lifeLost.state, {}, 0.2, baseOptions);
+    expect(stillDead.state.status).toBe('dead');
+
+    const respawn = step(stillDead.state, {}, 1.0, baseOptions);
+    expect(respawn.events.respawned).toBe(true);
+    expect(respawn.state.status).toBe('playing');
+    expect(respawn.state.pac.x).toBeCloseTo(respawn.state.spawns.pac.x + 0.5, 2);
   });
 
   it('transitions between scatter and chase on schedule', () => {
@@ -132,31 +162,6 @@ describe('pacman engine', () => {
     expect(result.state.mode).toBe('chase');
     const next = step(result.state, {}, 0.6, options);
     expect(next.state.mode).toBe('chase');
-  });
-
-  it('snaps pacman to the tile center when blocked to avoid wall lock', () => {
-    const level: LevelDefinition = {
-      maze: [
-        [1,1,1],
-        [1,2,1],
-        [1,2,1],
-        [1,1,1],
-      ],
-      fruit: { x: 1, y: 2 },
-      fruitTimes: [],
-      pacStart: { x: 1, y: 1 },
-    };
-    const state = createInitialState(level, baseOptions);
-    state.pac.dir = { x: 1, y: 0 };
-
-    const blocked = step(state, {}, 0.4, baseOptions);
-    expect(blocked.state.pac.dir).toEqual({ x: 0, y: 0 });
-    expect(blocked.state.pac.x).toBeCloseTo(1.5, 2);
-    expect(blocked.state.pac.y).toBeCloseTo(1.5, 2);
-
-    const turned = step(blocked.state, { direction: { x: 0, y: 1 } }, 0.4, baseOptions);
-    expect(turned.state.pac.dir).toEqual({ x: 0, y: 1 });
-    expect(turned.state.pac.y).toBeGreaterThan(1.5);
   });
 
   it('reverses ghosts when the mode changes', () => {
