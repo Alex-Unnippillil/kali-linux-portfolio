@@ -59,6 +59,21 @@ const pieceValues = {
   [KING]: 20000,
 };
 
+const difficultyConfig = {
+  beginner: { depth: 1, candidatePool: 4, label: "Beginner" },
+  intermediate: { depth: 2, candidatePool: 3, label: "Intermediate" },
+  expert: { depth: 4, candidatePool: 1, label: "Expert" },
+};
+
+const resolveStoredDifficulty = (storedSettings = {}) => {
+  const savedDifficulty = storedSettings.aiDifficulty;
+  if (savedDifficulty && difficultyConfig[savedDifficulty]) return savedDifficulty;
+  const savedDepth = Number(storedSettings.aiDepth || 2);
+  if (savedDepth <= 1) return "beginner";
+  if (savedDepth >= 4) return "expert";
+  return "intermediate";
+};
+
 const files = "abcdefgh";
 const sqToAlg = (sq) => {
   const file = sq & 7;
@@ -228,7 +243,12 @@ const ChessGame = () => {
   const [analysisDepth, setAnalysisDepth] = useState(
     storedSettings.analysisDepth ?? 2,
   );
-  const [aiDepth, setAiDepth] = useState(storedSettings.aiDepth ?? 2);
+  const [aiDifficulty, setAiDifficulty] = useState(() =>
+    resolveStoredDifficulty(storedSettings),
+  );
+  const [aiDepth, setAiDepth] = useState(
+    difficultyConfig[resolveStoredDifficulty(storedSettings)].depth,
+  );
   const [aiThinking, setAiThinking] = useState(false);
   const [playerSide, setPlayerSide] = useState(
     storedSettings.playerSide ?? WHITE,
@@ -273,7 +293,7 @@ const ChessGame = () => {
     const handler = () => setReduceMotion(mq.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
-  }, [updateCheckHighlight]);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -300,7 +320,7 @@ const ChessGame = () => {
     return () => {
       active = false;
     };
-  }, [updateCheckHighlight]);
+  }, []);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -317,6 +337,11 @@ const ChessGame = () => {
   useEffect(() => {
     aiDepthRef.current = aiDepth;
   }, [aiDepth]);
+
+  useEffect(() => {
+    const settings = difficultyConfig[aiDifficulty] || difficultyConfig.intermediate;
+    setAiDepth(settings.depth);
+  }, [aiDifficulty]);
 
   useEffect(() => {
     aiThinkingRef.current = aiThinking;
@@ -660,6 +685,7 @@ const ChessGame = () => {
         settings: {
           playerSide,
           aiDepth,
+          aiDifficulty,
           analysisDepth,
           sound,
           showHints,
@@ -679,6 +705,7 @@ const ChessGame = () => {
     }
   }, [
     aiDepth,
+    aiDifficulty,
     analysisDepth,
     orientation,
     paused,
@@ -1107,20 +1134,36 @@ const ChessGame = () => {
     if (sideRef.current === playerSideRef.current) return;
     if (aiThinkingRef.current) return;
     setAiThinking(true);
-    sendEngineRequest("ai", chessRef.current.fen(), aiDepthRef.current, 1, (payload) => {
-      setAiThinking(false);
-      if (payload.type === "error") return;
-      let chosen = null;
-      if (payload.suggestions?.length) {
-        const suggestion = payload.suggestions[0];
-        chosen = findVerboseMove(suggestion.from, suggestion.to);
-      }
-      if (!chosen) {
-        const list = chessRef.current.moves({ verbose: true });
-        chosen = list[Math.floor(Math.random() * list.length)];
-      }
-      applyMove(chosen, { announce: true, triggerAi: false });
-    });
+    sendEngineRequest(
+      "ai",
+      chessRef.current.fen(),
+      aiDepthRef.current,
+      difficultyConfig[aiDifficulty]?.candidatePool || 1,
+      aiDifficulty,
+      (payload) => {
+        setAiThinking(false);
+        if (payload.type === "error") return;
+        let chosen = null;
+        if (payload.suggestions?.length) {
+          const [best] = payload.suggestions;
+          const spread = payload.suggestions.filter(
+            (move) => move.evaluation >= (best?.evaluation ?? -Infinity) - 60,
+          );
+          const pool = spread.length ? spread : payload.suggestions;
+          const pick =
+            aiDifficulty === "expert"
+              ? pool[0]
+              : pool[Math.floor(Math.random() * pool.length)];
+          const suggestion = pick || payload.suggestions[0];
+          chosen = findVerboseMove(suggestion.from, suggestion.to);
+        }
+        if (!chosen) {
+          const list = chessRef.current.moves({ verbose: true });
+          chosen = list[Math.floor(Math.random() * list.length)];
+        }
+        applyMove(chosen, { announce: true, triggerAi: false });
+      },
+    );
   };
 
   aiMoveRef.current = aiMove;
@@ -1323,7 +1366,7 @@ const ChessGame = () => {
     setOrientation(playerSide === WHITE ? "white" : "black");
     resetGame({ autoplayAi: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playerSide]);
+  }, [aiDifficulty, playerSide]);
 
   const undoMove = () => {
     if (modeRef.current !== "play") return;
@@ -1515,7 +1558,7 @@ const ChessGame = () => {
   };
 
   const sendEngineRequest = useCallback(
-    (channel, fen, depth, maxSuggestions, onResult) => {
+    (channel, fen, depth, maxSuggestions, difficulty, onResult) => {
       const worker = engineWorkerRef.current;
       const tracker =
         channel === "ai" ? aiTrackerRef.current : analysisTrackerRef.current;
@@ -1538,6 +1581,7 @@ const ChessGame = () => {
         fen,
         depth,
         maxSuggestions,
+        difficulty,
         requestId,
       });
       return requestId;
@@ -1549,7 +1593,7 @@ const ChessGame = () => {
     setAnalysisPending(true);
     setAnalysisError("");
     setAnalysisMoves([]);
-    sendEngineRequest("analysis", chessRef.current.fen(), analysisDepth, 5, (payload) => {
+    sendEngineRequest("analysis", chessRef.current.fen(), analysisDepth, 5, "expert", (payload) => {
       if (payload.type === "error") {
         setAnalysisError(payload.message || "Analysis failed.");
         setAnalysisPending(false);
@@ -2392,26 +2436,26 @@ const ChessGame = () => {
               </label>
               <label
                 className="mt-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400"
-                htmlFor="chess-ai-depth"
+                htmlFor="chess-ai-difficulty"
               >
-                <span>AI Depth</span>
+                <span>AI Difficulty</span>
                 <select
-                  id="chess-ai-depth"
+                  id="chess-ai-difficulty"
                   className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                  value={aiDepth}
-                  onChange={(e) => setAiDepth(Number(e.target.value))}
+                  value={aiDifficulty}
+                  onChange={(e) => setAiDifficulty(e.target.value)}
                   disabled={mode !== "play"}
                 >
-                  {[1, 2, 3, 4].map((d) => (
-                    <option key={d} value={d}>
-                      {d}
+                  {Object.entries(difficultyConfig).map(([key, config]) => (
+                    <option key={key} value={key}>
+                      {config.label}
                     </option>
                   ))}
                 </select>
               </label>
               <p className="mt-2 text-xs text-slate-400">
                 {mode === "play"
-                  ? "Changing sides restarts the game. The AI moves first when you choose Black."
+                  ? "Changing sides or AI difficulty restarts the game. Beginner plays simpler moves, intermediate balances tactics, and expert looks deeper."
                   : "Player settings are locked while training modes are active."}
               </p>
             </section>
