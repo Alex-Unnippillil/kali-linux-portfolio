@@ -15,7 +15,50 @@ const tabs = [
   { id: 'fixtures', label: 'Fixtures' },
 ];
 
-export default function SecurityTools() {
+const toolLaunchers = [
+  {
+    id: 'hydra',
+    label: 'Hydra',
+    description: 'Credential testing lab with guided workflow.',
+  },
+  {
+    id: 'nmap-nse',
+    label: 'Nmap NSE',
+    description: 'Scripted recon demos powered by offline fixtures.',
+  },
+  {
+    id: 'openvas',
+    label: 'OpenVAS',
+    description: 'Vulnerability scan summaries and sample reports.',
+  },
+  {
+    id: 'recon-ng',
+    label: 'Recon-ng',
+    description: 'OSINT workbench for simulated collection tasks.',
+  },
+  {
+    id: 'nessus',
+    label: 'Nessus',
+    description: 'Audit dashboards built from static datasets.',
+  },
+  {
+    id: 'metasploit',
+    label: 'Metasploit',
+    description: 'Exploit planning with deterministic lab outputs.',
+  },
+  {
+    id: 'wireshark',
+    label: 'Wireshark',
+    description: 'Packet capture viewer with local sample traces.',
+  },
+  {
+    id: 'beef',
+    label: 'BeEF',
+    description: 'Browser lab scenarios in a safe sandbox.',
+  },
+];
+
+export default function SecurityTools({ openApp }) {
   const [active, setActive] = useState('repeater');
   const [query, setQuery] = useState('');
   const [authorized, setAuthorized] = useState(false);
@@ -195,7 +238,38 @@ export default function SecurityTools() {
           ) : (
             <>
               <p className="text-xs mb-2">All tools are static demos. No external traffic.</p>
-              <div className="mb-2 flex flex-wrap gap-2">{tabs.map(tabButton)}</div>
+              <section className="mb-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h2 className="text-sm font-bold">Tool Launchers</h2>
+                  <span className="text-[10px] text-white/70">Opens tools in new windows</span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {toolLaunchers.map((tool) => (
+                    <div
+                      key={tool.id}
+                      className="rounded border border-white/10 bg-black/40 p-2 text-xs"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-sm font-bold">{tool.label}</div>
+                          <p className="text-white/70">{tool.description}</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openApp && openApp(tool.id)}
+                          className="whitespace-nowrap rounded bg-ub-green px-2 py-1 text-[10px] font-semibold text-black"
+                        >
+                          Launch
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              <section className="mb-2">
+                <h2 className="mb-2 text-sm font-bold">Lab</h2>
+                <div className="mb-2 flex flex-wrap gap-2">{tabs.map(tabButton)}</div>
+              </section>
 
               {active === 'repeater' && (
                 <div>
