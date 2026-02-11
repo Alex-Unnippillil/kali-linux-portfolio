@@ -25,6 +25,7 @@ import {
   type Direction,
   type GameState,
   type EngineOptions,
+  type PowerUpType,
 } from '../../apps/pacman/engine';
 import {
   sanitizeLevel,
@@ -32,8 +33,9 @@ import {
   type LevelDefinition,
 } from '../../apps/pacman/types';
 
-const TILE_SIZE = 20;
+const TILE_SIZE = 22;
 const FIXED_STEP = 1 / 120;
+const FRIGHT_FLASH_WINDOW = 1.5;
 const MAX_DELTA = 0.1;
 
 const DEFAULT_SCHEDULE = [
@@ -72,7 +74,7 @@ const DEFAULT_LEVEL: LevelDefinition = {
   name: 'Classic',
   maze: [
     [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-    [1,3,2,2,1,2,2,2,2,2,1,2,2,3,1],
+    [1,3,2,4,1,2,2,2,2,2,1,4,2,3,1],
     [1,2,1,2,1,2,1,1,1,2,1,2,1,2,1],
     [1,2,1,2,2,2,2,0,1,2,2,2,1,2,1],
     [1,2,1,1,1,1,2,1,1,2,1,1,1,2,1],
@@ -158,6 +160,9 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
     pellets: 0,
     mode: 'scatter',
     status: 'playing',
+    powerMode: null as PowerUpType | null,
+    speedTimer: 0,
+    shieldTimer: 0,
   });
 
   const stateRef = useRef<GameState | null>(null);
@@ -200,6 +205,10 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       levelIndex: activeLevelIndex,
       fruitDuration: 9,
       turnTolerance: 0.22,
+      powerUpDuration: 7,
+      shieldDuration: 12,
+      speedBoostMultiplier: 1.28,
+      deathPauseDuration: 1.1,
     };
   }, [difficulty, ghostSpeeds, gameSpeed, activeLevelIndex]);
 
@@ -219,13 +228,19 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
           pellets: state.pelletsRemaining,
           mode: state.mode,
           status: state.status,
+          powerMode: state.powerMode,
+          speedTimer: state.speedTimer,
+          shieldTimer: state.shieldTimer,
         };
         if (
           prev.score === next.score &&
           prev.lives === next.lives &&
           prev.pellets === next.pellets &&
           prev.mode === next.mode &&
-          prev.status === next.status
+          prev.status === next.status &&
+          prev.powerMode === next.powerMode &&
+          prev.speedTimer === next.speedTimer &&
+          prev.shieldTimer === next.shieldTimer
         ) {
           return prev;
         }
@@ -244,8 +259,10 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
         setCustomLevel(null);
         setActiveLevelIndex(index);
       }
+      const engineOptions = optionsRef.current;
+      if (!engineOptions) return;
       stateRef.current = createInitialState(normalized, {
-        ...(optionsRef.current ?? options),
+        ...engineOptions,
         levelIndex: index,
       });
       accumulatorRef.current = 0;
@@ -303,6 +320,10 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
     isFocused,
     onInput: ({ action, type }) => {
       if (type !== 'keydown') return;
+      if (action === 'action' && uiState.status === 'gameover') {
+        resetGame();
+        return;
+      }
       if (action === 'action' && !started) {
         setStarted(true);
         return;
@@ -422,9 +443,25 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       }
       if (events.ghostEaten) playTone?.(160, { duration: 0.12, volume: 0.5 });
       if (events.fruit) playTone?.(720, { duration: 0.08, volume: 0.4 });
+      if (events.powerUp === 'speed') {
+        playTone?.(980, { duration: 0.08, volume: 0.4 });
+        setAnnouncement('Speed boost engaged');
+      }
+      if (events.powerUp === 'shield') {
+        playTone?.(640, { duration: 0.1, volume: 0.5 });
+        setAnnouncement('Shield online');
+      }
+      if (events.shieldUsed) {
+        playTone?.(240, { duration: 0.14, volume: 0.5 });
+        setAnnouncement('Shield absorbed hit');
+      }
       if (events.lifeLost) {
         playTone?.(220, { duration: 0.2, volume: 0.5 });
+        setStatusMessage('Ready...');
         setAnnouncement('Life lost');
+      }
+      if (events.respawned) {
+        setStatusMessage('');
       }
       if (events.gameOver) {
         playTone?.(120, { duration: 0.3, volume: 0.6 });
@@ -542,6 +579,30 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
             );
             ctx.fill();
             ctx.shadowBlur = 0;
+          } else if (state.maze[y][x] === 4) {
+            const pulse = prefersReducedMotion ? 1 : 0.9 + 0.3 * Math.sin(time * 5 + x);
+            const centerX = x * TILE_SIZE + TILE_SIZE / 2;
+            const centerY = y * TILE_SIZE + TILE_SIZE / 2;
+            ctx.fillStyle = '#a78bfa';
+            ctx.strokeStyle = '#f5d0fe';
+            ctx.lineWidth = 1.5;
+            ctx.shadowColor = 'rgba(167,139,250,0.8)';
+            ctx.shadowBlur = 10;
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY - 6 * pulse);
+            ctx.lineTo(centerX + 4 * pulse, centerY - 1.5 * pulse);
+            ctx.lineTo(centerX + 7 * pulse, centerY - 1.5 * pulse);
+            ctx.lineTo(centerX + 4.5 * pulse, centerY + 1.5 * pulse);
+            ctx.lineTo(centerX + 5.5 * pulse, centerY + 6 * pulse);
+            ctx.lineTo(centerX, centerY + 3.2 * pulse);
+            ctx.lineTo(centerX - 5.5 * pulse, centerY + 6 * pulse);
+            ctx.lineTo(centerX - 4.5 * pulse, centerY + 1.5 * pulse);
+            ctx.lineTo(centerX - 7 * pulse, centerY - 1.5 * pulse);
+            ctx.lineTo(centerX - 4 * pulse, centerY - 1.5 * pulse);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            ctx.shadowBlur = 0;
           }
         }
       }
@@ -588,7 +649,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
         const baseY = ghost.y * TILE_SIZE;
         const frightFlash =
           state.frightenedTimer > 0 &&
-          state.frightenedTimer < 1.5 &&
+          state.frightenedTimer < FRIGHT_FLASH_WINDOW &&
           !prefersReducedMotion &&
           Math.floor(time * 6) % 2 === 0;
         ctx.shadowColor =
@@ -646,6 +707,17 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
           ctx.fill();
         });
       });
+
+      ctx.save();
+      ctx.globalAlpha = 0.08;
+      ctx.strokeStyle = '#94a3b8';
+      for (let y = 0; y < height; y += 4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      ctx.restore();
     },
     [prefersReducedMotion],
   );
@@ -660,7 +732,11 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       const inputDir = directionRef.current;
       if (inputDir) directionRef.current = null;
 
-      const shouldUpdate = started && !paused && state.status === 'playing';
+      const shouldUpdate =
+        started &&
+        !paused &&
+        state.status !== 'gameover' &&
+        state.status !== 'complete';
       while (shouldUpdate && accumulatorRef.current >= FIXED_STEP) {
         const result = step(stateRef.current, { direction: inputDir }, FIXED_STEP, options);
         stateRef.current = result.state;
@@ -842,6 +918,8 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
   const score = uiState.score;
   const pellets = uiState.pellets;
   const mode = uiState.mode;
+  const powerMode = uiState.powerMode;
+  const powerTimer = powerMode === 'speed' ? uiState.speedTimer : uiState.shieldTimer;
 
   return (
     <GameLayout
@@ -865,6 +943,22 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       }
     >
       <div className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white">
+        <div className="mx-4 mt-2 rounded-md border border-blue-500/40 bg-black/70 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-yellow-300">
+          <div className="grid grid-cols-3 items-center gap-2 text-center">
+            <div>
+              <div className="text-[10px] text-slate-300">1UP</div>
+              <div className="font-bold text-lg leading-none text-yellow-200">{score.toString().padStart(6, '0')}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-300">HIGH SCORE</div>
+              <div className="font-bold text-lg leading-none text-red-300">{highScore.toString().padStart(6, '0')}</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-slate-300">LEVEL</div>
+              <div className="font-bold text-lg leading-none text-sky-300">{(customLevel ? 1 : activeLevelIndex + 1).toString().padStart(2, '0')}</div>
+            </div>
+          </div>
+        </div>
         <div className="relative flex-1 w-full min-h-0 flex items-center justify-center">
           <canvas
             ref={canvasRef}
@@ -875,6 +969,12 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
             aria-label="Pacman playfield"
           />
           {!started && renderStartScreen()}
+          {uiState.status === 'dead' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/65 text-white gap-2">
+              <div className="text-lg font-semibold text-yellow-300">Ready!</div>
+              <div className="text-xs text-slate-200">Get set for the next life</div>
+            </div>
+          )}
           {uiState.status === 'gameover' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 text-white gap-2">
               <div className="text-lg font-semibold">Game Over</div>
@@ -895,18 +995,27 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
             </div>
           )}
         </div>
-        <div className="mt-3 flex flex-wrap items-center justify-center gap-3 px-3 pb-3 text-xs text-slate-200">
-          <div className="rounded bg-slate-900/70 px-2 py-1">
-            Mode: {mode === 'fright' ? 'Frightened' : mode}
+        <div className="mt-3 mx-3 mb-2 grid grid-cols-2 gap-2 text-xs text-slate-200 sm:grid-cols-4">
+          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+            Mode: <span className="text-cyan-300">{mode === 'fright' ? 'Frightened' : mode}</span>
           </div>
-          <div className="rounded bg-slate-900/70 px-2 py-1">
-            Pellets: {pellets}
+          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+            Dots: <span className="text-amber-200">{pellets}</span>
           </div>
-          <div className="rounded bg-slate-900/70 px-2 py-1">
-            Level: {activeLevel.name || `Level ${activeLevelIndex + 1}`}
+          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+            Lives: <span className="text-yellow-300">{'● '.repeat(Math.max(0, lives)).trim() || '0'}</span>
+          </div>
+          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+            {powerMode ? (
+              <>
+                Power: <span className="text-fuchsia-300">{powerMode}</span> <span className="text-slate-400">({Math.ceil(powerTimer)}s)</span>
+              </>
+            ) : (
+              <>Power: <span className="text-slate-400">none</span></>
+            )}
           </div>
           {statusMessage && (
-            <div className="rounded bg-amber-500/80 px-2 py-1 text-slate-900">
+            <div className="col-span-full rounded bg-amber-500/80 px-2 py-1 text-center text-slate-900">
               {statusMessage}
             </div>
           )}
