@@ -17,13 +17,19 @@ import {
   GRID_SIZE,
   createInitialState,
   stepSnake,
+  randomPowerUp,
 } from '../../apps/snake';
 import rng from '../../apps/games/rng';
 
-const CELL_SIZE = 16; // pixels
+const CELL_SIZE = 20; // pixels
 const DEFAULT_SPEED = 120; // ms per move
 const MAX_QUEUE = 3;
 const BOARD_SIZE = GRID_SIZE * CELL_SIZE;
+const POWER_UP_STYLES = {
+  bonus: { color: '#f59e0b', label: 'B', glow: 'rgba(245,158,11,0.55)' },
+  slow: { color: '#60a5fa', label: 'S', glow: 'rgba(96,165,250,0.55)' },
+  shield: { color: '#c084fc', label: '⛨', glow: 'rgba(192,132,252,0.55)' },
+};
 const SKINS = {
   classic: {
     label: 'Neon Classic',
@@ -167,6 +173,7 @@ const Snake = ({ windowMeta } = {}) => {
     initialStateRef.current.snake.map((seg) => ({ ...seg, scale: 1 })),
   );
   const foodRef = useRef({ ...initialStateRef.current.food });
+  const powerUpRef = useRef(initialStateRef.current.powerUp || null);
   const obstaclesRef = useRef(
     initialStateRef.current.obstacles.map((o) => ({ ...o })),
   );
@@ -174,7 +181,9 @@ const Snake = ({ windowMeta } = {}) => {
   const moveQueueRef = useRef([]);
   const accumulatorRef = useRef(0);
   const runningRef = useRef(true);
-  const scoreRef = useRef(0);
+  const pointsRef = useRef(initialStateRef.current.points || 0);
+  const foodsRef = useRef(initialStateRef.current.foodsEaten || 0);
+  const shieldsRef = useRef(initialStateRef.current.shieldCharges || 0);
   const audioCtx = useRef(null);
   const haptics = useGameHaptics();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -206,15 +215,20 @@ const Snake = ({ windowMeta } = {}) => {
     (v) => typeof v === 'number',
   );
   const [speed, setSpeed] = useState(baseSpeed);
-  const [score, setScore] = useState(0);
+  const [points, setPoints] = useState(initialStateRef.current.points || 0);
+  const [foodsEaten, setFoodsEaten] = useState(initialStateRef.current.foodsEaten || 0);
+  const [shieldCharges, setShieldCharges] = useState(
+    initialStateRef.current.shieldCharges || 0,
+  );
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
-    'snake:highScore',
+    'snake:highScorePoints',
     0,
     (v) => typeof v === 'number',
   );
   const speedRef = useRef(baseSpeed);
+  const slowEffectTicksRef = useRef(0);
   const {
     save: saveReplay,
     load: loadReplay,
@@ -312,9 +326,18 @@ const Snake = ({ windowMeta } = {}) => {
     speedRef.current = speed;
   }, [speed]);
 
+
   useEffect(() => {
-    scoreRef.current = score;
-  }, [score]);
+    pointsRef.current = points;
+  }, [points]);
+
+  useEffect(() => {
+    foodsRef.current = foodsEaten;
+  }, [foodsEaten]);
+
+  useEffect(() => {
+    shieldsRef.current = shieldCharges;
+  }, [shieldCharges]);
 
   useEffect(() => () => {
     if (milestoneTimeoutRef.current) {
@@ -358,8 +381,14 @@ const Snake = ({ windowMeta } = {}) => {
         validator: (v) => typeof v === 'number',
       },
       {
+        oldKey: 'snake:highScore',
+        newKey: 'snake:highScorePoints',
+        setter: setHighScore,
+        validator: (v) => typeof v === 'number',
+      },
+      {
         oldKey: 'snake_highscore',
-        newKey: 'snake:highScore',
+        newKey: 'snake:highScorePoints',
         setter: setHighScore,
         validator: (v) => typeof v === 'number',
       },
@@ -560,6 +589,29 @@ const Snake = ({ windowMeta } = {}) => {
       ctx.stroke();
     }
 
+    const powerUp = powerUpRef.current;
+    if (powerUp && POWER_UP_STYLES[powerUp.type]) {
+      const style = POWER_UP_STYLES[powerUp.type];
+      const px = powerUp.x * CELL_SIZE + CELL_SIZE / 2;
+      const py = powerUp.y * CELL_SIZE + CELL_SIZE / 2;
+      ctx.save();
+      ctx.shadowBlur = prefersReducedMotion ? 0 : 12;
+      ctx.shadowColor = style.glow;
+      ctx.fillStyle = style.color;
+      ctx.fillRect(
+        px - CELL_SIZE * 0.35,
+        py - CELL_SIZE * 0.35,
+        CELL_SIZE * 0.7,
+        CELL_SIZE * 0.7,
+      );
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = `${Math.max(10, CELL_SIZE * 0.4)}px ui-sans-serif, system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(style.label, px, py + 0.5);
+      ctx.restore();
+    }
+
     // Snake segments with dynamic shading
     const segments = snakeRef.current;
     segments.forEach((seg, index) => {
@@ -668,10 +720,14 @@ const Snake = ({ windowMeta } = {}) => {
       legacyPlaybackIndexRef.current += 1;
       snakeRef.current = frame.snake.map((s) => ({ ...s }));
       foodRef.current = { ...frame.food };
+      powerUpRef.current = frame.powerUp ? { ...frame.powerUp } : null;
       obstaclesRef.current = frame.obstacles.map((o) => ({ ...o }));
-      const frameScore = frame.score ?? 0;
-      scoreRef.current = frameScore;
-      setScore(frameScore);
+      const frameFoods = frame.foodsEaten ?? frame.score ?? 0;
+      const framePoints = frame.points ?? frameFoods;
+      const frameShields = frame.shieldCharges ?? 0;
+      setFoodsEaten(frameFoods);
+      setPoints(framePoints);
+      setShieldCharges(frameShields);
       return;
     }
     if (playingRef.current) {
@@ -701,10 +757,31 @@ const Snake = ({ windowMeta } = {}) => {
         snake: snakeRef.current.map((seg) => ({ x: seg.x, y: seg.y })),
         food: { ...foodRef.current },
         obstacles: obstaclesRef.current.map((o) => ({ x: o.x, y: o.y })),
+        points: pointsRef.current,
+        foodsEaten: foodsRef.current,
+        shieldCharges: shieldsRef.current,
+        powerUp: powerUpRef.current ? { ...powerUpRef.current } : null,
       },
       dirRef.current,
-      { wrap, gridSize: GRID_SIZE, random: rng.random },
+      {
+        wrap,
+        gridSize: GRID_SIZE,
+        random: rng.random,
+        randomPowerUp,
+      },
     );
+
+    if (result.shieldSaved) {
+      setShieldCharges(result.state.shieldCharges || 0);
+      shieldsRef.current = result.state.shieldCharges || 0;
+      haptics.danger();
+      beep(260);
+      if (snakeRef.current[0]) {
+        spawnParticles(snakeRef.current[0], { milestone: true });
+      }
+      stepCountRef.current += 1;
+      return;
+    }
 
     if (result.collision !== 'none') {
       haptics.danger();
@@ -722,21 +799,46 @@ const Snake = ({ windowMeta } = {}) => {
     }
     snakeRef.current = nextSnake;
     foodRef.current = { ...result.state.food };
+    powerUpRef.current = result.state.powerUp ? { ...result.state.powerUp } : null;
     obstaclesRef.current = result.state.obstacles.map((o) => ({ ...o }));
+    setPoints(result.state.points || 0);
+    pointsRef.current = result.state.points || 0;
+    setFoodsEaten(result.state.foodsEaten || 0);
+    foodsRef.current = result.state.foodsEaten || 0;
+    setShieldCharges(result.state.shieldCharges || 0);
+    shieldsRef.current = result.state.shieldCharges || 0;
 
     if (result.grew) {
-      const nextScore = scoreRef.current + 1;
-      scoreRef.current = nextScore;
-      setScore(nextScore);
       haptics.score();
       beep(440);
       setSpeed((s) => Math.max(50, s * 0.95));
       spawnParticles(consumedFood);
-      if (nextScore > 0 && nextScore % 5 === 0) {
+      if (result.state.foodsEaten > 0 && result.state.foodsEaten % 5 === 0) {
         triggerMilestoneFlash();
         if (nextSnake.length) {
           spawnParticles(nextSnake[0], { milestone: true });
         }
+      }
+    }
+
+    if (result.consumedPowerUp === 'slow') {
+      slowEffectTicksRef.current = 18;
+      setSpeed((s) => Math.min(280, s + 28));
+      beep(380);
+    }
+    if (result.consumedPowerUp === 'bonus') {
+      beep(520);
+      if (consumedFood) spawnParticles(consumedFood, { milestone: true });
+    }
+    if (result.consumedPowerUp === 'shield') {
+      beep(600);
+      if (nextSnake[0]) spawnParticles(nextSnake[0], { milestone: true });
+    }
+
+    if (slowEffectTicksRef.current > 0) {
+      slowEffectTicksRef.current -= 1;
+      if (slowEffectTicksRef.current === 0) {
+        setSpeed((s) => Math.max(baseSpeed, s - 36));
       }
     }
 
@@ -759,6 +861,7 @@ const Snake = ({ windowMeta } = {}) => {
     setSpeed,
     spawnParticles,
     triggerMilestoneFlash,
+    baseSpeed
   ]);
 
   const tick = useCallback(
@@ -830,10 +933,10 @@ const Snake = ({ windowMeta } = {}) => {
   });
 
   useEffect(() => {
-    if ((gameOver || won) && score > highScore) {
-      setHighScore(score);
+    if ((gameOver || won) && points > highScore) {
+      setHighScore(points);
     }
-  }, [gameOver, won, score, highScore, setHighScore]);
+  }, [gameOver, won, points, highScore, setHighScore]);
 
   useEffect(() => {
     if (gameOver) haptics.gameOver();
@@ -865,6 +968,7 @@ const Snake = ({ windowMeta } = {}) => {
     const base = buildInitialState(nextSeed);
     snakeRef.current = base.snake.map((seg) => ({ ...seg, scale: 1 }));
     foodRef.current = { ...base.food };
+    powerUpRef.current = null;
     obstaclesRef.current = base.obstacles.map((o) => ({ ...o }));
     dirRef.current = { x: 1, y: 0 };
     moveQueueRef.current = [];
@@ -879,13 +983,18 @@ const Snake = ({ windowMeta } = {}) => {
     accumulatorRef.current = 0;
     const shouldRun = !prefersReducedMotion && isFocused;
     runningRef.current = shouldRun;
-    setScore(0);
-    scoreRef.current = 0;
+    setFoodsEaten(0);
+    foodsRef.current = 0;
+    setPoints(0);
+    pointsRef.current = 0;
+    setShieldCharges(0);
+    shieldsRef.current = 0;
     setGameOver(false);
     setWon(false);
     setRunning(shouldRun);
     setSpeed(baseSpeed);
     speedRef.current = baseSpeed;
+    slowEffectTicksRef.current = 0;
     particlesRef.current = [];
     setMilestoneFlash(false);
     setReducedMotionPaused(prefersReducedMotion);
@@ -929,6 +1038,7 @@ const Snake = ({ windowMeta } = {}) => {
       snakeRef.current = base.snake.map((seg) => ({ ...seg, scale: 1 }));
       obstaclesRef.current = base.obstacles.map((o) => ({ ...o }));
       foodRef.current = { ...base.food };
+      powerUpRef.current = null;
       dirRef.current = { x: 1, y: 0 };
       moveQueueRef.current = [];
       accumulatorRef.current = 0;
@@ -943,12 +1053,23 @@ const Snake = ({ windowMeta } = {}) => {
         snakeRef.current = first.snake.map((s) => ({ ...s }));
         obstaclesRef.current = first.obstacles.map((o) => ({ ...o }));
         foodRef.current = { ...first.food };
-        const frameScore = first.score ?? 0;
-        scoreRef.current = frameScore;
-        setScore(frameScore);
+        powerUpRef.current = first.powerUp ? { ...first.powerUp } : null;
+        const frameFoods = first.foodsEaten ?? first.score ?? 0;
+        const framePoints = first.points ?? frameFoods;
+        const frameShields = first.shieldCharges ?? 0;
+        setFoodsEaten(frameFoods);
+        foodsRef.current = frameFoods;
+        setPoints(framePoints);
+        pointsRef.current = framePoints;
+        setShieldCharges(frameShields);
+        shieldsRef.current = frameShields;
       } else {
-        scoreRef.current = 0;
-        setScore(0);
+        setFoodsEaten(0);
+        foodsRef.current = 0;
+        setPoints(0);
+        pointsRef.current = 0;
+        setShieldCharges(0);
+        shieldsRef.current = 0;
       }
     },
     [
@@ -1151,7 +1272,7 @@ const Snake = ({ windowMeta } = {}) => {
   return (
     <GameLayout
       gameId="snake"
-      score={score}
+      score={points}
       highScore={highScore}
       onPauseChange={handlePauseChange}
       onRestart={reset}
@@ -1160,18 +1281,25 @@ const Snake = ({ windowMeta } = {}) => {
       settingsPanel={settingsPanel}
       isFocused={isFocused}
     >
-      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none px-3 pb-4">
+      <div className="h-full w-full flex flex-col items-center justify-center bg-ub-cool-grey text-white select-none px-3 pb-4 pt-10">
         <p id="snake-instructions" className="sr-only">
           Use arrow keys or swipe to move. Press Space to pause and R to restart.
         </p>
-        <div className="relative flex flex-col items-center">
-          <canvas
-            ref={canvasRef}
-            className="bg-gray-900/80 border border-gray-700/70 shadow-xl w-full h-full rounded"
-            tabIndex={0}
-            aria-label="Snake game board"
-            aria-describedby="snake-instructions"
-          />
+        <div className="mb-2 flex w-full max-w-[900px] items-center justify-center gap-3 text-xs sm:text-sm">
+          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-3 py-1">Food: {foodsEaten}</div>
+          <div className="rounded border border-amber-400/30 bg-slate-900/70 px-3 py-1">Points: {points}</div>
+          <div className="rounded border border-violet-400/30 bg-slate-900/70 px-3 py-1">Shields: {shieldCharges}</div>
+        </div>
+        <div className="relative flex w-full max-w-[920px] flex-1 min-h-0 items-center justify-center">
+          <div className="relative flex h-full w-full min-h-[320px] items-center justify-center rounded-xl border border-slate-700/80 bg-slate-900/45 p-2 shadow-2xl">
+            <canvas
+              ref={canvasRef}
+              className="bg-gray-900/80 border border-gray-700/70 shadow-xl rounded"
+              tabIndex={0}
+              aria-label="Snake game board"
+              aria-describedby="snake-instructions"
+            />
+          </div>
           {reducedMotionPaused && !gameOver && !won && (
             <div
               className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/70 text-center px-4"
@@ -1208,6 +1336,13 @@ const Snake = ({ windowMeta } = {}) => {
               <div className="text-sm text-slate-200">
                 Press R or Restart to try again.
               </div>
+              <button
+                type="button"
+                className="px-4 py-1.5 bg-rose-500/90 text-white font-semibold rounded shadow-sm transition hover:bg-rose-400 focus:outline-none focus:ring"
+                onClick={reset}
+              >
+                Restart now
+              </button>
             </div>
           )}
           {won && (
@@ -1222,6 +1357,13 @@ const Snake = ({ windowMeta } = {}) => {
               <div className="text-sm text-slate-200">
                 Press R or Restart to play again.
               </div>
+              <button
+                type="button"
+                className="px-4 py-1.5 bg-emerald-500/90 text-slate-900 font-semibold rounded shadow-sm transition hover:bg-emerald-400 focus:outline-none focus:ring"
+                onClick={reset}
+              >
+                Play again
+              </button>
             </div>
           )}
           {milestoneFlash && (
@@ -1230,7 +1372,7 @@ const Snake = ({ windowMeta } = {}) => {
               role="status"
               aria-live="polite"
             >
-              Milestone {score}!
+              Milestone {foodsEaten}!
             </div>
           )}
         </div>

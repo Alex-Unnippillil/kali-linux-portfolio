@@ -10,6 +10,8 @@ exercise the game across desktop, mobile, and gamepad setups.
   would instantly collide with the snake's body.
 - **Pause / Resume** – The in-game Pause button or window blur pauses the loop.
   Resume the game via the same button or by refocusing the window.
+- **Restart** – Press `R` at any time to immediately reset the run, or use the
+  in-overlay **Restart now** button after a collision.
 
 ## Touch
 
@@ -35,10 +37,29 @@ exercise the game across desktop, mobile, and gamepad setups.
   automatic loop until the player explicitly resumes via the on-screen Resume
   button.
 
+## Progression & scoring
+
+- **Food counter** – The food count tracks apples consumed in the current run.
+- **Points** – Food grants 10 points and power-ups add bonus points depending on
+  type.
+- **High score** – The high score tracks the best points total and persists
+  across sessions.
+- **Shield charges** – Shield power-ups store a charge that will cancel one
+  fatal collision.
+
+## Power-ups
+
+- **Bonus (`B`)** – Grants a large point boost.
+- **Slow (`S`)** – Temporarily lowers game speed to help recover from tight
+  paths.
+- **Shield (`⛨`)** – Adds one collision protection charge.
+- Power-ups despawn after a limited number of ticks if ignored.
+
 ## Persistence
 
-- **High score** – Scores persist in `localStorage` under `snake:highScore` so
-  testers can confirm high-score saves survive reloads.
+- **High score** – Points persist in `localStorage` under
+  `snake:highScorePoints` (with migration from older keys) so testers can
+  confirm high-score saves survive reloads.
 - **Settings** – Wrap, skin, colorblind assist, sound, base speed, and touch
   controls use `snake:*` keys (for example `snake:wrap` and `snake:baseSpeed`)
   to keep preferences consistent across sessions.
