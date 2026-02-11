@@ -1,17 +1,22 @@
 import { random as rngRandom } from '../games/rng';
-import type { LevelDefinition, Point, Tile } from './types';
+import type { FruitRuleMode, LevelDefinition, Point, Tile } from './types';
 
 export type Direction = Point;
-
 export type GhostName = 'blinky' | 'pinky' | 'inky' | 'clyde';
-
 export type Mode = 'scatter' | 'chase' | 'fright';
+export type GhostBehaviorState =
+  | 'active'
+  | 'frightened'
+  | 'eaten'
+  | 'inHouse'
+  | 'leavingHouse';
 
 export interface GhostState {
   name: GhostName;
   x: number;
   y: number;
   dir: Direction;
+  state: GhostBehaviorState;
 }
 
 export interface PacState {
@@ -42,12 +47,17 @@ export interface GameState {
   frightenedTimer: number;
   frightenedCombo: number;
   pelletsRemaining: number;
+  totalPellets: number;
   score: number;
   levelTime: number;
   nextFruitIndex: number;
   fruit: FruitState;
   fruitTimes: number[];
-  status: 'playing' | 'dead' | 'gameover' | 'complete';
+  fruitRuleMode: FruitRuleMode;
+  fruitPelletThresholds: number[];
+  status: 'ready' | 'playing' | 'dead' | 'gameover' | 'complete';
+  readyTimer: number;
+  deathTimer: number;
   spawns: {
     pac: Point;
     ghosts: Record<GhostName, Point>;
@@ -65,6 +75,8 @@ export interface EngineOptions {
   levelIndex: number;
   fruitDuration: number;
   turnTolerance: number;
+  readyDuration?: number;
+  deathDuration?: number;
   random?: () => number;
 }
 
@@ -80,34 +92,52 @@ export interface StepEvents {
   lifeLost?: boolean;
   gameOver?: boolean;
   levelComplete?: boolean;
+  ready?: boolean;
+  noPellets?: boolean;
 }
 
 export const DIRECTIONS: Direction[] = [
-  { x: 1, y: 0 },
+  { x: 0, y: -1 },
   { x: -1, y: 0 },
   { x: 0, y: 1 },
-  { x: 0, y: -1 },
+  { x: 1, y: 0 },
 ];
 
-const SCATTER_CORNERS: Record<GhostName, Point> = {
-  blinky: { x: 13, y: 0 },
-  pinky: { x: 0, y: 0 },
-  inky: { x: 13, y: 6 },
-  clyde: { x: 0, y: 6 },
-};
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.min(Math.max(value, min), max);
-
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 const cloneMaze = (maze: Tile[][]) => maze.map((row) => row.slice());
+
+const add = (a: Point, b: Point) => ({ x: a.x + b.x, y: a.y + b.y });
+const tileDistance = (a: Point, b: Point) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
+const toTile = (p: Point) => ({ x: Math.floor(p.x), y: Math.floor(p.y) });
+const isOpposite = (a: Direction, b: Direction) => a.x === -b.x && a.y === -b.y;
+const near = (a: Point, b: Point, radius = 0.45) => Math.hypot(a.x - b.x, a.y - b.y) <= radius;
 
 const isWalkable = (maze: Tile[][], x: number, y: number) => {
   if (!maze[y] || typeof maze[y][x] === 'undefined') return false;
   return maze[y][x] !== 1;
 };
 
-export const canMove = (maze: Tile[][], tileX: number, tileY: number) =>
-  isWalkable(maze, tileX, tileY);
+export const canMove = (maze: Tile[][], tileX: number, tileY: number) => isWalkable(maze, tileX, tileY);
+
+const isNearCenter = (pos: Point, tolerance: number) => {
+  const center = { x: Math.floor(pos.x) + 0.5, y: Math.floor(pos.y) + 0.5 };
+  return Math.abs(pos.x - center.x) <= tolerance && Math.abs(pos.y - center.y) <= tolerance;
+};
+
+const alignToCenter = (pos: Point) => ({ x: Math.floor(pos.x) + 0.5, y: Math.floor(pos.y) + 0.5 });
+
+const isTunnel = (maze: Tile[][], tileX: number, tileY: number) => {
+  const width = maze[0]?.length ?? 0;
+  return (tileX === 0 || tileX === width - 1) && isWalkable(maze, tileX, tileY);
+};
+
+const wrapIfNeeded = (maze: Tile[][], pos: Point) => {
+  const width = maze[0]?.length ?? 0;
+  if (width === 0) return pos;
+  if (pos.x < -0.25) return { ...pos, x: width - 0.5 };
+  if (pos.x > width - 0.25) return { ...pos, x: 0.5 };
+  return pos;
+};
 
 const findSpawn = (maze: Tile[][], fallback: Point) => {
   if (isWalkable(maze, fallback.x, fallback.y)) return { ...fallback };
@@ -119,87 +149,79 @@ const findSpawn = (maze: Tile[][], fallback: Point) => {
   return { ...fallback };
 };
 
-const isTunnel = (maze: Tile[][], tileX: number, tileY: number) => {
-  const width = maze[0]?.length ?? 0;
-  if (width === 0) return false;
-  if (tileX !== 0 && tileX !== width - 1) return false;
-  return isWalkable(maze, tileX, tileY);
-};
-
-const wrapIfNeeded = (maze: Tile[][], pos: Point) => {
-  const width = maze[0]?.length ?? 0;
-  if (width === 0) return pos;
-  const min = -0.25;
-  const max = width - 0.5 + 0.25;
-  if (pos.x < min) {
-    return { ...pos, x: width - 0.5 };
-  }
-  if (pos.x > max) {
-    return { ...pos, x: 0.5 };
-  }
-  return pos;
-};
-
-const distance = (a: Point, b: Point) =>
-  Math.hypot(a.x - b.x, a.y - b.y);
-
-const isNearCenter = (pos: Point, tolerance: number) => {
-  const dx = Math.abs((pos.x % 1) - 0.5);
-  const dy = Math.abs((pos.y % 1) - 0.5);
-  return dx <= tolerance && dy <= tolerance;
-};
-
-const alignToCenter = (pos: Point) => ({
-  x: Math.floor(pos.x) + 0.5,
-  y: Math.floor(pos.y) + 0.5,
+export const findScatterCorners = (width: number, height: number): Record<GhostName, Point> => ({
+  blinky: { x: width - 2, y: 0 },
+  pinky: { x: 1, y: 0 },
+  inky: { x: width - 2, y: height - 1 },
+  clyde: { x: 1, y: height - 1 },
 });
 
-const findNearestWalkableTile = (maze: Tile[][], tile: Point) => {
-  if (canMove(maze, tile.x, tile.y)) return tile;
-  for (const dir of DIRECTIONS) {
-    const candidate = { x: tile.x + dir.x, y: tile.y + dir.y };
-    if (canMove(maze, candidate.x, candidate.y)) return candidate;
-  }
-  return tile;
-};
+export const targetTileForGhost = (ghost: GhostState, pac: PacState, ghosts: GhostState[], corners: Record<GhostName, Point>) => {
+  const pacTile = toTile(pac);
+  const upQuirk = pac.dir.y < 0 && pac.dir.x === 0 ? { x: -1, y: -1 } : { x: 0, y: 0 };
 
-const targetFor = (ghost: GhostState, pac: PacState, ghosts: GhostState[]) => {
-  const px = Math.floor(pac.x);
-  const py = Math.floor(pac.y);
   switch (ghost.name) {
     case 'blinky':
-      return { x: px, y: py };
+      return pacTile;
     case 'pinky':
-      return { x: px + 4 * pac.dir.x, y: py + 4 * pac.dir.y };
+      return {
+        x: pacTile.x + pac.dir.x * 4 + upQuirk.x * 4,
+        y: pacTile.y + pac.dir.y * 4 + upQuirk.y * 4,
+      };
     case 'inky': {
-      const blinky = ghosts.find((g) => g.name === 'blinky') || ghost;
-      const bx = Math.floor(blinky.x);
-      const by = Math.floor(blinky.y);
-      const tx = px + 2 * pac.dir.x;
-      const ty = py + 2 * pac.dir.y;
-      return { x: tx * 2 - bx, y: ty * 2 - by };
+      const blinky = ghosts.find((g) => g.name === 'blinky') ?? ghost;
+      const anchor = {
+        x: pacTile.x + pac.dir.x * 2 + upQuirk.x * 2,
+        y: pacTile.y + pac.dir.y * 2 + upQuirk.y * 2,
+      };
+      const bTile = toTile(blinky);
+      return { x: anchor.x * 2 - bTile.x, y: anchor.y * 2 - bTile.y };
     }
     case 'clyde': {
-      const dist = Math.hypot(px - Math.floor(ghost.x), py - Math.floor(ghost.y));
-      if (dist > 8) return { x: px, y: py };
-      return SCATTER_CORNERS.clyde;
+      const gTile = toTile(ghost);
+      if (tileDistance(gTile, pacTile) <= 8) return corners.clyde;
+      return pacTile;
     }
     default:
-      return { x: px, y: py };
+      return pacTile;
   }
 };
 
-export const createInitialState = (
-  level: LevelDefinition,
-  options: EngineOptions,
-): GameState => {
+const fruitScoreForLevel = (levelIndex: number) => {
+  const table = [100, 300, 500, 500, 700, 700, 1000, 1000, 2000, 2000];
+  return table[Math.min(levelIndex, table.length - 1)];
+};
+
+const shouldSpawnFruit = (state: GameState) => {
+  if (state.nextFruitIndex >= 2 || state.fruit.active) return false;
+  if (state.fruitRuleMode === 'pellet') {
+    const threshold = state.fruitPelletThresholds[state.nextFruitIndex];
+    if (typeof threshold !== 'number') return false;
+    const eaten = state.totalPellets - state.pelletsRemaining;
+    if (eaten >= threshold) {
+      state.nextFruitIndex += 1;
+      return true;
+    }
+    return false;
+  }
+
+  const trigger = state.fruitTimes[state.nextFruitIndex];
+  if (typeof trigger !== 'number') return false;
+  if (state.levelTime >= trigger) {
+    state.nextFruitIndex += 1;
+    return true;
+  }
+  return false;
+};
+
+export const createInitialState = (level: LevelDefinition, options: EngineOptions): GameState => {
   const maze = cloneMaze(level.maze);
   const width = maze[0]?.length ?? 0;
   const height = maze.length;
-  const pelletsRemaining = maze.flat().filter((t) => t === 2 || t === 3).length;
+  const pelletsRemaining = maze.flat().filter((tile) => tile === 2 || tile === 3).length;
   const pacSpawn = findSpawn(maze, level.pacStart ?? { x: 1, y: 1 });
-  const ghostSpawn = findSpawn(maze, level.ghostStart ?? { x: 7, y: 3 });
-  const ghostNames: GhostName[] = ['blinky', 'pinky', 'inky', 'clyde'];
+  const ghostSpawn = findSpawn(maze, level.ghostStart ?? { x: Math.floor(width / 2), y: Math.floor(height / 2) });
+  const fruitRuleMode: FruitRuleMode = level.fruitRuleMode ?? (level.fruitPelletThresholds ? 'pellet' : 'time');
 
   return {
     maze,
@@ -213,11 +235,12 @@ export const createInitialState = (
       lives: 3,
       extraLifeAwarded: false,
     },
-    ghosts: ghostNames.map((name, index) => ({
+    ghosts: (['blinky', 'pinky', 'inky', 'clyde'] as GhostName[]).map((name, index) => ({
       name,
       x: ghostSpawn.x + 0.5,
       y: ghostSpawn.y + 0.5,
-      dir: index % 2 === 0 ? { x: 0, y: -1 } : { x: -1, y: 0 },
+      dir: index % 2 === 0 ? { x: -1, y: 0 } : { x: 1, y: 0 },
+      state: 'active',
     })),
     mode: options.scatterChaseSchedule[0]?.mode ?? 'scatter',
     modeIndex: 0,
@@ -225,6 +248,7 @@ export const createInitialState = (
     frightenedTimer: 0,
     frightenedCombo: 0,
     pelletsRemaining,
+    totalPellets: pelletsRemaining,
     score: 0,
     levelTime: 0,
     nextFruitIndex: 0,
@@ -234,10 +258,12 @@ export const createInitialState = (
       y: level.fruit?.y ?? Math.floor(height / 2),
       timer: 0,
     },
-    fruitTimes: Array.isArray(level.fruitTimes)
-      ? level.fruitTimes.slice()
-      : [],
-    status: 'playing',
+    fruitTimes: level.fruitTimes?.slice() ?? [],
+    fruitPelletThresholds: level.fruitPelletThresholds?.slice() ?? [70, 170],
+    fruitRuleMode,
+    status: 'ready',
+    readyTimer: options.readyDuration ?? 1.2,
+    deathTimer: 0,
     spawns: {
       pac: pacSpawn,
       ghosts: {
@@ -250,254 +276,246 @@ export const createInitialState = (
   };
 };
 
+const resetAfterLifeLost = (state: GameState, options: EngineOptions) => {
+  state.pac.x = state.spawns.pac.x + 0.5;
+  state.pac.y = state.spawns.pac.y + 0.5;
+  state.pac.dir = { x: 0, y: 0 };
+  state.pac.nextDir = { x: 0, y: 0 };
+  state.ghosts = state.ghosts.map((ghost) => ({
+    ...ghost,
+    x: state.spawns.ghosts[ghost.name].x + 0.5,
+    y: state.spawns.ghosts[ghost.name].y + 0.5,
+    dir: { x: -1, y: 0 },
+    state: 'active',
+  }));
+  state.modeIndex = 0;
+  state.modeTimer = options.scatterChaseSchedule[0]?.duration ?? 0;
+  state.frightenedTimer = 0;
+  state.frightenedCombo = 0;
+  state.status = 'ready';
+  state.readyTimer = options.readyDuration ?? 1.2;
+};
+
 export const step = (
   state: GameState,
   input: StepInput,
   dt: number,
   options: EngineOptions,
 ): { state: GameState; events: StepEvents } => {
-  if (state.status !== 'playing') {
-    return { state, events: {} };
+  const events: StepEvents = {};
+  const delta = clamp(dt, 0, 0.2);
+
+  if (state.status === 'gameover' || state.status === 'complete') return { state, events };
+
+  if (state.pelletsRemaining <= 0) {
+    state.status = 'complete';
+    events.levelComplete = true;
+    return { state, events };
   }
 
-  const events: StepEvents = {};
-  const rand = options.random ?? rngRandom;
+  if (state.status === 'ready') {
+    if (input.direction) state.pac.nextDir = { ...input.direction };
+    state.readyTimer = Math.max(0, state.readyTimer - delta);
+    if (state.readyTimer === 0) {
+      state.status = 'playing';
+      events.ready = true;
+    }
+    return { state, events };
+  }
+
+  if (state.status === 'dead') {
+    state.deathTimer = Math.max(0, state.deathTimer - delta);
+    if (state.deathTimer === 0) {
+      if (state.pac.lives <= 0) {
+        state.status = 'gameover';
+        events.gameOver = true;
+      } else {
+        resetAfterLifeLost(state, options);
+      }
+    }
+    return { state, events };
+  }
+
+  const random = options.random ?? rngRandom;
   const maze = state.maze;
-  let pac = { ...state.pac };
-  let ghosts = state.ghosts.map((g) => ({ ...g }));
 
   if (input.direction) {
-    pac.nextDir = { ...input.direction };
+    state.pac.nextDir = { ...input.direction };
   }
 
-  state.levelTime += dt;
+  state.levelTime += delta;
 
-  let pacTile = { x: Math.floor(pac.x), y: Math.floor(pac.y) };
-  const recoveryTile = findNearestWalkableTile(maze, pacTile);
-  if (recoveryTile.x !== pacTile.x || recoveryTile.y !== pacTile.y) {
-    pac = {
-      ...pac,
-      x: recoveryTile.x + 0.5,
-      y: recoveryTile.y + 0.5,
-      dir: { x: 0, y: 0 },
-    };
-    pacTile = { ...recoveryTile };
-  }
-  const pacCenter = alignToCenter(pac);
-  const canTurn =
-    pac.nextDir &&
-    (pac.nextDir.x !== 0 || pac.nextDir.y !== 0) &&
-    isNearCenter(pac, options.turnTolerance);
-
-  if (canTurn) {
-    const nextTile = {
-      x: pacTile.x + pac.nextDir.x,
-      y: pacTile.y + pac.nextDir.y,
-    };
-    if (canMove(maze, nextTile.x, nextTile.y)) {
-      pac = {
-        ...pac,
-        dir: pac.nextDir,
-        nextDir: { x: 0, y: 0 },
-        x: pacCenter.x,
-        y: pacCenter.y,
-      };
+  const pacTile = toTile(state.pac);
+  const pacNearCenter = isNearCenter(state.pac, options.turnTolerance);
+  const desiredDir = state.pac.nextDir;
+  if ((desiredDir.x !== 0 || desiredDir.y !== 0) && pacNearCenter) {
+    const targetTile = add(pacTile, desiredDir);
+    if (canMove(maze, targetTile.x, targetTile.y)) {
+      state.pac.dir = { ...desiredDir };
+      state.pac.x = Math.floor(state.pac.x) + 0.5;
+      state.pac.y = Math.floor(state.pac.y) + 0.5;
     }
   }
 
-  const pacSpeed =
-    options.pacSpeed *
-    options.speedMultiplier *
-    (isTunnel(maze, pacTile.x, pacTile.y) ? options.tunnelSpeed : 1);
-
+  const basePacSpeed = options.pacSpeed * options.speedMultiplier;
+  const pacSpeed = basePacSpeed * (isTunnel(maze, pacTile.x, pacTile.y) ? options.tunnelSpeed : 1);
   const nextPac = {
-    x: pac.x + pac.dir.x * pacSpeed * dt,
-    y: pac.y + pac.dir.y * pacSpeed * dt,
+    x: state.pac.x + state.pac.dir.x * pacSpeed * delta,
+    y: state.pac.y + state.pac.dir.y * pacSpeed * delta,
   };
-  const nextPacTile = {
-    x: Math.floor(nextPac.x),
-    y: Math.floor(nextPac.y),
-  };
-
-  if (canMove(maze, nextPacTile.x, nextPacTile.y)) {
-    pac = { ...pac, ...wrapIfNeeded(maze, nextPac) };
+  const nextPacTile = toTile(nextPac);
+  const allowTunnelWrap = state.pac.dir.y === 0 && isTunnel(maze, pacTile.x, pacTile.y) && (nextPacTile.x < 0 || nextPacTile.x >= state.width);
+  if (allowTunnelWrap || canMove(maze, nextPacTile.x, nextPacTile.y)) {
+    const wrapped = wrapIfNeeded(maze, nextPac);
+    state.pac.x = wrapped.x;
+    state.pac.y = wrapped.y;
   } else {
-    pac = { ...pac, x: pacCenter.x, y: pacCenter.y, dir: { x: 0, y: 0 } };
+    const centered = alignToCenter(state.pac);
+    state.pac.x = centered.x;
+    state.pac.y = centered.y;
+    state.pac.dir = { x: 0, y: 0 };
   }
 
-  const pacCell = {
-    x: Math.floor(pac.x),
-    y: Math.floor(pac.y),
-  };
-  if (maze[pacCell.y]?.[pacCell.x] === 2 || maze[pacCell.y]?.[pacCell.x] === 3) {
-    const tile = maze[pacCell.y][pacCell.x];
-    const updatedMaze = cloneMaze(maze);
-    updatedMaze[pacCell.y][pacCell.x] = 0;
-    state.maze = updatedMaze;
-    state.pelletsRemaining -= 1;
-    if (tile === 2) {
-      state.score += 10;
-      events.pellet = true;
-    } else {
+  const pacCell = toTile(state.pac);
+  const tile = state.maze[pacCell.y]?.[pacCell.x];
+  if (tile === 2 || tile === 3) {
+    state.maze[pacCell.y][pacCell.x] = 0;
+    state.pelletsRemaining = Math.max(0, state.pelletsRemaining - 1);
+    if (tile === 3) {
       state.score += 50;
       state.frightenedTimer = options.frightenedDuration;
+      state.mode = 'fright';
       state.frightenedCombo = 0;
+      state.ghosts = state.ghosts.map((ghost) => ({
+        ...ghost,
+        state: ghost.state === 'active' ? 'frightened' : ghost.state,
+      }));
       events.energizer = true;
+    } else {
+      state.score += 10;
+      events.pellet = true;
     }
   }
 
-  if (!pac.extraLifeAwarded && state.score >= 10000) {
-    pac.extraLifeAwarded = true;
-    pac.lives += 1;
+  if (state.totalPellets === 0) {
+    events.noPellets = true;
+  }
+
+  if (!state.pac.extraLifeAwarded && state.score >= 10000) {
+    state.pac.extraLifeAwarded = true;
+    state.pac.lives += 1;
   }
 
   const prevMode = state.mode;
   if (state.frightenedTimer > 0) {
-    state.frightenedTimer = Math.max(0, state.frightenedTimer - dt);
-    if (state.frightenedTimer === 0) {
-      state.mode = options.scatterChaseSchedule[state.modeIndex]?.mode ?? 'scatter';
-      state.frightenedCombo = 0;
-    } else {
-      state.mode = 'fright';
-    }
+    state.frightenedTimer = Math.max(0, state.frightenedTimer - delta);
+    state.mode = state.frightenedTimer > 0 ? 'fright' : options.scatterChaseSchedule[state.modeIndex]?.mode ?? 'scatter';
   } else {
-    state.modeTimer -= dt;
+    state.modeTimer -= delta;
     if (state.modeTimer <= 0 && state.modeIndex < options.scatterChaseSchedule.length - 1) {
       state.modeIndex += 1;
       state.modeTimer = options.scatterChaseSchedule[state.modeIndex].duration;
     }
     state.mode = options.scatterChaseSchedule[state.modeIndex]?.mode ?? 'scatter';
   }
-
   const modeChanged = prevMode !== state.mode;
   const randomMode = options.levelIndex < options.randomModeLevel;
+  const corners = findScatterCorners(state.width, state.height);
 
-  ghosts = ghosts.map((g) => {
-    const gTile = { x: Math.floor(g.x), y: Math.floor(g.y) };
-    const speedBase =
-      (state.frightenedTimer > 0
-        ? options.ghostSpeeds.scatter * 0.7
-        : state.mode === 'scatter'
-          ? options.ghostSpeeds.scatter
-          : options.ghostSpeeds.chase) * options.speedMultiplier;
-    const gSpeed =
-      speedBase * (isTunnel(maze, gTile.x, gTile.y) ? options.tunnelSpeed : 1);
-    let dir = g.dir;
-    const forcedTurn = modeChanged && (dir.x !== 0 || dir.y !== 0);
-    if (forcedTurn) {
+  state.ghosts = state.ghosts.map((ghost) => {
+    const tilePos = toTile(ghost);
+    const nearCenter = isNearCenter(ghost, options.turnTolerance);
+    let dir = { ...ghost.dir };
+    const forbidReverse = !modeChanged && ghost.state !== 'frightened';
+
+    if (modeChanged && (dir.x !== 0 || dir.y !== 0) && ghost.state !== 'eaten') {
       dir = { x: -dir.x, y: -dir.y };
     }
 
-    if (!forcedTurn && isNearCenter(g, options.turnTolerance)) {
-      const rev = { x: -dir.x, y: -dir.y };
-      let optionsDirs = DIRECTIONS.filter((d) => {
-        if (!modeChanged && d.x === rev.x && d.y === rev.y) return false;
-        return canMove(maze, gTile.x + d.x, gTile.y + d.y);
+    if (nearCenter) {
+      const choices = DIRECTIONS.filter((candidate) => {
+        if (forbidReverse && isOpposite(candidate, dir)) return false;
+        return canMove(maze, tilePos.x + candidate.x, tilePos.y + candidate.y);
       });
-      if (!optionsDirs.length) optionsDirs = DIRECTIONS;
-      if (state.frightenedTimer > 0 || randomMode) {
-        dir = optionsDirs[Math.floor(rand() * optionsDirs.length)] || dir;
+      const legal = choices.length ? choices : DIRECTIONS.filter((candidate) => canMove(maze, tilePos.x + candidate.x, tilePos.y + candidate.y));
+
+      if (ghost.state === 'eaten') {
+        legal.sort((a, b) => tileDistance(add(tilePos, a), state.spawns.ghosts[ghost.name]) - tileDistance(add(tilePos, b), state.spawns.ghosts[ghost.name]));
+        dir = legal[0] ?? dir;
+      } else if (state.mode === 'fright' || randomMode) {
+        const index = Math.floor(random() * legal.length);
+        dir = legal[index] ?? dir;
       } else {
-        const target =
-          state.mode === 'scatter'
-            ? SCATTER_CORNERS[g.name] || { x: gTile.x, y: gTile.y }
-            : targetFor(g, pac, ghosts);
-        optionsDirs.sort((a, b) => {
-          const da = distance({ x: gTile.x + a.x, y: gTile.y + a.y }, target);
-          const db = distance({ x: gTile.x + b.x, y: gTile.y + b.y }, target);
+        const target = state.mode === 'scatter' ? corners[ghost.name] : targetTileForGhost(ghost, state.pac, state.ghosts, corners);
+        legal.sort((a, b) => {
+          const da = tileDistance(add(tilePos, a), target);
+          const db = tileDistance(add(tilePos, b), target);
+          if (da === db) return DIRECTIONS.indexOf(a) - DIRECTIONS.indexOf(b);
           return da - db;
         });
-        dir = optionsDirs[0] || dir;
+        dir = legal[0] ?? dir;
       }
     }
 
+    const speedBase = state.mode === 'chase' ? options.ghostSpeeds.chase : options.ghostSpeeds.scatter;
+    const frightenedSlowdown = ghost.state === 'frightened' ? 0.7 : 1;
     const next = {
-      x: g.x + dir.x * gSpeed * dt,
-      y: g.y + dir.y * gSpeed * dt,
+      x: ghost.x + dir.x * speedBase * options.speedMultiplier * frightenedSlowdown * delta,
+      y: ghost.y + dir.y * speedBase * options.speedMultiplier * frightenedSlowdown * delta,
     };
-    const nextTile = { x: Math.floor(next.x), y: Math.floor(next.y) };
-    if (canMove(maze, nextTile.x, nextTile.y)) {
-      return { ...g, ...wrapIfNeeded(maze, next), dir };
-    }
-    return { ...g, dir };
+    const nextTile = toTile(next);
+    const canGhostWrap = dir.y === 0 && isTunnel(maze, tilePos.x, tilePos.y) && (nextTile.x < 0 || nextTile.x >= state.width);
+    const moved = canGhostWrap || canMove(maze, nextTile.x, nextTile.y) ? wrapIfNeeded(maze, next) : alignToCenter(ghost);
+    const atSpawn = tileDistance(toTile(moved), state.spawns.ghosts[ghost.name]) === 0;
+
+    return {
+      ...ghost,
+      x: moved.x,
+      y: moved.y,
+      dir,
+      state: ghost.state === 'eaten' && atSpawn ? 'active' : state.mode === 'fright' ? ghost.state === 'active' ? 'frightened' : ghost.state : ghost.state === 'frightened' ? 'active' : ghost.state,
+    };
   });
 
-  const pacTileCheck = { x: Math.floor(pac.x), y: Math.floor(pac.y) };
-  ghosts.forEach((g) => {
-    if (Math.floor(g.x) === pacTileCheck.x && Math.floor(g.y) === pacTileCheck.y) {
-      if (state.frightenedTimer > 0) {
-        const comboMultiplier = Math.pow(2, state.frightenedCombo);
-        state.score += 200 * comboMultiplier;
-        state.frightenedCombo = Math.min(state.frightenedCombo + 1, 3);
-        events.ghostEaten = g.name;
-        const spawn = state.spawns.ghosts[g.name];
-        g.x = spawn.x + 0.5;
-        g.y = spawn.y + 0.5;
-        g.dir = { x: 0, y: -1 };
-      } else {
-        pac.lives -= 1;
-        events.lifeLost = true;
-        if (pac.lives <= 0) {
-          state.status = 'gameover';
-          events.gameOver = true;
-        } else {
-          pac.x = state.spawns.pac.x + 0.5;
-          pac.y = state.spawns.pac.y + 0.5;
-          pac.dir = { x: 0, y: 0 };
-          pac.nextDir = { x: 0, y: 0 };
-          ghosts = ghosts.map((ghost) => ({
-            ...ghost,
-            x: state.spawns.ghosts[ghost.name].x + 0.5,
-            y: state.spawns.ghosts[ghost.name].y + 0.5,
-            dir: { x: 0, y: -1 },
-          }));
-          state.modeIndex = 0;
-          state.modeTimer = options.scatterChaseSchedule[0]?.duration ?? 0;
-          state.frightenedTimer = 0;
-        }
-      }
-    }
-  });
+  for (const ghost of state.ghosts) {
+    const tileCollision = toTile(ghost).x === pacCell.x && toTile(ghost).y === pacCell.y;
+    if (!tileCollision && !near(ghost, state.pac)) continue;
 
-  if (!state.fruit.active && levelFruitTimeReached(state)) {
+    if (ghost.state === 'frightened' || state.mode === 'fright') {
+      const comboMultiplier = 2 ** state.frightenedCombo;
+      state.score += 200 * comboMultiplier;
+      state.frightenedCombo = Math.min(state.frightenedCombo + 1, 3);
+      ghost.state = 'eaten';
+      events.ghostEaten = ghost.name;
+    } else if (ghost.state !== 'eaten') {
+      state.pac.lives -= 1;
+      events.lifeLost = true;
+      state.status = 'dead';
+      state.deathTimer = options.deathDuration ?? 1;
+      break;
+    }
+  }
+
+  if (shouldSpawnFruit(state)) {
     state.fruit.active = true;
     state.fruit.timer = options.fruitDuration;
   }
 
   if (state.fruit.active) {
-    state.fruit.timer -= dt;
-    if (pacTileCheck.x === state.fruit.x && pacTileCheck.y === state.fruit.y) {
+    state.fruit.timer = Math.max(0, state.fruit.timer - delta);
+    if (pacCell.x === state.fruit.x && pacCell.y === state.fruit.y) {
+      state.score += fruitScoreForLevel(options.levelIndex);
       state.fruit.active = false;
-      state.score += 100;
       events.fruit = true;
-    } else if (state.fruit.timer <= 0) {
+    } else if (state.fruit.timer === 0) {
       state.fruit.active = false;
     }
   }
 
-  if (state.pelletsRemaining <= 0 && state.status === 'playing') {
+  if (state.pelletsRemaining <= 0) {
     state.status = 'complete';
     events.levelComplete = true;
   }
 
-  return {
-    state: {
-      ...state,
-      pac,
-      ghosts,
-    },
-    events,
-  };
-};
-
-const levelFruitTimeReached = (state: GameState) => {
-  const level = state.levelTime;
-  const index = state.nextFruitIndex;
-  const levelTimes = state.fruitTimes;
-  if (!levelTimes || index >= levelTimes.length) return false;
-  if (level >= levelTimes[index]) {
-    state.nextFruitIndex += 1;
-    return true;
-  }
-  return false;
+  return { state, events };
 };

@@ -1,176 +1,175 @@
-import { createInitialState, step, canMove } from '../apps/pacman/engine';
+import { canMove, createInitialState, findScatterCorners, step, targetTileForGhost } from '../apps/pacman/engine';
 import type { EngineOptions } from '../apps/pacman/engine';
 import type { LevelDefinition } from '../apps/pacman/types';
 
 const baseLevel: LevelDefinition = {
+  name: 'Base',
   maze: [
     [1,1,1,1,1],
-    [1,2,0,2,1],
-    [1,0,0,0,1],
-    [1,2,0,2,1],
+    [0,2,0,2,0],
+    [0,0,3,0,0],
+    [0,2,0,2,0],
     [1,1,1,1,1],
   ],
-  fruit: { x: 2, y: 2 },
-  fruitTimes: [1],
+  pacStart: { x: 1, y: 1 },
+  ghostStart: { x: 4, y: 1 },
+  fruit: { x: 4, y: 1 },
+  fruitTimes: [100],
 };
 
-const baseOptions: EngineOptions = {
+const options: EngineOptions = {
   speedMultiplier: 1,
-  pacSpeed: 2,
-  ghostSpeeds: { scatter: 1.5, chase: 2 },
+  pacSpeed: 3,
+  ghostSpeeds: { scatter: 2, chase: 2.2 },
   tunnelSpeed: 0.7,
-  frightenedDuration: 6,
+  frightenedDuration: 3,
   scatterChaseSchedule: [
     { mode: 'scatter', duration: 1 },
     { mode: 'chase', duration: 2 },
   ],
-  randomModeLevel: 2,
-  levelIndex: 0,
+  randomModeLevel: 0,
+  levelIndex: 1,
   fruitDuration: 2,
-  turnTolerance: 0.2,
-  random: () => 0.3,
+  turnTolerance: 0.22,
+  readyDuration: 0,
+  deathDuration: 0.2,
+  random: () => 0,
 };
+
+const ready = (state: ReturnType<typeof createInitialState>) => step(state, {}, 0.1, options).state;
 
 describe('pacman engine', () => {
   it('blocks movement through walls', () => {
-    const level = {
-      ...baseLevel,
-      maze: [
-        [1,1,1],
-        [1,2,1],
-        [1,1,1],
-      ],
-    };
-    const state = createInitialState(level, baseOptions);
-    state.pac.dir = { x: 1, y: 0 };
-    expect(canMove(level.maze, 2, 1)).toBe(false);
-    const result = step(state, {}, 0.5, baseOptions);
-    expect(result.state.pac.x).toBeCloseTo(state.pac.x, 2);
-    expect(result.state.pac.dir).toEqual({ x: 0, y: 0 });
-  });
-
-  it('collects pellets and updates score', () => {
-    const state = createInitialState(baseLevel, baseOptions);
-    const result = step(state, {}, 0.1, baseOptions);
-    expect(result.state.score).toBe(10);
-    expect(result.state.pelletsRemaining).toBe(
-      baseLevel.maze.flat().filter((t) => t === 2 || t === 3).length - 1,
-    );
-  });
-
-  it('energizer sets frightened mode timer', () => {
-    const level = {
-      ...baseLevel,
-      maze: [
-        [1,1,1],
-        [1,3,1],
-        [1,1,1],
-      ],
-    };
-    const state = createInitialState(level, baseOptions);
-    const result = step(state, {}, 0.1, baseOptions);
-    expect(result.state.frightenedTimer).toBeCloseTo(
-      baseOptions.frightenedDuration - 0.1,
-      2,
-    );
-    expect(result.state.mode).toBe('fright');
-  });
-
-  it('handles ghost collisions in normal and frightened modes', () => {
-    const state = createInitialState(baseLevel, baseOptions);
-    state.pac.lives = 1;
-    state.ghosts[0].x = state.pac.x;
-    state.ghosts[0].y = state.pac.y;
-    const result = step(state, {}, 0.1, baseOptions);
-    expect(result.state.status).toBe('gameover');
-
-    const frightened = createInitialState(baseLevel, baseOptions);
-    frightened.frightenedTimer = 2;
-    frightened.ghosts.forEach((ghost, index) => {
-      if (index === 0) {
-        ghost.x = frightened.pac.x;
-        ghost.y = frightened.pac.y;
-      } else {
-        ghost.x = frightened.pac.x + 1;
-        ghost.y = frightened.pac.y + 1;
-      }
-    });
-    const resultFright = step(frightened, {}, 0.1, baseOptions);
-    expect(resultFright.state.score).toBeGreaterThanOrEqual(200);
-    expect(resultFright.state.ghosts[0].x).toBeCloseTo(
-      frightened.spawns.ghosts.blinky.x + 0.5,
-      2,
-    );
-  });
-
-  it('scales ghost scores during frightened combos', () => {
-    const state = createInitialState(baseLevel, baseOptions);
-    state.frightenedTimer = 2;
-    state.ghosts[0].x = state.pac.x;
-    state.ghosts[0].y = state.pac.y;
-    const first = step(state, {}, 0.1, baseOptions);
-    expect(first.state.score).toBeGreaterThanOrEqual(200);
-
-    const comboState = {
-      ...first.state,
-      pac: { ...first.state.pac, x: first.state.ghosts[1].x, y: first.state.ghosts[1].y },
-    };
-    const second = step(comboState, {}, 0.1, baseOptions);
-    expect(second.state.score).toBeGreaterThan(first.state.score);
-  });
-
-  it('transitions between scatter and chase on schedule', () => {
-    const options: EngineOptions = {
-      ...baseOptions,
-      scatterChaseSchedule: [
-        { mode: 'scatter', duration: 0.5 },
-        { mode: 'chase', duration: 0.5 },
-      ],
-    };
-    const state = createInitialState(baseLevel, options);
-    const result = step(state, {}, 0.6, options);
-    expect(result.state.mode).toBe('chase');
-    const next = step(result.state, {}, 0.6, options);
-    expect(next.state.mode).toBe('chase');
-  });
-
-  it('snaps pacman to the tile center when blocked to avoid wall lock', () => {
     const level: LevelDefinition = {
       maze: [
         [1,1,1],
         [1,2,1],
-        [1,2,1],
         [1,1,1],
       ],
-      fruit: { x: 1, y: 2 },
-      fruitTimes: [],
       pacStart: { x: 1, y: 1 },
+      ghostStart: { x: 1, y: 1 },
     };
-    const state = createInitialState(level, baseOptions);
+    const state = ready(createInitialState(level, options));
     state.pac.dir = { x: 1, y: 0 };
-
-    const blocked = step(state, {}, 0.4, baseOptions);
-    expect(blocked.state.pac.dir).toEqual({ x: 0, y: 0 });
-    expect(blocked.state.pac.x).toBeCloseTo(1.5, 2);
-    expect(blocked.state.pac.y).toBeCloseTo(1.5, 2);
-
-    const turned = step(blocked.state, { direction: { x: 0, y: 1 } }, 0.4, baseOptions);
-    expect(turned.state.pac.dir).toEqual({ x: 0, y: 1 });
-    expect(turned.state.pac.y).toBeGreaterThan(1.5);
+    expect(canMove(level.maze, 2, 1)).toBe(false);
+    expect(step(state, {}, 0.2, options).state.pac.dir).toEqual({ x: 0, y: 0 });
   });
 
-  it('reverses ghosts when the mode changes', () => {
-    const options: EngineOptions = {
-      ...baseOptions,
-      scatterChaseSchedule: [
-        { mode: 'scatter', duration: 0.01 },
-        { mode: 'chase', duration: 1 },
+  it('pellet consumption updates score and pellet count', () => {
+    const state = ready(createInitialState(baseLevel, options));
+    const result = step(state, {}, 0.1, options);
+    expect(result.state.score).toBe(10);
+    expect(result.state.pelletsRemaining).toBe(baseLevel.maze.flat().filter((tile) => tile === 2 || tile === 3).length - 1);
+    expect(result.events.pellet).toBe(true);
+  });
+
+  it('energizer triggers frightened state and resets combo', () => {
+    const level: LevelDefinition = {
+      maze: [
+        [0,0,0],
+        [0,3,0],
+        [0,0,0],
       ],
+      pacStart: { x: 1, y: 1 },
+      ghostStart: { x: 0, y: 0 },
     };
-    const state = createInitialState(baseLevel, options);
-    state.ghosts[0].dir = { x: 1, y: 0 };
-    const result = step(state, {}, 0.02, options);
-    expect(result.state.mode).toBe('chase');
-    expect(result.state.ghosts[0].dir).not.toEqual({ x: 1, y: 0 });
+    const state = ready(createInitialState(level, options));
+    state.frightenedCombo = 2;
+    const result = step(state, {}, 0.01, options);
+    expect(result.state.mode).toBe('fright');
+    expect(result.state.frightenedCombo).toBe(0);
+    expect(result.events.energizer).toBe(true);
+  });
+
+  it('ghost eaten scoring sequence increments properly', () => {
+    const state = ready(createInitialState(baseLevel, options));
+    state.frightenedTimer = 2;
+    state.mode = 'fright';
+    state.ghosts.forEach((ghost, index) => {
+      ghost.x = 3.5 + index;
+      ghost.y = 1.5;
+      ghost.state = 'frightened';
+    });
+
+    const increments: number[] = [];
+    for (let i = 0; i < 4; i += 1) {
+      const ghost = state.ghosts[i];
+      state.pac.x = ghost.x;
+      state.pac.y = ghost.y;
+      const before = state.score;
+      step(state, {}, 0.01, options);
+      increments.push(state.score - before);
+    }
+
+    expect(increments).toEqual([210, 400, 800, 1600]);
+  });
+
+  it('life loss decrements lives and reaches game over at zero', () => {
+    const state = ready(createInitialState(baseLevel, options));
+    state.pac.lives = 1;
+    state.ghosts[0].x = state.pac.x;
+    state.ghosts[0].y = state.pac.y;
+    const first = step(state, {}, 0.01, options);
+    expect(first.events.lifeLost).toBe(true);
+
+    const second = step(first.state, {}, 0.2, options);
+    const third = step(second.state, {}, 0.2, options);
+    expect(third.state.status).toBe('gameover');
+  });
+
+  it('tunnel wrap works at left and right edges', () => {
+    const level: LevelDefinition = {
+      maze: [
+        [1,1,1,1,1],
+        [0,2,0,0,0],
+        [1,1,1,1,1],
+      ],
+      pacStart: { x: 0, y: 1 },
+      ghostStart: { x: 2, y: 1 },
+    };
+    const state = ready(createInitialState(level, options));
+    state.pac.dir = { x: -1, y: 0 };
+    step(state, {}, 0.2, options);
+    step(state, {}, 0.2, options);
+    step(state, {}, 0.2, options);
+    expect(state.pac.x).toBeGreaterThan(3);
+
+    state.pac.dir = { x: 1, y: 0 };
+    state.pac.x = 4.6;
+    step(state, {}, 0.2, options);
+    expect(state.pac.x).toBeLessThan(1);
+  });
+
+  it('target tile functions include Pinky and Inky upward quirk', () => {
+    const state = ready(createInitialState(baseLevel, options));
+    state.pac.dir = { x: 0, y: -1 };
+    const corners = findScatterCorners(state.width, state.height);
+    const pinky = state.ghosts.find((ghost) => ghost.name === 'pinky');
+    const inky = state.ghosts.find((ghost) => ghost.name === 'inky');
+    expect(pinky).toBeDefined();
+    expect(inky).toBeDefined();
+
+    const pinkyTarget = targetTileForGhost(pinky!, state.pac, state.ghosts, corners);
+    const inkyTarget = targetTileForGhost(inky!, state.pac, state.ghosts, corners);
+    expect(pinkyTarget.x).toBeLessThan(Math.floor(state.pac.x));
+    expect(pinkyTarget.y).toBeLessThan(Math.floor(state.pac.y));
+    expect(inkyTarget.x).toBeLessThan(Math.floor(state.pac.x));
+    expect(inkyTarget.y).toBeLessThan(Math.floor(state.pac.y));
+  });
+
+  it('supports deterministic frightened movement from injected RNG', () => {
+    const deterministic: EngineOptions = {
+      ...options,
+      randomModeLevel: 5,
+      levelIndex: 0,
+      random: () => 0.75,
+    };
+    const state = ready(createInitialState(baseLevel, deterministic));
+    state.mode = 'fright';
+    state.frightenedTimer = 2;
+    state.ghosts[0].state = 'frightened';
+    const before = { ...state.ghosts[0].dir };
+    step(state, {}, 0.1, deterministic);
+    expect(state.ghosts[0].dir).not.toEqual(before);
   });
 });
