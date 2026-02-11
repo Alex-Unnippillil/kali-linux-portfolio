@@ -16,13 +16,15 @@ interface Instruction {
 
 export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   "2048": {
-    objective: "Reach the 2048 tile by merging numbers.",
-    controls: "Use the arrow keys to slide and combine tiles.",
+    objective: "Reach the 2048 tile by merging numbers and continue past it if you choose.",
+    controls: "Use arrow keys to slide tiles. U/Backspace undoes (limited), R starts a new game, and choose Keep going after 2048 to continue.",
     actions: {
       up: "ArrowUp",
       down: "ArrowDown",
       left: "ArrowLeft",
       right: "ArrowRight",
+      undo: "u",
+      restart: "r",
     },
   },
   asteroids: {
