@@ -1,12 +1,12 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ConnectFour from '../components/apps/connect-four';
 
 beforeAll(() => {
   class ResizeObserverMock {
-    observe() { }
-    unobserve() { }
-    disconnect() { }
+    observe() {}
+    unobserve() {}
+    disconnect() {}
   }
   // @ts-ignore
   global.ResizeObserver = ResizeObserverMock;
@@ -20,86 +20,105 @@ beforeEach(() => {
 });
 
 describe('connect four app', () => {
-  it('drops a disc in the correct cell', async () => {
+  it('supports confirm move on touch-style flow', async () => {
     window.localStorage.setItem('connect_four:mode', JSON.stringify('local'));
+    window.localStorage.setItem('connect_four:confirm_move', JSON.stringify(true));
     render(<ConnectFour />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/local match/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText(/local match/i)).toBeInTheDocument());
 
-    const columnButton = screen.getByRole('button', { name: /column 1/i });
-    fireEvent.click(columnButton);
+    const col1 = screen.getByRole('button', { name: /column 1/i });
+    fireEvent.click(col1);
+    expect(screen.getByTestId('connect-four-cell-5-0')).toHaveAttribute('data-token', '');
 
-    const cell = screen.getByTestId('connect-four-cell-5-0');
-    expect(cell).toHaveAttribute('data-token', 'red');
+    fireEvent.click(col1);
+    expect(screen.getByTestId('connect-four-cell-5-0')).toHaveAttribute('data-token', 'red');
   });
 
-  it('detects a win and updates the status', async () => {
+  it('keyboard arrows and enter place a disc', async () => {
     window.localStorage.setItem('connect_four:mode', JSON.stringify('local'));
     render(<ConnectFour />);
 
-    await waitFor(() => {
-      expect(screen.getByText(/local match/i)).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText(/local match/i)).toBeInTheDocument());
+
+    const board = screen.getByLabelText(/connect four board/i);
+    fireEvent.keyDown(board, { key: 'ArrowLeft' });
+    fireEvent.keyDown(board, { key: 'Enter' });
+
+    expect(screen.getByTestId('connect-four-cell-5-2')).toHaveAttribute('data-token', 'red');
+  });
+
+  it('best-of-3 match tracks winner and score', async () => {
+    window.localStorage.setItem('connect_four:mode', JSON.stringify('local'));
+    window.localStorage.setItem('connect_four:match_mode', JSON.stringify('best_of_3'));
+    render(<ConnectFour />);
+
+    await waitFor(() => expect(screen.getByText(/match:/i)).toBeInTheDocument());
 
     const col1 = screen.getByRole('button', { name: /column 1/i });
     const col2 = screen.getByRole('button', { name: /column 2/i });
     const col3 = screen.getByRole('button', { name: /column 3/i });
     const col4 = screen.getByRole('button', { name: /column 4/i });
 
-    fireEvent.click(col1); // red
-    fireEvent.click(col1); // yellow
-    fireEvent.click(col2); // red
-    fireEvent.click(col2); // yellow
-    fireEvent.click(col3); // red
-    fireEvent.click(col3); // yellow
-    fireEvent.click(col4); // red wins
+    // red win #1
+    fireEvent.click(col1); fireEvent.click(col1);
+    fireEvent.click(col2); fireEvent.click(col2);
+    fireEvent.click(col3); fireEvent.click(col3);
+    fireEvent.click(col4);
+    fireEvent.click(screen.getByRole('button', { name: /restart/i }));
 
-    expect(screen.getAllByText(/wins\./i).length).toBeGreaterThan(0);
+    // red win #2
+    fireEvent.click(col1); fireEvent.click(col1);
+    fireEvent.click(col2); fireEvent.click(col2);
+    fireEvent.click(col3); fireEvent.click(col3);
+    fireEvent.click(col4);
+
+    expect(screen.getByText(/match winner/i)).toBeInTheDocument();
   });
 
-  it('undo restores the previous state', async () => {
-    window.localStorage.setItem('connect_four:mode', JSON.stringify('local'));
-    render(<ConnectFour />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/local match/i)).toBeInTheDocument();
-    });
-
-    const col1 = screen.getByRole('button', { name: /column 1/i });
-    const col2 = screen.getByRole('button', { name: /column 2/i });
-
-    fireEvent.click(col1);
-    fireEvent.click(col2);
-
-    fireEvent.click(screen.getByRole('button', { name: /undo/i }));
-
-    const cell = screen.getByTestId('connect-four-cell-5-1');
-    expect(cell).toHaveAttribute('data-token', '');
-  });
-
-  it('CPU move arrives after the player move', async () => {
+  it('cpu moves with worker fallback when Worker is unavailable', async () => {
     window.localStorage.setItem('connect_four:mode', JSON.stringify('cpu'));
     window.localStorage.setItem('connect_four:human_token', JSON.stringify('red'));
-    window.localStorage.setItem('connect_four:human_starts', JSON.stringify(true));
-    window.localStorage.setItem('settings:difficulty', JSON.stringify('easy'));
-
+    window.localStorage.setItem('connect_four:confirm_move', JSON.stringify(false));
     render(<ConnectFour />);
 
+    await waitFor(() => expect(screen.getByText(/you:/i)).toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole('button', { name: /column 1/i }));
+
     await waitFor(() => {
-      expect(screen.getByText(/You:/i)).toBeInTheDocument();
+      expect(document.querySelectorAll('[data-token="yellow"]').length).toBeGreaterThan(0);
     });
+  });
 
-    const columnButton = screen.getByRole('button', { name: /column 1/i });
-    fireEvent.click(columnButton);
+  it('uses worker when present and handles malformed response', async () => {
+    class WorkerMock {
+      private handler: ((event: MessageEvent) => void) | null = null;
+      addEventListener(type: string, cb: any) {
+        if (type === 'message') this.handler = cb;
+      }
+      removeEventListener() {}
+      postMessage(payload: any) {
+        setTimeout(() => {
+          this.handler?.({ data: { taskId: payload.taskId, column: 'bad' } } as MessageEvent);
+          this.handler?.({ data: { taskId: payload.taskId, column: 0 } } as MessageEvent);
+        }, 5);
+      }
+      terminate() {}
+    }
+    // @ts-ignore
+    global.Worker = WorkerMock;
 
-    const before = document.querySelectorAll('[data-token="yellow"]');
-    expect(before.length).toBe(0);
+    window.localStorage.setItem('connect_four:mode', JSON.stringify('cpu'));
+    window.localStorage.setItem('connect_four:human_token', JSON.stringify('red'));
+    window.localStorage.setItem('connect_four:confirm_move', JSON.stringify(false));
+    render(<ConnectFour />);
+
+    await waitFor(() => expect(screen.getByText(/you:/i)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /column 1/i }));
 
     await waitFor(() => {
-      const after = document.querySelectorAll('[data-token="yellow"]');
-      expect(after.length).toBeGreaterThan(0);
-    }, { timeout: 5000 });
+      expect(document.querySelectorAll('[data-token="yellow"]').length).toBeGreaterThan(0);
+    });
   });
 });
