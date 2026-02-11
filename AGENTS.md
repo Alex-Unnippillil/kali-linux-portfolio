@@ -166,6 +166,55 @@ npx playwright test   # E2E, if tooling is available locally
 
 ---
 
+## 13. Polish pass protocol (final-touch optimization)
+
+When an issue asks for "polish", "final touches", or "overall UX improvements", treat the work as a focused finishing pass
+instead of broad refactoring. Use this sequence:
+
+1. **Visual consistency audit**
+   * Normalize spacing, alignment, icon sizing, and typography across dock, launcher, top bar, and app windows.
+   * Reuse existing Tailwind tokens and component patterns before adding new classes.
+2. **Layout resilience audit**
+   * Validate desktop shell behavior at common breakpoints (mobile landscape, tablet, laptop, ultrawide).
+   * Confirm windows never render unreachable controls (close/minimize/maximize) and avoid off-screen spawn positions.
+3. **Interaction quality audit**
+   * Tighten drag/resize affordances, hover states, loading states, and empty states.
+   * Ensure keyboard and pointer interactions are equivalent for menus, launcher search, and core app switching.
+4. **Performance and reliability audit**
+   * Prefer memoization/state-scope fixes over adding new dependencies.
+   * Verify static export fallback behavior for anything that can touch `/api/*`.
+
+Keep each polish PR scoped to user-perceivable improvements with measurable outcomes (for example, reduced overlap bugs,
+improved keyboard traversal, or cleaner responsive alignment).
+
+---
+
+## 14. Next-priority feature backlog for AI agents
+
+If no explicit roadmap item is provided, prioritize these features in order:
+
+1. **Desktop UX finishing work**
+   * Snap-to-grid or edge-aware window placement.
+   * Better z-index/focus recovery when many windows are open.
+   * Persisted per-app window bounds with safe reset behavior.
+2. **Navigation and discoverability upgrades**
+   * Faster launcher search relevance (aliases, tags, recent apps).
+   * Quick actions from dock/context menus (open new window, pin/unpin, recent).
+   * Clear onboarding hint layer that can be dismissed and remembered.
+3. **App quality and content depth**
+   * Expand educational copy in simulated security apps (what it demonstrates, what it does *not* do).
+   * Add deterministic demo datasets and richer empty/error states.
+   * Improve shared app chrome consistency (titles, action buttons, status text).
+4. **Trust, accessibility, and platform fit**
+   * Full keyboard parity for desktop shell flows.
+   * ARIA and focus-visible improvements for all interactive controls.
+   * Performance cleanup for drag/move/resize hot paths and animation jank.
+
+For any backlog item implemented, include before/after screenshots (when UI-facing), note feature flags touched, and confirm
+behavior in both serverful and static-export modes.
+
+---
+
 ## Appendix A — Directory map (high level)
 
 * `.github/workflows/` — CI including Pages export pipeline.
