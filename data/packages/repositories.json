@@ -1,0 +1,58 @@
+[
+  {
+    "id": "kali-official",
+    "name": "Kali Linux Rolling",
+    "description": "Primary Kali repository with rolling updates.",
+    "url": "https://http.kali.org/kali",
+    "enabled": true,
+    "signature": {
+      "status": "trusted",
+      "summary": "Release file matches the Kali Linux master signing key.",
+      "authority": "Kali Linux Master Signing Key <devel@kali.org>",
+      "fingerprint": "44C6 2D72 1A2B 3C4D 5E6F 7890 1234 5678 90AB CDEF",
+      "lastChecked": "2024-05-12T16:24:00Z"
+    }
+  },
+  {
+    "id": "kali-experimental",
+    "name": "Kali Experimental",
+    "description": "Bleeding edge packages for testing and preview.",
+    "url": "https://http.kali.org/kali-experimental",
+    "enabled": false,
+    "signature": {
+      "status": "warning",
+      "summary": "Signature valid but key expires in less than 30 days.",
+      "authority": "Kali Linux Experimental Signing Key",
+      "fingerprint": "9F1C 4A52 B6E9 F3A2 3C78 1920 FA02 89D4 7701 33AE",
+      "lastChecked": "2024-05-08T11:05:00Z"
+    }
+  },
+  {
+    "id": "community-tools",
+    "name": "Community Tools",
+    "description": "Community maintained utilities and wordlists.",
+    "url": "https://packages.example.org/community",
+    "enabled": true,
+    "signature": {
+      "status": "unsigned",
+      "summary": "Repository served without Release.gpg signature.",
+      "authority": "Unverified",
+      "fingerprint": "N/A",
+      "lastChecked": "2024-05-10T09:45:00Z"
+    }
+  },
+  {
+    "id": "archive-mirror",
+    "name": "Archive Mirror",
+    "description": "Frozen snapshot for forensic reproducibility.",
+    "url": "https://archive.example.org/kali-2023",
+    "enabled": false,
+    "signature": {
+      "status": "revoked",
+      "summary": "Signing key revoked 2024-03-02. Keep disabled.",
+      "authority": "Kali Legacy Signing Key",
+      "fingerprint": "D2AA 1090 7D23 0A8B 5F9C 2210 01F0 43B2 4C1D AABB",
+      "lastChecked": "2024-04-29T07:10:00Z"
+    }
+  }
+]
