@@ -96,7 +96,6 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       count -= 1;
       if (count <= 0) {
         clearInterval(timer);
-        pushHistory(items);
         setItems([]);
         setSelected(null);
         setEmptyCountdown(null);
@@ -109,14 +108,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
 
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (selected === null) return;
-    if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (e.key === 'Delete') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        purge();
+      } else {
+        remove();
+      }
+    } else if (e.key === 'Backspace') {
       e.preventDefault();
       remove();
     } else if (e.key === 'Enter' || e.key.toLowerCase() === 'r') {
       e.preventDefault();
       restore();
     }
-  }, [selected, remove, restore]);
+  }, [selected, remove, purge, restore]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKey);
