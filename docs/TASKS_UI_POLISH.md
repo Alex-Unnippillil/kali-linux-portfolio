@@ -115,8 +115,9 @@ This document tracks UI polish tasks for the Kali/Ubuntu inspired desktop experi
     - **Where:** desktop and lock components.
 
 27. **Iconography pass**
-    - **Accept:** SVG icons normalized to common grid (e.g., 24 or 32), consistent stroke widths.
-    - **Where:** `public/images/*`.
+    - **Accept:** SVG icons normalized to a 24 px grid with a consistent 1.5 px stroke; shapes land on the pixel grid to avoid blur.
+    - **How:** Use the shared helpers in `components/icons/IconBase.tsx` and keep decorative glyphs `aria-hidden`.
+    - **Where:** `components/icons/*`, `public/images/*`.
 
 28. **Hover and pressed states**
     - **Accept:** Dock tiles, app grid, buttons have clear hover and pressed; 100–150 ms ease out.
