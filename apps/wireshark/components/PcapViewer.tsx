@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
@@ -246,6 +246,9 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const cancelRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -272,21 +275,158 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.history.replaceState(null, '', url.toString());
   }, [filter]);
 
+  const loadStream = async (stream: ReadableStream<Uint8Array>, size: number) => {
+    setPackets([]);
+    setSelected(null);
+    setLoading(true);
+    setProgress(0);
+    let cancelled = false;
+    const reader = stream.getReader();
+    cancelRef.current = () => {
+      cancelled = true;
+      reader.cancel();
+      setLoading(false);
+      setProgress(0);
+    };
+
+    let buffer = new Uint8Array(0);
+    let bytesRead = 0;
+    let format: 'pcap' | 'pcapng' | null = null;
+    let little = true;
+    let headerParsed = false;
+    const ifaces: { tsres: number }[] = [];
+
+    while (!cancelled) {
+      const { value, done } = await reader.read();
+      if (value) {
+        bytesRead += value.length;
+        const tmp = new Uint8Array(buffer.length + value.length);
+        tmp.set(buffer);
+        tmp.set(value, buffer.length);
+        buffer = tmp;
+        const view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+        let offset = 0;
+        if (!format && buffer.length >= 4) {
+          const magic = view.getUint32(0, false);
+          if (magic === 0x0a0d0d0a) {
+            format = 'pcapng';
+          } else if (magic === 0xa1b2c3d4) {
+            format = 'pcap';
+            little = false;
+          } else if (magic === 0xd4c3b2a1) {
+            format = 'pcap';
+            little = true;
+          } else {
+            throw new Error('Unsupported pcap format');
+          }
+        }
+
+        if (format === 'pcap') {
+          if (!headerParsed) {
+            if (buffer.length < 24) {
+              setProgress(size ? (bytesRead / size) * 100 : 0);
+              continue;
+            }
+            offset = 24;
+            headerParsed = true;
+          }
+          while (offset + 16 <= buffer.length) {
+            const tsSec = view.getUint32(offset, little);
+            const tsUsec = view.getUint32(offset + 4, little);
+            const capLen = view.getUint32(offset + 8, little);
+            const origLen = view.getUint32(offset + 12, little);
+            if (offset + 16 + capLen > buffer.length) break;
+            const data = buffer.slice(offset + 16, offset + 16 + capLen);
+            const meta: any = parseEthernetIpv4(data);
+            setPackets((pkts) => [
+              ...pkts,
+              {
+                timestamp: `${tsSec}.${tsUsec.toString().padStart(6, '0')}`,
+                src: meta.src,
+                dest: meta.dest,
+                protocol: meta.protocol,
+                info: meta.info || `len=${origLen}`,
+                sport: meta.sport,
+                dport: meta.dport,
+                data,
+              },
+            ]);
+            offset += 16 + capLen;
+          }
+          buffer = buffer.slice(offset);
+        } else if (format === 'pcapng') {
+          while (offset + 8 <= buffer.length) {
+            let blockType = view.getUint32(offset, little);
+            let blockLen = view.getUint32(offset + 4, little);
+            if (offset + blockLen > buffer.length) break;
+            if (blockType === 0x0a0d0d0a) {
+              const bom = view.getUint32(offset + 8, true);
+              if (bom === 0x1a2b3c4d) little = true;
+              else if (bom === 0x4d3c2b1a) little = false;
+              blockLen = view.getUint32(offset + 4, little);
+            } else if (blockType === 0x00000001) {
+              let tsres = 1e-6;
+              let optOffset = offset + 20;
+              while (optOffset + 4 <= offset + blockLen - 4) {
+                const optCode = view.getUint16(optOffset, little);
+                const optLen = view.getUint16(optOffset + 2, little);
+                optOffset += 4;
+                if (optCode === 9 && optLen === 1) {
+                  const val = view.getUint8(optOffset);
+                  tsres = val & 0x80 ? 2 ** -(val & 0x7f) : 10 ** -val;
+                }
+                optOffset += optLen;
+                optOffset = (optOffset + 3) & ~3;
+                if (optCode === 0) break;
+              }
+              ifaces.push({ tsres });
+            } else if (blockType === 0x00000006) {
+              const ifaceId = view.getUint32(offset + 8, little);
+              const tsHigh = view.getUint32(offset + 12, little);
+              const tsLow = view.getUint32(offset + 16, little);
+              const capLen = view.getUint32(offset + 20, little);
+              const dataStart = offset + 28;
+              const data = buffer.slice(dataStart, dataStart + capLen);
+              const meta: any = parseEthernetIpv4(data);
+              const res = ifaces[ifaceId]?.tsres ?? 1e-6;
+              const timestamp = ((tsHigh * 2 ** 32 + tsLow) * res).toFixed(6);
+              setPackets((pkts) => [
+                ...pkts,
+                {
+                  timestamp,
+                  src: meta.src,
+                  dest: meta.dest,
+                  protocol: meta.protocol,
+                  info: meta.info || `len=${capLen}`,
+                  sport: meta.sport,
+                  dport: meta.dport,
+                  data,
+                },
+              ]);
+            }
+            offset += blockLen;
+          }
+          buffer = buffer.slice(offset);
+        }
+      }
+      setProgress(size ? (bytesRead / size) * 100 : 0);
+      if (done) break;
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    setLoading(false);
+  };
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const buf = await file.arrayBuffer();
-    const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
-    setSelected(null);
+    await loadStream(file.stream(), file.size);
   };
 
   const handleSample = async (path: string) => {
     const res = await fetch(path);
-    const buf = await res.arrayBuffer();
-    const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
-    setSelected(null);
+    if (!res.body) return;
+    const size = Number(res.headers.get('content-length')) || 0;
+    await loadStream(res.body, size);
   };
 
   const filtered = packets.filter((p) => {
@@ -332,6 +472,23 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           Sample sources
         </a>
       </div>
+      {loading && (
+        <div className="flex items-center space-x-2">
+          <div className="flex-1 h-2 bg-gray-700 rounded">
+            <div
+              className="h-2 bg-blue-600 rounded"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <button
+            onClick={() => cancelRef.current()}
+            className="px-2 py-1 bg-red-700 rounded text-xs"
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
