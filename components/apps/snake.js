@@ -27,8 +27,9 @@ const MAX_QUEUE = 3;
 const BOARD_SIZE = GRID_SIZE * CELL_SIZE;
 const POWER_UP_STYLES = {
   bonus: { color: '#f59e0b', label: 'B', glow: 'rgba(245,158,11,0.55)' },
-  slow: { color: '#60a5fa', label: 'S', glow: 'rgba(96,165,250,0.55)' },
+  phase: { color: '#22d3ee', label: 'Φ', glow: 'rgba(34,211,238,0.6)' },
   shield: { color: '#c084fc', label: '⛨', glow: 'rgba(192,132,252,0.55)' },
+  feast: { color: '#fb7185', label: '+2', glow: 'rgba(251,113,133,0.55)' },
 };
 const SKINS = {
   classic: {
@@ -184,6 +185,8 @@ const Snake = ({ windowMeta } = {}) => {
   const pointsRef = useRef(initialStateRef.current.points || 0);
   const foodsRef = useRef(initialStateRef.current.foodsEaten || 0);
   const shieldsRef = useRef(initialStateRef.current.shieldCharges || 0);
+  const growthRef = useRef(initialStateRef.current.pendingGrowth || 0);
+  const phaseTicksRef = useRef(initialStateRef.current.phaseTicks || 0);
   const audioCtx = useRef(null);
   const haptics = useGameHaptics();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -220,6 +223,10 @@ const Snake = ({ windowMeta } = {}) => {
   const [shieldCharges, setShieldCharges] = useState(
     initialStateRef.current.shieldCharges || 0,
   );
+  const [pendingGrowth, setPendingGrowth] = useState(
+    initialStateRef.current.pendingGrowth || 0,
+  );
+  const [phaseTicks, setPhaseTicks] = useState(initialStateRef.current.phaseTicks || 0);
   const [gameOver, setGameOver] = useState(false);
   const [won, setWon] = useState(false);
   const [highScore, setHighScore] = usePersistentState(
@@ -228,7 +235,6 @@ const Snake = ({ windowMeta } = {}) => {
     (v) => typeof v === 'number',
   );
   const speedRef = useRef(baseSpeed);
-  const slowEffectTicksRef = useRef(0);
   const {
     save: saveReplay,
     load: loadReplay,
@@ -338,6 +344,14 @@ const Snake = ({ windowMeta } = {}) => {
   useEffect(() => {
     shieldsRef.current = shieldCharges;
   }, [shieldCharges]);
+
+  useEffect(() => {
+    growthRef.current = pendingGrowth;
+  }, [pendingGrowth]);
+
+  useEffect(() => {
+    phaseTicksRef.current = phaseTicks;
+  }, [phaseTicks]);
 
   useEffect(() => () => {
     if (milestoneTimeoutRef.current) {
@@ -519,7 +533,7 @@ const Snake = ({ windowMeta } = {}) => {
     ctx.stroke();
     ctx.restore();
 
-    // Ghost path preview with adaptive color
+    // Ghost path preview as subtle breadcrumbs
     const ghost = [];
     let gx = snakeRef.current[0].x;
     let gy = snakeRef.current[0].y;
@@ -539,10 +553,14 @@ const Snake = ({ windowMeta } = {}) => {
     }
     if (ghost.length) {
       ctx.fillStyle = colorblindMode
-        ? 'rgba(125,211,252,0.35)'
-        : 'rgba(74,222,128,0.35)';
+        ? 'rgba(125,211,252,0.4)'
+        : 'rgba(74,222,128,0.32)';
       ghost.forEach((g) => {
-        ctx.fillRect(g.x * CELL_SIZE, g.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        const gxCenter = g.x * CELL_SIZE + CELL_SIZE / 2;
+        const gyCenter = g.y * CELL_SIZE + CELL_SIZE / 2;
+        ctx.beginPath();
+        ctx.arc(gxCenter, gyCenter, CELL_SIZE * 0.14, 0, Math.PI * 2);
+        ctx.fill();
       });
     }
 
@@ -627,10 +645,10 @@ const Snake = ({ windowMeta } = {}) => {
       bodyGradient.addColorStop(0, highlight);
       bodyGradient.addColorStop(1, fill);
       ctx.fillStyle = bodyGradient;
-      ctx.fillRect(x, y, size, size);
+      ctx.fillRect(x + 0.25, y + 0.25, size - 0.5, size - 0.5);
       ctx.strokeStyle = hexToRgba('#0f172a', 0.25);
       ctx.lineWidth = 0.8;
-      ctx.strokeRect(x + 0.4, y + 0.4, size - 0.8, size - 0.8);
+      ctx.strokeRect(x + 0.6, y + 0.6, size - 1.2, size - 1.2);
       if (colorblindMode) {
         ctx.strokeStyle = hexToRgba('#0f172a', 0.5);
         ctx.setLineDash([2, 2]);
@@ -645,26 +663,74 @@ const Snake = ({ windowMeta } = {}) => {
       }
     });
 
-    // Dynamic lighting around the head
+    // Distinct head marker for orientation clarity
     const head = segments[0];
-    if (head && !prefersReducedMotion) {
+    if (head) {
       ctx.save();
-      ctx.globalCompositeOperation = 'lighter';
       const cx = head.x * CELL_SIZE + CELL_SIZE / 2;
       const cy = head.y * CELL_SIZE + CELL_SIZE / 2;
+      const dir = dirRef.current;
+      const pulse = prefersReducedMotion
+        ? 1
+        : 0.9 + Math.sin(Date.now() / 140) * 0.08;
+
       const glow = ctx.createRadialGradient(
         cx,
         cy,
-        CELL_SIZE * 0.3,
+        CELL_SIZE * 0.15,
         cx,
         cy,
-        CELL_SIZE * 5,
+        CELL_SIZE * 1.4,
       );
-      glow.addColorStop(0, hexToRgba(skinConfig.snakePalette.head, 0.55));
-      glow.addColorStop(0.4, hexToRgba(skinConfig.snakePalette.mid, 0.25));
+      glow.addColorStop(0, hexToRgba(skinConfig.snakePalette.head, 0.72));
+      glow.addColorStop(0.45, hexToRgba(skinConfig.snakePalette.mid, 0.38));
       glow.addColorStop(1, 'rgba(15,23,42,0)');
       ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, BOARD_SIZE, BOARD_SIZE);
+      ctx.beginPath();
+      ctx.arc(cx, cy, CELL_SIZE * 1.35 * pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      const eyeOffsetX = dir.x === 0 ? CELL_SIZE * 0.18 : CELL_SIZE * 0.08;
+      const eyeOffsetY = dir.y === 0 ? CELL_SIZE * 0.18 : CELL_SIZE * 0.08;
+      const eyes = [
+        { x: cx + (dir.x >= 0 ? eyeOffsetX : -eyeOffsetX), y: cy - eyeOffsetY },
+        { x: cx + (dir.x >= 0 ? eyeOffsetX : -eyeOffsetX), y: cy + eyeOffsetY },
+      ];
+      if (dir.y !== 0) {
+        eyes[0] = { x: cx - eyeOffsetX, y: cy + (dir.y >= 0 ? eyeOffsetY : -eyeOffsetY) };
+        eyes[1] = { x: cx + eyeOffsetX, y: cy + (dir.y >= 0 ? eyeOffsetY : -eyeOffsetY) };
+      }
+
+      ctx.fillStyle = '#f8fafc';
+      eyes.forEach((eye) => {
+        ctx.beginPath();
+        ctx.arc(eye.x, eye.y, CELL_SIZE * 0.08, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.fillStyle = '#0f172a';
+      const pupilShift = CELL_SIZE * 0.04;
+      eyes.forEach((eye) => {
+        ctx.beginPath();
+        ctx.arc(
+          eye.x + dir.x * pupilShift,
+          eye.y + dir.y * pupilShift,
+          CELL_SIZE * 0.035,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+      });
+
+      if (phaseTicksRef.current > 0) {
+        ctx.strokeStyle = 'rgba(34,211,238,0.8)';
+        ctx.lineWidth = 1.4;
+        ctx.setLineDash([3, 2]);
+        ctx.beginPath();
+        ctx.arc(cx, cy, CELL_SIZE * 0.62, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
       ctx.restore();
     }
 
@@ -725,9 +791,18 @@ const Snake = ({ windowMeta } = {}) => {
       const frameFoods = frame.foodsEaten ?? frame.score ?? 0;
       const framePoints = frame.points ?? frameFoods;
       const frameShields = frame.shieldCharges ?? 0;
+      const frameGrowth = frame.pendingGrowth ?? 0;
+      const framePhase = frame.phaseTicks ?? 0;
       setFoodsEaten(frameFoods);
+      foodsRef.current = frameFoods;
       setPoints(framePoints);
+      pointsRef.current = framePoints;
       setShieldCharges(frameShields);
+      shieldsRef.current = frameShields;
+      setPendingGrowth(frameGrowth);
+      growthRef.current = frameGrowth;
+      setPhaseTicks(framePhase);
+      phaseTicksRef.current = framePhase;
       return;
     }
     if (playingRef.current) {
@@ -760,6 +835,8 @@ const Snake = ({ windowMeta } = {}) => {
         points: pointsRef.current,
         foodsEaten: foodsRef.current,
         shieldCharges: shieldsRef.current,
+        pendingGrowth: growthRef.current,
+        phaseTicks: phaseTicksRef.current,
         powerUp: powerUpRef.current ? { ...powerUpRef.current } : null,
       },
       dirRef.current,
@@ -774,6 +851,10 @@ const Snake = ({ windowMeta } = {}) => {
     if (result.shieldSaved) {
       setShieldCharges(result.state.shieldCharges || 0);
       shieldsRef.current = result.state.shieldCharges || 0;
+      setPendingGrowth(result.state.pendingGrowth || 0);
+      growthRef.current = result.state.pendingGrowth || 0;
+      setPhaseTicks(result.state.phaseTicks || 0);
+      phaseTicksRef.current = result.state.phaseTicks || 0;
       haptics.danger();
       beep(260);
       if (snakeRef.current[0]) {
@@ -807,6 +888,10 @@ const Snake = ({ windowMeta } = {}) => {
     foodsRef.current = result.state.foodsEaten || 0;
     setShieldCharges(result.state.shieldCharges || 0);
     shieldsRef.current = result.state.shieldCharges || 0;
+    setPendingGrowth(result.state.pendingGrowth || 0);
+    growthRef.current = result.state.pendingGrowth || 0;
+    setPhaseTicks(result.state.phaseTicks || 0);
+    phaseTicksRef.current = result.state.phaseTicks || 0;
 
     if (result.grew) {
       haptics.score();
@@ -821,25 +906,23 @@ const Snake = ({ windowMeta } = {}) => {
       }
     }
 
-    if (result.consumedPowerUp === 'slow') {
-      slowEffectTicksRef.current = 18;
-      setSpeed((s) => Math.min(280, s + 28));
-      beep(380);
-    }
     if (result.consumedPowerUp === 'bonus') {
       beep(520);
       if (consumedFood) spawnParticles(consumedFood, { milestone: true });
+    }
+    if (result.consumedPowerUp === 'phase') {
+      beep(500);
+      setSpeed((s) => Math.max(60, s * 0.84));
+      if (nextSnake[0]) spawnParticles(nextSnake[0], { milestone: true });
     }
     if (result.consumedPowerUp === 'shield') {
       beep(600);
       if (nextSnake[0]) spawnParticles(nextSnake[0], { milestone: true });
     }
-
-    if (slowEffectTicksRef.current > 0) {
-      slowEffectTicksRef.current -= 1;
-      if (slowEffectTicksRef.current === 0) {
-        setSpeed((s) => Math.max(baseSpeed, s - 36));
-      }
+    if (result.consumedPowerUp === 'feast') {
+      beep(680);
+      setSpeed((s) => Math.min(210, s + 18));
+      if (consumedFood) spawnParticles(consumedFood, { milestone: true });
     }
 
     stepCountRef.current += 1;
@@ -861,7 +944,6 @@ const Snake = ({ windowMeta } = {}) => {
     setSpeed,
     spawnParticles,
     triggerMilestoneFlash,
-    baseSpeed
   ]);
 
   const tick = useCallback(
@@ -989,12 +1071,15 @@ const Snake = ({ windowMeta } = {}) => {
     pointsRef.current = 0;
     setShieldCharges(0);
     shieldsRef.current = 0;
+    setPendingGrowth(0);
+    growthRef.current = 0;
+    setPhaseTicks(0);
+    phaseTicksRef.current = 0;
     setGameOver(false);
     setWon(false);
     setRunning(shouldRun);
     setSpeed(baseSpeed);
     speedRef.current = baseSpeed;
-    slowEffectTicksRef.current = 0;
     particlesRef.current = [];
     setMilestoneFlash(false);
     setReducedMotionPaused(prefersReducedMotion);
@@ -1057,12 +1142,18 @@ const Snake = ({ windowMeta } = {}) => {
         const frameFoods = first.foodsEaten ?? first.score ?? 0;
         const framePoints = first.points ?? frameFoods;
         const frameShields = first.shieldCharges ?? 0;
+        const frameGrowth = first.pendingGrowth ?? 0;
+        const framePhase = first.phaseTicks ?? 0;
         setFoodsEaten(frameFoods);
         foodsRef.current = frameFoods;
         setPoints(framePoints);
         pointsRef.current = framePoints;
         setShieldCharges(frameShields);
         shieldsRef.current = frameShields;
+        setPendingGrowth(frameGrowth);
+        growthRef.current = frameGrowth;
+        setPhaseTicks(framePhase);
+        phaseTicksRef.current = framePhase;
       } else {
         setFoodsEaten(0);
         foodsRef.current = 0;
@@ -1070,6 +1161,10 @@ const Snake = ({ windowMeta } = {}) => {
         pointsRef.current = 0;
         setShieldCharges(0);
         shieldsRef.current = 0;
+        setPendingGrowth(0);
+        growthRef.current = 0;
+        setPhaseTicks(0);
+        phaseTicksRef.current = 0;
       }
     },
     [
@@ -1266,6 +1361,13 @@ const Snake = ({ windowMeta } = {}) => {
       >
         Reset high score
       </button>
+      <div className="rounded border border-slate-700/80 bg-slate-950/60 p-2 text-xs text-slate-300">
+        <div className="font-semibold text-slate-200 mb-1">Power-ups</div>
+        <div>B = bonus points</div>
+        <div>Φ = phase through body & obstacles</div>
+        <div>⛨ = extra shield charge</div>
+        <div>+2 = instant growth reserve</div>
+      </div>
     </div>
   );
 
@@ -1289,6 +1391,8 @@ const Snake = ({ windowMeta } = {}) => {
           <div className="rounded border border-slate-600/70 bg-slate-900/70 px-3 py-1">Food: {foodsEaten}</div>
           <div className="rounded border border-amber-400/30 bg-slate-900/70 px-3 py-1">Points: {points}</div>
           <div className="rounded border border-violet-400/30 bg-slate-900/70 px-3 py-1">Shields: {shieldCharges}</div>
+          <div className="rounded border border-cyan-400/30 bg-slate-900/70 px-3 py-1">Phase: {phaseTicks}</div>
+          <div className="rounded border border-rose-400/30 bg-slate-900/70 px-3 py-1">Growth: +{pendingGrowth}</div>
         </div>
         <div className="relative flex w-full max-w-[920px] flex-1 min-h-0 items-center justify-center">
           <div className="relative flex h-full w-full min-h-[320px] items-center justify-center rounded-xl border border-slate-700/80 bg-slate-900/45 p-2 shadow-2xl">

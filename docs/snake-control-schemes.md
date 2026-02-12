@@ -44,15 +44,18 @@ exercise the game across desktop, mobile, and gamepad setups.
   type.
 - **High score** – The high score tracks the best points total and persists
   across sessions.
-- **Shield charges** – Shield power-ups store a charge that will cancel one
-  fatal collision.
+- **Shield charges** – Shield power-ups store charges that cancel one fatal
+  collision each.
+- **Growth reserve** – Some power-ups add queued growth so the snake keeps
+  extending over the next moves, even between pellets.
 
 ## Power-ups
 
 - **Bonus (`B`)** – Grants a large point boost.
-- **Slow (`S`)** – Temporarily lowers game speed to help recover from tight
-  paths.
+- **Phase (`Φ`)** – Temporarily lets the snake phase through its own body and
+  obstacle blocks.
 - **Shield (`⛨`)** – Adds one collision protection charge.
+- **Feast (`+2`)** – Adds bonus points and two queued growth steps.
 - Power-ups despawn after a limited number of ticks if ignored.
 
 ## Persistence

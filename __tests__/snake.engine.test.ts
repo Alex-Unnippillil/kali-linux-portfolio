@@ -11,6 +11,8 @@ const baseState = (overrides: Partial<SnakeState> = {}): SnakeState => ({
   points: 0,
   foodsEaten: 0,
   shieldCharges: 0,
+  pendingGrowth: 0,
+  phaseTicks: 0,
   powerUp: null,
   ...overrides,
 });
@@ -21,6 +23,8 @@ describe('snake engine upgrades', () => {
     expect(state.points).toBe(0);
     expect(state.foodsEaten).toBe(0);
     expect(state.shieldCharges).toBe(0);
+    expect(state.pendingGrowth).toBe(0);
+    expect(state.phaseTicks).toBe(0);
     expect(state.powerUp).toBeNull();
   });
 
@@ -53,5 +57,35 @@ describe('snake engine upgrades', () => {
     expect(result.shieldSaved).toBe(true);
     expect(result.collision).toBe('none');
     expect(result.state.shieldCharges).toBe(0);
+  });
+
+  it('phase power-up allows safe movement through obstacles', () => {
+    const withPhase = baseState({
+      powerUp: { x: 3, y: 2, type: 'phase', ttl: 30 },
+      obstacles: [{ x: 4, y: 2 }],
+    });
+    const phasePickup = stepSnake(withPhase, { x: 1, y: 0 }, { wrap: false, gridSize: 20 });
+    expect(phasePickup.consumedPowerUp).toBe('phase');
+    expect(phasePickup.state.phaseTicks).toBeGreaterThan(0);
+
+    const throughObstacle = stepSnake(
+      phasePickup.state,
+      { x: 1, y: 0 },
+      { wrap: false, gridSize: 20 },
+    );
+    expect(throughObstacle.collision).toBe('none');
+  });
+
+  it('feast power-up queues growth even without new pellet', () => {
+    const withFeast = baseState({
+      powerUp: { x: 3, y: 2, type: 'feast', ttl: 30 },
+    });
+    const pickup = stepSnake(withFeast, { x: 1, y: 0 }, { wrap: false, gridSize: 20 });
+    expect(pickup.state.pendingGrowth).toBe(2);
+
+    const grown = stepSnake(pickup.state, { x: 1, y: 0 }, { wrap: false, gridSize: 20 });
+    expect(grown.grew).toBe(true);
+    expect(grown.state.snake).toHaveLength(withFeast.snake.length + 1);
+    expect(grown.state.pendingGrowth).toBe(1);
   });
 });

@@ -12,11 +12,13 @@ export interface SnakeState {
   points: number;
   foodsEaten: number;
   shieldCharges: number;
+  pendingGrowth: number;
+  phaseTicks: number;
   powerUp: PowerUp | null;
 }
 
 export type CollisionType = 'none' | 'wall' | 'self' | 'obstacle';
-export type PowerUpType = 'bonus' | 'slow' | 'shield';
+export type PowerUpType = 'bonus' | 'phase' | 'shield' | 'feast';
 
 export interface PowerUp {
   x: number;
@@ -107,7 +109,13 @@ export const randomPowerUp = (
   const point = pickRandom(free, rand);
   const roll = rand();
   const type: PowerUpType =
-    roll < 0.4 ? 'bonus' : roll < 0.75 ? 'slow' : 'shield';
+    roll < 0.32
+      ? 'bonus'
+      : roll < 0.56
+        ? 'phase'
+        : roll < 0.8
+          ? 'shield'
+          : 'feast';
   return {
     ...point,
     type,
@@ -159,6 +167,8 @@ export const createInitialState = (params?: {
   points?: number;
   foodsEaten?: number;
   shieldCharges?: number;
+  pendingGrowth?: number;
+  phaseTicks?: number;
   powerUp?: PowerUp | null;
 }): SnakeState => {
   const gridSize = params?.gridSize ?? GRID_SIZE;
@@ -203,6 +213,8 @@ export const createInitialState = (params?: {
     points: params?.points ?? 0,
     foodsEaten: params?.foodsEaten ?? 0,
     shieldCharges: params?.shieldCharges ?? 0,
+    pendingGrowth: params?.pendingGrowth ?? 0,
+    phaseTicks: params?.phaseTicks ?? 0,
     powerUp: params?.powerUp ? { ...params.powerUp } : null,
   };
 };
@@ -232,6 +244,8 @@ export const stepSnake = (
   const points = state.points ?? 0;
   const foodsEaten = state.foodsEaten ?? 0;
   const shieldCharges = state.shieldCharges ?? 0;
+  const pendingGrowth = state.pendingGrowth ?? 0;
+  const phaseTicks = state.phaseTicks ?? 0;
   const powerUp = state.powerUp ? { ...state.powerUp } : null;
   const obstacleSnapshot = obstacles.map((o) => ({ ...o }));
   const food = { ...state.food };
@@ -275,7 +289,10 @@ export const stepSnake = (
     }
   }
 
-  const grew = newHeadX === food.x && newHeadY === food.y;
+  const phasesThroughBodies = phaseTicks > 0;
+  const ateFood = newHeadX === food.x && newHeadY === food.y;
+  const growsFromReserve = pendingGrowth > 0;
+  const grew = ateFood || growsFromReserve;
 
   const collisionSegments = grew ? snake : snake.slice(0, -1);
   for (let i = 0; i < collisionSegments.length; i += 1) {
@@ -283,6 +300,9 @@ export const stepSnake = (
       collisionSegments[i].x === newHeadX &&
       collisionSegments[i].y === newHeadY
     ) {
+      if (phasesThroughBodies) {
+        break;
+      }
       if (!shieldCharges) {
         return {
           state,
@@ -308,6 +328,9 @@ export const stepSnake = (
 
   for (let i = 0; i < obstacles.length; i += 1) {
     if (obstacles[i].x === newHeadX && obstacles[i].y === newHeadY) {
+      if (phasesThroughBodies) {
+        break;
+      }
       if (!shieldCharges) {
         return {
           state,
@@ -337,16 +360,18 @@ export const stepSnake = (
   let nextPoints = points;
   let nextFoodsEaten = foodsEaten;
   let nextShieldCharges = shieldCharges;
+  let nextPendingGrowth = Math.max(0, pendingGrowth - (growsFromReserve ? 1 : 0));
+  let nextPhaseTicks = Math.max(0, phaseTicks - 1);
   let pointsDelta = 0;
   let consumedPowerUp: PowerUpType | null = null;
 
   const randomFoodFn = options.randomFood ?? randomFood;
   const randomFn = options.random ?? Math.random;
-  const nextFood = grew
+  const nextFood = ateFood
     ? randomFoodFn(newSnake, obstacleSnapshot, gridSize, randomFn)
     : food;
 
-  if (grew) {
+  if (ateFood) {
     pointsDelta += 10;
     nextPoints += 10;
     nextFoodsEaten += 1;
@@ -359,14 +384,19 @@ export const stepSnake = (
   if (nextPowerUp && nextPowerUp.x === newHeadX && nextPowerUp.y === newHeadY) {
     consumedPowerUp = nextPowerUp.type;
     if (nextPowerUp.type === 'bonus') {
-      pointsDelta += 25;
+      pointsDelta += 30;
     }
-    if (nextPowerUp.type === 'slow') {
-      pointsDelta += 5;
+    if (nextPowerUp.type === 'phase') {
+      pointsDelta += 12;
+      nextPhaseTicks = Math.max(nextPhaseTicks, 12);
     }
     if (nextPowerUp.type === 'shield') {
       pointsDelta += 8;
       nextShieldCharges += 1;
+    }
+    if (nextPowerUp.type === 'feast') {
+      pointsDelta += 18;
+      nextPendingGrowth += 2;
     }
     nextPoints += pointsDelta - (grew ? 10 : 0);
     nextPowerUp = null;
@@ -375,7 +405,7 @@ export const stepSnake = (
   let won = false;
   const nextObstacles = obstacles.map((o) => ({ ...o }));
 
-  if (grew) {
+  if (ateFood) {
     if (isNoCell(nextFood)) {
       won = true;
     } else if (options.randomObstacle) {
@@ -391,7 +421,7 @@ export const stepSnake = (
     }
   }
 
-  if (grew && !nextPowerUp && options.randomPowerUp && randomFn() < 0.35) {
+  if (ateFood && !nextPowerUp && options.randomPowerUp && randomFn() < 0.4) {
     nextPowerUp = options.randomPowerUp(
       newSnake,
       nextFood,
@@ -409,6 +439,8 @@ export const stepSnake = (
       points: nextPoints,
       foodsEaten: nextFoodsEaten,
       shieldCharges: nextShieldCharges,
+      pendingGrowth: nextPendingGrowth,
+      phaseTicks: nextPhaseTicks,
       powerUp: nextPowerUp,
     },
     grew,
