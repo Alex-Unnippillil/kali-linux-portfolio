@@ -1144,8 +1144,9 @@ const ChessGame = () => {
 
   const aiMove = () => {
     stopAi();
+    if (opponentMode !== "ai") return;
     if (pausedRef.current || gameOverRef.current) return;
-    if (opponentMode === "ai" && sideRef.current === playerSideRef.current) return;
+    if (sideRef.current === playerSideRef.current) return;
     if (aiThinkingRef.current) return;
     setAiThinking(true);
     sendEngineRequest(
@@ -1239,7 +1240,11 @@ const ChessGame = () => {
         reduceMotion ? 100 : 260,
       );
     } else {
-      setStatus(opponentMode === "local" ? "White to move" : "Your move");
+      setStatus(
+        opponentMode === "local"
+          ? `${sideRef.current === WHITE ? "White" : "Black"} to move`
+          : "Your move",
+      );
     }
   }, [
     cancelReplay,
@@ -1414,7 +1419,15 @@ const ChessGame = () => {
       return;
     }
     if (modeRef.current !== "play") return;
-    setOrientation(playerSide === WHITE ? "white" : "black");
+    if (opponentMode === "local") {
+      if (playerSide !== WHITE) {
+        setPlayerSide(WHITE);
+        return;
+      }
+      setOrientation("white");
+    } else {
+      setOrientation(playerSide === WHITE ? "white" : "black");
+    }
     resetGame({ autoplayAi: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiDifficulty, opponentMode, playerSide]);
@@ -1467,7 +1480,11 @@ const ChessGame = () => {
       pausedRef.current = false;
       setPaused(false);
       startClockForSide(sideRef.current);
-      setStatus(opponentMode === "local" ? "White to move" : "Your move");
+      setStatus(
+        opponentMode === "local"
+          ? `${sideRef.current === WHITE ? "White" : "Black"} to move`
+          : "Your move",
+      );
     }
   };
 

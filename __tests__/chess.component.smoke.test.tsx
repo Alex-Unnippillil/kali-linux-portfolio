@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import ChessApp from "../components/apps/chess";
 
 describe("Chess app smoke", () => {
@@ -41,5 +41,15 @@ describe("Chess app smoke", () => {
     unmount();
 
     global.Worker = originalWorker;
+  });
+
+  test("local 2-player mode disables AI-only controls", () => {
+    render(<ChessApp />);
+
+    const opponentSelect = screen.getByLabelText("Opponent");
+    fireEvent.change(opponentSelect, { target: { value: "local" } });
+
+    expect(screen.getByLabelText("Play As")).toBeDisabled();
+    expect(screen.getByLabelText("AI Difficulty")).toBeDisabled();
   });
 });
