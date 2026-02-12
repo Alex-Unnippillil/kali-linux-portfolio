@@ -1,0 +1,170 @@
+{
+  "metadata": {
+    "source": "Mock NSRL reference dataset for Autopsy demo",
+    "generated": "2025-09-18T15:45:19.629Z",
+    "count": 20,
+    "notes": "Hashes derived from deterministic fingerprints for repeatable demos. Not real NSRL data."
+  },
+  "entries": [
+    {
+      "fileName": "calc.exe",
+      "product": "Microsoft Calculator",
+      "version": "10.0.19041.1",
+      "os": "Windows 10",
+      "sha1": "99a06053205a3436542bfa61d19c557032a1d28c",
+      "sha256": "9162fab717bf3a31298744beec253f8cfd7a064cbb75f9d80f0906380eca4635"
+    },
+    {
+      "fileName": "notepad.exe",
+      "product": "Microsoft Notepad",
+      "version": "10.0.19041.1",
+      "os": "Windows 10",
+      "sha1": "9493759fe458605e65aa02387661422d17c7a0b3",
+      "sha256": "4b3e590843988d2df90e6a7579eeb113b95088f988e40f007a129e2407118dcc"
+    },
+    {
+      "fileName": "winword.exe",
+      "product": "Microsoft Word",
+      "version": "16.0.17029.20108",
+      "os": "Windows 11",
+      "sha1": "e977d00d6cee4f2e1edf67254b7a0dce58faade6",
+      "sha256": "74016f855bde2a941fa1d59d9bca8ed4ea3a3931fe3b93f8d5e7a609b58db06c"
+    },
+    {
+      "fileName": "excel.exe",
+      "product": "Microsoft Excel",
+      "version": "16.0.17029.20108",
+      "os": "Windows 11",
+      "sha1": "e73210d45ad14f7e6100780e3931c50209148b87",
+      "sha256": "de3ead3ebe0f86b8d5ebb1fe06aafb4dcb32dfd67ee32961bdcf449802241378"
+    },
+    {
+      "fileName": "powershell.exe",
+      "product": "Windows PowerShell",
+      "version": "7.3.0",
+      "os": "Windows 10",
+      "sha1": "6a97e2ea8a77d7719f50446fb853e418356ba050",
+      "sha256": "7c330a1155116118e6fea453e5f80dd9df5223c50d53b6e331c8f81df78f4ebe"
+    },
+    {
+      "fileName": "cmd.exe",
+      "product": "Windows Command Processor",
+      "version": "10.0.19041.1",
+      "os": "Windows 10",
+      "sha1": "6ef3cdf431fbb44f3da1e522bd0b7dbc1d9e7d8e",
+      "sha256": "bfc095b15a73729a83aca83d23e7bb9345ecbe960d6a0e1cf4bf51285f88a873"
+    },
+    {
+      "fileName": "explorer.exe",
+      "product": "Windows Explorer",
+      "version": "10.0.22000.120",
+      "os": "Windows 11",
+      "sha1": "3e786dafaa8e59a489047bd73d694302c0a05259",
+      "sha256": "28a5975d991b5b64e766cd3100cae36c874c3aabfc55f03114d497b9a7c08614"
+    },
+    {
+      "fileName": "mspaint.exe",
+      "product": "Microsoft Paint",
+      "version": "10.0.22000.120",
+      "os": "Windows 11",
+      "sha1": "0f7c96ee471661d70be34a95c677b288fcd79d8c",
+      "sha256": "721915bebe4f1563b79819f3d86db6a6a7240eeaf7d3d29e32fc934c417b91b2"
+    },
+    {
+      "fileName": "taskmgr.exe",
+      "product": "Windows Task Manager",
+      "version": "10.0.22621.1",
+      "os": "Windows 11",
+      "sha1": "6c1f37a1efebed06b0ce5be9141fa7e37bf162c7",
+      "sha256": "feed73a7408d8187e8882d195ac7d387532f3ae4227b765a3c0ab5d76ead5735"
+    },
+    {
+      "fileName": "wordpad.exe",
+      "product": "WordPad",
+      "version": "10.0.19041.1",
+      "os": "Windows 10",
+      "sha1": "0c99c9cc9f5b61e4445c846f11ed00125edf159b",
+      "sha256": "d3854f626eee6af37db604f08278dd2c69e1296bcd745eac39bde4884631de5c"
+    },
+    {
+      "fileName": "regedit.exe",
+      "product": "Registry Editor",
+      "version": "10.0.19041.1",
+      "os": "Windows 10",
+      "sha1": "0f5e24b8dce84bdaeb6bf1bd711c1b5297285ff2",
+      "sha256": "22993e91a09aca3b7394767b7550bc95f7f6fd6e16e679248d46a32c0f2f5441"
+    },
+    {
+      "fileName": "wscript.exe",
+      "product": "Windows Script Host",
+      "version": "5.812.10240",
+      "os": "Windows 10",
+      "sha1": "2806b596522278a0d9ceade481e82a9a2a5f519e",
+      "sha256": "c4aff43240f96b519f722bc7e572ddd1dac80e0fbcced50f2f314bb7d3b0a89e"
+    },
+    {
+      "fileName": "bash",
+      "product": "GNU Bash",
+      "version": "5.2.15",
+      "os": "Ubuntu 22.04",
+      "sha1": "a4307f8e0d9f46985c100d05758a05eb93a565da",
+      "sha256": "2f27918e0babdb203b60b980525bcaa2c983c0b6810220449b3892e6b7ea0545"
+    },
+    {
+      "fileName": "python3.10",
+      "product": "Python",
+      "version": "3.10.8",
+      "os": "Ubuntu 22.04",
+      "sha1": "92eb9f8c88c8fa146d087d7e9293fedc7c097b4b",
+      "sha256": "1e495a513f6e3d993ef2393ca891de40d9b156aa5572f0fbab0a80c559f0781f"
+    },
+    {
+      "fileName": "zsh",
+      "product": "Z shell",
+      "version": "5.9",
+      "os": "macOS 13",
+      "sha1": "4d188280daef2427f55725c7fe23d2e6d932c6c5",
+      "sha256": "4d9accf747502d052aaece6ee50e9e547cf25d045a89b969f62da167cad252b7"
+    },
+    {
+      "fileName": "Finder",
+      "product": "Finder",
+      "version": "13.0",
+      "os": "macOS 13",
+      "sha1": "256e22772abd56a32b94931972f8515ea1f048ac",
+      "sha256": "f24d6cccd3f8f6d2df598aa124ebc330ed658866d6178635ef619aefb2baa858"
+    },
+    {
+      "fileName": "Terminal",
+      "product": "Terminal",
+      "version": "2.13",
+      "os": "macOS 13",
+      "sha1": "3f300d796160001b8ad1d6e81d9d0d75d2d4c9b8",
+      "sha256": "d2b04fa58c3f224e5ae3f76af2a873ee6fb12c0b57abab17cedf3bcfee7dab5a"
+    },
+    {
+      "fileName": "Safari",
+      "product": "Safari",
+      "version": "16.0",
+      "os": "macOS 13",
+      "sha1": "55188edf9ff1a66591f7ddd6cad8e3043a2dd8bc",
+      "sha256": "42976db8b043ebf1404380e18820baccdc918d2994ca7abfefdcaf1ca5de0edb"
+    },
+    {
+      "fileName": "chrome.exe",
+      "product": "Google Chrome",
+      "version": "117.0.5938.92",
+      "os": "Windows 11",
+      "sha1": "1f1b11b915d8f3ee4c1149a452e4a06c373f9d11",
+      "sha256": "2c42c4b483748c615be3b435112d464ab3b29047399d4ab994ab51df150f8117"
+    },
+    {
+      "fileName": "firefox.exe",
+      "product": "Mozilla Firefox",
+      "version": "118.0.1",
+      "os": "Windows 11",
+      "sha1": "b6e52204a4bdb890b41c76c9796b8914191928de",
+      "sha256": "79fc07e71fa37709b8a7e7b6952c5293451f215c18c215a9271c62f41fcc673e"
+    }
+  ]
+}
