@@ -72,7 +72,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | --- | --- | --- | --- | --- |
 | nikto | Nikto | Security simulations pod | **In progress** – load canned outputs and lab banner | JSON fixtures, lab mode flag |
 | wireshark | Wireshark | Security simulations pod | **In progress** – simulator backlog | Packet capture fixtures |
-| ble-sensor | BLE Sensor | Security simulations pod | **Needs polish** – finalize simulator UX and datasets | BLE datasets |
+| ble-sensor | BLE Sensor | Security simulations pod | **Ready** – curated dataset library with read-only inspector | BLE datasets |
 | dsniff | dsniff | Security simulations pod | **In progress** – command builder and sample outputs | Command templates |
 | beef | BeEF | Security simulations pod | **In progress** – simulator backlog | Browser exploit fixtures |
 | metasploit | Metasploit | Security simulations pod | **In progress** – simulator backlog | Module JSON |

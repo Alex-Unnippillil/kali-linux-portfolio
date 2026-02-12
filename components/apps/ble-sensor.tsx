@@ -1,204 +1,309 @@
-import React, { useState, useEffect, useRef } from 'react';
-import FormError from '../ui/FormError';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  loadProfiles,
-  loadProfile,
-  saveProfile,
-  renameProfile,
-  deleteProfile,
-  SavedProfile,
-  ServiceData,
-  CharacteristicData,
-} from '../../utils/bleProfiles';
-
-type BluetoothDevice = any;
-type BluetoothRemoteGATTServer = any;
-
-const MAX_RETRIES = 3;
-
-const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
+  getBleDataset,
+  getBleDatasetTags,
+  listBleDatasets,
+  searchBleDatasets,
+  BleDataset,
+} from '../../utils/bleDatasets';
 
 const BleSensor: React.FC = () => {
-  const supported = typeof navigator !== 'undefined' && 'bluetooth' in navigator;
-  const [deviceName, setDeviceName] = useState('');
-  const [services, setServices] = useState<ServiceData[]>([]);
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [profiles, setProfiles] = useState<SavedProfile[]>([]);
-  const bcRef = useRef<BroadcastChannel | null>(null);
+  const [search, setSearch] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedId, setSelectedId] = useState<string>(() => {
+    const all = listBleDatasets();
+    return all.length > 0 ? all[0].id : '';
+  });
 
-  const refreshProfiles = async () => setProfiles(await loadProfiles());
+  const tagOptions = useMemo(() => getBleDatasetTags(), []);
+  const filteredDatasets = useMemo(
+    () => searchBleDatasets(search, selectedTags),
+    [search, selectedTags]
+  );
+
+  const selectedDataset = useMemo(() => {
+    if (selectedId) {
+      const match = filteredDatasets.find((dataset) => dataset.id === selectedId);
+      if (match) {
+        return match;
+      }
+      const fallback = getBleDataset(selectedId);
+      if (fallback) {
+        return fallback;
+      }
+    }
+    return filteredDatasets[0];
+  }, [filteredDatasets, selectedId]);
 
   useEffect(() => {
-    refreshProfiles();
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const bc = new BroadcastChannel('ble-profiles');
-      bc.onmessage = () => refreshProfiles();
-      bcRef.current = bc;
-      return () => bc.close();
+    if (
+      filteredDatasets.length > 0 &&
+      !filteredDatasets.some((dataset) => dataset.id === selectedId)
+    ) {
+      setSelectedId(filteredDatasets[0].id);
     }
-  }, []);
+  }, [filteredDatasets, selectedId]);
 
-  const connectWithRetry = async (
-    device: BluetoothDevice,
-    retries = MAX_RETRIES
-  ): Promise<BluetoothRemoteGATTServer> => {
-    let lastError: unknown = new Error('Unable to connect');
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        return await device.gatt!.connect();
-      } catch (err) {
-        lastError = err;
-        if (attempt < retries) {
-          await delay(1000 * attempt);
-        }
-      }
-    }
-    throw lastError;
-  };
-
-  const handleScan = async () => {
-    if (!supported || busy) return;
-    setError('');
-    setBusy(true);
-
-    const consent = window.confirm(
-      'This application will request access to nearby Bluetooth devices. Continue?'
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((value) => value !== tag) : [...prev, tag]
     );
-    if (!consent) {
-      setBusy(false);
-      return;
-    }
-
-    try {
-      const device = await (navigator as any).bluetooth.requestDevice({
-        acceptAllDevices: true,
-        optionalServices: ['battery_service', 'device_information'],
-      });
-
-      const saved = await loadProfile(device.id);
-      if (saved) {
-        setDeviceName(saved.name);
-        setServices(saved.services);
-        return;
-      }
-
-      setDeviceName(device.name || 'Unknown device');
-
-      const server = await connectWithRetry(device);
-
-      device.addEventListener('gattserverdisconnected', () =>
-        setError('Device disconnected.')
-      );
-
-      const primServices = await server.getPrimaryServices();
-      const serviceData: ServiceData[] = [];
-
-      for (const service of primServices) {
-        const chars = await service.getCharacteristics();
-        const charData: CharacteristicData[] = await Promise.all(
-          chars.map(async (char: any) => {
-            try {
-              const val = await char.readValue();
-              const decoder = new TextDecoder();
-              return { uuid: char.uuid, value: decoder.decode(val.buffer) };
-            } catch {
-              return { uuid: char.uuid, value: '[unreadable]' };
-            }
-          })
-        );
-        serviceData.push({ uuid: service.uuid, characteristics: charData });
-      }
-      setServices(serviceData);
-      await saveProfile(device.id, {
-        name: device.name || 'Unknown device',
-        services: serviceData,
-      });
-      bcRef.current?.postMessage('update');
-      await refreshProfiles();
-    } catch (err) {
-      const e = err as DOMException;
-      if (e.name === 'NotAllowedError') {
-        setError('Permission to access Bluetooth was denied.');
-      } else if (e.name === 'NotFoundError') {
-        setError('No devices found.');
-      } else {
-        setError(e.message || 'An unknown error occurred.');
-      }
-    } finally {
-      setBusy(false);
-    }
   };
+
+  const renderDatasetCard = (dataset: BleDataset) => (
+    <button
+      key={dataset.id}
+      type="button"
+      onClick={() => setSelectedId(dataset.id)}
+      className={`w-full rounded border px-3 py-2 text-left transition-colors ${
+        dataset.id === selectedId
+          ? 'border-blue-500 bg-blue-500/20'
+          : 'border-gray-700 bg-gray-900/40 hover:border-blue-500/70'
+      }`}
+    >
+      <p className="text-sm font-semibold text-white">{dataset.label}</p>
+      <p className="text-xs text-gray-300">{dataset.deviceType}</p>
+      <p className="mt-1 text-[11px] uppercase tracking-wide text-gray-500">
+        {dataset.location}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-[6px]">
+        {dataset.tags.slice(0, 3).map((tag) => (
+          <span
+            key={tag}
+            className="rounded-full bg-gray-800 px-2 py-[2px] text-[10px] uppercase tracking-wide text-gray-300"
+          >
+            {tag}
+          </span>
+        ))}
+        {dataset.tags.length > 3 && (
+          <span className="rounded-full bg-gray-800 px-2 py-[2px] text-[10px] uppercase tracking-wide text-gray-300">
+            +{dataset.tags.length - 3}
+          </span>
+        )}
+      </div>
+    </button>
+  );
 
   return (
-    <div className="h-full w-full bg-black p-4 text-white">
-      {!supported && (
-        <p className="mb-4 text-sm text-yellow-400">
-          Web Bluetooth is not supported in this browser.
+    <div className="flex h-full w-full flex-col gap-4 bg-black p-4 text-white">
+      <header>
+        <h1 className="text-xl font-semibold">BLE Sensor Inspector</h1>
+        <p className="mt-1 text-sm text-gray-300">
+          Explore curated Bluetooth Low Energy datasets that showcase realistic GATT
+          service layouts with descriptive telemetry.
         </p>
-      )}
+      </header>
 
-      <button
-        onClick={handleScan}
-        disabled={!supported || busy}
-        className="mb-4 rounded bg-blue-600 px-3 py-1 disabled:opacity-50"
-      >
-        Scan for Devices
-      </button>
+      <div className="rounded border border-blue-500/40 bg-blue-900/30 p-3 text-sm text-blue-100">
+        <p className="font-semibold uppercase tracking-wide text-blue-200">
+          Read-only simulation
+        </p>
+        <p className="mt-1">
+          Device data is sourced from curated training captures. Interactions are limited
+          to browsing metadata—no pairing, writes, or deletions are available in this
+          desktop build.
+        </p>
+      </div>
 
-      {error && <FormError className="mt-0 mb-4">{error}</FormError>}
+      <div className="flex flex-1 flex-col gap-4 overflow-hidden md:grid md:grid-cols-5">
+        <aside className="flex flex-col gap-4 md:col-span-2">
+          <div>
+            <label htmlFor="ble-search" className="block text-xs uppercase tracking-wide text-gray-400">
+              Search catalog
+            </label>
+            <input
+              id="ble-search"
+              type="text"
+              aria-label="Search BLE datasets"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Filter by name, location, or service"
+              className="mt-1 w-full rounded border border-gray-700 bg-gray-900/70 p-2 text-sm text-white focus:border-blue-500 focus:outline-none"
+            />
+          </div>
 
-      {profiles.length > 0 && (
-        <div className="mb-4">
-          <p className="mb-2 font-bold">Saved Profiles</p>
-          <ul className="space-y-1">
-            {profiles.map((p) => (
-              <li key={p.deviceId} className="flex items-center space-x-2">
-                <input
-                  defaultValue={p.name}
-                  onBlur={async (e) => {
-                    await renameProfile(p.deviceId, e.target.value);
-                    bcRef.current?.postMessage('update');
-                    await refreshProfiles();
-                  }}
-                  className="w-40 bg-gray-800 px-1"
-                />
+          <div>
+            <p className="text-xs uppercase tracking-wide text-gray-400">Filter by tags</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {tagOptions.map((tag) => {
+                const active = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={`rounded-full border px-3 py-[6px] text-xs transition-colors ${
+                      active
+                        ? 'border-blue-500 bg-blue-500/20 text-blue-200'
+                        : 'border-gray-700 bg-gray-900/40 text-gray-300 hover:border-blue-500/70'
+                    }`}
+                  >
+                    {tag}
+                  </button>
+                );
+              })}
+              {(search || selectedTags.length > 0) && (
                 <button
-                  onClick={async () => {
-                    await deleteProfile(p.deviceId);
-                    bcRef.current?.postMessage('update');
-                    await refreshProfiles();
+                  type="button"
+                  onClick={() => {
+                    setSearch('');
+                    setSelectedTags([]);
                   }}
-                  className="text-red-400"
+                  className="rounded-full border border-gray-700 bg-transparent px-3 py-[6px] text-xs text-gray-400 transition-colors hover:border-blue-500/70 hover:text-blue-200"
                 >
-                  Delete
+                  Clear filters
                 </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+              )}
+            </div>
+          </div>
 
-      {deviceName && <p className="mb-2">Connected to: {deviceName}</p>}
+          <div className="flex-1 overflow-auto rounded border border-gray-700 bg-gray-900/30 p-2">
+            {filteredDatasets.length === 0 ? (
+              <p className="text-sm text-gray-400">
+                No datasets match the current filters. Adjust your search or tag
+                selection to continue exploring the catalog.
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {filteredDatasets.map((dataset) => renderDatasetCard(dataset))}
+              </div>
+            )}
+          </div>
+        </aside>
 
-      <ul className="space-y-2 overflow-auto">
-        {services.map((service) => (
-          <li key={service.uuid} className="border-b border-gray-700 pb-2">
-            <p className="font-bold">Service: {service.uuid}</p>
-            <ul className="ml-4 list-disc">
-              {service.characteristics.map((char) => (
-                <li key={char.uuid}>
-                  {char.uuid}: {char.value}
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
+        <section className="flex flex-1 flex-col overflow-hidden rounded border border-gray-700 bg-gray-900/40 p-4 md:col-span-3">
+          {!selectedDataset ? (
+            <p className="text-sm text-gray-400">
+              Select a dataset from the catalog to view its services, characteristic
+              values, and supporting documentation.
+            </p>
+          ) : (
+            <div className="flex h-full flex-col gap-4 overflow-hidden">
+              <div>
+                <p className="text-2xl font-semibold text-white">
+                  {selectedDataset.label}
+                </p>
+                <p className="mt-1 text-sm text-gray-300">
+                  {selectedDataset.description}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 text-sm text-gray-300 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Manufacturer</p>
+                  <p className="text-white">{selectedDataset.manufacturer}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Device type</p>
+                  <p className="text-white">{selectedDataset.deviceType}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Location</p>
+                  <p className="text-white">{selectedDataset.location}</p>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-500">Last seen</p>
+                  <p className="text-white">{selectedDataset.lastSeen}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {selectedDataset.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-blue-600/20 px-3 py-1 text-xs uppercase tracking-wide text-blue-100"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                  Analyst highlights
+                </h2>
+                <ul className="mt-2 list-disc space-y-2 pl-5 text-sm text-gray-200">
+                  {selectedDataset.highlights.map((highlight) => (
+                    <li key={highlight}>{highlight}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="flex-1 overflow-auto">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                  GATT services
+                </h2>
+                <div className="mt-2 space-y-3">
+                  {selectedDataset.services.map((service) => (
+                    <article
+                      key={service.uuid}
+                      className="rounded border border-gray-700 bg-black/40 p-3"
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-base font-semibold text-white">
+                            {service.name}
+                          </p>
+                          <p className="text-sm text-gray-300">{service.description}</p>
+                        </div>
+                        <span className="text-xs text-gray-500">{service.uuid}</span>
+                      </div>
+                      <ul className="mt-3 space-y-2">
+                        {service.characteristics.map((characteristic) => (
+                          <li
+                            key={characteristic.uuid}
+                            className="rounded bg-gray-900/60 px-3 py-2"
+                          >
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                              <span className="text-sm font-medium text-white">
+                                {characteristic.name}
+                              </span>
+                              <span className="text-xs text-gray-500">
+                                {characteristic.uuid}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-sm text-emerald-300">
+                              {characteristic.value}
+                            </p>
+                            {characteristic.description && (
+                              <p className="mt-1 text-xs text-gray-300">
+                                {characteristic.description}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400">
+                  Source material
+                </h2>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-xs text-gray-300">
+                  {selectedDataset.sources.map((source) => (
+                    <li key={source.url}>
+                      <a
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-300 transition-colors hover:text-blue-200"
+                      >
+                        {source.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 };
 
 export default BleSensor;
 export const displayBleSensor = () => <BleSensor />;
-
