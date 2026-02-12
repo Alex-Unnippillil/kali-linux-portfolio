@@ -1,0 +1,114 @@
+[
+  {
+    "id": "system-monitor",
+    "name": "System Monitor",
+    "description": "Kernel and audit telemetry collected from a simulated host.",
+    "channels": [
+      {
+        "id": "syslog",
+        "name": "System Log",
+        "description": "Kernel, init, and service messages.",
+        "fields": [
+          { "key": "timestamp", "label": "Timestamp", "type": "datetime" },
+          { "key": "host", "label": "Host", "type": "string" },
+          { "key": "process", "label": "Process", "type": "string" },
+          { "key": "pid", "label": "PID", "type": "number" },
+          { "key": "message", "label": "Message", "type": "text" }
+        ],
+        "levelMap": {
+          "debug": { "label": "Debug", "severity": 10, "color": "#6B7280" },
+          "info": { "label": "Info", "severity": 20, "color": "#2563EB" },
+          "notice": { "label": "Notice", "severity": 25, "color": "#0EA5E9" },
+          "warn": { "label": "Warning", "severity": 30, "color": "#D97706" },
+          "error": { "label": "Error", "severity": 40, "color": "#DC2626" }
+        }
+      },
+      {
+        "id": "audit",
+        "name": "Audit Trail",
+        "description": "Authentication and authorization activity.",
+        "fields": [
+          { "key": "timestamp", "label": "Timestamp", "type": "datetime" },
+          { "key": "user", "label": "User", "type": "string" },
+          { "key": "action", "label": "Action", "type": "string" },
+          { "key": "target", "label": "Target", "type": "string" },
+          { "key": "ip", "label": "Source IP", "type": "ip" },
+          { "key": "status", "label": "Status", "type": "string" }
+        ],
+        "levelMap": {
+          "info": { "label": "Info", "severity": 20, "color": "#2563EB" },
+          "warning": { "label": "Warning", "severity": 30, "color": "#D97706" },
+          "alert": { "label": "Alert", "severity": 50, "color": "#B91C1C" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "app-firewall",
+    "name": "Application Firewall",
+    "description": "ModSecurity-style HTTP inspection events.",
+    "channels": [
+      {
+        "id": "waf",
+        "name": "WAF Events",
+        "description": "Rule triggers from inbound requests.",
+        "fields": [
+          { "key": "timestamp", "label": "Timestamp", "type": "datetime" },
+          { "key": "client", "label": "Client IP", "type": "ip" },
+          { "key": "path", "label": "Request Path", "type": "string" },
+          { "key": "rule", "label": "Rule ID", "type": "string" },
+          { "key": "action", "label": "Action", "type": "string" },
+          { "key": "impact", "label": "Impact", "type": "number" }
+        ],
+        "levelMap": {
+          "info": { "label": "Info", "severity": 20, "color": "#2563EB" },
+          "notice": { "label": "Notice", "severity": 26, "color": "#0EA5E9" },
+          "warning": { "label": "Warning", "severity": 30, "color": "#D97706" },
+          "critical": { "label": "Critical", "severity": 60, "color": "#BE123C" }
+        }
+      }
+    ]
+  },
+  {
+    "id": "pipeline",
+    "name": "CI Pipeline",
+    "description": "Synthetic logs from a build pipeline.",
+    "channels": [
+      {
+        "id": "build",
+        "name": "Build Steps",
+        "description": "Lifecycle events for builds.",
+        "fields": [
+          { "key": "timestamp", "label": "Timestamp", "type": "datetime" },
+          { "key": "stage", "label": "Stage", "type": "string" },
+          { "key": "duration", "label": "Duration (ms)", "type": "number" },
+          { "key": "message", "label": "Message", "type": "text" }
+        ],
+        "levelMap": {
+          "info": { "label": "Info", "severity": 20, "color": "#2563EB" },
+          "success": { "label": "Success", "severity": 15, "color": "#16A34A" },
+          "warning": { "label": "Warning", "severity": 30, "color": "#D97706" },
+          "error": { "label": "Error", "severity": 40, "color": "#DC2626" }
+        }
+      },
+      {
+        "id": "deploy",
+        "name": "Deployments",
+        "description": "Release notifications.",
+        "fields": [
+          { "key": "timestamp", "label": "Timestamp", "type": "datetime" },
+          { "key": "environment", "label": "Environment", "type": "string" },
+          { "key": "version", "label": "Version", "type": "string" },
+          { "key": "status", "label": "Status", "type": "string" },
+          { "key": "message", "label": "Message", "type": "text" }
+        ],
+        "levelMap": {
+          "info": { "label": "Info", "severity": 20, "color": "#2563EB" },
+          "success": { "label": "Success", "severity": 15, "color": "#16A34A" },
+          "warning": { "label": "Warning", "severity": 30, "color": "#D97706" },
+          "error": { "label": "Error", "severity": 40, "color": "#DC2626" }
+        }
+      }
+    ]
+  }
+]
