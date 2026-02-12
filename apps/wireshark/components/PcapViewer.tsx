@@ -22,12 +22,6 @@ const samples = [
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
 
-// Convert bytes to hex dump string
-const toHex = (bytes: Uint8Array) =>
-  Array.from(bytes, (b, i) =>
-    `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
-  ).join('');
-
 interface Packet {
   timestamp: string;
   src: string;
@@ -39,9 +33,16 @@ interface Packet {
   dport?: number;
 }
 
+interface LayerField {
+  key: string;
+  value: string;
+  start: number;
+  end: number;
+}
+
 interface Layer {
   name: string;
-  fields: Record<string, string>;
+  fields: LayerField[];
 }
 
 // Basic Ethernet + IPv4 parser
@@ -190,11 +191,11 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
     const type = ((data[12] << 8) | data[13]).toString(16).padStart(4, '0');
     layers.push({
       name: 'Ethernet',
-      fields: {
-        Destination: destMac,
-        Source: srcMac,
-        Type: `0x${type}`,
-      },
+      fields: [
+        { key: 'Destination', value: destMac, start: 0, end: 5 },
+        { key: 'Source', value: srcMac, start: 6, end: 11 },
+        { key: 'Type', value: `0x${type}`, start: 12, end: 13 },
+      ],
     });
   }
   if (data.length >= 34) {
@@ -203,31 +204,31 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
     const proto = data[23];
     layers.push({
       name: 'IPv4',
-      fields: {
-        Source: srcIp,
-        Destination: destIp,
-        Protocol: protocolName(proto),
-      },
+      fields: [
+        { key: 'Source', value: srcIp, start: 26, end: 29 },
+        { key: 'Destination', value: destIp, start: 30, end: 33 },
+        { key: 'Protocol', value: protocolName(proto), start: 23, end: 23 },
+      ],
     });
     if (proto === 6 && data.length >= 54) {
       const sport = (data[34] << 8) | data[35];
       const dport = (data[36] << 8) | data[37];
       layers.push({
         name: 'TCP',
-        fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
-        },
+        fields: [
+          { key: 'Source Port', value: sport.toString(), start: 34, end: 35 },
+          { key: 'Destination Port', value: dport.toString(), start: 36, end: 37 },
+        ],
       });
     } else if (proto === 17 && data.length >= 42) {
       const sport = (data[34] << 8) | data[35];
       const dport = (data[36] << 8) | data[37];
       layers.push({
         name: 'UDP',
-        fields: {
-          'Source Port': sport.toString(),
-          'Destination Port': dport.toString(),
-        },
+        fields: [
+          { key: 'Source Port', value: sport.toString(), start: 34, end: 35 },
+          { key: 'Destination Port', value: dport.toString(), start: 36, end: 37 },
+        ],
       });
     }
   }
@@ -246,6 +247,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [hoverRange, setHoverRange] = useState<[number, number] | null>(null);
+  const [selectedRange, setSelectedRange] = useState<[number, number] | null>(
+    null
+  );
+  const [fieldMap, setFieldMap] = useState<
+    { start: number; end: number; el: HTMLLIElement }[]
+  >([]);
+
+  useEffect(() => {
+    setFieldMap([]);
+    setSelectedRange(null);
+  }, [selected]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -300,6 +313,49 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     );
   });
 
+  const registerField = (range: [number, number], el: HTMLLIElement) => {
+    setFieldMap((prev) => {
+      const others = prev.filter(
+        (f) => f.start !== range[0] || f.end !== range[1]
+      );
+      return [...others, { start: range[0], end: range[1], el }];
+    });
+  };
+
+  const handleByteClick = (idx: number) => {
+    const target = fieldMap.find((f) => idx >= f.start && idx <= f.end);
+    if (target) {
+      setSelectedRange([target.start, target.end]);
+      target.el.scrollIntoView({ block: 'nearest' });
+    } else {
+      setSelectedRange(null);
+    }
+  };
+
+  const renderHex = (data: Uint8Array) => {
+    const elems: React.ReactNode[] = [];
+    for (let i = 0; i < data.length; i++) {
+      const byteStr = data[i].toString(16).padStart(2, '0');
+      const highlight =
+        (hoverRange && i >= hoverRange[0] && i <= hoverRange[1]) ||
+        (selectedRange && i >= selectedRange[0] && i <= selectedRange[1]);
+      elems.push(
+        <span
+          key={i}
+          onClick={() => handleByteClick(i)}
+          className={`${highlight ? 'bg-yellow-800' : ''} cursor-pointer`}
+        >
+          {byteStr}
+        </span>
+      );
+      if ((i + 1) % 16 === 0) elems.push(<br key={`br${i}`} />);
+      else elems.push(' ');
+    }
+    return elems;
+  };
+
+  const layers = selected !== null ? decodePacketLayers(filtered[selected]) : [];
+
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
       <div className="flex items-center space-x-2">
@@ -308,6 +364,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="open capture"
         />
         <select
           onChange={(e) => {
@@ -354,6 +411,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   protocolColors[label.toUpperCase()] || 'bg-gray-500'
                 }`}
                 title={label}
+                aria-label={label}
                 type="button"
               />
             ))}
@@ -442,10 +500,19 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
               {selected !== null ? (
                 <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
+                  {layers.map((layer, i) => (
+                    <LayerView
+                      key={i}
+                      name={layer.name}
+                      fields={layer.fields}
+                      onHoverRange={setHoverRange}
+                      onRegisterField={registerField}
+                      selectedRange={selectedRange}
+                    />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400 whitespace-pre-wrap">
+                    {renderHex(filtered[selected].data)}
+                  </pre>
                 </>
               ) : (
                 'Select a packet'
