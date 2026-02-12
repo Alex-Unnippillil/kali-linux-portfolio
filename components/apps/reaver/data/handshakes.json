@@ -1,42 +1,248 @@
 {
+  "globalWarnings": [
+    "Simulation only: command builders wrap every example with printf so nothing transmits over the air.",
+    "Capture and replay work must stay inside owned or dedicated lab hardware."
+  ],
+  "risks": [
+    "Captured frames allow offline password and PIN attacks when weak credentials are used.",
+    "WPS-enabled routers can leak PINs or expose downgrade paths if left in production networks."
+  ],
+  "defenses": [
+    "Prefer WPA3 or WPA2 with strong passphrases and disable legacy WPS enrollment flows.",
+    "Monitor for anomalous association attempts and rotate credentials when test labs finish exercising." 
+  ],
   "handshakes": [
     {
-      "id": "sample",
-      "label": "WPA2 4-Way Handshake",
+      "id": "wpa2-lab",
+      "label": "WPA2 Personal – Clean 4-Way Handshake",
+      "summary": "Baseline handshake captured after a lab client was deauthenticated.",
+      "labWarning": "For classroom access points only. Do not attempt on production SSIDs.",
+      "environment": {
+        "ssid": "LAB-WPA2",
+        "bssid": "02:00:00:00:01:10",
+        "channel": 6,
+        "notes": [
+          "Raspberry Pi 4 acting as the access point with hostapd.",
+          "Client is an ESP32 dev board forced to reauthenticate."
+        ]
+      },
       "messages": [
         {
           "step": "M1",
           "from": "Access Point",
           "to": "Client",
-          "description": "Authenticator sends ANonce and security parameters to start the handshake."
+          "description": "Authenticator sends ANonce plus RSN information element values."
         },
         {
           "step": "M2",
           "from": "Client",
           "to": "Access Point",
-          "description": "Supplicant responds with SNonce and a MIC computed with the PTK."
+          "description": "Supplicant replies with SNonce, RSN, and MIC derived from the PMK."
         },
         {
           "step": "M3",
           "from": "Access Point",
           "to": "Client",
-          "description": "Authenticator sends the GTK and a MIC, instructing the client to install the PTK."
+          "description": "Authenticator transmits the Group Temporal Key and installs the PTK."
         },
         {
           "step": "M4",
           "from": "Client",
           "to": "Access Point",
-          "description": "Supplicant acknowledges installation of the PTK completing the handshake."
+          "description": "Supplicant acknowledges installation completing the 4-way exchange."
         }
-      ]
+      ],
+      "commandTemplates": [
+        {
+          "id": "monitor",
+          "title": "Prepare monitor mode",
+          "description": "Configures a USB adapter for passive capture while staying offline.",
+          "template": "ip link set {iface} down && iw dev {iface} set type monitor && ip link set {iface} up",
+          "inputs": [
+            { "name": "iface", "label": "Wireless interface", "default": "wlan0" }
+          ]
+        },
+        {
+          "id": "capture",
+          "title": "Capture handshake frames",
+          "description": "Focuses on the lab BSSID and channel so the capture is deterministic.",
+          "template": "airodump-ng --bssid {bssid} --channel {channel} --write lab-handshake {iface}",
+          "inputs": [
+            { "name": "iface", "label": "Monitor interface", "default": "wlan0mon" },
+            { "name": "bssid", "label": "Target BSSID", "default": "02:00:00:00:01:10" },
+            { "name": "channel", "label": "Channel", "default": "6" }
+          ]
+        },
+        {
+          "id": "reaver-dry",
+          "title": "Reaver dry run",
+          "description": "Prints the PIN workflow without sending association frames.",
+          "template": "reaver --interface {iface} --bssid {bssid} --channel {channel} --session lab-session --pin 12345670 --no-associate",
+          "inputs": [
+            { "name": "iface", "label": "Monitor interface", "default": "wlan0mon" },
+            { "name": "bssid", "label": "Target BSSID", "default": "02:00:00:00:01:10" },
+            { "name": "channel", "label": "Channel", "default": "6" }
+          ]
+        }
+      ],
+      "analysis": {
+        "sections": [
+          {
+            "title": "Handshake completeness",
+            "items": [
+              "All four WPA2 messages present which satisfies offline cracking prerequisites.",
+              "No retransmissions logged; capture timing aligned with the forced deauth."
+            ]
+          },
+          {
+            "title": "Lab takeaways",
+            "items": [
+              "Use the capture to demonstrate how dictionary strength impacts crack time.",
+              "Discuss why production monitoring should alert on repeated deauth frames."
+            ]
+          }
+        ],
+        "labNotices": [
+          "Keep the client isolated from the internet so accidental association traffic stays inside the lab.",
+          "Rotate the lab passphrase after each class so PCAPs are not reused elsewhere."
+        ]
+      }
+    },
+    {
+      "id": "wps-pin-lab",
+      "label": "WPS PIN Workflow – Training Router",
+      "summary": "Eight-message WPS exchange captured while attempting a PIN brute force.",
+      "labWarning": "Router intentionally vulnerable for curriculum demos. Never expose to production VLANs.",
+      "environment": {
+        "ssid": "LAB-WPS",
+        "bssid": "02:00:00:00:03:20",
+        "channel": 1,
+        "notes": [
+          "OpenWrt router with WPS enabled and PIN lockout set to 60 seconds.",
+          "PIN brute force limited to 30 attempts between cooldowns."
+        ]
+      },
+      "messages": [
+        { "step": "M1", "from": "Registrar", "to": "Enrollee", "description": "Registrar announces public key and nonce." },
+        { "step": "M2", "from": "Enrollee", "to": "Registrar", "description": "Enrollee shares its nonce and public key." },
+        { "step": "M3", "from": "Registrar", "to": "Enrollee", "description": "Registrar sends encrypted settings and authenticator." },
+        { "step": "M4", "from": "Enrollee", "to": "Registrar", "description": "Enrollee responds with hash of the PIN first half." },
+        { "step": "M5", "from": "Registrar", "to": "Enrollee", "description": "Registrar validates and sends the second half challenge." },
+        { "step": "M6", "from": "Enrollee", "to": "Registrar", "description": "Enrollee replies with hash of the second half." },
+        { "step": "M7", "from": "Registrar", "to": "Enrollee", "description": "Registrar delivers encrypted network settings." },
+        { "step": "M8", "from": "Enrollee", "to": "Registrar", "description": "Enrollee confirms receipt and completes the exchange." }
+      ],
+      "commandTemplates": [
+        {
+          "id": "wps-survey",
+          "title": "Survey WPS targets",
+          "description": "Lists lab routers with WPS metadata without touching non-lab BSSIDs.",
+          "template": "wash --interface {iface} --channel {channel} --json --timeout 5",
+          "inputs": [
+            { "name": "iface", "label": "Monitor interface", "default": "wlan0mon" },
+            { "name": "channel", "label": "Channel", "default": "1" }
+          ]
+        },
+        {
+          "id": "wps-reaver",
+          "title": "Throttle PIN attempts",
+          "description": "Prints a spaced-out command illustrating lockout-aware testing.",
+          "template": "reaver --interface {iface} --bssid {bssid} --delay 5 --locked=60 --session wps-lab --no-associate",
+          "inputs": [
+            { "name": "iface", "label": "Monitor interface", "default": "wlan0mon" },
+            { "name": "bssid", "label": "Target BSSID", "default": "02:00:00:00:03:20" }
+          ]
+        }
+      ],
+      "analysis": {
+        "sections": [
+          {
+            "title": "Lockout awareness",
+            "items": [
+              "Observe the registrar's NACKs after 30 attempts indicating the timer engaged.",
+              "Discuss responsible throttling and why production WPS should be disabled entirely."
+            ]
+          },
+          {
+            "title": "Instructional focus",
+            "items": [
+              "Highlight how PIXIE-style attacks rely on weak nonce generation.",
+              "Compare offline brute force timing between WPS and WPA2 passphrases."
+            ]
+          }
+        ],
+        "labNotices": [
+          "Only operate the router on an RF-isolated bench to avoid leaking beacon frames to neighbors.",
+          "Reset the router after class so students do not retain administrative credentials."
+        ]
+      }
+    },
+    {
+      "id": "wpa-enterprise-lab",
+      "label": "WPA2-Enterprise – PEAP Exchange",
+      "summary": "EAPOL plus inner PEAP negotiation captured on a training RADIUS stack.",
+      "labWarning": "Captures include anonymised usernames. Keep artifacts inside the lab share only.",
+      "environment": {
+        "ssid": "LAB-PEAP",
+        "bssid": "02:00:00:00:05:40",
+        "channel": 11,
+        "notes": [
+          "FreeRADIUS with test certificates; usernames intentionally generic.",
+          "Client is wpa_supplicant running with verbose logging enabled."
+        ]
+      },
+      "messages": [
+        { "step": "EAPOL-Start", "from": "Client", "to": "Authenticator", "description": "Client requests authentication." },
+        { "step": "Identity", "from": "Authenticator", "to": "Client", "description": "Access point requests identity to forward upstream." },
+        { "step": "Response/Identity", "from": "Client", "to": "Authenticator", "description": "Client provides anonymous outer identity for PEAP." },
+        { "step": "EAP-TLS ServerHello", "from": "Authenticator", "to": "Client", "description": "RADIUS server shares certificate and begins TLS tunnel." },
+        { "step": "EAP-TLS ClientKeyExchange", "from": "Client", "to": "Authenticator", "description": "Client negotiates TLS secrets inside PEAP tunnel." },
+        { "step": "EAP-Success", "from": "Authenticator", "to": "Client", "description": "Authentication succeeds, allowing 4-way handshake." },
+        { "step": "M1", "from": "Access Point", "to": "Client", "description": "Standard WPA2 message 1 following PEAP success." },
+        { "step": "M2", "from": "Client", "to": "Access Point", "description": "Client replies with MIC built from derived keys." }
+      ],
+      "commandTemplates": [
+        {
+          "id": "enterprise-capture",
+          "title": "Capture PEAP negotiation",
+          "description": "Focus on the RADIUS-connected BSSID while mirroring to lab storage.",
+          "template": "airodump-ng --bssid {bssid} --channel {channel} --write peap-trace {iface}",
+          "inputs": [
+            { "name": "iface", "label": "Monitor interface", "default": "wlan1mon" },
+            { "name": "bssid", "label": "Target BSSID", "default": "02:00:00:00:05:40" },
+            { "name": "channel", "label": "Channel", "default": "11" }
+          ]
+        },
+        {
+          "id": "enterprise-interpret",
+          "title": "Summarise 802.1X log",
+          "description": "Shows how to view wpa_supplicant logs without leaking lab credentials.",
+          "template": "grep PEAP /var/log/wpa_supplicant.log | head -n 5",
+          "inputs": []
+        }
+      ],
+      "analysis": {
+        "sections": [
+          {
+            "title": "RADIUS hygiene",
+            "items": [
+              "Certificates expire in 90 days; schedule renewals inside the lab calendar.",
+              "Ensure inner identities map to disposable lab accounts with no extra privileges."
+            ]
+          },
+          {
+            "title": "Teaching cues",
+            "items": [
+              "Compare PEAP to EAP-TTLS and discuss why mutual TLS matters.",
+              "Use the logs to highlight why credential replay is ineffective when TLS is enforced." 
+            ]
+          }
+        ],
+        "labNotices": [
+          "Scrub logs before distributing lab materials so usernames remain pseudonymous.",
+          "Keep the RADIUS server offline when labs are not scheduled to avoid rogue associations."
+        ]
+      }
     }
-  ],
-  "risks": [
-    "Captured handshakes can be brute‑forced offline to recover weak passphrases.",
-    "Attackers can lure clients to rogue access points to obtain handshakes."
-  ],
-  "defenses": [
-    "Use strong, unique passphrases and prefer WPA3 when possible.",
-    "Monitor for rogue APs and disable WPS to reduce attack surface."
   ]
 }
