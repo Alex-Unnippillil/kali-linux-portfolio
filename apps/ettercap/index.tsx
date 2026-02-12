@@ -205,7 +205,7 @@ export default function EttercapPage() {
       <section className="space-y-3">
         <h2 className={`text-sm font-semibold uppercase tracking-wide ${ACCENT_SUBHEADING_TEXT}`}>Attack workflow timeline</h2>
         <ol className="space-y-4 border-l border-[color:color-mix(in_srgb,var(--color-primary)_35%,transparent)] pl-4">
-          {timeline.map((step) => {
+          {timeline.map((step: TimelineStep) => {
             const tone = STATUS_TONE_MAP[step.status];
             const palette = STATUS_STYLE[tone];
 
