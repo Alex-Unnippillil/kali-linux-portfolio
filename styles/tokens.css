@@ -47,6 +47,11 @@
   --game-color-warning: #d97706;
   --game-color-danger: #b91c1c;
 
+  /* Semantic colors */
+  --surface: var(--color-bg);
+  --text: var(--color-text);
+  --accent: var(--color-ubt-blue);
+
   /* Spacing scale */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
