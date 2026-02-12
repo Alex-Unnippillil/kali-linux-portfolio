@@ -78,6 +78,9 @@ const VCardPage: React.FC = () => {
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="mt-1 w-full rounded border p-2"
+            inputMode="text"
+            autoComplete="name"
+            autoCorrect="off"
           />
         </label>
         <label className="block text-sm">
@@ -87,6 +90,9 @@ const VCardPage: React.FC = () => {
             value={org}
             onChange={(e) => setOrg(e.target.value)}
             className="mt-1 w-full rounded border p-2"
+            inputMode="text"
+            autoComplete="organization"
+            autoCorrect="off"
           />
         </label>
         <label className="block text-sm">
@@ -96,6 +102,9 @@ const VCardPage: React.FC = () => {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             className="mt-1 w-full rounded border p-2"
+            inputMode="tel"
+            autoComplete="tel"
+            autoCorrect="off"
           />
         </label>
         <label className="block text-sm">
@@ -105,6 +114,9 @@ const VCardPage: React.FC = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 w-full rounded border p-2"
+            inputMode="email"
+            autoComplete="email"
+            autoCorrect="off"
           />
         </label>
       </form>

@@ -35,6 +35,25 @@ beforeEach(() => {
 });
 
 describe('ContactApp UI', () => {
+  it('sets mobile friendly attributes on key fields', () => {
+    render(<ContactApp />);
+
+    const nameInput = screen.getByLabelText(/name/i);
+    expect(nameInput).toHaveAttribute('autocomplete', 'name');
+    expect(nameInput).toHaveAttribute('inputmode', 'text');
+    expect(nameInput).toHaveAttribute('autocorrect', 'off');
+
+    const emailInput = screen.getByLabelText(/email/i);
+    expect(emailInput).toHaveAttribute('autocomplete', 'email');
+    expect(emailInput).toHaveAttribute('inputmode', 'email');
+    expect(emailInput).toHaveAttribute('autocorrect', 'off');
+
+    const messageInput = screen.getByLabelText(/message/i);
+    expect(messageInput).toHaveAttribute('autocomplete', 'on');
+    expect(messageInput).toHaveAttribute('autocorrect', 'on');
+    expect(messageInput).toHaveAttribute('inputmode', 'text');
+  });
+
   it('shows a success toast and banner after a successful submission', async () => {
     processContactFormMock.mockResolvedValue({ success: true });
 

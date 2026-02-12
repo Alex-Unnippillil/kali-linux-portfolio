@@ -97,6 +97,9 @@ const DummyForm: React.FC = () => {
           id="name"
           className="mb-4 w-full rounded border p-2"
           type="text"
+          inputMode="text"
+          autoComplete="name"
+          autoCorrect="off"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
@@ -105,6 +108,9 @@ const DummyForm: React.FC = () => {
           id="email"
           className="mb-4 w-full rounded border p-2"
           type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCorrect="off"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -112,6 +118,9 @@ const DummyForm: React.FC = () => {
         <textarea
           id="message"
           className="mb-4 w-full rounded border p-2"
+          inputMode="text"
+          autoComplete="on"
+          autoCorrect="on"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
         />
