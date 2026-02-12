@@ -3,16 +3,26 @@
 import React, { useEffect, useRef, useState } from "react";
 import PipPortalProvider, { usePipPortal } from "../common/PipPortal";
 
+type CaptionTrack = {
+  src: string;
+  label: string;
+  srcLang: string;
+  kind?: TextTrackKind;
+  default?: boolean;
+};
+
 interface VideoPlayerProps {
   src: string;
   poster?: string;
   className?: string;
+  tracks?: CaptionTrack[];
 }
 
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
   className = "",
+  tracks = [],
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const { open, close } = usePipPortal();
@@ -127,14 +137,40 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     await open(<DocPipControls initialVolume={initialVolume} />);
   };
 
+  const hasCaptionTrack = tracks.some(
+    ({ kind = "captions" }) => kind === "captions"
+  );
+
   return (
     <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto">
+        {tracks.map(({ kind = "captions", src: trackSrc, label, srcLang, default: isDefault }) => (
+          <track
+            key={`${kind}-${label}-${srcLang}`}
+            kind={kind}
+            src={trackSrc}
+            label={label}
+            srcLang={srcLang}
+            default={isDefault}
+          />
+        ))}
+      </video>
+      {!hasCaptionTrack && (
+        <p
+          role="status"
+          className="mt-2 text-xs text-gray-300"
+          aria-live="polite"
+        >
+          Captions unavailable
+        </p>
+      )}
       {pipSupported && (
         <button
           type="button"
           onClick={togglePiP}
           className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-label={`${isPip ? "Exit" : "Enter"} picture-in-picture mode (keyboard shortcut: Shift+P)`}
+          aria-keyshortcuts="Shift+P"
         >
           {isPip ? "Exit PiP" : "PiP"}
         </button>
@@ -144,6 +180,8 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
           type="button"
           onClick={openDocPip}
           className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
+          aria-label="Open document picture-in-picture controls (keyboard shortcut: Shift+D)"
+          aria-keyshortcuts="Shift+D"
         >
           Doc-PiP
         </button>
