@@ -1,0 +1,131 @@
+{
+  "id": "security-overview",
+  "name": "Security Assessment Overview",
+  "description": "Summarize the current security posture, top risks, and prioritized remediation roadmap for leadership stakeholders.",
+  "layout": {
+    "format": "A4",
+    "orientation": "portrait",
+    "columns": 1,
+    "theme": "midnight-terminal",
+    "margin": "1in"
+  },
+  "cover": [
+    { "field": "title", "label": "Report Title", "type": "string", "required": true },
+    { "field": "subtitle", "label": "Subtitle", "type": "string", "required": false },
+    { "field": "client", "label": "Client", "type": "string", "required": true },
+    { "field": "assessmentDate", "label": "Assessment Date", "type": "date", "required": true },
+    { "field": "preparedBy", "label": "Prepared By", "type": "string", "required": true },
+    { "field": "version", "label": "Version", "type": "string", "required": false },
+    { "field": "confidentiality", "label": "Classification", "type": "string", "required": false }
+  ],
+  "sections": [
+    {
+      "slug": "executive-summary",
+      "title": "Executive Summary",
+      "description": "High-level synopsis written for senior leadership and non-technical stakeholders.",
+      "required": true,
+      "variables": [
+        {
+          "key": "executiveSummary",
+          "type": "markdown",
+          "required": true,
+          "description": "Narrative summary of the assessment purpose, current security posture, and most urgent calls to action."
+        }
+      ]
+    },
+    {
+      "slug": "assessment-scope",
+      "title": "Assessment Scope",
+      "description": "Systems, business units, and time period covered by the engagement.",
+      "required": true,
+      "variables": [
+        {
+          "key": "assessmentScope",
+          "type": "markdown",
+          "required": true,
+          "description": "Summary of in-scope assets, environments, and constraints."
+        }
+      ]
+    },
+    {
+      "slug": "methodology",
+      "title": "Methodology",
+      "description": "Testing approach, frameworks, and tooling used during the assessment.",
+      "required": true,
+      "variables": [
+        {
+          "key": "methodology",
+          "type": "markdown",
+          "required": true,
+          "description": "Description of testing methodology, mapping to industry frameworks when applicable."
+        }
+      ]
+    },
+    {
+      "slug": "key-findings",
+      "title": "Key Findings",
+      "description": "Prioritized technical and procedural gaps that require remediation.",
+      "required": true,
+      "variables": [
+        {
+          "key": "keyFindings",
+          "type": "collection",
+          "required": true,
+          "description": "Ordered list of the top findings with impact and remediation guidance.",
+          "itemFields": [
+            { "field": "title", "type": "string", "required": true },
+            { "field": "severity", "type": "string", "required": true },
+            { "field": "impact", "type": "markdown", "required": true },
+            { "field": "evidence", "type": "markdown", "required": false },
+            { "field": "remediation", "type": "markdown", "required": true }
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "risk-overview",
+      "title": "Risk Heatmap",
+      "description": "Visual summary of likelihood vs impact to highlight concentration of risk.",
+      "required": false,
+      "variables": [
+        {
+          "key": "riskOverview",
+          "type": "markdown",
+          "required": false,
+          "description": "Narrative or embedded graphic summarizing how findings cluster across risk categories."
+        }
+      ]
+    },
+    {
+      "slug": "roadmap",
+      "title": "Prioritized Roadmap",
+      "description": "Actionable next steps grouped by priority horizon.",
+      "required": true,
+      "variables": [
+        {
+          "key": "roadmap",
+          "type": "markdown",
+          "required": true,
+          "description": "Plan summarizing remediation initiatives and owners."
+        }
+      ]
+    },
+    {
+      "slug": "appendix-artifacts",
+      "title": "Artifacts Reviewed",
+      "description": "Documents, configurations, and evidence collected during the engagement.",
+      "required": false,
+      "variables": [
+        {
+          "key": "artifactsReviewed",
+          "type": "markdown",
+          "required": false,
+          "description": "Bulleted appendix enumerating logs, screenshots, and data sources used."
+        }
+      ]
+    }
+  ],
+  "preview": {
+    "thumbnail": "/images/report-templates/security-overview.svg"
+  }
+}
