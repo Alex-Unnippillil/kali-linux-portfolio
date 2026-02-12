@@ -1,24 +1,184 @@
 {
   "modules": [
-    {"id": "alert", "name": "Alert Dialog", "description": "Display a simple alert dialog in the hooked browser.", "demo": "window.alert('BeEF demo alert!');", "link": "https://github.com/beefproject/beef/wiki/Alert-Dialog"},
-    {"id": "prompt", "name": "Prompt Dialog", "description": "Ask the user for input using the browser's prompt dialog.", "demo": "window.prompt('Enter demo text');", "link": "https://github.com/beefproject/beef/wiki/Prompt-Dialog"},
-    {"id": "confirm", "name": "Confirm Dialog", "description": "Show a confirmation dialog with OK and Cancel options.", "demo": "window.confirm('Do you accept?');", "link": "https://github.com/beefproject/beef/wiki/Confirm-Dialog"},
-    {"id": "get-cookie", "name": "Get Cookies", "description": "Retrieve document cookies from the hooked browser.", "demo": "document.cookie", "link": "https://github.com/beefproject/beef/wiki/Get-Cookies"},
-    {"id": "get-local-storage", "name": "List Local Storage", "description": "Enumerate items in localStorage.", "demo": "Object.keys(localStorage)", "link": "https://github.com/beefproject/beef/wiki/Get-Local-Storage"},
-    {"id": "get-session-storage", "name": "List Session Storage", "description": "Enumerate items in sessionStorage.", "demo": "Object.keys(sessionStorage)", "link": "https://github.com/beefproject/beef/wiki/Get-Session-Storage"},
-    {"id": "browser-info", "name": "Browser Details", "description": "Gather user agent and browser details.", "demo": "navigator.userAgent", "link": "https://github.com/beefproject/beef/wiki/Browser-Details"},
-    {"id": "detect-plugins", "name": "Detect Plugins", "description": "List plugins exposed by the browser.", "demo": "navigator.plugins.length", "link": "https://github.com/beefproject/beef/wiki/Detect-Plugins"},
-    {"id": "geolocation", "name": "Get Geolocation", "description": "Request the browser's current geolocation.", "demo": "navigator.geolocation.getCurrentPosition(()=>{})", "link": "https://github.com/beefproject/beef/wiki/Get-Geolocation"},
-    {"id": "play-sound", "name": "Play Sound", "description": "Play an audio clip in the hooked browser.", "demo": "new Audio('data:audio/wav;base64,...').play();", "link": "https://github.com/beefproject/beef/wiki/Play-Sound"},
-    {"id": "change-background", "name": "Change Background", "description": "Change the page background color.", "demo": "document.body.style.background='lime';", "link": "https://github.com/beefproject/beef/wiki/Change-Background"},
-    {"id": "open-tab", "name": "Open New Tab", "description": "Open a new tab to a given URL.", "demo": "window.open('https://example.com','_blank');", "link": "https://github.com/beefproject/beef/wiki/Open-New-Tab"},
-    {"id": "redirect", "name": "Redirect Browser", "description": "Redirect the current page to another URL.", "demo": "window.location='https://example.com';", "link": "https://github.com/beefproject/beef/wiki/Redirect-Browser"},
-    {"id": "fetch-url", "name": "Fetch URL", "description": "Perform a fetch request to a chosen URL.", "demo": "fetch('https://example.com').then(r=>r.text());", "link": "https://github.com/beefproject/beef/wiki/Fetch-URL"},
-    {"id": "port-scan", "name": "Port Scanner", "description": "Scan a set of ports on the client network.", "demo": "// Demo only: no real scanning performed", "link": "https://github.com/beefproject/beef/wiki/Port-Scanner"},
-    {"id": "network-scan", "name": "Network Scanner", "description": "Attempt to discover internal network hosts.", "demo": "// Demo only: network scan placeholder", "link": "https://github.com/beefproject/beef/wiki/Network-Scanner"},
-    {"id": "keylogger", "name": "Keylogger", "description": "Log keystrokes typed by the user.", "demo": "// Demo only: keylogger placeholder", "link": "https://github.com/beefproject/beef/wiki/Keylogger"},
-    {"id": "clipboard", "name": "Clipboard Theft", "description": "Read text from the clipboard with permission.", "demo": "navigator.clipboard.readText()", "link": "https://github.com/beefproject/beef/wiki/Clipboard-Theft"},
-    {"id": "screenshot", "name": "Screenshot", "description": "Capture a screenshot of the current page.", "demo": "html2canvas(document.body)", "link": "https://github.com/beefproject/beef/wiki/Screenshot"},
-    {"id": "webcam-snapshot", "name": "Webcam Snapshot", "description": "Take a snapshot from the user's webcam.", "demo": "navigator.mediaDevices.getUserMedia({video:true})", "link": "https://github.com/beefproject/beef/wiki/Webcam-Snapshot"}
+    {
+      "id": "alert",
+      "name": "Alert Dialog",
+      "description": "Display a simple alert dialog in the hooked browser.",
+      "demo": "window.alert('BeEF demo alert!');",
+      "link": "https://github.com/beefproject/beef/wiki/Alert-Dialog",
+      "outputType": "Modal dialog",
+      "tags": ["Social Engineering", "Dialog", "User Interaction"]
+    },
+    {
+      "id": "prompt",
+      "name": "Prompt Dialog",
+      "description": "Ask the user for input using the browser's prompt dialog.",
+      "demo": "window.prompt('Enter demo text');",
+      "link": "https://github.com/beefproject/beef/wiki/Prompt-Dialog",
+      "outputType": "Modal prompt",
+      "tags": ["Social Engineering", "Dialog", "User Interaction"]
+    },
+    {
+      "id": "confirm",
+      "name": "Confirm Dialog",
+      "description": "Show a confirmation dialog with OK and Cancel options.",
+      "demo": "window.confirm('Do you accept?');",
+      "link": "https://github.com/beefproject/beef/wiki/Confirm-Dialog",
+      "outputType": "Modal confirm",
+      "tags": ["Social Engineering", "Dialog", "User Interaction"]
+    },
+    {
+      "id": "get-cookie",
+      "name": "Get Cookies",
+      "description": "Retrieve document cookies from the hooked browser.",
+      "demo": "document.cookie",
+      "link": "https://github.com/beefproject/beef/wiki/Get-Cookies",
+      "outputType": "Key/value text",
+      "tags": ["Data Harvesting", "Reconnaissance", "Storage"]
+    },
+    {
+      "id": "get-local-storage",
+      "name": "List Local Storage",
+      "description": "Enumerate items in localStorage.",
+      "demo": "Object.keys(localStorage)",
+      "link": "https://github.com/beefproject/beef/wiki/Get-Local-Storage",
+      "outputType": "Key list",
+      "tags": ["Data Harvesting", "Reconnaissance", "Storage"]
+    },
+    {
+      "id": "get-session-storage",
+      "name": "List Session Storage",
+      "description": "Enumerate items in sessionStorage.",
+      "demo": "Object.keys(sessionStorage)",
+      "link": "https://github.com/beefproject/beef/wiki/Get-Session-Storage",
+      "outputType": "Key list",
+      "tags": ["Data Harvesting", "Reconnaissance", "Storage"]
+    },
+    {
+      "id": "browser-info",
+      "name": "Browser Details",
+      "description": "Gather user agent and browser details.",
+      "demo": "navigator.userAgent",
+      "link": "https://github.com/beefproject/beef/wiki/Browser-Details",
+      "outputType": "JSON blob",
+      "tags": ["Reconnaissance", "Fingerprinting", "Client Insights"]
+    },
+    {
+      "id": "detect-plugins",
+      "name": "Detect Plugins",
+      "description": "List plugins exposed by the browser.",
+      "demo": "navigator.plugins.length",
+      "link": "https://github.com/beefproject/beef/wiki/Detect-Plugins",
+      "outputType": "Count summary",
+      "tags": ["Reconnaissance", "Fingerprinting", "Client Insights"]
+    },
+    {
+      "id": "geolocation",
+      "name": "Get Geolocation",
+      "description": "Request the browser's current geolocation.",
+      "demo": "navigator.geolocation.getCurrentPosition(()=>{})",
+      "link": "https://github.com/beefproject/beef/wiki/Get-Geolocation",
+      "outputType": "Coordinate pair",
+      "tags": ["Field Intelligence", "User Interaction", "Location"]
+    },
+    {
+      "id": "play-sound",
+      "name": "Play Sound",
+      "description": "Play an audio clip in the hooked browser.",
+      "demo": "new Audio('data:audio/wav;base64,...').play();",
+      "link": "https://github.com/beefproject/beef/wiki/Play-Sound",
+      "outputType": "Audio feedback",
+      "tags": ["Environment Control", "Sensory", "Experience"]
+    },
+    {
+      "id": "change-background",
+      "name": "Change Background",
+      "description": "Change the page background color.",
+      "demo": "document.body.style.background='lime';",
+      "link": "https://github.com/beefproject/beef/wiki/Change-Background",
+      "outputType": "DOM mutation",
+      "tags": ["Environment Control", "Visual", "Experience"]
+    },
+    {
+      "id": "open-tab",
+      "name": "Open New Tab",
+      "description": "Open a new tab to a given URL.",
+      "demo": "window.open('https://example.com','_blank');",
+      "link": "https://github.com/beefproject/beef/wiki/Open-New-Tab",
+      "outputType": "Tab launch",
+      "tags": ["Environment Control", "Navigation", "Experience"]
+    },
+    {
+      "id": "redirect",
+      "name": "Redirect Browser",
+      "description": "Redirect the current page to another URL.",
+      "demo": "window.location='https://example.com';",
+      "link": "https://github.com/beefproject/beef/wiki/Redirect-Browser",
+      "outputType": "URL change",
+      "tags": ["Environment Control", "Navigation", "Experience"]
+    },
+    {
+      "id": "fetch-url",
+      "name": "Fetch URL",
+      "description": "Perform a fetch request to a chosen URL.",
+      "demo": "fetch('https://example.com').then(r=>r.text());",
+      "link": "https://github.com/beefproject/beef/wiki/Fetch-URL",
+      "outputType": "HTML snippet",
+      "tags": ["Reconnaissance", "Network", "Data Harvesting"]
+    },
+    {
+      "id": "port-scan",
+      "name": "Port Scanner",
+      "description": "Scan a set of ports on the client network.",
+      "demo": "// Demo only: no real scanning performed",
+      "link": "https://github.com/beefproject/beef/wiki/Port-Scanner",
+      "outputType": "Port map",
+      "tags": ["Reconnaissance", "Network", "Simulation"]
+    },
+    {
+      "id": "network-scan",
+      "name": "Network Scanner",
+      "description": "Attempt to discover internal network hosts.",
+      "demo": "// Demo only: network scan placeholder",
+      "link": "https://github.com/beefproject/beef/wiki/Network-Scanner",
+      "outputType": "Host list",
+      "tags": ["Reconnaissance", "Network", "Simulation"]
+    },
+    {
+      "id": "keylogger",
+      "name": "Keylogger",
+      "description": "Log keystrokes typed by the user.",
+      "demo": "// Demo only: keylogger placeholder",
+      "link": "https://github.com/beefproject/beef/wiki/Keylogger",
+      "outputType": "Keystroke log",
+      "tags": ["Data Harvesting", "Persistence", "Simulation"]
+    },
+    {
+      "id": "clipboard",
+      "name": "Clipboard Theft",
+      "description": "Read text from the clipboard with permission.",
+      "demo": "navigator.clipboard.readText()",
+      "link": "https://github.com/beefproject/beef/wiki/Clipboard-Theft",
+      "outputType": "Clipboard text",
+      "tags": ["Data Harvesting", "Social Engineering", "User Interaction"]
+    },
+    {
+      "id": "screenshot",
+      "name": "Screenshot",
+      "description": "Capture a screenshot of the current page.",
+      "demo": "html2canvas(document.body)",
+      "link": "https://github.com/beefproject/beef/wiki/Screenshot",
+      "outputType": "Image capture",
+      "tags": ["Field Intelligence", "Visual", "Data Harvesting"]
+    },
+    {
+      "id": "webcam-snapshot",
+      "name": "Webcam Snapshot",
+      "description": "Take a snapshot from the user's webcam.",
+      "demo": "navigator.mediaDevices.getUserMedia({video:true})",
+      "link": "https://github.com/beefproject/beef/wiki/Webcam-Snapshot",
+      "outputType": "Image capture",
+      "tags": ["Field Intelligence", "Visual", "Data Harvesting"]
+    }
   ]
 }
