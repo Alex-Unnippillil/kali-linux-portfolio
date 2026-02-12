@@ -61,6 +61,7 @@ export interface UFOState {
   dir: number;
   w: number;
   h: number;
+  value: number;
 }
 
 export interface GameState {
@@ -85,6 +86,8 @@ export interface GameState {
   waveTime: number;
   extraLifeIndex: number;
   frontLine: number[];
+  shotsFired: number;
+  invaderStepPulse: number;
 }
 
 export interface InputState {
@@ -109,6 +112,7 @@ export interface StepEvent {
     | 'ufo-destroyed'
     | 'powerup'
     | 'invader-destroyed'
+    | 'invader-step'
     | 'shield-hit'
     | 'extra-life';
   value?: number;
@@ -129,6 +133,7 @@ const PLAYER_COOLDOWN = 0.45;
 const BULLET_SPEED = 240;
 const ENEMY_BULLET_SPEED = 200;
 const UFO_SPEED = 90;
+const UFO_SCORE_SEQUENCE = [100, 50, 50, 100, 150, 100, 50, 300];
 const SHIELD_SEG_ROWS = 2;
 const SHIELD_SEG_COLS = 3;
 const SHIELD_SEG_HP = 2;
@@ -243,7 +248,7 @@ export const createGame = (options?: {
     shields: createShields(width, height),
     bullets: [],
     powerUps: [],
-    ufo: { active: false, x: 0, y: 18, dir: 1, w: 30, h: 12 },
+    ufo: { active: false, x: 0, y: 18, dir: 1, w: 30, h: 12, value: 100 },
     invaderDir: 1,
     invaderStepTimer: 0,
     invaderFrame: 0,
@@ -252,6 +257,8 @@ export const createGame = (options?: {
     waveTime: 0,
     extraLifeIndex: 0,
     frontLine: Array.from({ length: INVADER_COLS }, () => -1),
+    shotsFired: 0,
+    invaderStepPulse: 0,
   };
 };
 
@@ -270,7 +277,15 @@ export const advanceWave = (state: GameState) => {
 };
 
 export const spawnUFO = (state: GameState) => {
-  state.ufo = { active: true, x: 0, y: 18, dir: 1, w: 30, h: 12 };
+  state.ufo = {
+    active: true,
+    x: -32,
+    y: 18,
+    dir: 1,
+    w: 30,
+    h: 12,
+    value: UFO_SCORE_SEQUENCE[state.shotsFired % UFO_SCORE_SEQUENCE.length],
+  };
 };
 
 export const updateHighScore = (score: number, highScore: number) =>
@@ -416,6 +431,7 @@ export const stepGame = (
         dy: -BULLET_SPEED,
         owner: 'player',
       });
+      state.shotsFired += 1;
       player.cooldown = player.rapid > 0 ? 0.18 : PLAYER_COOLDOWN;
     }
   }
@@ -456,22 +472,19 @@ export const stepGame = (
       state.frontLine.fill(-1);
       for (let i = 0; i < state.invaders.length; i += 1) {
         const invader = state.invaders[i];
-      if (!invader.alive) continue;
-      const current = state.frontLine[invader.column];
-      if (
-        current === -1 ||
-        invader.y > state.invaders[current].y
-      ) {
-        state.frontLine[invader.column] = i;
+        if (!invader.alive) continue;
+        const current = state.frontLine[invader.column];
+        if (current === -1 || invader.y > state.invaders[current].y) {
+          state.frontLine[invader.column] = i;
+        }
       }
-    }
-    let pickIndex = -1;
-    let seen = 0;
-    for (const index of state.frontLine) {
-      if (index < 0) continue;
-      seen += 1;
-      if (random() < 1 / seen) pickIndex = index;
-    }
+      let pickIndex = -1;
+      let seen = 0;
+      for (const index of state.frontLine) {
+        if (index < 0) continue;
+        seen += 1;
+        if (random() < 1 / seen) pickIndex = index;
+      }
       if (pickIndex >= 0) {
         const pick = state.invaders[pickIndex];
         spawnBullet(state.bullets, {
@@ -493,7 +506,8 @@ export const stepGame = (
     (0.65 * Math.max(0.2, aliveRatio)) /
     (state.stage * difficulty * (1 + state.waveTime * 0.04));
   state.invaderStepTimer += delta;
-  if (state.invaderStepTimer >= interval && aliveInvaders > 0) {
+  let marched = false;
+  while (state.invaderStepTimer >= interval && aliveInvaders > 0) {
     state.invaderStepTimer -= interval;
     state.invaderFrame = state.invaderFrame === 0 ? 1 : 0;
     let hitEdge = false;
@@ -504,6 +518,7 @@ export const stepGame = (
         hitEdge = true;
       }
     }
+    marched = true;
     if (hitEdge) {
       state.invaderDir *= -1;
       for (const invader of state.invaders) {
@@ -511,6 +526,10 @@ export const stepGame = (
         invader.y += 10;
       }
     }
+  }
+  if (marched) {
+    state.invaderStepPulse = (state.invaderStepPulse + 1) % 4;
+    events.push({ type: 'invader-step', value: state.invaderStepPulse });
   }
 
   for (const invader of state.invaders) {
@@ -622,10 +641,10 @@ export const stepGame = (
         ) {
           bullet.active = false;
           state.ufo.active = false;
-          state.score += 50;
+          state.score += state.ufo.value;
           events.push({
             type: 'ufo-destroyed',
-            value: 50,
+            value: state.ufo.value,
             x: state.ufo.x + state.ufo.w / 2,
             y: state.ufo.y + state.ufo.h / 2,
           });
