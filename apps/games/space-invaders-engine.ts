@@ -85,6 +85,8 @@ export interface GameState {
   waveTime: number;
   extraLifeIndex: number;
   frontLine: number[];
+  randomFn: () => number;
+  ufoScoreCursor: number;
 }
 
 export interface InputState {
@@ -134,6 +136,7 @@ const SHIELD_SEG_COLS = 3;
 const SHIELD_SEG_HP = 2;
 const EXTRA_LIFE_THRESHOLDS = [1000, 5000, 10000];
 const MAX_ENEMY_BULLETS = 3;
+const UFO_BONUS_SCORES = [50, 100, 150, 300];
 export const HIGH_SCORE_KEY = 'si_highscore';
 
 const clamp = (value: number, min: number, max: number) =>
@@ -216,6 +219,7 @@ export const createGame = (options?: {
   width?: number;
   height?: number;
   highScore?: number;
+  randomFn?: () => number;
 }): GameState => {
   const width = options?.width ?? DEFAULT_WIDTH;
   const height = options?.height ?? DEFAULT_HEIGHT;
@@ -252,6 +256,8 @@ export const createGame = (options?: {
     waveTime: 0,
     extraLifeIndex: 0,
     frontLine: Array.from({ length: INVADER_COLS }, () => -1),
+    randomFn: options?.randomFn ?? random,
+    ufoScoreCursor: 0,
   };
 };
 
@@ -270,7 +276,15 @@ export const advanceWave = (state: GameState) => {
 };
 
 export const spawnUFO = (state: GameState) => {
-  state.ufo = { active: true, x: 0, y: 18, dir: 1, w: 30, h: 12 };
+  const fromLeft = state.randomFn() < 0.5;
+  state.ufo = {
+    active: true,
+    x: fromLeft ? -30 : state.width + 30,
+    y: 18,
+    dir: fromLeft ? 1 : -1,
+    w: 30,
+    h: 12,
+  };
 };
 
 export const updateHighScore = (score: number, highScore: number) =>
@@ -300,8 +314,8 @@ const handlePowerUp = (state: GameState, type: PowerUpType) => {
   }
 };
 
-const pickPowerUp = (): PowerUpType => {
-  const roll = random();
+const pickPowerUp = (randomFn: () => number): PowerUpType => {
+  const roll = randomFn();
   if (roll < 0.34) return 'shield';
   if (roll < 0.67) return 'rapid';
   return 'life';
@@ -377,6 +391,25 @@ const getEnemyCooldown = (
   return clamp(scaled, 0.35, 1.2);
 };
 
+const getEnemyBulletCap = (stage: number, aliveRatio: number) => {
+  if (stage >= 4 || aliveRatio < 0.2) return MAX_ENEMY_BULLETS;
+  if (stage >= 2 || aliveRatio < 0.45) return MAX_ENEMY_BULLETS - 1;
+  return 1;
+};
+
+export const getInvaderStepInterval = (
+  aliveRatio: number,
+  stage: number,
+  difficulty: number,
+  waveTime: number,
+) => {
+  const safeRatio = Math.max(0.12, aliveRatio);
+  const interval =
+    (0.68 * safeRatio) /
+    (Math.max(1, stage) * Math.max(1, difficulty) * (1 + waveTime * 0.04));
+  return clamp(interval, 0.06, 0.58);
+};
+
 export const stepGame = (
   state: GameState,
   input: InputState,
@@ -450,28 +483,29 @@ export const stepGame = (
     for (const bullet of state.bullets) {
       if (bullet.active && bullet.owner === 'enemy') activeEnemyBullets += 1;
     }
-    if (activeEnemyBullets >= MAX_ENEMY_BULLETS) {
-      state.enemyCooldown = Math.min(state.enemyCooldown, 0.2);
+
+    const aliveRatio = aliveInvaders / (state.invaders.length || 1);
+    const enemyBulletCap = getEnemyBulletCap(state.stage, aliveRatio);
+    if (activeEnemyBullets >= enemyBulletCap) {
+      state.enemyCooldown = 0.18;
     } else {
       state.frontLine.fill(-1);
       for (let i = 0; i < state.invaders.length; i += 1) {
         const invader = state.invaders[i];
-      if (!invader.alive) continue;
-      const current = state.frontLine[invader.column];
-      if (
-        current === -1 ||
-        invader.y > state.invaders[current].y
-      ) {
-        state.frontLine[invader.column] = i;
+        if (!invader.alive) continue;
+        const current = state.frontLine[invader.column];
+        if (current === -1 || invader.y > state.invaders[current].y) {
+          state.frontLine[invader.column] = i;
+        }
       }
-    }
-    let pickIndex = -1;
-    let seen = 0;
-    for (const index of state.frontLine) {
-      if (index < 0) continue;
-      seen += 1;
-      if (random() < 1 / seen) pickIndex = index;
-    }
+
+      let pickIndex = -1;
+      let seen = 0;
+      for (const index of state.frontLine) {
+        if (index < 0) continue;
+        seen += 1;
+        if (state.randomFn() < 1 / seen) pickIndex = index;
+      }
       if (pickIndex >= 0) {
         const pick = state.invaders[pickIndex];
         spawnBullet(state.bullets, {
@@ -482,16 +516,18 @@ export const stepGame = (
           owner: 'enemy',
         });
       }
-      const aliveRatio = aliveInvaders / (state.invaders.length || 1);
       state.enemyCooldown = getEnemyCooldown(aliveRatio, difficulty, state.stage);
     }
   }
 
   state.waveTime += delta;
   const aliveRatio = aliveInvaders / (state.invaders.length || 1);
-  const interval =
-    (0.65 * Math.max(0.2, aliveRatio)) /
-    (state.stage * difficulty * (1 + state.waveTime * 0.04));
+  const interval = getInvaderStepInterval(
+    aliveRatio,
+    state.stage,
+    difficulty,
+    state.waveTime,
+  );
   state.invaderStepTimer += delta;
   if (state.invaderStepTimer >= interval && aliveInvaders > 0) {
     state.invaderStepTimer -= interval;
@@ -499,7 +535,7 @@ export const stepGame = (
     let hitEdge = false;
     for (const invader of state.invaders) {
       if (!invader.alive) continue;
-      invader.x += state.invaderDir * 10;
+      invader.x += state.invaderDir * 9;
       if (invader.x < 10 || invader.x + invader.w > state.width - 10) {
         hitEdge = true;
       }
@@ -508,7 +544,7 @@ export const stepGame = (
       state.invaderDir *= -1;
       for (const invader of state.invaders) {
         if (!invader.alive) continue;
-        invader.y += 10;
+        invader.y += 12;
       }
     }
   }
@@ -525,7 +561,7 @@ export const stepGame = (
   }
 
   state.ufoTimer += delta;
-  if (!state.ufo.active && state.ufoTimer > 12 && random() < 0.02) {
+  if (!state.ufo.active && state.ufoTimer > 12 && state.randomFn() < 0.02) {
     spawnUFO(state);
     state.ufoTimer = 0;
     events.push({ type: 'ufo-spawn', message: 'Saucer approaching' });
@@ -596,11 +632,11 @@ export const stepGame = (
             y: invader.y + invader.h / 2,
             row: invader.row,
           });
-          if (random() < 0.1) {
+          if (state.randomFn() < 0.1) {
             state.powerUps.push({
               x: invader.x + invader.w / 2,
               y: invader.y + invader.h / 2,
-              type: pickPowerUp(),
+              type: pickPowerUp(state.randomFn),
               active: true,
             });
           }
@@ -622,10 +658,13 @@ export const stepGame = (
         ) {
           bullet.active = false;
           state.ufo.active = false;
-          state.score += 50;
+          const scoreIndex = state.ufoScoreCursor % UFO_BONUS_SCORES.length;
+          const ufoScore = UFO_BONUS_SCORES[scoreIndex];
+          state.ufoScoreCursor += 1;
+          state.score += ufoScore;
           events.push({
             type: 'ufo-destroyed',
-            value: 50,
+            value: ufoScore,
             x: state.ufo.x + state.ufo.w / 2,
             y: state.ufo.y + state.ufo.h / 2,
           });

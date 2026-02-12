@@ -60,6 +60,50 @@ const createSeededRandom = (seed: number) => {
   };
 };
 
+
+const drawSprite = (
+  ctx: CanvasRenderingContext2D,
+  sprite: string[],
+  x: number,
+  y: number,
+  color: string,
+  pixel = 2,
+) => {
+  ctx.fillStyle = color;
+  for (let row = 0; row < sprite.length; row += 1) {
+    const line = sprite[row];
+    for (let col = 0; col < line.length; col += 1) {
+      if (line[col] === '1') {
+        ctx.fillRect(x + col * pixel, y + row * pixel, pixel, pixel);
+      }
+    }
+  }
+};
+
+const INVADER_SPRITES = {
+  30: [
+    ['00100100', '01111110', '11111111', '11011011', '11111111', '00100100'],
+    ['00100100', '01111110', '11111111', '11011011', '11111111', '01000010'],
+  ],
+  20: [
+    ['00011000', '00111100', '01111110', '11011011', '11111111', '00100100'],
+    ['00011000', '00111100', '01111110', '11011011', '11111111', '01000010'],
+  ],
+  10: [
+    ['00100100', '01011010', '11111111', '10111101', '00100100', '01000010'],
+    ['00100100', '01011010', '11111111', '10111101', '01000010', '10000001'],
+  ],
+};
+
+const PLAYER_SPRITE = [
+  '00011000',
+  '00111100',
+  '01111110',
+  '11111111',
+  '11111111',
+  '01111110',
+];
+
 const createStarfield = () => {
   const rand = createSeededRandom(42);
   return Array.from({ length: STAR_COUNT }, () => {
@@ -400,20 +444,16 @@ const SpaceInvaders: React.FC = () => {
     });
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(
-      state.player.x,
+    drawSprite(
+      ctx,
+      PLAYER_SPRITE,
+      state.player.x + 5,
       state.player.y,
-      state.player.w,
-      state.player.h,
+      '#f8fafc',
+      2,
     );
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(
-      state.player.x + state.player.w * 0.35,
-      state.player.y - 3,
-      state.player.w * 0.3,
-      3,
-    );
+    ctx.fillRect(state.player.x + state.player.w * 0.44, state.player.y - 4, 3, 4);
 
     if (state.player.shield) {
       ctx.strokeStyle = '#22d3ee';
@@ -435,15 +475,10 @@ const SpaceInvaders: React.FC = () => {
 
     state.invaders.forEach((invader) => {
       if (!invader.alive) return;
-      ctx.fillStyle = getInvaderColor(invader.points);
-      const bob = prefersReducedMotion ? 0 : Math.sin(invader.phase) * 1.5;
-      ctx.fillRect(invader.x, invader.y + bob, invader.w, invader.h);
-      if (state.invaderFrame === 1) {
-        ctx.fillRect(invader.x + 2, invader.y + invader.h + bob, 4, 2);
-        ctx.fillRect(invader.x + invader.w - 6, invader.y + invader.h + bob, 4, 2);
-      } else {
-        ctx.fillRect(invader.x + 4, invader.y - 2 + bob, invader.w - 8, 2);
-      }
+      const bob = prefersReducedMotion ? 0 : Math.sin(invader.phase) * 1.2;
+      const spriteSet = INVADER_SPRITES[invader.points as 10 | 20 | 30] ?? INVADER_SPRITES[10];
+      const frame = spriteSet[state.invaderFrame];
+      drawSprite(ctx, frame, invader.x + 2, invader.y + bob + 1, getInvaderColor(invader.points), 2);
     });
 
     ctx.fillStyle = '#facc15';

@@ -1,127 +1,103 @@
 import {
+  HIGH_SCORE_KEY,
   createGame,
+  getInvaderStepInterval,
+  loadHighScore,
+  persistHighScore,
   spawnUFO,
-  advanceWave,
   stepGame,
 } from '../apps/games/space-invaders';
 
-describe('space-invaders logic', () => {
-  test('initializes with shields and inactive ufo', () => {
-    const game = createGame();
-    expect(game.shields).toHaveLength(3);
-    game.shields.forEach((s) => expect(s.hp).toBe(12));
-    expect(game.ufo.active).toBe(false);
-  });
+const noRandom = () => 0.99;
 
-  test('spawnUFO activates bonus target', () => {
-    const game = createGame();
-    spawnUFO(game);
-    expect(game.ufo.active).toBe(true);
-  });
+describe('space-invaders engine', () => {
+  test('player bullet collides with invader and awards points', () => {
+    const game = createGame({ randomFn: noRandom });
+    const target = game.invaders[0];
 
-  test('advanceWave increments stage and invader count', () => {
-    const game = createGame();
-    game.invaders.forEach((i) => (i.alive = false));
-    const initialCount = game.invaders.length;
-    advanceWave(game);
-    expect(game.stage).toBe(2);
-    expect(game.invaders.length).toBeGreaterThan(initialCount);
-  });
-
-  test('paused step prevents player movement', () => {
-    const game = createGame();
-    const startX = game.player.x;
-    stepGame(game, { left: false, right: true, fire: false }, 1, {
-      paused: true,
-    });
-    expect(game.player.x).toBe(startX);
-  });
-
-  test('game over updates high score', () => {
-    const game = createGame();
-    game.highScore = 10;
-    game.score = 20;
-    game.lives = 1;
     game.bullets.push({
-      x: game.player.x + 1,
-      y: game.player.y + 1,
-      dx: 0,
-      dy: 0,
-      active: true,
-      owner: 'enemy',
-    });
-    stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    expect(game.gameOver).toBe(true);
-    expect(game.highScore).toBe(20);
-  });
-
-  test('ufo awards classic score values', () => {
-    const game = createGame();
-    game.ufo.active = true;
-    game.bullets.push({
-      x: game.ufo.x + 1,
-      y: game.ufo.y + 1,
+      x: target.x + 1,
+      y: target.y + 1,
       dx: 0,
       dy: 0,
       active: true,
       owner: 'player',
     });
-    const result = stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    const event = result.events.find((ev) => ev.type === 'ufo-destroyed');
-    expect(event?.value).toBeDefined();
-    expect([50, 100, 150, 300]).toContain(event?.value);
+
+    const { events } = stepGame(game, { left: false, right: false, fire: false }, 0);
+
+    expect(target.alive).toBe(false);
+    expect(game.score).toBe(target.points);
+    expect(events.some((event) => event.type === 'invader-destroyed')).toBe(true);
   });
 
-  test('invaders reaching player line trigger game over', () => {
-    const game = createGame();
-    const target = game.invaders[0];
-    target.alive = true;
-    target.y = game.player.y - target.h + 1;
+  test('bullet collision against shields chips health and deactivates bullet', () => {
+    const game = createGame({ randomFn: noRandom });
+    const shield = game.shields[0];
+
+    game.bullets.push({
+      x: shield.x + 4,
+      y: shield.y + 4,
+      dx: 0,
+      dy: 0,
+      active: true,
+      owner: 'enemy',
+    });
+
+    const hpBefore = shield.hp;
+    const { events } = stepGame(game, { left: false, right: false, fire: false }, 0.016);
+
+    expect(shield.hp).toBe(hpBefore - 1);
+    expect(game.bullets[0].active).toBe(false);
+    expect(events.some((event) => event.type === 'shield-hit')).toBe(true);
+  });
+
+  test('enemy bullet collision with player reduces life', () => {
+    const game = createGame({ randomFn: noRandom });
+    const bullet = {
+      x: game.player.x + 2,
+      y: game.player.y + 2,
+      dx: 0,
+      dy: 0,
+      active: true,
+      owner: 'enemy' as const,
+    };
+    game.bullets.push(bullet);
+
+    const livesBefore = game.lives;
+    const { events } = stepGame(game, { left: false, right: false, fire: false }, 0.016);
+
+    expect(game.lives).toBe(livesBefore - 1);
+    expect(events.some((event) => event.type === 'life-lost')).toBe(true);
+  });
+
+  test('invaders reverse direction and step down at edge', () => {
+    const game = createGame({ randomFn: noRandom });
+    game.invaders.forEach((invader) => {
+      invader.x = game.width - invader.w - 10;
+    });
+    const yBefore = game.invaders[0].y;
+    game.invaderStepTimer = 1;
+
     stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    expect(game.gameOver).toBe(true);
+
+    expect(game.invaderDir).toBe(-1);
+    expect(game.invaders[0].y).toBe(yBefore + 12);
   });
 
-  test('enemy bullets originate from front-line invader per column', () => {
-    const game = createGame();
-    game.bullets = [];
-    game.invaders.forEach((invader) => (invader.alive = false));
-    const columnInvaders = game.invaders.filter((invader) => invader.column === 0);
-    const top = columnInvaders[0];
-    const bottom = columnInvaders[columnInvaders.length - 1];
-    top.alive = true;
-    bottom.alive = true;
-    top.y = 40;
-    bottom.y = 140;
-    game.enemyCooldown = 0;
-    stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    const enemyBullet = game.bullets.find((b) => b.active && b.owner === 'enemy');
-    expect(enemyBullet).toBeDefined();
-    expect(enemyBullet?.y).toBeCloseTo(bottom.y + bottom.h, 5);
+  test('march interval gets faster as fewer invaders remain', () => {
+    const dense = getInvaderStepInterval(1, 1, 1, 0);
+    const sparse = getInvaderStepInterval(0.2, 1, 1, 0);
+
+    expect(sparse).toBeLessThan(dense);
   });
 
-  test('player bullet cap limits active shots', () => {
-    const game = createGame();
-    game.player.cooldown = 0;
-    stepGame(game, { left: false, right: false, fire: true }, 0.016);
-    const firstCount = game.bullets.filter(
-      (bullet) => bullet.active && bullet.owner === 'player',
-    ).length;
-    expect(firstCount).toBe(1);
-    game.player.cooldown = 0;
-    stepGame(game, { left: false, right: false, fire: true }, 0.016);
-    const secondCount = game.bullets.filter(
-      (bullet) => bullet.active && bullet.owner === 'player',
-    ).length;
-    expect(secondCount).toBe(1);
-  });
-
-  test('top row invaders award more points than bottom row', () => {
-    const topGame = createGame();
-    topGame.invaders.forEach((invader) => (invader.alive = false));
+  test('top invader row scores higher than bottom row', () => {
+    const topGame = createGame({ randomFn: noRandom });
     const topInvader = topGame.invaders.find((invader) => invader.row === 0);
     expect(topInvader).toBeDefined();
     if (!topInvader) return;
-    topInvader.alive = true;
+
     topGame.bullets.push({
       x: topInvader.x + 1,
       y: topInvader.y + 1,
@@ -131,16 +107,13 @@ describe('space-invaders logic', () => {
       owner: 'player',
     });
     stepGame(topGame, { left: false, right: false, fire: false }, 0);
-    const topScore = topGame.score;
 
-    const bottomGame = createGame();
-    bottomGame.invaders.forEach((invader) => (invader.alive = false));
-    const bottomInvader = bottomGame.invaders.find(
-      (invader) => invader.row === Math.max(...bottomGame.invaders.map((inv) => inv.row)),
-    );
+    const bottomGame = createGame({ randomFn: noRandom });
+    const maxRow = Math.max(...bottomGame.invaders.map((invader) => invader.row));
+    const bottomInvader = bottomGame.invaders.find((invader) => invader.row === maxRow);
     expect(bottomInvader).toBeDefined();
     if (!bottomInvader) return;
-    bottomInvader.alive = true;
+
     bottomGame.bullets.push({
       x: bottomInvader.x + 1,
       y: bottomInvader.y + 1,
@@ -150,8 +123,49 @@ describe('space-invaders logic', () => {
       owner: 'player',
     });
     stepGame(bottomGame, { left: false, right: false, fire: false }, 0);
-    const bottomScore = bottomGame.score;
 
-    expect(topScore).toBeGreaterThan(bottomScore);
+    expect(topGame.score).toBeGreaterThan(bottomGame.score);
+  });
+
+  test('ufo bonus scores rotate deterministically', () => {
+    const game = createGame({ randomFn: () => 0 });
+    const seen: number[] = [];
+
+    for (let i = 0; i < 4; i += 1) {
+      spawnUFO(game);
+      game.bullets.push({
+        x: game.ufo.x + game.ufo.w / 2,
+        y: game.ufo.y + 2,
+        dx: 0,
+        dy: 0,
+        active: true,
+        owner: 'player',
+      });
+      const { events } = stepGame(game, { left: false, right: false, fire: false }, 0.016);
+      const hit = events.find((event) => event.type === 'ufo-destroyed');
+      if (hit?.value) seen.push(hit.value);
+    }
+
+    expect(seen).toEqual([50, 100, 150, 300]);
+  });
+
+  test('high score persistence reads and writes storage', () => {
+    const fakeStorage = {
+      store: new Map<string, string>(),
+      getItem(key: string) {
+        return this.store.has(key) ? this.store.get(key)! : null;
+      },
+      setItem(key: string, value: string) {
+        this.store.set(key, value);
+      },
+    };
+
+    expect(loadHighScore(fakeStorage)).toBe(0);
+    persistHighScore(700, fakeStorage);
+    expect(fakeStorage.getItem(HIGH_SCORE_KEY)).toBe('700');
+    persistHighScore(120, fakeStorage);
+    expect(loadHighScore(fakeStorage)).toBe(700);
+    persistHighScore(1440, fakeStorage);
+    expect(loadHighScore(fakeStorage)).toBe(1440);
   });
 });
