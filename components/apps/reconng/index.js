@@ -8,6 +8,10 @@ import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
 import { useSettings } from '../../../hooks/useSettings';
+import useEvidenceStore, {
+  buildManifestEntries,
+  formatManifestId,
+} from '../../../hooks/useEvidenceStore';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -152,6 +156,8 @@ const ReconNG = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [chainData, setChainData] = useState(null);
   const cyRef = useRef(null);
+  const { items: evidenceItems } = useEvidenceStore();
+  const [selectedEvidenceIds, setSelectedEvidenceIds] = useState([]);
 
   const currentWorkspace = workspaces[activeWs];
 
@@ -186,6 +192,13 @@ const ReconNG = () => {
         .catch(() => {});
     }
   }, [view, chainData]);
+
+  useEffect(() => {
+    setSelectedEvidenceIds((prev) => {
+      const valid = prev.filter((id) => evidenceItems.some((item) => item.id === id));
+      return valid.length === prev.length ? prev : valid;
+    });
+  }, [evidenceItems]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -270,6 +283,46 @@ const ReconNG = () => {
       },
     ],
     [],
+  );
+
+  const toggleEvidence = (id) => {
+    setSelectedEvidenceIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
+    );
+  };
+
+  const selectedEvidenceItems = useMemo(
+    () =>
+      selectedEvidenceIds
+        .map((id) => evidenceItems.find((item) => item.id === id))
+        .filter(Boolean),
+    [selectedEvidenceIds, evidenceItems],
+  );
+
+  const manifestIdByEvidenceId = useMemo(() => {
+    const map = new Map();
+    selectedEvidenceIds.forEach((id, index) => {
+      map.set(id, formatManifestId(index));
+    });
+    return map;
+  }, [selectedEvidenceIds]);
+
+  const manifestEntries = useMemo(
+    () => buildManifestEntries(selectedEvidenceItems),
+    [selectedEvidenceItems],
+  );
+
+  const inlineReferencePreview = useMemo(
+    () =>
+      manifestEntries
+        .map(
+          (entry) =>
+            `[manifest:${entry.manifestId}] ${entry.label}${
+              entry.summary ? ` — ${entry.summary}` : ''
+            }`,
+        )
+        .join('\n'),
+    [manifestEntries],
   );
 
   const updateWorkspace = (updater) => {
@@ -407,6 +460,45 @@ const ReconNG = () => {
   const addWorkspace = () => {
     setWorkspaces((ws) => [...ws, createWorkspace(ws.length)]);
     setActiveWs(workspaces.length);
+  };
+
+  const exportBundle = () => {
+    if (!chainData) return;
+    const references = manifestEntries.map((entry, index) => ({
+      id: `ref-${index + 1}`,
+      manifestId: entry.manifestId,
+      label: entry.label,
+      summary: entry.summary,
+      inline: `[manifest:${entry.manifestId}]`,
+    }));
+    const bundle = {
+      generatedAt: new Date().toISOString(),
+      target: target || null,
+      workspace: workspaces[activeWs]?.name || `Workspace ${activeWs + 1}`,
+      modules: chainData.chain.nodes.map((n) => n.data.label),
+      chain: chainData.chain,
+      chainEntities: chainData.entities,
+      entities: Object.fromEntries(
+        Object.entries(currentWorkspace.entities).map(([type, set]) => [
+          type,
+          Array.from(set),
+        ]),
+      ),
+      manifest: manifestEntries,
+      references,
+    };
+    if (inlineReferencePreview) {
+      bundle.inlineReport = inlineReferencePreview;
+    }
+    const blob = new Blob([JSON.stringify(bundle, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reconng-bundle.json';
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const exportJSON = () => {
@@ -580,22 +672,137 @@ const ReconNG = () => {
         </>
       )}
       {view === 'builder' && chainData && (
-        <>
-          <button
-            type="button"
-            onClick={runChain}
-            className="mb-2 bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
-          >
-            Run Chain
-          </button>
-          <div className="bg-black p-2" style={{ height: '300px' }}>
-            <CytoscapeComponent
-              elements={[...chainData.chain.nodes, ...chainData.chain.edges]}
-              stylesheet={stylesheet}
-              style={{ width: '100%', height: '100%' }}
-            />
+        <div className="flex flex-col gap-4 lg:flex-row">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <button
+                type="button"
+                onClick={runChain}
+                className="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded"
+              >
+                Run Chain
+              </button>
+              <button
+                type="button"
+                onClick={exportBundle}
+                className="bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded"
+              >
+                Export Bundle
+              </button>
+            </div>
+            <div className="bg-black p-2 rounded" style={{ height: '300px' }}>
+              <CytoscapeComponent
+                elements={[...chainData.chain.nodes, ...chainData.chain.edges]}
+                stylesheet={stylesheet}
+                style={{ width: '100%', height: '100%' }}
+              />
+            </div>
           </div>
-        </>
+          <aside className="lg:w-80 bg-gray-900/60 border border-gray-700 rounded p-3 space-y-3 text-sm">
+            <h3 className="font-semibold text-base">Evidence Attachments</h3>
+            {evidenceItems.length === 0 ? (
+              <p className="text-xs text-gray-400">
+                Capture evidence in the Evidence Vault to reference it here.
+              </p>
+            ) : (
+              <>
+                <p className="text-xs text-gray-400">
+                  Selected items are embedded in exports with manifest references.
+                </p>
+                <ul className="space-y-2 max-h-64 overflow-auto pr-1">
+                  {evidenceItems.map((item) => {
+                    const manifestId = manifestIdByEvidenceId.get(item.id);
+                    const isSelected = Boolean(manifestId);
+                    return (
+                      <li
+                        key={item.id}
+                        className={`border rounded bg-gray-800/70 ${
+                          isSelected ? 'border-blue-500 shadow-inner' : 'border-gray-700'
+                        }`}
+                      >
+                        <label className="flex gap-2 p-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={isSelected}
+                            onChange={() => toggleEvidence(item.id)}
+                          />
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-start gap-2">
+                              {item.thumbnail ? (
+                                <img
+                                  src={item.thumbnail}
+                                  alt=""
+                                  className="w-12 h-12 rounded object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div
+                                  className="w-12 h-12 rounded bg-gray-700 flex items-center justify-center text-lg"
+                                  aria-hidden="true"
+                                >
+                                  📁
+                                </div>
+                              )}
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-sm leading-tight">
+                                    {item.label}
+                                  </span>
+                                  {manifestId && (
+                                    <span className="text-xs font-mono px-1 rounded bg-blue-500/20 text-blue-200">
+                                      {manifestId}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-300 capitalize">
+                                  {item.kind}
+                                </div>
+                              </div>
+                            </div>
+                            {item.summary && (
+                              <p className="text-xs text-gray-200 whitespace-pre-wrap">
+                                {item.summary}
+                              </p>
+                            )}
+                            {item.tags.length > 0 && (
+                              <div className="text-[10px] text-gray-400 uppercase tracking-wide">
+                                Tags: {item.tags.join(', ')}
+                              </div>
+                            )}
+                            {item.metadata && Object.keys(item.metadata).length > 0 && (
+                              <dl className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-gray-300">
+                                {Object.entries(item.metadata).map(([key, value]) => (
+                                  <React.Fragment key={key}>
+                                    <dt className="uppercase tracking-wide text-gray-500">
+                                      {key}
+                                    </dt>
+                                    <dd className="break-words text-gray-200">
+                                      {String(value)}
+                                    </dd>
+                                  </React.Fragment>
+                                ))}
+                              </dl>
+                            )}
+                          </div>
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {inlineReferencePreview && (
+                  <div>
+                    <h4 className="font-semibold text-xs uppercase tracking-wide text-gray-400">
+                      Inline reference preview
+                    </h4>
+                    <pre className="mt-1 bg-black/70 p-2 rounded text-[11px] whitespace-pre-wrap">
+                      {inlineReferencePreview}
+                    </pre>
+                  </div>
+                )}
+              </>
+            )}
+          </aside>
+        </div>
       )}
       {view === 'reports' && <ReportTemplates />}
       {view === 'settings' && (
