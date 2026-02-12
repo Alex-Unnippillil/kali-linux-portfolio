@@ -39,7 +39,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | weather_widget | Weather Widget | Core maintainers | **Ready** – shares Open-Meteo data, respects Settings, and ships offline fallback | Settings integration |
 | qr | QR Tool | Core maintainers | **In progress** – camera selector and downloadable output | MediaDevices API |
 | ascii_art | ASCII Art | Core maintainers | **In progress** – text/image conversion pipeline | Canvas sampling |
-| quote | Quote | Core maintainers | **In progress** – offline JSON source and no-repeat option | Local JSON |
+| quote | Quote | Core maintainers | **Needs polish** – offline packs + rotation shipped; expand pack catalog next | Local JSON |
 | input-lab | Input Lab | Core maintainers | **Needs polish** – ensure device coverage (keyboard, mouse, gamepad) | Device APIs |
 | subnet-calculator | Subnet Calculator | Core maintainers | **Needs polish** – validation UX and shared presets | Network calc utils |
 | sticky_notes | Sticky Notes | Core maintainers | **Needs polish** – confirm persistence model and drag handles | localStorage |
