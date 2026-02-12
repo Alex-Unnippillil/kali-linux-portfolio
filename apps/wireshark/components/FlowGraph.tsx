@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { toPng } from 'html-to-image';
 import type cytoscape from 'cytoscape';
+import { PacketFrame } from '../../../utils/network/packetSerializer';
 
 interface CytoscapeComponentProps {
   elements: cytoscape.ElementDefinition[];
@@ -20,14 +21,8 @@ const CytoscapeComponent = dynamic(
   { ssr: false }
 ) as React.ComponentType<CytoscapeComponentProps>;
 
-interface Packet {
-  src: string;
-  dest: string;
-  data?: Uint8Array;
-}
-
 interface FlowGraphProps {
-  packets: Packet[];
+  packets: PacketFrame[];
 }
 
 const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
@@ -47,7 +42,7 @@ const FlowGraph: React.FC<FlowGraphProps> = ({ packets }) => {
           data: { id: key, source: p.src, target: p.dest, count: 0 }
         };
       edges[key].data.count += 1;
-      bytes += p.data?.length || 0;
+      bytes += p.data.length;
     });
     const elements = [
       ...Object.values(nodes),

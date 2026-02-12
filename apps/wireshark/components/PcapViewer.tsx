@@ -1,10 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import {
+  deserializeCapture,
+  PacketFrame,
+  PacketLayer,
+  serializeCapture,
+} from '../../../utils/network/packetSerializer';
 
 
 interface PcapViewerProps {
@@ -28,21 +34,7 @@ const toHex = (bytes: Uint8Array) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-interface Packet {
-  timestamp: string;
-  src: string;
-  dest: string;
-  protocol: number;
-  info: string;
-  data: Uint8Array;
-  sport?: number;
-  dport?: number;
-}
-
-interface Layer {
-  name: string;
-  fields: Record<string, string>;
-}
+type ParsedPacket = Omit<PacketFrame, 'layers'>;
 
 // Basic Ethernet + IPv4 parser
 const parseEthernetIpv4 = (data: Uint8Array) => {
@@ -69,7 +61,7 @@ const parseEthernetIpv4 = (data: Uint8Array) => {
 };
 
 // Parse classic pcap format
-const parsePcap = (buf: ArrayBuffer): Packet[] => {
+const parsePcap = (buf: ArrayBuffer): ParsedPacket[] => {
   const view = new DataView(buf);
   const magic = view.getUint32(0, false);
   let little: boolean;
@@ -77,7 +69,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
   else if (magic === 0xd4c3b2a1) little = true;
   else throw new Error('Unsupported pcap format');
   let offset = 24;
-  const packets: Packet[] = [];
+  const packets: ParsedPacket[] = [];
   while (offset + 16 <= view.byteLength) {
     const tsSec = view.getUint32(offset, little);
     const tsUsec = view.getUint32(offset + 4, little);
@@ -103,12 +95,12 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
 };
 
 // Parse PCAP-NG files including section and interface blocks
-const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
+const parsePcapNg = (buf: ArrayBuffer): ParsedPacket[] => {
   const view = new DataView(buf);
   let offset = 0;
   let little = true;
   const ifaces: { tsres: number }[] = [];
-  const packets: Packet[] = [];
+  const packets: ParsedPacket[] = [];
 
   while (offset + 8 <= view.byteLength) {
     let blockType = view.getUint32(offset, little);
@@ -163,7 +155,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
   return packets;
 };
 
-const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
+const parseWithWasm = async (buf: ArrayBuffer): Promise<ParsedPacket[]> => {
   try {
     // Attempt to load wasm parser; fall back to JS parsing
     await WebAssembly.instantiateStreaming(
@@ -177,9 +169,9 @@ const parseWithWasm = async (buf: ArrayBuffer): Promise<Packet[]> => {
   return magic === 0x0a0d0d0a ? parsePcapNg(buf) : parsePcap(buf);
 };
 
-const decodePacketLayers = (pkt: Packet): Layer[] => {
+const decodePacketLayers = (pkt: ParsedPacket): PacketLayer[] => {
   const data = pkt.data;
-  const layers: Layer[] = [];
+  const layers: PacketLayer[] = [];
   if (data.length >= 14) {
     const destMac = Array.from(data.slice(0, 6))
       .map((b) => b.toString(16).padStart(2, '0'))
@@ -235,7 +227,7 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
 };
 
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+  const [packets, setPackets] = useState<PacketFrame[]>([]);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -246,6 +238,23 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [lastExportSnapshot, setLastExportSnapshot] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [statusTone, setStatusTone] = useState<'success' | 'error' | 'info' | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
+
+  const setStatus = (
+    message: string,
+    tone: 'success' | 'error' | 'info' = 'info'
+  ) => {
+    setStatusMessage(message);
+    setStatusTone(tone);
+  };
+
+  const clearStatus = () => {
+    setStatusMessage(null);
+    setStatusTone(null);
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -272,33 +281,125 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.history.replaceState(null, '', url.toString());
   }, [filter]);
 
+  const mapWithLayers = (pkts: ParsedPacket[]): PacketFrame[] =>
+    pkts.map((pkt) => ({ ...pkt, layers: decodePacketLayers(pkt) }));
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const buf = await file.arrayBuffer();
     const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
+    setPackets(mapWithLayers(pkts));
     setSelected(null);
+    setLastExportSnapshot(null);
+    clearStatus();
   };
 
   const handleSample = async (path: string) => {
     const res = await fetch(path);
     const buf = await res.arrayBuffer();
     const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
+    setPackets(mapWithLayers(pkts));
     setSelected(null);
+    setLastExportSnapshot(null);
+    clearStatus();
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
+  const handleExportJson = () => {
+    if (!packets.length) {
+      setStatus('No packets available to export.', 'error');
+      return;
+    }
+    const snapshot = serializeCapture(packets);
+    setLastExportSnapshot(snapshot);
+    const blob = new Blob([snapshot], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `capture-${new Date()
+      .toISOString()
+      .replace(/[:.]/g, '-')}.json`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+    setStatus(
+      `Exported ${packets.length} frame${packets.length === 1 ? '' : 's'} to JSON.`,
+      'success'
     );
-  });
+  };
+
+  const triggerImport = () => importInputRef.current?.click();
+
+  const handleImportJson = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = deserializeCapture(text);
+      const prepared = imported.map((pkt) => {
+        if (pkt.layers.length) return pkt;
+        const { layers: _ignored, ...rest } = pkt;
+        return { ...pkt, layers: decodePacketLayers(rest) };
+      });
+      const canonical = serializeCapture(prepared);
+      const hasExport = lastExportSnapshot !== null;
+      if (hasExport && canonical !== lastExportSnapshot) {
+        setStatus(
+          'Imported capture does not match the last exported snapshot.',
+          'error'
+        );
+        return;
+      }
+      setPackets(prepared);
+      setSelected(null);
+      setStatus(
+        hasExport
+          ? `Import verified: ${prepared.length} frame${
+              prepared.length === 1 ? '' : 's'
+            } match the exported snapshot.`
+          : `Imported ${prepared.length} frame${
+              prepared.length === 1 ? '' : 's'
+            } from JSON.`,
+        'success'
+      );
+      setLastExportSnapshot(hasExport ? canonical : null);
+    } catch (err) {
+      setStatus(
+        err instanceof Error ? err.message : 'Failed to import capture JSON.',
+        'error'
+      );
+    } finally {
+      event.target.value = '';
+    }
+  };
+
+  const filtered = useMemo(
+    () =>
+      packets.filter((p) => {
+        if (!filter) return true;
+        const term = filter.toLowerCase();
+        return (
+          p.src.toLowerCase().includes(term) ||
+          p.dest.toLowerCase().includes(term) ||
+          protocolName(p.protocol).toLowerCase().includes(term) ||
+          (p.info || '').toLowerCase().includes(term)
+        );
+      }),
+    [packets, filter]
+  );
+
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev === null) return prev;
+      return prev < filtered.length ? prev : null;
+    });
+  }, [filtered.length]);
+
+  const selectedPacket =
+    selected !== null && selected < filtered.length ? filtered[selected] : null;
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -331,7 +432,43 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
         >
           Sample sources
         </a>
+        <button
+          onClick={handleExportJson}
+          className="px-2 py-1 text-xs bg-gray-700 rounded"
+          type="button"
+        >
+          Export JSON
+        </button>
+        <button
+          onClick={triggerImport}
+          className="px-2 py-1 text-xs bg-gray-700 rounded"
+          type="button"
+        >
+          Import JSON
+        </button>
+        <input
+          type="file"
+          accept="application/json"
+          ref={importInputRef}
+          onChange={handleImportJson}
+          aria-label="Import capture JSON"
+          className="hidden"
+        />
       </div>
+      {statusMessage && (
+        <p
+          className={`text-xs ${
+            statusTone === 'success'
+              ? 'text-green-400'
+              : statusTone === 'error'
+              ? 'text-red-400'
+              : 'text-yellow-300'
+          }`}
+          aria-live="polite"
+        >
+          {statusMessage}
+        </p>
+      )}
       {packets.length > 0 && (
         <>
           <div className="flex items-center space-x-2">
@@ -440,12 +577,16 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               </table>
             </div>
             <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
+              {selectedPacket ? (
                 <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
+                  {selectedPacket.layers.map((layer, i) => (
+                    <LayerView
+                      key={`${layer.name}-${i}`}
+                      name={layer.name}
+                      fields={layer.fields}
+                    />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400">{toHex(selectedPacket.data)}</pre>
                 </>
               ) : (
                 'Select a packet'
