@@ -1,0 +1,66 @@
+---
+title: "HowTo Template"
+description: "Replace with page description"
+---
+
+import Head from 'next/head'
+
+export const steps = [
+  {
+    id: 'step-1',
+    title: 'First step title',
+    description: 'Detail for the first step.',
+  },
+  {
+    id: 'step-2',
+    title: 'Second step title',
+    description: 'Detail for the second step.',
+  },
+]
+
+<Head>
+  <script
+    type="application/ld+json"
+    dangerouslySetInnerHTML={{
+      __html: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'HowTo',
+        name: 'Replace with HowTo name',
+        description: 'Replace with HowTo description',
+        step: steps.map((step) => ({
+          '@type': 'HowToStep',
+          name: step.title,
+          url: `#${step.id}`,
+          itemListElement: [
+            {
+              '@type': 'HowToDirection',
+              text: step.description,
+            },
+          ],
+        })),
+      }),
+    }}
+  />
+</Head>
+
+## Summary
+
+Provide a short overview of the task and its outcome.
+
+## Steps
+
+{steps.map((step, index) => (
+  <div key={step.id}>
+    <h3 id={step.id}>{`Step ${index + 1}: ${step.title}`}</h3>
+    <p>{step.description}</p>
+  </div>
+))}
+
+## Verification
+
+Explain how to confirm the task completed successfully.
+
+## Troubleshooting
+
+List common issues and how to resolve them.
+
