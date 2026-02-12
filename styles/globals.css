@@ -235,6 +235,8 @@ html[data-theme='matrix'] {
 
 html {
   scrollbar-color: var(--kali-border, var(--color-border)) transparent;
+  /* Prevent horizontal swipe gestures from triggering browser navigation */
+  overscroll-behavior-x: none;
 }
 
 @keyframes ambientGlowDrift {
