@@ -348,10 +348,30 @@ async function init() {
     notes.forEach(createNoteElement);
 
     const params = new URLSearchParams(location.search);
-    const sharedText = params.get('text');
-    if (sharedText) {
-      addNote(sharedText);
-      history.replaceState(null, '', location.pathname);
+    const sharedKeys = ['title', 'text', 'url'];
+    const sharedParts = [];
+    sharedKeys.forEach((key) => {
+      const value = params.get(key);
+      if (typeof value === 'string') {
+        const trimmed = value.trim();
+        if (trimmed) {
+          sharedParts.push(trimmed);
+        }
+      }
+    });
+
+    if (sharedParts.length) {
+      const noteContent = sharedParts.join('\n\n');
+      addNote(noteContent);
+
+      sharedKeys.forEach((key) => params.delete(key));
+      const remainingQuery = params.toString();
+      const nextUrl = remainingQuery
+        ? `${location.pathname}?${remainingQuery}`
+        : location.pathname;
+      if (typeof history.replaceState === 'function') {
+        history.replaceState(null, '', nextUrl);
+      }
     }
   } catch (err) {
     console.error('Failed to load notes', err);
