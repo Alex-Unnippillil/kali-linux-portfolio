@@ -7,7 +7,7 @@ function FunctionNode({ func, funcMap, onSelect, selected }) {
         onClick={() => onSelect(func.name)}
         className={`text-left w-full ${selected === func.name ? 'font-bold' : ''}`}
       >
-        {func.name}
+        {func.displayName || func.name}
       </button>
       {func.calls && func.calls.length > 0 && (
         <ul className="ml-4">

@@ -1,0 +1,836 @@
+{
+  "project": {
+    "name": "Lab Firmware Monitor",
+    "binary": "lab-firmware-monitor.bin",
+    "architecture": "x86_64",
+    "entry": "_start",
+    "summary": "Synthetic firmware sample compiled for the simulator. Demonstrates license validation and logging flows without executing binaries.",
+    "labMessage": "For lab use only – dataset derived from a synthetic firmware sample. Uploading binaries stays disabled until lab mode is enabled."
+  },
+  "functions": [
+    {
+      "name": "_start",
+      "displayName": "_start",
+      "prototype": "void _start(void)",
+      "address": "0x401000",
+      "size": 48,
+      "code": [
+        "void _start(void) {",
+        "    init_logging();",
+        "    main();",
+        "}"
+      ],
+      "annotations": {
+        "1": "Dispatcher emitted by the compiler – trimmed for the read-only lab build.",
+        "2": "Transfers control to the simulated main routine."
+      },
+      "calls": [
+        "init_logging",
+        "main"
+      ],
+      "blocks": [
+        {
+          "id": "start_entry",
+          "label": "Entry",
+          "address": "0x401000",
+          "code": [
+            "call init_logging",
+            "call main",
+            "hlt"
+          ],
+          "edges": [],
+          "x": 60,
+          "y": 60
+        }
+      ],
+      "bytes": [
+        "48",
+        "83",
+        "ec",
+        "08",
+        "e8",
+        "5b",
+        "00",
+        "00",
+        "00",
+        "e8",
+        "8f",
+        "00",
+        "00",
+        "00",
+        "f4",
+        "90"
+      ]
+    },
+    {
+      "name": "main",
+      "displayName": "main",
+      "prototype": "int main(void)",
+      "address": "0x401030",
+      "size": 144,
+      "code": [
+        "int main(void) {",
+        "    init_logging();",
+        "    const char *key = load_license();",
+        "    if (!validate_license(key)) {",
+        "        log_status(\"License failure\");",
+        "        return -1;",
+        "    }",
+        "    log_status(\"License accepted\");",
+        "    return 0;",
+        "}"
+      ],
+      "annotations": {
+        "1": "Entry point used by the simulator in place of the real firmware loop.",
+        "3": "Loads the canned lab license block from global memory.",
+        "4": "Validation mirrors the dataset shipped with the fixtures.",
+        "6": "Failure path emits the red status banner.",
+        "7": "Success path logs acceptance for analysts."
+      },
+      "calls": [
+        "init_logging",
+        "load_license",
+        "validate_license",
+        "log_status"
+      ],
+      "blocks": [
+        {
+          "id": "main_entry",
+          "label": "Entry",
+          "address": "0x401030",
+          "code": [
+            "call init_logging",
+            "call load_license",
+            "test rax, rax",
+            "je main_failure"
+          ],
+          "edges": [
+            "main_failure",
+            "main_success"
+          ],
+          "x": 60,
+          "y": 40
+        },
+        {
+          "id": "main_failure",
+          "label": "Failure",
+          "address": "0x401080",
+          "code": [
+            "lea rdi, str_failure",
+            "call log_status",
+            "mov eax, 0xffffffff"
+          ],
+          "edges": [],
+          "x": 220,
+          "y": 20
+        },
+        {
+          "id": "main_success",
+          "label": "Success",
+          "address": "0x4010a0",
+          "code": [
+            "lea rdi, str_success",
+            "call log_status",
+            "xor eax, eax"
+          ],
+          "edges": [],
+          "x": 220,
+          "y": 80
+        }
+      ],
+      "bytes": [
+        "55",
+        "48",
+        "89",
+        "e5",
+        "e8",
+        "8f",
+        "ff",
+        "ff",
+        "ff",
+        "e8",
+        "b4",
+        "ff",
+        "ff",
+        "ff",
+        "85",
+        "c0",
+        "74",
+        "14",
+        "48",
+        "8d",
+        "3d",
+        "41",
+        "01",
+        "00",
+        "00",
+        "e8",
+        "5f",
+        "01",
+        "00",
+        "00",
+        "b8",
+        "ff",
+        "ff",
+        "ff",
+        "ff",
+        "c3",
+        "48",
+        "8d",
+        "3d",
+        "1e",
+        "01",
+        "00",
+        "00",
+        "e8",
+        "4e",
+        "01",
+        "00",
+        "00",
+        "31",
+        "c0",
+        "c3"
+      ]
+    },
+    {
+      "name": "init_logging",
+      "displayName": "init_logging",
+      "prototype": "void init_logging(void)",
+      "address": "0x4010c0",
+      "size": 64,
+      "code": [
+        "void init_logging(void) {",
+        "    configure_sink(\"serial\");",
+        "    configure_sink(\"file\");",
+        "}"
+      ],
+      "annotations": {
+        "1": "Initializes sinks used by log_status during the lab run.",
+        "2": "Serial sink is used for quick iteration in the simulator.",
+        "3": "File sink demonstrates multi-target fanout."
+      },
+      "calls": [
+        "configure_sink"
+      ],
+      "blocks": [
+        {
+          "id": "logging_entry",
+          "label": "Entry",
+          "address": "0x4010c0",
+          "code": [
+            "lea rdi, str_serial",
+            "call configure_sink",
+            "lea rdi, str_file",
+            "call configure_sink"
+          ],
+          "edges": [],
+          "x": 80,
+          "y": 60
+        }
+      ],
+      "bytes": [
+        "48",
+        "8d",
+        "3d",
+        "aa",
+        "01",
+        "00",
+        "00",
+        "e8",
+        "6f",
+        "00",
+        "00",
+        "00",
+        "48",
+        "8d",
+        "3d",
+        "a1",
+        "01",
+        "00",
+        "00",
+        "e8",
+        "64",
+        "00",
+        "00",
+        "00",
+        "c3"
+      ]
+    },
+    {
+      "name": "configure_sink",
+      "displayName": "configure_sink",
+      "prototype": "void configure_sink(const char *name)",
+      "address": "0x401100",
+      "size": 80,
+      "code": [
+        "void configure_sink(const char *name) {",
+        "    if (!name) {",
+        "        return;",
+        "    }",
+        "    record_event(name);",
+        "}"
+      ],
+      "annotations": {
+        "1": "Checks pointers before handing them to record_event.",
+        "3": "Delegates to record_event so logs share a single writer."
+      },
+      "calls": [
+        "record_event"
+      ],
+      "blocks": [
+        {
+          "id": "sink_guard",
+          "label": "Guard",
+          "address": "0x401100",
+          "code": [
+            "test rdi, rdi",
+            "je sink_exit",
+            "call record_event"
+          ],
+          "edges": [
+            "sink_exit"
+          ],
+          "x": 80,
+          "y": 40
+        },
+        {
+          "id": "sink_exit",
+          "label": "Exit",
+          "address": "0x401120",
+          "code": [
+            "ret"
+          ],
+          "edges": [],
+          "x": 220,
+          "y": 60
+        }
+      ],
+      "bytes": [
+        "48",
+        "85",
+        "ff",
+        "74",
+        "05",
+        "e8",
+        "45",
+        "00",
+        "00",
+        "00",
+        "c3"
+      ]
+    },
+    {
+      "name": "load_license",
+      "displayName": "load_license",
+      "prototype": "const char *load_license(void)",
+      "address": "0x401150",
+      "size": 32,
+      "code": [
+        "const char *load_license(void) {",
+        "    return g_license_key;",
+        "}"
+      ],
+      "annotations": {
+        "1": "Returns a pointer to the global lab key rather than reading disk."
+      },
+      "calls": [],
+      "blocks": [
+        {
+          "id": "license_entry",
+          "label": "Entry",
+          "address": "0x401150",
+          "code": [
+            "mov rax, offset g_license_key",
+            "ret"
+          ],
+          "edges": [],
+          "x": 80,
+          "y": 60
+        }
+      ],
+      "bytes": [
+        "48",
+        "8d",
+        "05",
+        "aa",
+        "20",
+        "00",
+        "00",
+        "c3"
+      ]
+    },
+    {
+      "name": "validate_license",
+      "displayName": "validate_license",
+      "prototype": "bool validate_license(const char *key)",
+      "address": "0x401170",
+      "size": 160,
+      "code": [
+        "bool validate_license(const char *key) {",
+        "    if (!key) {",
+        "        return false;",
+        "    }",
+        "    uint16_t digest = checksum_buffer(key, 16);",
+        "    return digest == EXPECTED_DIGEST;",
+        "}"
+      ],
+      "annotations": {
+        "1": "Null check added for the simulator to avoid crashes.",
+        "3": "checksum_buffer implements the rolling hash used in the fixture.",
+        "4": "EXPECTED_DIGEST sourced from docs/fixtures/ghidra.md."
+      },
+      "calls": [
+        "checksum_buffer"
+      ],
+      "blocks": [
+        {
+          "id": "validate_guard",
+          "label": "Guard",
+          "address": "0x401170",
+          "code": [
+            "test rdi, rdi",
+            "je validate_fail",
+            "mov esi, 0x10",
+            "call checksum_buffer",
+            "cmp ax, word ptr [EXPECTED_DIGEST]",
+            "je validate_pass"
+          ],
+          "edges": [
+            "validate_fail",
+            "validate_pass"
+          ],
+          "x": 80,
+          "y": 40
+        },
+        {
+          "id": "validate_fail",
+          "label": "Fail",
+          "address": "0x4011b0",
+          "code": [
+            "mov eax, 0",
+            "ret"
+          ],
+          "edges": [],
+          "x": 240,
+          "y": 20
+        },
+        {
+          "id": "validate_pass",
+          "label": "Pass",
+          "address": "0x4011c0",
+          "code": [
+            "mov eax, 1",
+            "ret"
+          ],
+          "edges": [],
+          "x": 240,
+          "y": 80
+        }
+      ],
+      "bytes": [
+        "48",
+        "85",
+        "ff",
+        "74",
+        "14",
+        "be",
+        "10",
+        "00",
+        "00",
+        "00",
+        "e8",
+        "55",
+        "00",
+        "00",
+        "00",
+        "66",
+        "39",
+        "05",
+        "66",
+        "20",
+        "00",
+        "00",
+        "74",
+        "05",
+        "b8",
+        "01",
+        "00",
+        "00",
+        "00",
+        "c3",
+        "31",
+        "c0",
+        "c3"
+      ]
+    },
+    {
+      "name": "checksum_buffer",
+      "displayName": "checksum_buffer",
+      "prototype": "uint16_t checksum_buffer(const char *key, int len)",
+      "address": "0x4011f0",
+      "size": 128,
+      "code": [
+        "uint16_t checksum_buffer(const char *key, int len) {",
+        "    uint32_t rolling = 0x1337c0de;",
+        "    for (int i = 0; i < len; i++) {",
+        "        rolling = (rolling * 33) ^ (unsigned char)key[i];",
+        "    }",
+        "    return (uint16_t)(rolling & 0xffff);",
+        "}"
+      ],
+      "annotations": {
+        "1": "Implements a tiny rolling hash that is easy to audit.",
+        "2": "Loop bounds fixed at 16 for the bundled key.",
+        "3": "Mask ensures deterministic 16-bit digest across toolchains."
+      },
+      "calls": [],
+      "blocks": [
+        {
+          "id": "checksum_init",
+          "label": "Init",
+          "address": "0x4011f0",
+          "code": [
+            "mov eax, 0x1337c0de",
+            "xor ecx, ecx"
+          ],
+          "edges": [
+            "checksum_loop",
+            "checksum_return"
+          ],
+          "x": 70,
+          "y": 30
+        },
+        {
+          "id": "checksum_loop",
+          "label": "Loop",
+          "address": "0x401200",
+          "code": [
+            "cmp ecx, esi",
+            "jge checksum_done",
+            "movzx edx, byte ptr [rdi+rcx]",
+            "imul eax, eax, 33",
+            "xor eax, edx",
+            "inc ecx",
+            "jmp checksum_loop"
+          ],
+          "edges": [
+            "checksum_done"
+          ],
+          "x": 220,
+          "y": 40
+        },
+        {
+          "id": "checksum_done",
+          "label": "Done",
+          "address": "0x401240",
+          "code": [
+            "and eax, 0xffff",
+            "ret"
+          ],
+          "edges": [],
+          "x": 220,
+          "y": 90
+        },
+        {
+          "id": "checksum_return",
+          "label": "Return",
+          "address": "0x401250",
+          "code": [
+            "ret"
+          ],
+          "edges": [],
+          "x": 70,
+          "y": 90
+        }
+      ],
+      "bytes": [
+        "b8",
+        "de",
+        "c0",
+        "37",
+        "13",
+        "31",
+        "c9",
+        "39",
+        "ce",
+        "7d",
+        "16",
+        "0f",
+        "b6",
+        "14",
+        "0f",
+        "69",
+        "c0",
+        "21",
+        "00",
+        "00",
+        "00",
+        "33",
+        "c2",
+        "41",
+        "ff",
+        "c1",
+        "eb",
+        "e8",
+        "25",
+        "c0",
+        "00",
+        "00",
+        "00",
+        "c3"
+      ]
+    },
+    {
+      "name": "log_status",
+      "displayName": "log_status",
+      "prototype": "void log_status(const char *message)",
+      "address": "0x401260",
+      "size": 96,
+      "code": [
+        "void log_status(const char *message) {",
+        "    if (!message) {",
+        "        return;",
+        "    }",
+        "    record_event(message);",
+        "}"
+      ],
+      "annotations": {
+        "1": "Mirrors configure_sink guard so logs ignore null inputs.",
+        "3": "Delegates to record_event to centralize the formatted output."
+      },
+      "calls": [
+        "record_event"
+      ],
+      "blocks": [
+        {
+          "id": "log_guard",
+          "label": "Guard",
+          "address": "0x401260",
+          "code": [
+            "test rdi, rdi",
+            "je log_exit",
+            "call record_event"
+          ],
+          "edges": [
+            "log_exit"
+          ],
+          "x": 80,
+          "y": 40
+        },
+        {
+          "id": "log_exit",
+          "label": "Exit",
+          "address": "0x401280",
+          "code": [
+            "ret"
+          ],
+          "edges": [],
+          "x": 220,
+          "y": 60
+        }
+      ],
+      "bytes": [
+        "48",
+        "85",
+        "ff",
+        "74",
+        "05",
+        "e8",
+        "18",
+        "00",
+        "00",
+        "00",
+        "c3"
+      ]
+    },
+    {
+      "name": "record_event",
+      "displayName": "record_event",
+      "prototype": "void record_event(const char *message)",
+      "address": "0x4012a0",
+      "size": 64,
+      "code": [
+        "void record_event(const char *message) {",
+        "    (void)message;",
+        "    /* Transmission to external sinks is stubbed in the lab build. */",
+        "}"
+      ],
+      "annotations": {
+        "1": "Stubbed so the simulator never emits external traffic.",
+        "2": "In production this would forward to a UART and syslog."
+      },
+      "calls": [],
+      "blocks": [
+        {
+          "id": "record_entry",
+          "label": "Entry",
+          "address": "0x4012a0",
+          "code": [
+            "ret"
+          ],
+          "edges": [],
+          "x": 80,
+          "y": 60
+        }
+      ],
+      "bytes": [
+        "c3",
+        "90",
+        "90",
+        "90"
+      ]
+    }
+  ],
+  "strings": [
+    {
+      "id": "str_success",
+      "address": "0x402040",
+      "value": "License accepted",
+      "description": "Displayed when the bundled key hashes to the expected digest.",
+      "references": [
+        "main",
+        "log_status"
+      ]
+    },
+    {
+      "id": "str_failure",
+      "address": "0x402058",
+      "value": "License failure",
+      "description": "Emitted on validation failure so analysts can trace the branch.",
+      "references": [
+        "main",
+        "log_status"
+      ]
+    },
+    {
+      "id": "str_serial",
+      "address": "0x402070",
+      "value": "serial",
+      "description": "Name of the first logging sink configured during init.",
+      "references": [
+        "init_logging"
+      ]
+    },
+    {
+      "id": "str_file",
+      "address": "0x402078",
+      "value": "file",
+      "description": "Secondary sink used to showcase multiple outputs.",
+      "references": [
+        "init_logging"
+      ]
+    }
+  ],
+  "symbols": [
+    {
+      "name": "_start",
+      "type": "FUNCTION",
+      "address": "0x401000",
+      "section": ".text",
+      "size": 48,
+      "description": "Program entry before C runtime setup."
+    },
+    {
+      "name": "main",
+      "type": "FUNCTION",
+      "address": "0x401030",
+      "section": ".text",
+      "size": 144,
+      "description": "Simulated firmware control loop used in the tutorial."
+    },
+    {
+      "name": "init_logging",
+      "type": "FUNCTION",
+      "address": "0x4010c0",
+      "section": ".text",
+      "size": 64,
+      "description": "Boot-time logging initialization."
+    },
+    {
+      "name": "configure_sink",
+      "type": "FUNCTION",
+      "address": "0x401100",
+      "section": ".text",
+      "size": 80,
+      "description": "Routes configuration requests to record_event."
+    },
+    {
+      "name": "load_license",
+      "type": "FUNCTION",
+      "address": "0x401150",
+      "section": ".text",
+      "size": 32,
+      "description": "Returns the lab-provided license key pointer."
+    },
+    {
+      "name": "validate_license",
+      "type": "FUNCTION",
+      "address": "0x401170",
+      "section": ".text",
+      "size": 160,
+      "description": "Applies the rolling hash and compares to EXPECTED_DIGEST."
+    },
+    {
+      "name": "checksum_buffer",
+      "type": "FUNCTION",
+      "address": "0x4011f0",
+      "section": ".text",
+      "size": 128,
+      "description": "Generates a 16-bit digest for the provided buffer."
+    },
+    {
+      "name": "log_status",
+      "type": "FUNCTION",
+      "address": "0x401260",
+      "section": ".text",
+      "size": 96,
+      "description": "Wraps record_event with a guard to avoid null dereferences."
+    },
+    {
+      "name": "record_event",
+      "type": "FUNCTION",
+      "address": "0x4012a0",
+      "section": ".text",
+      "size": 64,
+      "description": "Stubbed event writer for the simulator build."
+    },
+    {
+      "name": "g_license_key",
+      "type": "DATA",
+      "address": "0x404000",
+      "section": ".data",
+      "size": 16,
+      "description": "Static lab license used to drive the fixtures."
+    },
+    {
+      "name": "EXPECTED_DIGEST",
+      "type": "DATA",
+      "address": "0x404020",
+      "section": ".rodata",
+      "size": 2,
+      "description": "Reference digest for the bundled key."
+    }
+  ],
+  "pseudocode": [
+    {
+      "pseudo": "bool validate_license(const char *key) {",
+      "asm": "validate_license:"
+    },
+    {
+      "pseudo": "    if (!key) return false;",
+      "asm": "  test rdi, rdi"
+    },
+    {
+      "pseudo": "    uint16_t digest = checksum_buffer(key, 16);",
+      "asm": "  mov esi, 0x10"
+    },
+    {
+      "pseudo": "    return digest == EXPECTED_DIGEST;",
+      "asm": "  call checksum_buffer"
+    },
+    {
+      "pseudo": "}",
+      "asm": "  ret"
+    }
+  ]
+}
