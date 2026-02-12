@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 type Node = 'Victim' | 'Attacker' | 'Gateway';
 
@@ -8,43 +8,130 @@ const positions: Record<Node, { x: number; y: number }> = {
   Gateway: { x: 240, y: 120 },
 };
 
+interface Flow {
+  from: Node;
+  to: Node;
+  color: string;
+  blocked?: boolean;
+  label?: string;
+}
+
 interface Step {
   title: string;
   description: string;
-  flows: { from: Node; to: Node; color: string }[];
+  flows: Flow[];
 }
 
-const steps: Step[] = [
-  {
-    title: 'Normal Operation',
-    description: 'Victim communicates with the gateway directly.',
-    flows: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
-  },
-  {
-    title: 'ARP Poisoning',
-    description:
-      'Attacker sends forged ARP replies to victim and gateway, claiming to be each other.',
-    flows: [
-      { from: 'Attacker', to: 'Victim', color: '#f87171' },
-      { from: 'Attacker', to: 'Gateway', color: '#f87171' },
-    ],
-  },
-  {
-    title: 'Traffic Interception',
-    description: "Victim's traffic is now routed through the attacker.",
-    flows: [
-      { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
-      { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
-    ],
-  },
-];
+interface ArpLabProps {
+  staticArpEnabled: boolean;
+  dhcpSnoopingEnabled: boolean;
+}
 
-const ArpLab = () => {
+const formatList = (items: string[]) => {
+  if (items.length === 0) return '';
+  if (items.length === 1) return items[0];
+  const head = items.slice(0, -1).join(', ');
+  return `${head} and ${items[items.length - 1]}`;
+};
+
+const ArpLab = ({
+  staticArpEnabled,
+  dhcpSnoopingEnabled,
+}: ArpLabProps) => {
   const [step, setStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const rafRef = useRef<number | null>(null);
   const startRef = useRef<number | null>(null);
+
+  const defences = useMemo(() => {
+    const entries: { label: string; description: string }[] = [];
+    if (staticArpEnabled) {
+      entries.push({
+        label: 'static ARP entries',
+        description:
+          'Static ARP entries pin trusted MAC addresses so forged replies are ignored.',
+      });
+    }
+    if (dhcpSnoopingEnabled) {
+      entries.push({
+        label: 'DHCP snooping',
+        description:
+          'DHCP snooping builds a binding table and drops rogue updates from untrusted ports.',
+      });
+    }
+    return entries;
+  }, [staticArpEnabled, dhcpSnoopingEnabled]);
+
+  const defenceLabels = useMemo(
+    () => defences.map((d) => d.label),
+    [defences]
+  );
+  const defenceDescriptions = useMemo(
+    () => defences.map((d) => d.description),
+    [defences]
+  );
+
+  const defencesActive = defenceLabels.length > 0;
+
+  const steps = useMemo<Step[]>(
+    () => [
+      {
+        title: 'Normal Operation',
+        description: defencesActive
+          ? `Victim communicates with the gateway directly while ${formatList(
+              defenceLabels
+            )} stand ready to enforce layer 2 integrity.`
+          : 'Victim communicates with the gateway directly.',
+        flows: [{ from: 'Victim', to: 'Gateway', color: '#fbbf24' }],
+      },
+      {
+        title: defencesActive ? 'ARP Poisoning Blocked' : 'ARP Poisoning',
+        description: defencesActive
+          ? `Attacker attempts to poison the cache, but ${formatList(
+              defenceLabels
+            )} prevent the forged bindings. ${formatList(
+              defenceDescriptions
+            )}`
+          : 'Attacker sends forged ARP replies to victim and gateway, claiming to be each other.',
+        flows: defencesActive
+          ? [
+              {
+                from: 'Attacker',
+                to: 'Victim',
+                color: '#f87171',
+                blocked: true,
+                label: 'blocked',
+              },
+              {
+                from: 'Attacker',
+                to: 'Gateway',
+                color: '#f87171',
+                blocked: true,
+                label: 'blocked',
+              },
+              { from: 'Victim', to: 'Gateway', color: '#34d399' },
+            ]
+          : [
+              { from: 'Attacker', to: 'Victim', color: '#f87171' },
+              { from: 'Attacker', to: 'Gateway', color: '#f87171' },
+            ],
+      },
+      {
+        title: defencesActive ? 'Traffic Stays Direct' : 'Traffic Interception',
+        description: defencesActive
+          ? 'Traffic continues flowing directly between the victim and gateway; the attacker remains off the path.'
+          : "Victim's traffic is now routed through the attacker.",
+        flows: defencesActive
+          ? [{ from: 'Victim', to: 'Gateway', color: '#34d399' }]
+          : [
+              { from: 'Victim', to: 'Attacker', color: '#fbbf24' },
+              { from: 'Attacker', to: 'Gateway', color: '#fbbf24' },
+            ],
+      },
+    ],
+    [defenceDescriptions, defenceLabels, defencesActive]
+  );
 
   useEffect(() => {
     if (!playing) {
@@ -68,7 +155,7 @@ const ArpLab = () => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [playing, step]);
+  }, [playing, step, steps.length]);
 
   const handlePlay = () => setPlaying(true);
   const handleReset = () => {
@@ -79,10 +166,14 @@ const ArpLab = () => {
   };
 
   const flows = steps[step].flows;
+  const defenceStatus = defencesActive
+    ? `Defences active: ${formatList(defenceLabels)} enforcing trusted bindings.`
+    : 'Defences inactive: poisoning attempts will alter the path.';
 
   return (
     <div className="mt-4">
       <h2 className="font-semibold">ARP Cache Poisoning Lab</h2>
+      <p className="mt-1 text-xs text-blue-300">{defenceStatus}</p>
       <svg
         width={300}
         height={200}
@@ -111,6 +202,16 @@ const ArpLab = () => {
           >
             <polygon points="0 0, 10 3.5, 0 7" fill="#f87171" />
           </marker>
+          <marker
+            id="arrow-green"
+            markerWidth="10"
+            markerHeight="7"
+            refX="10"
+            refY="3.5"
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="#34d399" />
+          </marker>
         </defs>
         {Object.entries(positions).map(([name, pos]) => (
           <g key={name}>
@@ -129,7 +230,15 @@ const ArpLab = () => {
         {flows.map((f, i) => {
           const from = positions[f.from];
           const to = positions[f.to];
-          const markerId = f.color === '#f87171' ? 'arrow-red' : 'arrow';
+          const markerId = f.blocked
+            ? null
+            : f.color === '#f87171'
+            ? 'arrow-red'
+            : f.color === '#34d399'
+            ? 'arrow-green'
+            : 'arrow';
+          const midX = from.x + (to.x - from.x) / 2;
+          const midY = from.y + (to.y - from.y) / 2;
           return (
             <g key={i}>
               <line
@@ -137,17 +246,58 @@ const ArpLab = () => {
                 y1={from.y}
                 x2={to.x}
                 y2={to.y}
-                stroke={f.color}
+                stroke={f.blocked ? '#f87171' : f.color}
                 strokeWidth={2}
-                markerEnd={`url(#${markerId})`}
+                strokeDasharray={f.blocked ? '6 4' : undefined}
+                markerEnd={markerId ? `url(#${markerId})` : undefined}
               />
-              {i === 0 && (
+              {i === 0 && !f.blocked && (
                 <circle
                   cx={from.x + (to.x - from.x) * progress}
                   cy={from.y + (to.y - from.y) * progress}
                   r={4}
                   fill={f.color}
                 />
+              )}
+              {f.blocked && (
+                <>
+                  <line
+                    x1={midX - 6}
+                    y1={midY - 6}
+                    x2={midX + 6}
+                    y2={midY + 6}
+                    stroke="#f87171"
+                    strokeWidth={2}
+                  />
+                  <line
+                    x1={midX - 6}
+                    y1={midY + 6}
+                    x2={midX + 6}
+                    y2={midY - 6}
+                    stroke="#f87171"
+                    strokeWidth={2}
+                  />
+                  <text
+                    x={midX}
+                    y={midY - 10}
+                    fill="#f87171"
+                    textAnchor="middle"
+                    fontSize="8"
+                  >
+                    {f.label || 'blocked'}
+                  </text>
+                </>
+              )}
+              {!f.blocked && f.label && (
+                <text
+                  x={midX}
+                  y={midY - 10}
+                  fill={f.color}
+                  textAnchor="middle"
+                  fontSize="8"
+                >
+                  {f.label}
+                </text>
               )}
             </g>
           );
