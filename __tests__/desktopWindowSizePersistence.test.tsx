@@ -83,8 +83,7 @@ describe('Desktop window size persistence', () => {
     jest.useRealTimers();
   });
 
-  // Skipped: environment-specific ref timing issues cause null refs after reload in some test runners
-  it.skip('restores stored window dimensions after reload', async () => {
+  it('restores stored window dimensions after reload', async () => {
     const desktopRef = React.createRef<Desktop>();
     let initialRender: ReturnType<typeof render> | undefined;
     await act(async () => {
@@ -102,10 +101,19 @@ describe('Desktop window size persistence', () => {
     await act(async () => {
       await Promise.resolve();
     });
-    expect(desktopRef.current).toBeDefined();
-    act(() => {
-      desktopRef.current?.openApp('terminal');
-    });
+    if (desktopRef.current) {
+      act(() => {
+        desktopRef.current?.openApp('terminal');
+      });
+    } else {
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('open-app', {
+            detail: { id: 'terminal' },
+          }),
+        );
+      });
+    }
     await act(async () => {
       jest.runOnlyPendingTimers();
       await Promise.resolve();
@@ -118,7 +126,7 @@ describe('Desktop window size persistence', () => {
     // Call onSizeChange if it exists
     if (initialProps?.onSizeChange) {
       await act(async () => {
-        initialProps.onSizeChange(72, 64);
+        initialProps.onSizeChange('terminal', 72, 64);
         jest.runOnlyPendingTimers();
         await Promise.resolve();
       });
@@ -171,30 +179,29 @@ describe('Desktop window size persistence', () => {
 
     expect(reloadedRender).toBeDefined();
 
-    // If ref is available, use it to open app; otherwise directly test the restored dimensions
+    // If ref is available, use it to open app; otherwise use the public open-app event path.
     if (desktopRefReloaded.current) {
       act(() => {
         desktopRefReloaded.current?.openApp('terminal');
       });
-      await act(async () => {
-        jest.runOnlyPendingTimers();
-        await Promise.resolve();
-      });
-
-      expect(windowRenderMock).toHaveBeenCalled();
-      const reopenedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
-      expect(reopenedProps?.defaultWidth).toBe(72);
-      expect(reopenedProps?.defaultHeight).toBe(64);
     } else {
-      // Ref not available - verify localStorage still has persisted data (test passes if onSizeChange was invoked)
-      const stored = JSON.parse(localStorage.getItem('desktop_window_sizes') || '{}');
-      if (stored.terminal) {
-        expect(stored.terminal).toEqual({ width: 72, height: 64 });
-      } else {
-        // onSizeChange was not available, so persistence wasn't tested - this is acceptable
-        expect(true).toBe(true);
-      }
+      act(() => {
+        window.dispatchEvent(
+          new CustomEvent('open-app', {
+            detail: { id: 'terminal' },
+          }),
+        );
+      });
     }
+
+    await act(async () => {
+      jest.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+
+    expect(windowRenderMock).toHaveBeenCalled();
+    const reopenedProps = windowRenderMock.mock.calls[windowRenderMock.mock.calls.length - 1]?.[0];
+    expect(reopenedProps?.defaultWidth).toBe(72);
+    expect(reopenedProps?.defaultHeight).toBe(64);
   });
 });
-

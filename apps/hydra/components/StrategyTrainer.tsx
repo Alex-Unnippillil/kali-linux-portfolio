@@ -26,13 +26,11 @@ const StrategyTrainer: React.FC<StrategyTrainerProps> = ({ className = '' }) => 
   }, [parallelism, lockout]);
 
   const path = points
-    .map(
-      (p) => {
-        const x = Math.round((p.t / STEPS) * WIDTH * 100) / 100;
-        const y = Math.round((HEIGHT - p.success * HEIGHT) * 100) / 100;
-        return `${x},${y}`;
-      }
-    )
+    .map((p) => {
+      const x = ((p.t / STEPS) * WIDTH).toFixed(2);
+      const y = (HEIGHT - p.success * HEIGHT).toFixed(2);
+      return `${x},${y}`;
+    })
     .join(' ');
 
   const finalSuccess = points[points.length - 1]?.success ?? 0;
