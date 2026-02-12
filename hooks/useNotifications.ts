@@ -1,5 +1,5 @@
 import { useContext } from 'react';
-import { NotificationsContext } from '../components/common/NotificationCenter';
+import { NotificationsContext } from '../components/system/Notifications';
 
 export type {
   AppNotification,
