@@ -88,9 +88,26 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
 
     useEffect(() => {
         inertRootRef.current = getOverlayRoot();
+        const root = inertRootRef.current;
+
+        const applyBackgroundHiding = (value: boolean) => {
+            if (!root) return;
+            if (value) {
+                root.setAttribute('inert', '');
+                if (root !== document.body) {
+                    root.setAttribute('aria-hidden', 'true');
+                }
+            } else {
+                root.removeAttribute('inert');
+                if (root !== document.body) {
+                    root.removeAttribute('aria-hidden');
+                }
+            }
+        };
+
         if (isOpen) {
             triggerRef.current = document.activeElement as HTMLElement;
-            inertRootRef.current?.setAttribute('inert', '');
+            applyBackgroundHiding(true);
             const elements = modalRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTORS);
             if (elements && elements.length > 0) {
                 elements[0].focus();
@@ -98,12 +115,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
                 modalRef.current?.focus();
             }
         } else {
-            inertRootRef.current?.removeAttribute('inert');
+            applyBackgroundHiding(false);
             triggerRef.current?.focus();
             triggerRef.current = null;
         }
         return () => {
-            inertRootRef.current?.removeAttribute('inert');
+            applyBackgroundHiding(false);
         };
     }, [isOpen, getOverlayRoot]);
 
