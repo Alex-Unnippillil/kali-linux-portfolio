@@ -4,14 +4,21 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
+import {
+  parseChapterMetadata,
+  getChapterActionFromKey,
+  getChapterIndexForTime,
+  formatChapterTime,
+} from '../utils/youtubeChapters';
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
 // simple overlay used for notes/transcripts.
-export default function YouTubePlayer({ videoId }) {
+export default function YouTubePlayer({ videoId, chapterMetadata }) {
   const [activated, setActivated] = useState(false);
   const containerRef = useRef(null); // DOM node hosting the iframe
   const playerRef = useRef(null); // YT.Player instance
+  const pendingSeekRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
@@ -21,6 +28,22 @@ export default function YouTubePlayer({ videoId }) {
   const [results, setResults] = useState([]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
+
+  useEffect(() => {
+    setChapters([]);
+    setShowChapters(false);
+  }, [videoId]);
+
+  useEffect(() => {
+    if (chapterMetadata === undefined) return;
+    setChapters(parseChapterMetadata(chapterMetadata));
+  }, [chapterMetadata]);
+
+  useEffect(() => {
+    if (chapters.length === 0) {
+      setShowChapters(false);
+    }
+  }, [chapters.length]);
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -39,7 +62,12 @@ export default function YouTubePlayer({ videoId }) {
         events: {
           onReady: (e) => {
             const data = e.target.getVideoData();
-            if (data?.chapters) setChapters(data.chapters);
+            if (data?.chapters?.length) {
+              const parsed = parseChapterMetadata(data.chapters);
+              if (parsed.length) {
+                setChapters((prev) => (prev.length ? prev : parsed));
+              }
+            }
             if (prefersReducedMotion) {
               e.target.pauseVideo();
             } else {
@@ -74,6 +102,61 @@ export default function YouTubePlayer({ videoId }) {
     }
   };
 
+  const seekToChapter = useCallback(
+    (time) => {
+      if (!playerRef.current || !Number.isFinite(time)) return;
+      if (typeof window === 'undefined') {
+        playerRef.current.seekTo(time, true);
+        return;
+      }
+      const pending = pendingSeekRef.current;
+      if (pending) {
+        if (pending.type === 'raf' && typeof window.cancelAnimationFrame === 'function') {
+          window.cancelAnimationFrame(pending.id);
+        } else if (pending.type === 'timeout') {
+          window.clearTimeout(pending.id);
+        }
+      }
+      const run = () => {
+        playerRef.current?.seekTo(time, true);
+        pendingSeekRef.current = null;
+      };
+      if (typeof window.requestAnimationFrame === 'function') {
+        const id = window.requestAnimationFrame(() => {
+          run();
+        });
+        pendingSeekRef.current = { type: 'raf', id };
+      } else {
+        const id = window.setTimeout(run, 0);
+        pendingSeekRef.current = { type: 'timeout', id };
+      }
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      if (typeof window === 'undefined') return;
+      const pending = pendingSeekRef.current;
+      if (!pending) return;
+      if (pending.type === 'raf' && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(pending.id);
+      } else if (pending.type === 'timeout') {
+        window.clearTimeout(pending.id);
+      }
+      pendingSeekRef.current = null;
+    },
+    [],
+  );
+
+  const activeChapterIndex =
+    chapters.length > 0
+      ? getChapterIndexForTime(
+          chapters,
+          playerRef.current?.getCurrentTime?.() ?? 0,
+        )
+      : -1;
+
   const togglePlay = () => {
     if (!playerRef.current) return;
     const state = playerRef.current.getPlayerState();
@@ -87,20 +170,37 @@ export default function YouTubePlayer({ videoId }) {
   // Keyboard controls for seeking and playback rate cycling
   const handleKey = (e) => {
     if (!playerRef.current) return;
+    const currentTime =
+      typeof playerRef.current.getCurrentTime === 'function'
+        ? playerRef.current.getCurrentTime()
+        : 0;
+    const chapterAction = getChapterActionFromKey({
+      key: e.key,
+      chapters,
+      currentTime,
+    });
+    if (chapterAction) {
+      e.preventDefault();
+      if (chapterAction.type === 'toggle') {
+        setShowChapters((s) => !s);
+        return;
+      }
+      if (chapterAction.type === 'seek') {
+        seekToChapter(chapterAction.time);
+        return;
+      }
+    }
     switch (e.key) {
       case 'ArrowLeft':
         e.preventDefault();
         playerRef.current.seekTo(
-          Math.max(playerRef.current.getCurrentTime() - 5, 0),
+          Math.max(currentTime - 5, 0),
           true
         );
         break;
       case 'ArrowRight':
         e.preventDefault();
-        playerRef.current.seekTo(
-          playerRef.current.getCurrentTime() + 5,
-          true
-        );
+        playerRef.current.seekTo(currentTime + 5, true);
         break;
       case ' ':
       case 'k':
@@ -126,10 +226,6 @@ export default function YouTubePlayer({ videoId }) {
         );
         break;
       }
-      case 'c':
-      case 'C':
-        if (chapters.length) setShowChapters((s) => !s);
-        break;
       default:
     }
   };
@@ -259,6 +355,17 @@ export default function YouTubePlayer({ videoId }) {
             >
               PiP
             </button>
+            {chapters.length > 0 && (
+              <button
+                type="button"
+                aria-label="Toggle chapter list"
+                aria-pressed={showChapters}
+                onClick={() => setShowChapters((s) => !s)}
+                className="bg-black/60 text-white px-2 py-1 rounded"
+              >
+                Chapters
+              </button>
+            )}
             <button
               type="button"
               aria-label="Notes"
@@ -273,19 +380,28 @@ export default function YouTubePlayer({ videoId }) {
         {/* Chapter drawer */}
         {showChapters && chapters.length > 0 && (
           <div className="absolute bottom-0 left-0 bg-black/80 text-white text-sm max-h-1/2 overflow-auto w-48 z-40">
-            {chapters.map((ch) => (
-              <button
-                key={ch.startTime}
-                type="button"
-                className="block w-full text-left px-3 py-2 hover:bg-black/60"
-                onClick={() => {
-                  playerRef.current?.seekTo(ch.startTime, true);
-                  setShowChapters(false);
-                }}
-              >
-                {ch.title}
-              </button>
-            ))}
+            {chapters.map((ch, index) => {
+              const isActive = index === activeChapterIndex;
+              return (
+                <button
+                  key={`${ch.startTime}-${index}`}
+                  type="button"
+                  className={`block w-full text-left px-3 py-2 hover:bg-black/60 ${
+                    isActive ? 'bg-black/60' : ''
+                  }`}
+                  aria-current={isActive ? 'true' : undefined}
+                  onClick={() => {
+                    seekToChapter(ch.startTime);
+                    setShowChapters(false);
+                  }}
+                >
+                  <span className="block text-xs text-white/60">
+                    {formatChapterTime(ch.startTime)}
+                  </span>
+                  <span>{ch.title}</span>
+                </button>
+              );
+            })}
           </div>
         )}
 
