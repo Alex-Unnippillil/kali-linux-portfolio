@@ -1,3 +1,7 @@
+import { serverOnly } from './server/server-only';
+
+serverOnly('lib/analytics-server');
+
 export default async function trackServerEvent(
   event: string,
   properties?: Record<string, any>,

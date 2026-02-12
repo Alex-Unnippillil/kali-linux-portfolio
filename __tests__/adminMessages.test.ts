@@ -1,3 +1,7 @@
+/**
+ * @jest-environment node
+ */
+
 import { createMocks } from 'node-mocks-http';
 
 describe('admin messages api', () => {
