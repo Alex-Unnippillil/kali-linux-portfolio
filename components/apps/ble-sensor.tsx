@@ -11,8 +11,8 @@ import {
   CharacteristicData,
 } from '../../utils/bleProfiles';
 
-type BluetoothDevice = any;
-type BluetoothRemoteGATTServer = any;
+// TODO: Remove the ambient Bluetooth declarations once
+// https://github.com/microsoft/TypeScript/issues/18481 lands in lib.dom.
 
 const MAX_RETRIES = 3;
 
@@ -71,7 +71,12 @@ const BleSensor: React.FC = () => {
     }
 
     try {
-      const device = await (navigator as any).bluetooth.requestDevice({
+      const bluetooth = navigator.bluetooth;
+      if (!bluetooth) {
+        throw new Error('Web Bluetooth is unavailable.');
+      }
+
+      const device = await bluetooth.requestDevice({
         acceptAllDevices: true,
         optionalServices: ['battery_service', 'device_information'],
       });
