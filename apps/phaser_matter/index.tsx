@@ -119,7 +119,8 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
       for (const gp of pads) {
         if (!gp) continue;
         for (let i = 0; i < gp.buttons.length; i++) {
-          if (gp.buttons[i].pressed) {
+          const button = gp.buttons[i];
+          if (button?.pressed) {
             setPadMap((prev) => ({ ...prev, [waiting.action]: i }));
             setWaiting(null);
             return;
@@ -264,11 +265,13 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
               if (body.label === 'coin') {
                 const idx = this.coins.findIndex((c) => c.body === body);
                 if (idx >= 0) {
-                  const [coin] = this.coins.splice(idx, 1);
-                  coin.sprite.destroy();
-                  this.matter.world.remove(body);
-                  const count = this.gameState.addCoin();
-                  this.coinText.setText(`Coins: ${count}`);
+                  const coin = this.coins.splice(idx, 1)[0];
+                  if (coin) {
+                    coin.sprite.destroy();
+                    this.matter.world.remove(body);
+                    const count = this.gameState.addCoin();
+                    this.coinText.setText(`Coins: ${count}`);
+                  }
                 }
               }
             });
@@ -286,7 +289,7 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         );
       }
 
-      update(time: number, delta: number) {
+      override update(time: number, delta: number) {
         const ctrl = controls.current;
         const speed = 5;
         const fixedDelta = Math.min(delta, 1000 / 60);
@@ -296,9 +299,9 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         if (gamepad && gamepad.total > 0) {
           const pad = gamepad.getPad(0);
           const pm = padMapRef.current;
-          ctrl.left = pad.buttons[pm.left]?.pressed;
-          ctrl.right = pad.buttons[pm.right]?.pressed;
-          const jp = pad.buttons[pm.jump]?.pressed;
+          ctrl.left = !!pad.buttons[pm.left]?.pressed;
+          ctrl.right = !!pad.buttons[pm.right]?.pressed;
+          const jp = !!pad.buttons[pm.jump]?.pressed;
           if (jp && !this.padJumpWasPressed) {
             ctrl.jumpPressed = true;
             ctrl.jumpHeld = true;
