@@ -1,0 +1,2127 @@
+[
+  {
+    "file": "apps/calculator/main.js",
+    "line": 240,
+    "code": "const raw = localStorage.getItem('calc-vars');"
+  },
+  {
+    "file": "apps/calculator/state.ts",
+    "line": 20,
+    "code": "const stored = window.localStorage.getItem(VARS_KEY);"
+  },
+  {
+    "file": "apps/calculator/utils/parser.ts",
+    "line": 31,
+    "code": "const raw = typeof window === 'undefined' ? null : localStorage.getItem('calc-vars');"
+  },
+  {
+    "file": "apps/clipboard_manager/main.js",
+    "line": 3,
+    "code": "let history = JSON.parse(localStorage.getItem(historyKey)) || [];"
+  },
+  {
+    "file": "apps/clipboard_manager/main.js",
+    "line": 25,
+    "code": "localStorage.setItem(historyKey, JSON.stringify(history));"
+  },
+  {
+    "file": "apps/contact/index.tsx",
+    "line": 35,
+    "code": "const saved = localStorage.getItem(DRAFT_KEY);"
+  },
+  {
+    "file": "apps/contact/index.tsx",
+    "line": 52,
+    "code": "localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));"
+  },
+  {
+    "file": "apps/contact/index.tsx",
+    "line": 75,
+    "code": "localStorage.removeItem(DRAFT_KEY);"
+  },
+  {
+    "file": "apps/converter/index.tsx",
+    "line": 57,
+    "code": "const saved = localStorage.getItem(HISTORY_KEY);"
+  },
+  {
+    "file": "apps/converter/index.tsx",
+    "line": 104,
+    "code": "localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory));"
+  },
+  {
+    "file": "apps/games/nonogram/progress.ts",
+    "line": 12,
+    "code": "localStorage.setItem(`${PREFIX}${name}`, JSON.stringify(state));"
+  },
+  {
+    "file": "apps/games/nonogram/progress.ts",
+    "line": 20,
+    "code": "const raw = localStorage.getItem(`${PREFIX}${name}`);"
+  },
+  {
+    "file": "apps/input-lab/index.tsx",
+    "line": 20,
+    "code": "const saved = window.localStorage.getItem(SAVE_KEY);"
+  },
+  {
+    "file": "apps/input-lab/index.tsx",
+    "line": 36,
+    "code": "window.localStorage.setItem(SAVE_KEY, text);"
+  },
+  {
+    "file": "apps/quote/components/PlaylistBuilder.tsx",
+    "line": 23,
+    "code": "const stored = localStorage.getItem('quote-playlists');"
+  },
+  {
+    "file": "apps/quote/components/PlaylistBuilder.tsx",
+    "line": 35,
+    "code": "localStorage.setItem('quote-playlists', JSON.stringify(saved));"
+  },
+  {
+    "file": "apps/quote/index.tsx",
+    "line": 90,
+    "code": "const fav = localStorage.getItem('quote-favorites');"
+  },
+  {
+    "file": "apps/quote/index.tsx",
+    "line": 94,
+    "code": "const custom = localStorage.getItem('custom-quotes');"
+  },
+  {
+    "file": "apps/quote/index.tsx",
+    "line": 122,
+    "code": "const stored = localStorage.getItem('daily-quote');"
+  },
+  {
+    "file": "apps/quote/index.tsx",
+    "line": 134,
+    "code": "localStorage.setItem('daily-quote', JSON.stringify({ date: today, quote: q }));"
+  },
+  {
+    "file": "apps/quote/index.tsx",
+    "line": 236,
+    "code": "localStorage.setItem('quote-favorites', JSON.stringify(updated));"
+  },
+  {
+    "file": "apps/quote/index.tsx",
+    "line": 252,
+    "code": "localStorage.setItem('custom-quotes', JSON.stringify(parsed));"
+  },
+  {
+    "file": "apps/reaver/components/RouterProfiles.tsx",
+    "line": 49,
+    "code": "const stored = window.localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "apps/reaver/components/RouterProfiles.tsx",
+    "line": 59,
+    "code": "window.localStorage.setItem(STORAGE_KEY, profile.id);"
+  },
+  {
+    "file": "apps/settings/index.tsx",
+    "line": 97,
+    "code": "window.localStorage.clear();"
+  },
+  {
+    "file": "apps/sokoban/index.tsx",
+    "line": 242,
+    "code": "const b = localStorage.getItem(k);"
+  },
+  {
+    "file": "apps/sokoban/index.tsx",
+    "line": 299,
+    "code": "const prevBest = localStorage.getItem(bestKey);"
+  },
+  {
+    "file": "apps/sokoban/index.tsx",
+    "line": 301,
+    "code": "localStorage.setItem(bestKey, String(newState.pushes));"
+  },
+  {
+    "file": "apps/sokoban/index.tsx",
+    "line": 349,
+    "code": "const prevBest = localStorage.getItem(bestKey);"
+  },
+  {
+    "file": "apps/sokoban/index.tsx",
+    "line": 351,
+    "code": "localStorage.setItem(bestKey, String(newState.pushes));"
+  },
+  {
+    "file": "apps/solitaire/index.tsx",
+    "line": 19,
+    "code": "return (localStorage.getItem('solitaire-mode') as 'draw1' | 'draw3' | null) || 'draw1';"
+  },
+  {
+    "file": "apps/solitaire/index.tsx",
+    "line": 70,
+    "code": "localStorage.setItem('solitaire-mode', mode);"
+  },
+  {
+    "file": "apps/sticky_notes/main.js",
+    "line": 136,
+    "code": "localStorage.getItem('stickyNotes') || '[]',"
+  },
+  {
+    "file": "apps/sticky_notes/main.js",
+    "line": 141,
+    "code": "localStorage.removeItem('stickyNotes');"
+  },
+  {
+    "file": "apps/sticky_notes/main.js",
+    "line": 156,
+    "code": "notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]');"
+  },
+  {
+    "file": "apps/trash/index.tsx",
+    "line": 36,
+    "code": "window.localStorage.getItem('trash-purge-days') || '30',"
+  },
+  {
+    "file": "apps/trash/state.ts",
+    "line": 22,
+    "code": "window.localStorage.getItem('trash-purge-days') || '30',"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 19,
+    "code": "let apiKey = localStorage.getItem('weatherApiKey') || '';"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 24,
+    "code": "let savedCities = JSON.parse(localStorage.getItem('savedCities') || '[]');"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 37,
+    "code": "if (localStorage.getItem('pinnedCity') === city) {"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 140,
+    "code": "localStorage.setItem('lastCity', city);"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 143,
+    "code": "localStorage.setItem('savedCities', JSON.stringify(savedCities));"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 149,
+    "code": "localStorage.setItem('lastCity', demoCity.name);"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 182,
+    "code": "localStorage.setItem('weatherApiKey', apiKey);"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 184,
+    "code": "localStorage.removeItem('weatherApiKey');"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 192,
+    "code": "if (localStorage.getItem('pinnedCity') === city) {"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 193,
+    "code": "localStorage.removeItem('pinnedCity');"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 195,
+    "code": "localStorage.setItem('pinnedCity', city);"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 200,
+    "code": "const pinned = localStorage.getItem('pinnedCity');"
+  },
+  {
+    "file": "apps/weather_widget/main.js",
+    "line": 201,
+    "code": "const lastCity = localStorage.getItem('lastCity');"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 69,
+    "code": "const saved = window.localStorage.getItem(SAVE_KEY);"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 182,
+    "code": "window.localStorage.setItem(SAVE_KEY, JSON.stringify(data));"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 227,
+    "code": "const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 229,
+    "code": "localStorage.setItem(LB_KEY, JSON.stringify(lb));"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 231,
+    "code": "localStorage.setItem(dayKey, JSON.stringify({ seed, time }));"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 275,
+    "code": "window.localStorage.removeItem(SAVE_KEY);"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 285,
+    "code": "const saved = window.localStorage.getItem(SAVE_KEY);"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 304,
+    "code": "const data = window.localStorage.getItem(LB_KEY) || '[]';"
+  },
+  {
+    "file": "apps/word_search/index.tsx",
+    "line": 320,
+    "code": "window.localStorage.setItem(LB_KEY, text);"
+  },
+  {
+    "file": "components/apps/About/index.tsx",
+    "line": 35,
+    "code": "let lastVisitedScreen = localStorage.getItem('about-section');"
+  },
+  {
+    "file": "components/apps/About/index.tsx",
+    "line": 45,
+    "code": "localStorage.setItem('about-section', screen);"
+  },
+  {
+    "file": "components/apps/alex.js",
+    "line": 32,
+    "code": "let lastVisitedScreen = localStorage.getItem(\"about-section\");"
+  },
+  {
+    "file": "components/apps/alex.js",
+    "line": 45,
+    "code": "localStorage.setItem(\"about-section\", screen);"
+  },
+  {
+    "file": "components/apps/ascii_art/index.js",
+    "line": 65,
+    "code": "const savedSet = window.localStorage.getItem('ascii_char_set');"
+  },
+  {
+    "file": "components/apps/ascii_art/index.js",
+    "line": 66,
+    "code": "const savedPalette = window.localStorage.getItem('ascii_palette');"
+  },
+  {
+    "file": "components/apps/ascii_art/index.js",
+    "line": 77,
+    "code": "window.localStorage.setItem('ascii_char_set', charSet);"
+  },
+  {
+    "file": "components/apps/ascii_art/index.js",
+    "line": 78,
+    "code": "window.localStorage.setItem('ascii_palette', paletteName);"
+  },
+  {
+    "file": "components/apps/asteroids.js",
+    "line": 134,
+    "code": "const hs = Number(localStorage.getItem(HIGH_KEY) || 0);"
+  },
+  {
+    "file": "components/apps/asteroids.js",
+    "line": 135,
+    "code": "const ls = Number(localStorage.getItem(LAST_KEY) || 0);"
+  },
+  {
+    "file": "components/apps/asteroids.js",
+    "line": 390,
+    "code": "try { localStorage.setItem(HIGH_KEY, String(score)); } catch {}"
+  },
+  {
+    "file": "components/apps/asteroids.js",
+    "line": 394,
+    "code": "try { localStorage.setItem(LAST_KEY, String(score)); } catch {}"
+  },
+  {
+    "file": "components/apps/beef/GuideOverlay.js",
+    "line": 28,
+    "code": "localStorage.setItem(STORAGE_KEY, 'true');"
+  },
+  {
+    "file": "components/apps/beef/index.js",
+    "line": 64,
+    "code": "localStorage.removeItem('beef-lab-ok');"
+  },
+  {
+    "file": "components/apps/blackjack.js",
+    "line": 73,
+    "code": "const br = parseInt(localStorage.getItem('blackjackBankroll') || '1000', 10);"
+  },
+  {
+    "file": "components/apps/blackjack.js",
+    "line": 74,
+    "code": "const hs = parseInt(localStorage.getItem('blackjackHigh') || br.toString(), 10);"
+  },
+  {
+    "file": "components/apps/blackjack.js",
+    "line": 90,
+    "code": "localStorage.setItem('blackjackBankroll', bankroll.toString());"
+  },
+  {
+    "file": "components/apps/blackjack.js",
+    "line": 93,
+    "code": "localStorage.setItem('blackjackHigh', nh.toString());"
+  },
+  {
+    "file": "components/apps/blackjack/index.js",
+    "line": 163,
+    "code": "const stored = localStorage.getItem('bj_best_streak');"
+  },
+  {
+    "file": "components/apps/blackjack/index.js",
+    "line": 195,
+    "code": "localStorage.setItem('bj_best_streak', bestStreak.toString());"
+  },
+  {
+    "file": "components/apps/breakoutEditor.js",
+    "line": 21,
+    "code": "* localStorage. Cell types: 0-empty, 1-normal, 2-multi-ball, 3-magnet."
+  },
+  {
+    "file": "components/apps/breakoutEditor.js",
+    "line": 61,
+    "code": "localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));"
+  },
+  {
+    "file": "components/apps/breakoutEditor.js",
+    "line": 65,
+    "code": "const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);"
+  },
+  {
+    "file": "components/apps/breakoutLevels.js",
+    "line": 9,
+    "code": "* Lists saved layouts from localStorage and allows loading them."
+  },
+  {
+    "file": "components/apps/breakoutLevels.js",
+    "line": 16,
+    "code": "for (let i = 0; i < localStorage.length; i += 1) {"
+  },
+  {
+    "file": "components/apps/breakoutLevels.js",
+    "line": 17,
+    "code": "const key = localStorage.key(i);"
+  },
+  {
+    "file": "components/apps/breakoutLevels.js",
+    "line": 26,
+    "code": "const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 56,
+    "code": "? localStorage.getItem('car_racer_skin') || CAR_SKINS[0].key"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 106,
+    "code": "const stored = localStorage.getItem('car_racer_high');"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 109,
+    "code": "medalsRef.current = JSON.parse(localStorage.getItem('car_racer_medals') || '{}');"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 114,
+    "code": "ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 116,
+    "code": "localStorage.getItem('car_racer_ghost_score') || '0',"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 145,
+    "code": "localStorage.setItem('car_racer_skin', skin);"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 385,
+    "code": "localStorage.setItem('car_racer_high', `${scoreRef.current}`);"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 418,
+    "code": "localStorage.setItem('car_racer_ghost', JSON.stringify(ghostRunRef.current));"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 419,
+    "code": "localStorage.setItem('car_racer_ghost_score', `${score}`);"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 498,
+    "code": "localStorage.setItem('car_racer_high', `${scoreRef.current}`);"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 512,
+    "code": "ghostDataRef.current = JSON.parse(localStorage.getItem('car_racer_ghost') || '[]');"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 514,
+    "code": "localStorage.getItem('car_racer_ghost_score') || '0',"
+  },
+  {
+    "file": "components/apps/car-racer.js",
+    "line": 554,
+    "code": "localStorage.setItem('car_racer_medals', JSON.stringify(medalsRef.current));"
+  },
+  {
+    "file": "components/apps/checkers.js",
+    "line": 132,
+    "code": "const stored = localStorage.getItem('checkersWins');"
+  },
+  {
+    "file": "components/apps/checkers.js",
+    "line": 141,
+    "code": "localStorage.setItem('checkersWins', JSON.stringify(wins));"
+  },
+  {
+    "file": "components/apps/checkers/index.tsx",
+    "line": 107,
+    "code": "const saved = localStorage.getItem('checkersState');"
+  },
+  {
+    "file": "components/apps/checkers/index.tsx",
+    "line": 154,
+    "code": "localStorage.setItem('checkersState', JSON.stringify(state));"
+  },
+  {
+    "file": "components/apps/checkers/index.tsx",
+    "line": 283,
+    "code": "localStorage.removeItem('checkersState');"
+  },
+  {
+    "file": "components/apps/chess.js",
+    "line": 311,
+    "code": ": Number(localStorage.getItem(\"chessElo\") || 1200),"
+  },
+  {
+    "file": "components/apps/chess.js",
+    "line": 550,
+    "code": "localStorage.setItem(\"chessElo\", String(newElo));"
+  },
+  {
+    "file": "components/apps/chrome/AddressBar.tsx",
+    "line": 76,
+    "code": "const parsed = JSON.parse(localStorage.getItem('chrome-history') || '[]');"
+  },
+  {
+    "file": "components/apps/chrome/AddressBar.tsx",
+    "line": 123,
+    "code": "localStorage.setItem('chrome-history', JSON.stringify(next));"
+  },
+  {
+    "file": "components/apps/chrome/index.tsx",
+    "line": 55,
+    "code": "const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || '');"
+  },
+  {
+    "file": "components/apps/chrome/index.tsx",
+    "line": 63,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify({ tabs, active }));"
+  },
+  {
+    "file": "components/apps/chrome/index.tsx",
+    "line": 69,
+    "code": "typeof window !== 'undefined' ? sessionStorage.getItem('chrome-last-url') : null;"
+  },
+  {
+    "file": "components/apps/chrome/index.tsx",
+    "line": 265,
+    "code": "sessionStorage.setItem('chrome-last-url', url);"
+  },
+  {
+    "file": "components/apps/chrome/index.tsx",
+    "line": 378,
+    "code": "sessionStorage.setItem('chrome-last-url', activeTab.url);"
+  },
+  {
+    "file": "components/apps/chrome/Reader.tsx",
+    "line": 56,
+    "code": "const saved = localStorage.getItem('readerView');"
+  },
+  {
+    "file": "components/apps/chrome/Reader.tsx",
+    "line": 65,
+    "code": "localStorage.setItem('readerView', mode);"
+  },
+  {
+    "file": "components/apps/chrome/ReadLaterList.tsx",
+    "line": 14,
+    "code": "const data = localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "components/apps/chrome/ReadLaterList.tsx",
+    "line": 22,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(items));"
+  },
+  {
+    "file": "components/apps/converter/CurrencyConverter.js",
+    "line": 18,
+    "code": "const cached = typeof window !== 'undefined' ? localStorage.getItem(cacheKey) : null;"
+  },
+  {
+    "file": "components/apps/converter/CurrencyConverter.js",
+    "line": 36,
+    "code": "localStorage.setItem(cacheKey, JSON.stringify({ rates: data.rates, timestamp: ts }));"
+  },
+  {
+    "file": "components/apps/converter/CurrencyConverter.js",
+    "line": 38,
+    "code": "const raw = localStorage.getItem(historyKey);"
+  },
+  {
+    "file": "components/apps/converter/CurrencyConverter.js",
+    "line": 41,
+    "code": "localStorage.setItem(historyKey, JSON.stringify(arr.slice(-30)));"
+  },
+  {
+    "file": "components/apps/converter/CurrencyConverter.js",
+    "line": 55,
+    "code": "const raw = localStorage.getItem(historyKey);"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 30,
+    "code": "setSkin(parseInt(localStorage.getItem(\"flappy-bird-skin\") || \"0\", 10));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 32,
+    "code": "parseInt(localStorage.getItem(\"flappy-pipe-skin\") || \"0\", 10),"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 58,
+    "code": "localStorage.getItem(\"flappy-reduced-motion\") === \"1\" ||"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 62,
+    "code": "let practiceMode = localStorage.getItem(\"flappy-practice\") === \"1\";"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 71,
+    "code": "localStorage.getItem(\"flappy-gravity-variant\") || \"1\","
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 84,
+    "code": "let showHitbox = localStorage.getItem(\"flappy-hitbox\") === \"1\";"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 109,
+    "code": "let highHz = localStorage.getItem(\"flappy-120hz\") === \"1\";"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 291,
+    "code": "medals = JSON.parse(localStorage.getItem(\"flappy-medals\") || \"{}\");"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 299,
+    "code": "records = JSON.parse(localStorage.getItem(\"flappy-records\") || \"{}\");"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 324,
+    "code": "localStorage.setItem(\"flappy-medals\", JSON.stringify(medals));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 522,
+    "code": "localStorage.setItem(\"flappy-records\", JSON.stringify(records));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 661,
+    "code": "localStorage.setItem(\"flappy-120hz\", highHz ? \"1\" : \"0\");"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 665,
+    "code": "localStorage.setItem(\"flappy-reduced-motion\", reduceMotion ? \"1\" : \"0\");"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 670,
+    "code": "localStorage.setItem(\"flappy-practice\", practiceMode ? \"1\" : \"0\");"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 678,
+    "code": "localStorage.setItem(\"flappy-gravity-variant\", String(gravityVariant));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 685,
+    "code": "localStorage.setItem(\"flappy-records\", JSON.stringify(records));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 691,
+    "code": "localStorage.setItem(\"flappy-bird-skin\", String(birdSkin));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 697,
+    "code": "localStorage.setItem(\"flappy-pipe-skin\", String(pipeSkin));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 702,
+    "code": "localStorage.setItem(\"flappy-hitbox\", showHitbox ? \"1\" : \"0\");"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 769,
+    "code": "localStorage.setItem(\"flappy-bird-skin\", String(skin));"
+  },
+  {
+    "file": "components/apps/flappy-bird.js",
+    "line": 770,
+    "code": "localStorage.setItem(\"flappy-pipe-skin\", String(pipeSkinIndex));"
+  },
+  {
+    "file": "components/apps/frogger.js",
+    "line": 179,
+    "code": "const saved = Number(localStorage.getItem('frogger-highscore') || 0);"
+  },
+  {
+    "file": "components/apps/frogger.js",
+    "line": 186,
+    "code": "localStorage.setItem('frogger-highscore', String(score));"
+  },
+  {
+    "file": "components/apps/GameLayout.tsx",
+    "line": 88,
+    "code": "if (typeof window !== 'undefined' && !window.localStorage.getItem(key)) {"
+  },
+  {
+    "file": "components/apps/GameLayout.tsx",
+    "line": 90,
+    "code": "window.localStorage.setItem(key, '1');"
+  },
+  {
+    "file": "components/apps/Games/common/leaderboard.ts",
+    "line": 15,
+    "code": "const raw = window.localStorage.getItem(`${PREFIX}${gameId}`);"
+  },
+  {
+    "file": "components/apps/Games/common/leaderboard.ts",
+    "line": 35,
+    "code": "window.localStorage.setItem(`${PREFIX}${gameId}`, JSON.stringify(trimmed));"
+  },
+  {
+    "file": "components/apps/Games/common/useLeaderboard.ts",
+    "line": 12,
+    "code": "* Maintains a simple local leaderboard using localStorage."
+  },
+  {
+    "file": "components/apps/Games/common/useLeaderboard.ts",
+    "line": 19,
+    "code": "const raw = localStorage.getItem(key);"
+  },
+  {
+    "file": "components/apps/Games/common/useLeaderboard.ts",
+    "line": 29,
+    "code": "localStorage.setItem(key, JSON.stringify(next));"
+  },
+  {
+    "file": "components/apps/Games/common/useSaveSlots.ts",
+    "line": 6,
+    "code": "* Helper for saving and loading named save slots using localStorage."
+  },
+  {
+    "file": "components/apps/Games/common/useSaveSlots.ts",
+    "line": 13,
+    "code": "localStorage.setItem(makeKey(name), JSON.stringify(data));"
+  },
+  {
+    "file": "components/apps/Games/common/useSaveSlots.ts",
+    "line": 20,
+    "code": "const raw = localStorage.getItem(makeKey(name));"
+  },
+  {
+    "file": "components/apps/Games/common/useSaveSlots.ts",
+    "line": 28,
+    "code": "localStorage.removeItem(makeKey(name));"
+  },
+  {
+    "file": "components/apps/Games/common/useSaveSlots.ts",
+    "line": 34,
+    "code": "const keys = Object.keys(localStorage).filter((k) => k.startsWith(`${prefix}${gameId}:`));"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 17,
+    "code": "return JSON.parse(localStorage.getItem(key) || '[]');"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 24,
+    "code": "localStorage.setItem(key, JSON.stringify(lists));"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 29,
+    "code": "return JSON.parse(localStorage.getItem('hydra/session') || 'null');"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 36,
+    "code": "localStorage.setItem('hydra/session', JSON.stringify(session));"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 40,
+    "code": "localStorage.removeItem('hydra/session');"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 45,
+    "code": "return JSON.parse(localStorage.getItem('hydra/config') || 'null');"
+  },
+  {
+    "file": "components/apps/hydra/index.js",
+    "line": 52,
+    "code": "localStorage.setItem('hydra/config', JSON.stringify(config));"
+  },
+  {
+    "file": "components/apps/memory.js",
+    "line": 146,
+    "code": "const raw = window.localStorage.getItem(bestKey);"
+  },
+  {
+    "file": "components/apps/memory.js",
+    "line": 155,
+    "code": "window.localStorage.removeItem(bestKey);"
+  },
+  {
+    "file": "components/apps/memory.js",
+    "line": 165,
+    "code": "const raw = window.localStorage.getItem(bestKey);"
+  },
+  {
+    "file": "components/apps/memory.js",
+    "line": 170,
+    "code": "window.localStorage.removeItem(bestKey);"
+  },
+  {
+    "file": "components/apps/memory.js",
+    "line": 178,
+    "code": "window.localStorage.setItem(bestKey, serialized);"
+  },
+  {
+    "file": "components/apps/minesweeper.js",
+    "line": 217,
+    "code": "const best = localStorage.getItem('minesweeper-best-time');"
+  },
+  {
+    "file": "components/apps/minesweeper.js",
+    "line": 224,
+    "code": "const saved = localStorage.getItem('minesweeper-state');"
+  },
+  {
+    "file": "components/apps/minesweeper.js",
+    "line": 396,
+    "code": "localStorage.setItem('minesweeper-state', JSON.stringify(data));"
+  },
+  {
+    "file": "components/apps/minesweeper.js",
+    "line": 426,
+    "code": "localStorage.setItem('minesweeper-best-time', time.toString());"
+  },
+  {
+    "file": "components/apps/minesweeper.js",
+    "line": 889,
+    "code": "const saved = localStorage.getItem('minesweeper-state');"
+  },
+  {
+    "file": "components/apps/nessus/index.js",
+    "line": 12,
+    "code": "return JSON.parse(localStorage.getItem('nessusJobs') || '[]');"
+  },
+  {
+    "file": "components/apps/nessus/index.js",
+    "line": 22,
+    "code": "localStorage.setItem('nessusJobs', JSON.stringify(updated));"
+  },
+  {
+    "file": "components/apps/nessus/index.js",
+    "line": 29,
+    "code": "return JSON.parse(localStorage.getItem('nessusFalsePositives') || '[]');"
+  },
+  {
+    "file": "components/apps/nessus/index.js",
+    "line": 39,
+    "code": "localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));"
+  },
+  {
+    "file": "components/apps/nonogram.js",
+    "line": 70,
+    "code": "const hs = localStorage.getItem(\"nonogramHighScore\");"
+  },
+  {
+    "file": "components/apps/nonogram.js",
+    "line": 96,
+    "code": "localStorage.setItem(\"nonogramHighScore\", String(elapsed));"
+  },
+  {
+    "file": "components/apps/openvas/index.js",
+    "line": 176,
+    "code": "return JSON.parse(localStorage.getItem('openvas/session') || 'null');"
+  },
+  {
+    "file": "components/apps/openvas/index.js",
+    "line": 184,
+    "code": "localStorage.setItem('openvas/session', JSON.stringify(session));"
+  },
+  {
+    "file": "components/apps/openvas/index.js",
+    "line": 189,
+    "code": "localStorage.removeItem('openvas/session');"
+  },
+  {
+    "file": "components/apps/openvas/policy-settings.js",
+    "line": 17,
+    "code": "localStorage.setItem('openvasPolicy', JSON.stringify(config));"
+  },
+  {
+    "file": "components/apps/openvas/policy-settings.js",
+    "line": 22,
+    "code": "const stored = localStorage.getItem('openvasPolicy');"
+  },
+  {
+    "file": "components/apps/pacman.js",
+    "line": 642,
+    "code": "const stored = window.localStorage.getItem('pacmanHighScore');"
+  },
+  {
+    "file": "components/apps/pacman.js",
+    "line": 649,
+    "code": "window.localStorage.setItem('pacmanHighScore', String(score));"
+  },
+  {
+    "file": "components/apps/plugin-manager/index.tsx",
+    "line": 11,
+    "code": "return JSON.parse(localStorage.getItem('installedPlugins') || '{}');"
+  },
+  {
+    "file": "components/apps/plugin-manager/index.tsx",
+    "line": 27,
+    "code": "return JSON.parse(localStorage.getItem('lastPluginRun') || 'null');"
+  },
+  {
+    "file": "components/apps/plugin-manager/index.tsx",
+    "line": 47,
+    "code": "localStorage.setItem('installedPlugins', JSON.stringify(updated));"
+  },
+  {
+    "file": "components/apps/plugin-manager/index.tsx",
+    "line": 56,
+    "code": "localStorage.setItem('lastPluginRun', JSON.stringify(result));"
+  },
+  {
+    "file": "components/apps/pong.js",
+    "line": 54,
+    "code": "return JSON.parse(localStorage.getItem('pongHistory')) || [];"
+  },
+  {
+    "file": "components/apps/pong.js",
+    "line": 524,
+    "code": "localStorage.setItem('pongHistory', JSON.stringify(newHist));"
+  },
+  {
+    "file": "components/apps/project-gallery.tsx",
+    "line": 41,
+    "code": "const raw = localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "components/apps/project-gallery.tsx",
+    "line": 67,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(data));"
+  },
+  {
+    "file": "components/apps/project-gallery.tsx",
+    "line": 141,
+    "code": "localStorage.setItem('chrome-tabs', JSON.stringify({ tabs: [tab], active: id }));"
+  },
+  {
+    "file": "components/apps/quote_generator.js",
+    "line": 77,
+    "code": "() => localStorage.getItem(\"quotePack\") || \"default\","
+  },
+  {
+    "file": "components/apps/quote_generator.js",
+    "line": 112,
+    "code": "storedOrder = JSON.parse(localStorage.getItem(\"quoteOrder_\" + pack));"
+  },
+  {
+    "file": "components/apps/quote_generator.js",
+    "line": 120,
+    "code": "localStorage.getItem(\"quoteIndex_\" + pack) || \"0\","
+  },
+  {
+    "file": "components/apps/quote_generator.js",
+    "line": 142,
+    "code": "localStorage.setItem(\"quotePack\", pack);"
+  },
+  {
+    "file": "components/apps/quote_generator.js",
+    "line": 143,
+    "code": "localStorage.setItem(\"quoteIndex_\" + pack, index.toString());"
+  },
+  {
+    "file": "components/apps/quote_generator.js",
+    "line": 144,
+    "code": "localStorage.setItem(\"quoteOrder_\" + pack, JSON.stringify(order));"
+  },
+  {
+    "file": "components/apps/radare2/GuideOverlay.js",
+    "line": 25,
+    "code": "localStorage.setItem(STORAGE_KEY, 'true');"
+  },
+  {
+    "file": "components/apps/radare2/index.js",
+    "line": 46,
+    "code": "!localStorage.getItem(\"r2HelpDismissed\")"
+  },
+  {
+    "file": "components/apps/radare2/utils.js",
+    "line": 5,
+    "code": "const raw = localStorage.getItem(SNIPPET_KEY);"
+  },
+  {
+    "file": "components/apps/radare2/utils.js",
+    "line": 15,
+    "code": "localStorage.setItem(SNIPPET_KEY, JSON.stringify(newSnippets));"
+  },
+  {
+    "file": "components/apps/radare2/utils.js",
+    "line": 93,
+    "code": "const raw = localStorage.getItem(NOTES_PREFIX + file);"
+  },
+  {
+    "file": "components/apps/radare2/utils.js",
+    "line": 101,
+    "code": "localStorage.setItem(NOTES_PREFIX + file, JSON.stringify(notes));"
+  },
+  {
+    "file": "components/apps/radare2/utils.js",
+    "line": 106,
+    "code": "const raw = localStorage.getItem(BOOKMARK_PREFIX + file);"
+  },
+  {
+    "file": "components/apps/radare2/utils.js",
+    "line": 114,
+    "code": "localStorage.setItem(BOOKMARK_PREFIX + file, JSON.stringify(bookmarks));"
+  },
+  {
+    "file": "components/apps/reversi.js",
+    "line": 87,
+    "code": "const saved = window.localStorage.getItem('reversiWins');"
+  },
+  {
+    "file": "components/apps/reversi.js",
+    "line": 96,
+    "code": "window.localStorage.setItem('reversiWins', JSON.stringify(wins));"
+  },
+  {
+    "file": "components/apps/security-tools/index.js",
+    "line": 49,
+    "code": "const ok = localStorage.getItem('security-tools-lab-ok');"
+  },
+  {
+    "file": "components/apps/security-tools/index.js",
+    "line": 58,
+    "code": "localStorage.setItem('security-tools-lab-ok', 'true');"
+  },
+  {
+    "file": "components/apps/sokoban.js",
+    "line": 94,
+    "code": "const b = localStorage.getItem(`sokoban-best-${idx}`);"
+  },
+  {
+    "file": "components/apps/sokoban.js",
+    "line": 100,
+    "code": "localStorage.setItem("
+  },
+  {
+    "file": "components/apps/sokoban.js",
+    "line": 115,
+    "code": "const saved = localStorage.getItem(`sokoban-progress-${idx}`);"
+  },
+  {
+    "file": "components/apps/sokoban.js",
+    "line": 190,
+    "code": "localStorage.setItem("
+  },
+  {
+    "file": "components/apps/sokoban.js",
+    "line": 196,
+    "code": "localStorage.removeItem(progressKey);"
+  },
+  {
+    "file": "components/apps/solitaire/index.tsx",
+    "line": 93,
+    "code": "const savedBankroll = Number(localStorage.getItem('solitaireBankroll') || '0');"
+  },
+  {
+    "file": "components/apps/solitaire/index.tsx",
+    "line": 101,
+    "code": "localStorage.getItem(`solitaireStats-${variant}`) || '{}',"
+  },
+  {
+    "file": "components/apps/solitaire/index.tsx",
+    "line": 172,
+    "code": "localStorage.setItem('solitaireBankroll', String(nb));"
+  },
+  {
+    "file": "components/apps/solitaire/index.tsx",
+    "line": 180,
+    "code": "localStorage.setItem(`solitaireStats-${v}`, JSON.stringify(ns));"
+  },
+  {
+    "file": "components/apps/solitaire/index.tsx",
+    "line": 225,
+    "code": "localStorage.setItem(`solitaireStats-${variant}`, JSON.stringify(ns));"
+  },
+  {
+    "file": "components/apps/solitaire/index.tsx",
+    "line": 255,
+    "code": "localStorage.setItem('solitaireBankroll', String(nb));"
+  },
+  {
+    "file": "components/apps/space-invaders.js",
+    "line": 175,
+    "code": "const stored = localStorage.getItem('si_highscore');"
+  },
+  {
+    "file": "components/apps/space-invaders.js",
+    "line": 358,
+    "code": "localStorage.setItem('si_highscore', highScoreRef.current.toString());"
+  },
+  {
+    "file": "components/apps/space-invaders.js",
+    "line": 380,
+    "code": "localStorage.setItem('si_highscore', highScoreRef.current.toString());"
+  },
+  {
+    "file": "components/apps/tictactoe.js",
+    "line": 25,
+    "code": "return JSON.parse(localStorage.getItem('tictactoeStats') || '{}');"
+  },
+  {
+    "file": "components/apps/tictactoe.js",
+    "line": 47,
+    "code": "localStorage.setItem('tictactoeStats', JSON.stringify(updated));"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 61,
+    "code": "const data = localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 111,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 165,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 185,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 311,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 432,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));"
+  },
+  {
+    "file": "components/apps/todoist.js",
+    "line": 556,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(newGroups));"
+  },
+  {
+    "file": "components/apps/trash/index.tsx",
+    "line": 29,
+    "code": "const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);"
+  },
+  {
+    "file": "components/apps/trash/index.tsx",
+    "line": 34,
+    "code": "data = JSON.parse(localStorage.getItem('window-trash') || '[]');"
+  },
+  {
+    "file": "components/apps/trash/index.tsx",
+    "line": 39,
+    "code": "localStorage.setItem('window-trash', JSON.stringify(data));"
+  },
+  {
+    "file": "components/apps/trash/index.tsx",
+    "line": 45,
+    "code": "localStorage.setItem('window-trash', JSON.stringify(next));"
+  },
+  {
+    "file": "components/apps/useGameControls.js",
+    "line": 218,
+    "code": "localStorage.setItem(`snapshot:${gameId}`, JSON.stringify(data));"
+  },
+  {
+    "file": "components/apps/useGameControls.js",
+    "line": 228,
+    "code": "const raw = localStorage.getItem(`snapshot:${gameId}`);"
+  },
+  {
+    "file": "components/apps/useGameControls.js",
+    "line": 237,
+    "code": "return Number(localStorage.getItem(`highscore:${gameId}`)) || 0;"
+  },
+  {
+    "file": "components/apps/useGameControls.js",
+    "line": 248,
+    "code": "localStorage.setItem(`highscore:${gameId}`, String(score));"
+  },
+  {
+    "file": "components/apps/useGameControls.js",
+    "line": 259,
+    "code": "JSON.parse(localStorage.getItem(`achievements:${gameId}`)) || []"
+  },
+  {
+    "file": "components/apps/useGameControls.js",
+    "line": 272,
+    "code": "localStorage.setItem("
+  },
+  {
+    "file": "components/apps/wireshark/index.js",
+    "line": 136,
+    "code": "const saved = window.localStorage.getItem('wireshark-filter');"
+  },
+  {
+    "file": "components/apps/wireshark/index.js",
+    "line": 180,
+    "code": "window.localStorage.setItem('wireshark-filter', val);"
+  },
+  {
+    "file": "components/apps/word-search.js",
+    "line": 71,
+    "code": "const stored = window.localStorage.getItem(key);"
+  },
+  {
+    "file": "components/apps/word-search.js",
+    "line": 85,
+    "code": "window.localStorage.setItem(key, JSON.stringify(state));"
+  },
+  {
+    "file": "components/apps/wordle.js",
+    "line": 13,
+    "code": "// Persist state to localStorage so that refreshes keep progress/history"
+  },
+  {
+    "file": "components/apps/wordle.js",
+    "line": 21,
+    "code": "const stored = localStorage.getItem(key);"
+  },
+  {
+    "file": "components/apps/wordle.js",
+    "line": 30,
+    "code": "localStorage.setItem(key, JSON.stringify(state));"
+  },
+  {
+    "file": "components/apps/x.js",
+    "line": 17,
+    "code": "// Load presets from localStorage"
+  },
+  {
+    "file": "components/apps/x.js",
+    "line": 21,
+    "code": "localStorage.getItem('x-feed-presets') || '[]'"
+  },
+  {
+    "file": "components/apps/x.js",
+    "line": 24,
+    "code": "sanitizeHandle(localStorage.getItem('x-feed-user') || '') ||"
+  },
+  {
+    "file": "components/apps/x.js",
+    "line": 35,
+    "code": "localStorage.setItem('x-feed-user', feedUser);"
+  },
+  {
+    "file": "components/apps/x.js",
+    "line": 48,
+    "code": "localStorage.setItem('x-feed-presets', JSON.stringify(updated));"
+  },
+  {
+    "file": "components/apps/youtube/index.tsx",
+    "line": 24,
+    "code": "localStorage.getItem(CACHED_LIST_KEY) || '[]',"
+  },
+  {
+    "file": "components/apps/youtube/index.tsx",
+    "line": 30,
+    "code": "localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));"
+  },
+  {
+    "file": "components/apps/youtube/index.tsx",
+    "line": 287,
+    "code": "localStorage.getItem(CACHED_LIST_KEY) || '[]',"
+  },
+  {
+    "file": "components/apps/youtube/index.tsx",
+    "line": 290,
+    "code": "localStorage.setItem(CACHED_LIST_KEY, JSON.stringify(list));"
+  },
+  {
+    "file": "components/context-menus/default.js",
+    "line": 60,
+    "code": "onClick={() => { localStorage.clear(); window.location.reload() }}"
+  },
+  {
+    "file": "components/FixturesLoader.tsx",
+    "line": 19,
+    "code": "localStorage.setItem('fixtures-last', JSON.stringify(payload));"
+  },
+  {
+    "file": "components/game/GameSettingsPanel.jsx",
+    "line": 10,
+    "code": "* latency tester. All state is persisted to localStorage so settings survive"
+  },
+  {
+    "file": "components/game/GameSettingsPanel.jsx",
+    "line": 73,
+    "code": "window.localStorage.setItem(\"game-snapshot\", JSON.stringify(snap));"
+  },
+  {
+    "file": "components/game/GameSettingsPanel.jsx",
+    "line": 80,
+    "code": "const data = window.localStorage.getItem(\"game-snapshot\");"
+  },
+  {
+    "file": "components/hooks/usePersistentState.js",
+    "line": 7,
+    "code": "const stored = window.localStorage.getItem(key);"
+  },
+  {
+    "file": "components/hooks/usePersistentState.js",
+    "line": 16,
+    "code": "window.localStorage.setItem(key, JSON.stringify(state));"
+  },
+  {
+    "file": "components/LabMode.tsx",
+    "line": 12,
+    "code": "const stored = localStorage.getItem('lab-mode');"
+  },
+  {
+    "file": "components/LabMode.tsx",
+    "line": 23,
+    "code": "localStorage.setItem('lab-mode', String(next));"
+  },
+  {
+    "file": "components/ResultViewer.tsx",
+    "line": 14,
+    "code": "const sk = localStorage.getItem('rv-sort');"
+  },
+  {
+    "file": "components/ResultViewer.tsx",
+    "line": 23,
+    "code": "localStorage.setItem('rv-sort', sortKey);"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 85,
+    "code": "var new_folders = localStorage.getItem('new_folders');"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 87,
+    "code": "localStorage.setItem(\"new_folders\", JSON.stringify([]));"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 237,
+    "code": "let pinnedApps = localStorage.getItem('pinnedApps')"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 243,
+    "code": "localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 500,
+    "code": "var frequentApps = localStorage.getItem('frequentApps') ? JSON.parse(localStorage.getItem('frequentApps')) : [];"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 522,
+    "code": "localStorage.setItem(\"frequentApps\", JSON.stringify(frequentApps));"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 551,
+    "code": "const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 555,
+    "code": "try { trash = JSON.parse(localStorage.getItem('window-trash')) || []; } catch (e) { trash = []; }"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 564,
+    "code": "localStorage.setItem('window-trash', JSON.stringify(trash));"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 590,
+    "code": "let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 592,
+    "code": "localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 603,
+    "code": "let pinnedApps = JSON.parse(localStorage.getItem('pinnedApps')) || []"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 605,
+    "code": "localStorage.setItem('pinnedApps', JSON.stringify(pinnedApps))"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 637,
+    "code": "let shortcuts = JSON.parse(localStorage.getItem('app_shortcuts') || '[]');"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 640,
+    "code": "localStorage.setItem('app_shortcuts', JSON.stringify(shortcuts));"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 646,
+    "code": "let shortcuts = localStorage.getItem('app_shortcuts');"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 648,
+    "code": "localStorage.setItem('app_shortcuts', JSON.stringify([]));"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 662,
+    "code": "try { trash = JSON.parse(localStorage.getItem('window-trash') || '[]'); } catch (e) { trash = []; }"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 688,
+    "code": "var new_folders = JSON.parse(localStorage.getItem('new_folders'));"
+  },
+  {
+    "file": "components/screen/desktop.js",
+    "line": 690,
+    "code": "localStorage.setItem(\"new_folders\", JSON.stringify(new_folders));"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 31,
+    "code": "let bg_image_name = localStorage.getItem('bg-image');"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 36,
+    "code": "let booting_screen = localStorage.getItem('booting_screen');"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 42,
+    "code": "localStorage.setItem('booting_screen', false);"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 47,
+    "code": "let shut_down = localStorage.getItem('shut-down');"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 51,
+    "code": "let screen_locked = localStorage.getItem('screen-locked');"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 70,
+    "code": "localStorage.setItem('screen-locked', true);"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 80,
+    "code": "localStorage.setItem('screen-locked', false);"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 85,
+    "code": "localStorage.setItem('bg-image', img_name);"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 98,
+    "code": "localStorage.setItem('shut-down', true);"
+  },
+  {
+    "file": "components/ubuntu.js",
+    "line": 106,
+    "code": "localStorage.setItem('shut-down', false);"
+  },
+  {
+    "file": "components/usePersistentState.js",
+    "line": 3,
+    "code": "// Simple hook to persist state in localStorage"
+  },
+  {
+    "file": "components/usePersistentState.js",
+    "line": 9,
+    "code": "const stored = window.localStorage.getItem(key);"
+  },
+  {
+    "file": "components/usePersistentState.js",
+    "line": 20,
+    "code": "window.localStorage.setItem(key, JSON.stringify(state));"
+  },
+  {
+    "file": "games/2048/index.tsx",
+    "line": 77,
+    "code": "// load best score from localStorage"
+  },
+  {
+    "file": "games/2048/index.tsx",
+    "line": 80,
+    "code": "const stored = window.localStorage.getItem('game_2048_best_score');"
+  },
+  {
+    "file": "games/2048/index.tsx",
+    "line": 90,
+    "code": "window.localStorage.setItem('game_2048_best_score', best.toString());"
+  },
+  {
+    "file": "games/asteroids/ghost.ts",
+    "line": 10,
+    "code": "* Load a saved ghost replay from localStorage."
+  },
+  {
+    "file": "games/asteroids/ghost.ts",
+    "line": 13,
+    "code": "if (typeof localStorage === 'undefined') return [];"
+  },
+  {
+    "file": "games/asteroids/ghost.ts",
+    "line": 15,
+    "code": "const raw = localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "games/asteroids/ghost.ts",
+    "line": 23,
+    "code": "* Persist a ghost replay to localStorage for later viewing."
+  },
+  {
+    "file": "games/asteroids/ghost.ts",
+    "line": 26,
+    "code": "if (typeof localStorage === 'undefined') return;"
+  },
+  {
+    "file": "games/asteroids/ghost.ts",
+    "line": 28,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(frames));"
+  },
+  {
+    "file": "games/breakout/editor.tsx",
+    "line": 24,
+    "code": "* localStorage. Cell types: 0-empty, 1-normal, 2-multi-ball, 3-magnet."
+  },
+  {
+    "file": "games/breakout/editor.tsx",
+    "line": 64,
+    "code": "localStorage.setItem(`${KEY_PREFIX}${name}`, JSON.stringify(grid));"
+  },
+  {
+    "file": "games/breakout/editor.tsx",
+    "line": 68,
+    "code": "const txt = localStorage.getItem(`${KEY_PREFIX}${name}`);"
+  },
+  {
+    "file": "games/car-racer/components/DriftMeter.tsx",
+    "line": 58,
+    "code": "const stored = window.localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "games/car-racer/components/DriftMeter.tsx",
+    "line": 71,
+    "code": "window.localStorage.setItem(STORAGE_KEY, score.toString());"
+  },
+  {
+    "file": "games/car-racer/ghost.ts",
+    "line": 19,
+    "code": "return JSON.parse(window.localStorage.getItem(key) || 'null');"
+  },
+  {
+    "file": "games/car-racer/ghost.ts",
+    "line": 26,
+    "code": "window.localStorage.setItem(key, JSON.stringify(value));"
+  },
+  {
+    "file": "games/flappy-bird/ghost.ts",
+    "line": 14,
+    "code": "return JSON.parse(window.localStorage.getItem(key) || 'null') as T | null;"
+  },
+  {
+    "file": "games/flappy-bird/ghost.ts",
+    "line": 22,
+    "code": "window.localStorage.setItem(key, JSON.stringify(value));"
+  },
+  {
+    "file": "games/pacman/components/MazeEditor.tsx",
+    "line": 30,
+    "code": "for (let i = 0; i < window.localStorage.length; i++) {"
+  },
+  {
+    "file": "games/pacman/components/MazeEditor.tsx",
+    "line": 31,
+    "code": "const key = window.localStorage.key(i);"
+  },
+  {
+    "file": "games/pacman/components/MazeEditor.tsx",
+    "line": 51,
+    "code": "window.localStorage.setItem(`pacmanMaze:${name}`, JSON.stringify(maze));"
+  },
+  {
+    "file": "games/pacman/components/MazeEditor.tsx",
+    "line": 57,
+    "code": "const data = window.localStorage.getItem(`pacmanMaze:${name}`);"
+  },
+  {
+    "file": "games/platformer/components/SpeedrunTimer.tsx",
+    "line": 23,
+    "code": "* persists best records in localStorage."
+  },
+  {
+    "file": "games/platformer/components/SpeedrunTimer.tsx",
+    "line": 38,
+    "code": "const bf = localStorage.getItem(FINAL_KEY);"
+  },
+  {
+    "file": "games/platformer/components/SpeedrunTimer.tsx",
+    "line": 40,
+    "code": "const bs = localStorage.getItem(SPLIT_KEY);"
+  },
+  {
+    "file": "games/platformer/components/SpeedrunTimer.tsx",
+    "line": 89,
+    "code": "localStorage.setItem(FINAL_KEY, final.toString());"
+  },
+  {
+    "file": "games/platformer/components/SpeedrunTimer.tsx",
+    "line": 98,
+    "code": "localStorage.setItem(SPLIT_KEY, JSON.stringify(updatedBest));"
+  },
+  {
+    "file": "games/sokoban/components/LevelImport.tsx",
+    "line": 27,
+    "code": "return JSON.parse(localStorage.getItem(STORAGE_KEY) || \"[]\");"
+  },
+  {
+    "file": "games/sokoban/components/LevelImport.tsx",
+    "line": 43,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(packs));"
+  },
+  {
+    "file": "hooks/useDailyQuote.ts",
+    "line": 72,
+    "code": "const stored = localStorage.getItem('dailyQuote');"
+  },
+  {
+    "file": "hooks/useDailyQuote.ts",
+    "line": 106,
+    "code": "localStorage.setItem('dailyQuote', JSON.stringify(toStore));"
+  },
+  {
+    "file": "hooks/useGameInput.js",
+    "line": 6,
+    "code": "// localStorage under the `game-keymap` key."
+  },
+  {
+    "file": "hooks/useGameInput.js",
+    "line": 24,
+    "code": "const stored = window.localStorage.getItem('game-keymap');"
+  },
+  {
+    "file": "hooks/usePersistedState.js",
+    "line": 5,
+    "code": "// Stores state in localStorage, falling back when unavailable."
+  },
+  {
+    "file": "hooks/usePersistedState.js",
+    "line": 10,
+    "code": "const item = window.localStorage.getItem(key);"
+  },
+  {
+    "file": "hooks/usePersistedState.js",
+    "line": 19,
+    "code": "window.localStorage.setItem(key, JSON.stringify(value));"
+  },
+  {
+    "file": "hooks/usePersistentState.js",
+    "line": 5,
+    "code": "// Persist state in localStorage."
+  },
+  {
+    "file": "hooks/usePersistentState.js",
+    "line": 10,
+    "code": "const stored = window.localStorage.getItem(key);"
+  },
+  {
+    "file": "hooks/usePersistentState.js",
+    "line": 19,
+    "code": "window.localStorage.setItem(key, JSON.stringify(state));"
+  },
+  {
+    "file": "hooks/usePersistentState.ts",
+    "line": 4,
+    "code": "* Persist state in localStorage."
+  },
+  {
+    "file": "hooks/usePersistentState.ts",
+    "line": 6,
+    "code": "* @param key localStorage key"
+  },
+  {
+    "file": "hooks/usePersistentState.ts",
+    "line": 21,
+    "code": "const stored = window.localStorage.getItem(key);"
+  },
+  {
+    "file": "hooks/usePersistentState.ts",
+    "line": 36,
+    "code": "window.localStorage.setItem(key, JSON.stringify(state));"
+  },
+  {
+    "file": "hooks/usePersistentState.ts",
+    "line": 45,
+    "code": "window.localStorage.removeItem(key);"
+  },
+  {
+    "file": "hooks/useTheme.ts",
+    "line": 10,
+    "code": "const stored = window.localStorage.getItem(THEME_KEY);"
+  },
+  {
+    "file": "hooks/useTheme.ts",
+    "line": 28,
+    "code": "window.localStorage.setItem(THEME_KEY, next);"
+  },
+  {
+    "file": "jest.setup.ts",
+    "line": 82,
+    "code": "// Simple localStorage mock for environments without it"
+  },
+  {
+    "file": "jest.setup.ts",
+    "line": 83,
+    "code": "if (typeof window !== 'undefined' && !window.localStorage) {"
+  },
+  {
+    "file": "jest.setup.ts",
+    "line": 86,
+    "code": "window.localStorage = {"
+  },
+  {
+    "file": "lib/db/tasks.ts",
+    "line": 6,
+    "code": "const data = localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "lib/db/tasks.ts",
+    "line": 16,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(data));"
+  },
+  {
+    "file": "pages/dummy-form.tsx",
+    "line": 17,
+    "code": "const raw = window.localStorage.getItem(STORAGE_KEY);"
+  },
+  {
+    "file": "pages/dummy-form.tsx",
+    "line": 42,
+    "code": "window.localStorage.setItem("
+  },
+  {
+    "file": "pages/dummy-form.tsx",
+    "line": 47,
+    "code": "window.localStorage.removeItem(STORAGE_KEY);"
+  },
+  {
+    "file": "pages/dummy-form.tsx",
+    "line": 79,
+    "code": "window.localStorage.removeItem(STORAGE_KEY);"
+  },
+  {
+    "file": "pages/input-hub.tsx",
+    "line": 91,
+    "code": "const raw = localStorage.getItem(QUEUE_KEY);"
+  },
+  {
+    "file": "pages/input-hub.tsx",
+    "line": 105,
+    "code": "if (queue.length) localStorage.removeItem(QUEUE_KEY);"
+  },
+  {
+    "file": "pages/input-hub.tsx",
+    "line": 124,
+    "code": "const raw = localStorage.getItem(QUEUE_KEY);"
+  },
+  {
+    "file": "pages/input-hub.tsx",
+    "line": 127,
+    "code": "localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));"
+  },
+  {
+    "file": "pages/ui/settings/theme.tsx",
+    "line": 35,
+    "code": "// Persist theme selection in localStorage so it survives reloads"
+  },
+  {
+    "file": "public/apps/asteroids/main.js",
+    "line": 20,
+    "code": "const save = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}');"
+  },
+  {
+    "file": "public/apps/asteroids/main.js",
+    "line": 29,
+    "code": "localStorage.setItem(SAVE_KEY, JSON.stringify({ level, score }));"
+  },
+  {
+    "file": "public/apps/car-racer/main.js",
+    "line": 81,
+    "code": "const best = JSON.parse(localStorage.getItem(`car-racer-best-${t.seed}`) || 'null');"
+  },
+  {
+    "file": "public/apps/car-racer/main.js",
+    "line": 245,
+    "code": "bestReplay = JSON.parse(localStorage.getItem(`car-racer-best-${seed}`));"
+  },
+  {
+    "file": "public/apps/car-racer/main.js",
+    "line": 253,
+    "code": "lapHistory = JSON.parse(localStorage.getItem(`car-racer-laps-${seed}`)) || [];"
+  },
+  {
+    "file": "public/apps/car-racer/main.js",
+    "line": 264,
+    "code": "localStorage.setItem("
+  },
+  {
+    "file": "public/apps/car-racer/main.js",
+    "line": 271,
+    "code": "localStorage.setItem(`car-racer-laps-${seed}`, JSON.stringify(lapHistory));"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 58,
+    "code": "let jumpBufferMs = Number(localStorage.getItem('pf-buffer') || '100');"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 64,
+    "code": "localStorage.setItem('pf-buffer', String(jumpBufferMs));"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 86,
+    "code": "localStorage.getItem('pf-physics') || '{}'"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 114,
+    "code": "localStorage.setItem('pf-physics', JSON.stringify(physics));"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 121,
+    "code": "let coinValue = Number(localStorage.getItem('pf-coinValue') || '1');"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 122,
+    "code": "let jumpCost = Number(localStorage.getItem('pf-jumpCost') || '0');"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 133,
+    "code": "localStorage.setItem('pf-coinValue', String(coinValue));"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 134,
+    "code": "localStorage.setItem('pf-jumpCost', String(jumpCost));"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 151,
+    "code": "const padMap = JSON.parse(localStorage.getItem('pf-pad') || '{\"left\":14,\"right\":15,\"jump\":0}');"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 159,
+    "code": "localStorage.getItem('pf-buttons') ||"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 168,
+    "code": "localStorage.setItem('pf-buttons', JSON.stringify(showButtons));"
+  },
+  {
+    "file": "public/apps/platformer/main.js",
+    "line": 182,
+    "code": "localStorage.setItem('pf-pad', JSON.stringify(padMap));"
+  },
+  {
+    "file": "public/apps/tetris/main.js",
+    "line": 522,
+    "code": "const data = JSON.parse(localStorage.getItem(key) || '[]');"
+  },
+  {
+    "file": "public/apps/tetris/main.js",
+    "line": 525,
+    "code": "localStorage.setItem(key, JSON.stringify(data.slice(0,5)));"
+  },
+  {
+    "file": "public/apps/tetris/main.js",
+    "line": 530,
+    "code": "const data = JSON.parse(localStorage.getItem(key) || '[]');"
+  },
+  {
+    "file": "public/theme.js",
+    "line": 4,
+    "code": "var stored = localStorage.getItem(THEME_KEY);"
+  },
+  {
+    "file": "scanner/schedule.ts",
+    "line": 17,
+    "code": "return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');"
+  },
+  {
+    "file": "scanner/schedule.ts",
+    "line": 25,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));"
+  },
+  {
+    "file": "utils/dailyChallenge.ts",
+    "line": 27,
+    "code": "window.localStorage.setItem(`${SEED_PREFIX}${gameId}`, seed);"
+  },
+  {
+    "file": "utils/dailyChallenge.ts",
+    "line": 44,
+    "code": "return window.localStorage.getItem("
+  },
+  {
+    "file": "utils/dailyChallenge.ts",
+    "line": 63,
+    "code": "window.localStorage.setItem("
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 24,
+    "code": "return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');"
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 40,
+    "code": "localStorage.setItem(STORAGE_KEY, JSON.stringify(scans));"
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 54,
+    "code": "localStorage.removeItem(STORAGE_KEY);"
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 59,
+    "code": "return localStorage.getItem(LAST_SCAN_KEY) || '';"
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 64,
+    "code": "localStorage.setItem(LAST_SCAN_KEY, scan);"
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 69,
+    "code": "return localStorage.getItem(LAST_GEN_KEY) || '';"
+  },
+  {
+    "file": "utils/qrStorage.ts",
+    "line": 74,
+    "code": "localStorage.setItem(LAST_GEN_KEY, payload);"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 38,
+    "code": "return window.localStorage.getItem('density') || DEFAULT_SETTINGS.density;"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 43,
+    "code": "window.localStorage.setItem('density', density);"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 48,
+    "code": "return window.localStorage.getItem('reduced-motion') === 'true';"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 53,
+    "code": "window.localStorage.setItem('reduced-motion', value ? 'true' : 'false');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 58,
+    "code": "const stored = window.localStorage.getItem('font-scale');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 64,
+    "code": "window.localStorage.setItem('font-scale', String(scale));"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 69,
+    "code": "return window.localStorage.getItem('high-contrast') === 'true';"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 74,
+    "code": "window.localStorage.setItem('high-contrast', value ? 'true' : 'false');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 79,
+    "code": "return window.localStorage.getItem('large-hit-areas') === 'true';"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 84,
+    "code": "window.localStorage.setItem('large-hit-areas', value ? 'true' : 'false');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 89,
+    "code": "const val = window.localStorage.getItem('pong-spin');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 95,
+    "code": "window.localStorage.setItem('pong-spin', value ? 'true' : 'false');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 100,
+    "code": "return window.localStorage.getItem('allow-network') === 'true';"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 105,
+    "code": "window.localStorage.setItem('allow-network', value ? 'true' : 'false');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 114,
+    "code": "window.localStorage.removeItem('density');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 115,
+    "code": "window.localStorage.removeItem('reduced-motion');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 116,
+    "code": "window.localStorage.removeItem('font-scale');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 117,
+    "code": "window.localStorage.removeItem('high-contrast');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 118,
+    "code": "window.localStorage.removeItem('large-hit-areas');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 119,
+    "code": "window.localStorage.removeItem('pong-spin');"
+  },
+  {
+    "file": "utils/settingsStore.js",
+    "line": 120,
+    "code": "window.localStorage.removeItem('allow-network');"
+  },
+  {
+    "file": "utils/theme.ts",
+    "line": 14,
+    "code": "const stored = window.localStorage.getItem(THEME_KEY);"
+  },
+  {
+    "file": "utils/theme.ts",
+    "line": 28,
+    "code": "window.localStorage.setItem(THEME_KEY, theme);"
+  }
+]
