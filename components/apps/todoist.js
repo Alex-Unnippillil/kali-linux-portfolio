@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { RRule } from 'rrule';
 import { parseRecurring } from '../../apps/todoist/utils/recurringParser';
+import EmptyState from '../system/EmptyState';
 
 const STORAGE_KEY = 'portfolio-tasks';
 
@@ -756,9 +757,35 @@ export default function Todoist() {
           {WIP_LIMITS[name] ? ` (${groups[name].length}/${WIP_LIMITS[name]})` : ''}
         </h2>
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center text-gray-500 mt-3">
-            <img src="/empty-tasks.svg" alt="" className="w-16 h-16 mb-1.5" />
-            <span className="text-sm">No tasks</span>
+          <div className="mt-3 flex justify-center">
+            <EmptyState
+              className="max-w-sm px-6 py-8"
+              title="No tasks yet"
+              helperText="Use quick add or drop cards into this column to start planning."
+              icon={
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                >
+                  <rect x="3" y="3" width="6" height="18" rx="1.5" />
+                  <rect x="10.5" y="3" width="6" height="18" rx="1.5" />
+                  <rect x="18" y="3" width="3" height="18" rx="1.5" />
+                </svg>
+              }
+              iconLabel="Illustration of empty kanban columns"
+              action={
+                <button
+                  type="button"
+                  onClick={() => quickRef.current?.focus()}
+                  className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[var(--color-inverse)] transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-surface)]"
+                >
+                  Add a task
+                </button>
+              }
+            />
           </div>
         ) : (
           Object.keys(bySection).map((sec) => (
