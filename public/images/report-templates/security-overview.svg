@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400" viewBox="0 0 640 400" role="img" aria-labelledby="title desc">
+  <title id="title">Security Assessment Overview Preview</title>
+  <desc id="desc">Stylized preview of the security assessment overview report template.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#101421" />
+      <stop offset="100%" stop-color="#182b3a" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="400" fill="url(#bg)" rx="24" />
+  <rect x="48" y="48" width="544" height="80" rx="12" fill="#1f2937" stroke="#38bdf8" stroke-width="2" />
+  <rect x="48" y="152" width="544" height="72" rx="12" fill="#111827" stroke="#38bdf8" stroke-width="1.5" />
+  <rect x="48" y="240" width="544" height="112" rx="12" fill="#0f172a" stroke="#94a3b8" stroke-dasharray="8 6" stroke-width="1.5" />
+  <text x="72" y="98" font-family="'Fira Code', 'Courier New', monospace" font-size="28" fill="#e0f2fe">Security Assessment</text>
+  <text x="72" y="190" font-family="'Fira Code', 'Courier New', monospace" font-size="18" fill="#bae6fd">Executive Summary • Scope • Methodology</text>
+  <text x="72" y="286" font-family="'Fira Code', 'Courier New', monospace" font-size="16" fill="#f8fafc">Key Findings ▸ Risk Heatmap ▸ Roadmap</text>
+</svg>
