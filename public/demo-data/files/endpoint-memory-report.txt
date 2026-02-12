@@ -1,0 +1,8 @@
+# Endpoint Memory Survey – Suspicious Processes
+
+PID   NAME                SIGNED  PREVALENCE  NOTES
+4048  rundll32.exe        false   02/50       Spawned from Teams updater cache
+5320  msedge.exe          false   00/50       Injected thread present, see dump
+6124  powershell.exe      false   01/50       Encoded command launches cURL beacon
+7332  svchost.exe         true    48/50       Hosting PrintWorkflow (expected)
+9004  diagtrackrunner.exe false   00/50       File absent on gold image
