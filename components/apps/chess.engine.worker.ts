@@ -1,4 +1,5 @@
 import { suggestMoves } from "../../games/chess/engine/wasmEngine";
+import type { DifficultyLevel } from "../../games/chess/engine/wasmEngine";
 
 type SuggestRequest = {
   type: "suggest";
@@ -6,6 +7,7 @@ type SuggestRequest = {
   fen: string;
   depth: number;
   maxSuggestions: number;
+  difficulty?: DifficultyLevel;
   requestId: number;
 };
 
@@ -22,9 +24,9 @@ const ctx = self;
 ctx.addEventListener("message", (event: MessageEvent<SuggestRequest>) => {
   const payload = event.data;
   if (!payload || payload.type !== "suggest") return;
-  const { fen, depth, maxSuggestions, requestId, channel } = payload;
+  const { fen, depth, maxSuggestions, difficulty, requestId, channel } = payload;
   try {
-    const suggestions = suggestMoves(fen, depth, maxSuggestions);
+    const suggestions = suggestMoves(fen, depth, maxSuggestions, { difficulty });
     const response: SuggestResponse = {
       type: "result",
       channel,
