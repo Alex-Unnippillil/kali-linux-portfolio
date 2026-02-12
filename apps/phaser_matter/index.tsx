@@ -296,9 +296,9 @@ const PhaserMatter: React.FC<PhaserMatterProps> = ({ getDailySeed }) => {
         if (gamepad && gamepad.total > 0) {
           const pad = gamepad.getPad(0);
           const pm = padMapRef.current;
-          ctrl.left = pad.buttons[pm.left]?.pressed;
-          ctrl.right = pad.buttons[pm.right]?.pressed;
-          const jp = pad.buttons[pm.jump]?.pressed;
+          ctrl.left = pad.buttons[pm.left]?.pressed ?? false;
+          ctrl.right = pad.buttons[pm.right]?.pressed ?? false;
+          const jp = pad.buttons[pm.jump]?.pressed ?? false;
           if (jp && !this.padJumpWasPressed) {
             ctrl.jumpPressed = true;
             ctrl.jumpHeld = true;
