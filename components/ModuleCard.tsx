@@ -33,7 +33,7 @@ export default function ModuleCard({
   return (
     <button
       onClick={() => onSelect(module)}
-      className={`w-full text-left border rounded p-3 flex items-start justify-between hover:bg-gray-50 focus:outline-none ${
+      className={`w-full text-left border rounded p-3 flex items-start justify-between transition-[background-color,transform,box-shadow] duration-[var(--motion-fast)] ease-out motion-reduce:transition-none motion-safe:hover:-translate-y-0.5 motion-safe:hover:shadow-[var(--shadow-2)] hover:bg-gray-50 focus-visible:outline focus-visible:outline-[var(--focus-outline-width)] focus-visible:outline-offset-2 focus-visible:outline-[color:var(--focus-outline-color)] ${
         selected ? 'bg-gray-100' : ''
       }`}
     >
