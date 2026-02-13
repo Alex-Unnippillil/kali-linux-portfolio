@@ -1,52 +1,81 @@
 'use client';
 
+import type { AppMetadata } from '../../../lib/appRegistry';
 import { TrashItem } from '../state';
 
 interface Props {
   history: TrashItem[];
-  onRestore: (index: number) => void;
-  onRestoreAll: () => void;
+  onRestoreRequest: (item: TrashItem, index: number) => void;
+  onRestoreAllRequest: () => void;
+  getMetadata: (id: string) => AppMetadata | undefined;
+  formatRelativeTime: (closedAt: number) => string;
 }
 
-export default function HistoryList({ history, onRestore, onRestoreAll }: Props) {
+export default function HistoryList({
+  history,
+  onRestoreRequest,
+  onRestoreAllRequest,
+  getMetadata,
+  formatRelativeTime,
+}: Props) {
   if (history.length === 0) return null;
 
   return (
-    <div className="border-t border-white/10 px-3 py-4 text-xs space-y-3 bg-black/10">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="font-bold uppercase tracking-wide text-[0.7rem] text-white/80">
-          Recently Deleted
-        </span>
+    <section
+      aria-label="Recently deleted"
+      className="border-t border-white/10 bg-black/20 px-4 py-5 text-xs text-white/80"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-[0.65rem] uppercase tracking-[0.2em] text-white/60">
+            Recently Deleted
+          </p>
+          <p className="mt-1 text-[0.7rem] text-white/60">
+            Items you delete appear here for quick undo.
+          </p>
+        </div>
         <button
-          onClick={() => {
-            if (window.confirm('Restore all windows?')) onRestoreAll();
-          }}
-          className="px-3 py-1.5 rounded-md border border-white/10 bg-white/10 text-[0.7rem] font-semibold uppercase tracking-wide hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
+          onClick={onRestoreAllRequest}
+          className="rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-[0.7rem] font-semibold uppercase tracking-wide text-white transition-transform hover:-translate-y-0.5 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
         >
           Restore All
         </button>
       </div>
-      <ul className="max-h-40 overflow-auto space-y-2">
-        {history.map((item, idx) => (
-          <li
-            key={item.closedAt}
-            className="flex items-center justify-between gap-3 rounded-md bg-black/20 px-3 py-2 text-[0.7rem] transition-colors hover:bg-black/30"
-          >
-            <span className="truncate font-mono" title={item.title}>
-              {item.title}
-            </span>
-            <button
-              onClick={() => {
-                if (window.confirm(`Restore ${item.title}?`)) onRestore(idx);
-              }}
-              className="px-2 py-1 rounded-md border border-ub-orange/40 text-ub-orange hover:bg-ub-orange/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
+      <ul className="mt-4 max-h-48 space-y-2 overflow-auto pr-1" role="list">
+        {history.map((item, idx) => {
+          const meta = getMetadata(item.id);
+          return (
+            <li
+              key={`${item.id}-${item.closedAt}`}
+              className="flex items-start gap-3 rounded-lg border border-white/5 bg-black/30 px-3 py-2 transition-transform hover:-translate-y-0.5 hover:bg-black/40"
             >
-              Restore
-            </button>
-          </li>
-        ))}
+              <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-to-br from-ub-orange/40 to-ub-pink/40 text-[0.65rem] font-semibold text-white">
+                ↺
+              </div>
+              <div className="flex-1 space-y-1">
+                <p className="truncate font-medium text-white" title={item.title}>
+                  {item.title}
+                </p>
+                {meta?.path && (
+                  <p className="truncate font-mono text-[0.6rem] text-white/60" title={meta.path}>
+                    {meta.path}
+                  </p>
+                )}
+                <p className="text-[0.6rem] text-white/50">
+                  Closed {formatRelativeTime(item.closedAt)}
+                </p>
+              </div>
+              <button
+                onClick={() => onRestoreRequest(item, idx)}
+                className="rounded-full border border-ub-orange/50 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-ub-orange transition hover:bg-ub-orange/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
+              >
+                Restore
+              </button>
+            </li>
+          );
+        })}
       </ul>
-    </div>
+    </section>
   );
 }
 
