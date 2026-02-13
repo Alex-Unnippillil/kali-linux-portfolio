@@ -1,13 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import useIntersection from '../hooks/useIntersection';
 
 const BadgeList = ({ badges, className = '' }) => {
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState(null);
+  const [isExpanded, setIsExpanded] = useState(false);
   const triggerRef = useRef(null);
   const modalRef = useRef(null);
   const listRef = useRef(null);
   const listVisible = useIntersection(listRef);
+  const listId = useMemo(
+    () => `badge-list-${Math.random().toString(36).slice(2, 9)}`,
+    []
+  );
+
+  const MAX_VISIBLE_BADGES = 50;
 
   const closeModal = () => {
     setSelected(null);
@@ -47,6 +54,21 @@ const BadgeList = ({ badges, className = '' }) => {
     badge.label.toLowerCase().includes(filter.toLowerCase())
   );
 
+  const hiddenCount = Math.max(filteredBadges.length - MAX_VISIBLE_BADGES, 0);
+  const visibleBadges = isExpanded
+    ? filteredBadges
+    : filteredBadges.slice(0, MAX_VISIBLE_BADGES);
+
+  useEffect(() => {
+    setIsExpanded(false);
+  }, [filter]);
+
+  useEffect(() => {
+    if (filteredBadges.length <= MAX_VISIBLE_BADGES && isExpanded) {
+      setIsExpanded(false);
+    }
+  }, [filteredBadges.length, isExpanded]);
+
   return (
     <div className={`flex flex-col items-center ${className}`}>
       <label htmlFor="badge-filter" className="mb-1">
@@ -60,13 +82,13 @@ const BadgeList = ({ badges, className = '' }) => {
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
       />
-      <div ref={listRef} className="flex flex-wrap justify-center items-start w-full">
+      <div ref={listRef} id={listId} className="badge-list-container">
         {listVisible &&
-          filteredBadges.map((badge) => (
+          visibleBadges.map((badge) => (
             <button
               key={badge.label}
               type="button"
-              className="m-1 hover:scale-110 transition-transform cursor-pointer"
+              className="badge-button"
               onClick={(e) => {
                 triggerRef.current = e.currentTarget;
                 setSelected(badge);
@@ -77,9 +99,21 @@ const BadgeList = ({ badges, className = '' }) => {
                 src={badge.src}
                 alt={badge.alt}
                 title={badge.description || badge.label}
+                className="badge-image"
               />
             </button>
           ))}
+        {listVisible && hiddenCount > 0 && (
+          <button
+            type="button"
+            className="badge-summary"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            aria-expanded={isExpanded}
+            aria-controls={listId}
+          >
+            {isExpanded ? 'Show fewer badges' : `+${hiddenCount} more`}
+          </button>
+        )}
       </div>
       {selected && (
         <div
@@ -104,6 +138,80 @@ const BadgeList = ({ badges, className = '' }) => {
           </div>
         </div>
       )}
+      <style jsx>{`
+        .badge-list-container {
+          container-type: inline-size;
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          align-items: flex-start;
+          width: 100%;
+          gap: 0.5rem;
+        }
+
+        .badge-button,
+        .badge-summary {
+          margin: 0.25rem;
+          border-radius: 0.5rem;
+          background: transparent;
+          border: none;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.25rem;
+          color: inherit;
+        }
+
+        .badge-button:focus-visible,
+        .badge-summary:focus-visible {
+          outline: 2px solid #38bdf8;
+          outline-offset: 2px;
+        }
+
+        .badge-button {
+          transition: transform 150ms ease;
+        }
+
+        .badge-button:hover {
+          transform: scale(1.05);
+        }
+
+        .badge-summary {
+          background: rgba(30, 41, 59, 0.9);
+          color: #f8fafc;
+          font-size: 0.875rem;
+          font-weight: 600;
+          padding: 0.35rem 0.75rem;
+        }
+
+        .badge-summary:hover {
+          background: rgba(37, 99, 235, 0.9);
+        }
+
+        .badge-image {
+          max-height: 3rem;
+          max-width: 5rem;
+        }
+
+        @container (max-width: 480px) {
+          .badge-image {
+            max-height: 2.5rem;
+            max-width: 4rem;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .badge-button,
+          .badge-summary {
+            transition: none;
+          }
+
+          .badge-button:hover {
+            transform: none;
+          }
+        }
+      `}</style>
     </div>
   );
 };
