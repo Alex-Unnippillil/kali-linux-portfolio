@@ -107,6 +107,7 @@ const CameraApp = () => {
   const [trackCaps, setTrackCaps] = useState<VideoTrackCaps>({});
   const [zoom, setZoom] = useState<number | null>(null);
   const [torch, setTorch] = useState(false);
+  const [cameraPermissionState, setCameraPermissionState] = useState<PermissionState | 'unknown'>('unknown');
 
   const hasMediaSupport = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const hasMediaRecorder = typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined';
@@ -579,6 +580,44 @@ const CameraApp = () => {
   }, [loadDevices]);
 
   useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.permissions?.query) return;
+
+    let mounted = true;
+    let permissionStatus: PermissionStatus | null = null;
+
+    const syncPermissionState = async () => {
+      try {
+        permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        if (!mounted) return;
+
+        const nextState = permissionStatus.state;
+        setCameraPermissionState(nextState);
+
+        permissionStatus.onchange = () => {
+          const currentState = permissionStatus?.state ?? 'prompt';
+          setCameraPermissionState(currentState);
+          if (currentState === 'granted') {
+            setError(null);
+            setLiveMessage('Camera permission granted. Start camera to connect.');
+            void loadDevices();
+          }
+        };
+      } catch {
+        setCameraPermissionState('unknown');
+      }
+    };
+
+    void syncPermissionState();
+
+    return () => {
+      mounted = false;
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, [loadDevices]);
+
+  useEffect(() => {
     const sessionUrls = sessionUrlRef.current;
     const persistedUrls = persistedUrlRef.current;
     return () => {
@@ -681,6 +720,11 @@ const CameraApp = () => {
           </div>
 
           {error && <div className="rounded border border-red-500/50 bg-red-500/10 p-2 text-sm text-red-200">{error}</div>}
+          {cameraPermissionState === 'denied' && (
+            <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-100">
+              Camera access is blocked in browser/site settings. Allow camera access, then click “Start Camera”.
+            </div>
+          )}
           {videoUnavailableMessage && <div className="rounded border border-yellow-500/50 bg-yellow-500/10 p-2 text-xs">{videoUnavailableMessage}</div>}
 
           <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
