@@ -87,6 +87,35 @@ button:focus-visible {
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
+
+    .motion-reduce,
+    .animateShow,
+    .closed-window,
+    .scalable-app-icon.scale,
+    .xterm .xterm-cursor,
+    .all-apps-anim,
+    .app-icon-launch,
+    .card,
+    .card.flipped,
+    .animate-deal,
+    .peek,
+    .chip,
+    .chip-pop,
+    .shuffle,
+    .shake,
+    .key-press,
+    .reveal,
+    .tile-pop,
+    .merge-ripple,
+    .score-pop,
+    .hangman-part,
+    .word-found {
+        transition: none !important;
+    }
+
+    .xterm .xterm-cursor {
+        animation: none !important;
+    }
 }
 
 .reduced-motion *, .reduced-motion *::before, .reduced-motion *::after {
@@ -286,11 +315,6 @@ dialog {
     100% { opacity: 1; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .xterm .xterm-cursor {
-        animation: none;
-    }
-}
 
 @keyframes scaleAppImage {
     from {
@@ -427,23 +451,6 @@ dialog {
     animation: shuffleDeck 0.5s;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .card,
-    .chip {
-        transition: none;
-    }
-    .card.flipped {
-        transform: none;
-    }
-    .chip-pop,
-    .animate-deal,
-    .peek,
-    .shuffle {
-        animation: none;
-        transform: none;
-        opacity: 1;
-    }
-}
 
 @keyframes shuffleDeck {
     0% { transform: translateX(0); }
