@@ -1,0 +1,19 @@
+@import '../styles/globals.css';
+
+:root {
+  --app-safe-area-inline-padding: 0px;
+  --app-safe-area-bottom-padding: 0px;
+}
+
+body,
+.app-root {
+  padding-inline: max(
+    var(--app-safe-area-inline-padding),
+    env(safe-area-inset-left),
+    env(safe-area-inset-right)
+  );
+  padding-bottom: max(
+    var(--app-safe-area-bottom-padding),
+    env(safe-area-inset-bottom)
+  );
+}
