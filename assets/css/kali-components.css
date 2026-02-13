@@ -1,0 +1,5 @@
+@supports not (backdrop-filter: blur(6px)) {
+  .kali-panel {
+    background: rgba(12, 14, 18, 0.95);
+  }
+}
