@@ -223,6 +223,12 @@ html[data-theme='matrix'] {
 
 }
 
+/* Undercover theme */
+:root[data-theme='undercover'] {
+  --color-bg: #2a2e36; /* softer neutral background */
+  --color-surface: #2a2e36;
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
   color: var(--kali-text);
