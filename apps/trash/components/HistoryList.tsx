@@ -4,8 +4,8 @@ import { TrashItem } from '../state';
 
 interface Props {
   history: TrashItem[];
-  onRestore: (index: number) => void;
-  onRestoreAll: () => void;
+  onRestore: (index: number) => Promise<void> | void;
+  onRestoreAll: () => Promise<void> | void;
 }
 
 export default function HistoryList({ history, onRestore, onRestoreAll }: Props) {
@@ -18,8 +18,10 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
           Recently Deleted
         </span>
         <button
-          onClick={() => {
-            if (window.confirm('Restore all windows?')) onRestoreAll();
+          onClick={async () => {
+            if (window.confirm('Restore all windows?')) {
+              await onRestoreAll();
+            }
           }}
           className="px-3 py-1.5 rounded-md border border-white/10 bg-white/10 text-[0.7rem] font-semibold uppercase tracking-wide hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
         >
@@ -36,8 +38,10 @@ export default function HistoryList({ history, onRestore, onRestoreAll }: Props)
               {item.title}
             </span>
             <button
-              onClick={() => {
-                if (window.confirm(`Restore ${item.title}?`)) onRestore(idx);
+              onClick={async () => {
+                if (window.confirm(`Restore ${item.title}?`)) {
+                  await onRestore(idx);
+                }
               }}
               className="px-2 py-1 rounded-md border border-ub-orange/40 text-ub-orange hover:bg-ub-orange/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange"
             >
