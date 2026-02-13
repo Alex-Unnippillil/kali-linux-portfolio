@@ -1,12 +1,53 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import AnnotDiff from './AnnotDiff';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
+
+const SNAPSHOT_STORAGE_KEY = 'ghidra:annotation:snapshots';
+
+const cloneAnnotationState = (state = {}) => ({
+  comments: { ...(state.comments || {}) },
+  labels: { ...(state.labels || {}) },
+  types: { ...(state.types || {}) },
+});
+
+const normalizeSnapshotRecord = (snapshot = {}) => {
+  const base = cloneAnnotationState(snapshot);
+  return {
+    id:
+      snapshot.id ||
+      `snapshot-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`,
+    name: snapshot.name || snapshot.id || 'Snapshot',
+    createdAt: snapshot.createdAt || new Date().toISOString(),
+    ...base,
+  };
+};
+
+const normalizeAddressInput = (address) => {
+  const trimmed = (address || '').trim();
+  if (!trimmed) return '';
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('0x')) {
+    const hex = lower.slice(2).replace(/[^0-9a-f]/g, '');
+    if (!hex) return '';
+    return `0x${hex}`;
+  }
+  const hex = lower.replace(/[^0-9a-f]/g, '');
+  if (!hex) return trimmed;
+  return `0x${hex}`;
+};
 
 async function loadCapstoneModule() {
   if (typeof window === 'undefined') return null;
@@ -90,6 +131,18 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [annotationState, setAnnotationState] = useState({
+    comments: {},
+    labels: {},
+    types: {},
+  });
+  const [annotationSnapshots, setAnnotationSnapshots] = useState([]);
+  const [activeSnapshotId, setActiveSnapshotId] = useState('__working__');
+  const [compareSnapshotId, setCompareSnapshotId] = useState(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(true);
+  const [draftCategory, setDraftCategory] = useState('comments');
+  const [draftAddress, setDraftAddress] = useState('');
+  const [draftValue, setDraftValue] = useState('');
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -180,6 +233,79 @@ export default function GhidraApp() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    const loadAnnotationSnapshots = async () => {
+      setSnapshotLoading(true);
+      let storedSnapshots = [];
+      if (typeof window !== 'undefined') {
+        const raw = window.localStorage.getItem(SNAPSHOT_STORAGE_KEY);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              storedSnapshots = parsed.map((snap) =>
+                normalizeSnapshotRecord(snap)
+              );
+            }
+          } catch (err) {
+            console.warn('Failed to parse stored annotation snapshots', err);
+          }
+        }
+      }
+      try {
+        const resp = await fetch('/demo-data/ghidra/annotations.json');
+        if (!resp.ok) throw new Error('Failed to load annotation snapshots');
+        const data = await resp.json();
+        if (cancelled) return;
+        if (data.state) {
+          setAnnotationState(cloneAnnotationState(data.state));
+        } else {
+          setAnnotationState({ comments: {}, labels: {}, types: {} });
+        }
+        const sampleSnapshots = Array.isArray(data.snapshots)
+          ? data.snapshots.map((snap) => normalizeSnapshotRecord(snap))
+          : [];
+        const map = new Map();
+        sampleSnapshots.forEach((snap) => map.set(snap.id, snap));
+        storedSnapshots.forEach((snap) => map.set(snap.id, snap));
+        const merged = Array.from(map.values());
+        setAnnotationSnapshots(merged);
+        setActiveSnapshotId('__working__');
+        setCompareSnapshotId(merged[0]?.id || null);
+      } catch (error) {
+        if (!cancelled) {
+          setAnnotationSnapshots(storedSnapshots);
+          setActiveSnapshotId('__working__');
+          setCompareSnapshotId(storedSnapshots[0]?.id || null);
+        }
+      } finally {
+        if (!cancelled) {
+          setSnapshotLoading(false);
+        }
+      }
+    };
+    loadAnnotationSnapshots();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const userSnapshots = annotationSnapshots.filter((snap) =>
+      typeof snap.id === 'string' && snap.id.startsWith('user-')
+    );
+    if (userSnapshots.length > 0) {
+      window.localStorage.setItem(
+        SNAPSHOT_STORAGE_KEY,
+        JSON.stringify(userSnapshots)
+      );
+    } else {
+      window.localStorage.removeItem(SNAPSHOT_STORAGE_KEY);
+    }
+  }, [annotationSnapshots]);
+
   // S2: Respect reduced motion preference
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -240,6 +366,117 @@ export default function GhidraApp() {
       h.removeEventListener('scroll', onH);
     };
   }, []);
+
+  const workingSnapshot = useMemo(
+    () => ({
+      id: '__working__',
+      name: 'Working copy',
+      createdAt: 'current',
+      ...cloneAnnotationState(annotationState),
+    }),
+    [annotationState]
+  );
+
+  const diffSnapshots = useMemo(
+    () => [workingSnapshot, ...annotationSnapshots],
+    [workingSnapshot, annotationSnapshots]
+  );
+
+  const annotationStats = useMemo(
+    () => ({
+      comments: Object.keys(annotationState.comments || {}).length,
+      labels: Object.keys(annotationState.labels || {}).length,
+      types: Object.keys(annotationState.types || {}).length,
+    }),
+    [annotationState]
+  );
+
+  const normalizedDraftAddress = useMemo(
+    () => normalizeAddressInput(draftAddress),
+    [draftAddress]
+  );
+
+  const existingDraftValue = useMemo(() => {
+    const collection = annotationState[draftCategory] || {};
+    return collection[normalizedDraftAddress] || '';
+  }, [annotationState, draftCategory, normalizedDraftAddress]);
+
+  const handleAnnotationUpsert = useCallback(() => {
+    const normalized = normalizeAddressInput(draftAddress);
+    const value = draftValue.trim();
+    if (!normalized || !value) return;
+    setAnnotationState((prev) => ({
+      ...prev,
+      [draftCategory]: {
+        ...(prev[draftCategory] || {}),
+        [normalized]: value,
+      },
+    }));
+    setDraftAddress(normalized);
+    setDraftValue(value);
+  }, [draftAddress, draftValue, draftCategory]);
+
+  const handleAnnotationRemove = useCallback(() => {
+    const normalized = normalizeAddressInput(draftAddress);
+    if (!normalized) return;
+    setAnnotationState((prev) => {
+      const current = prev[draftCategory] || {};
+      if (typeof current[normalized] === 'undefined') return prev;
+      const nextCollection = { ...current };
+      delete nextCollection[normalized];
+      return { ...prev, [draftCategory]: nextCollection };
+    });
+    setDraftValue('');
+  }, [draftAddress, draftCategory]);
+
+  const captureSnapshot = useCallback(() => {
+    const defaultName = `Manual snapshot ${new Date().toLocaleString()}`;
+    let name = defaultName;
+    if (typeof window !== 'undefined') {
+      const response = window.prompt('Snapshot name', defaultName);
+      if (response === null) return;
+      name = response.trim() || defaultName;
+    }
+    const snapshot = {
+      id: `user-${Date.now()}`,
+      name: name.trim(),
+      createdAt: new Date().toISOString(),
+      ...cloneAnnotationState(annotationState),
+    };
+    setAnnotationSnapshots((prev) => [...prev, snapshot]);
+    setCompareSnapshotId(snapshot.id);
+  }, [annotationState]);
+
+  const applySnapshotSelection = useCallback(() => {
+    if (!activeSnapshotId || activeSnapshotId === '__working__') return;
+    const snapshot = annotationSnapshots.find(
+      (snap) => snap.id === activeSnapshotId
+    );
+    if (!snapshot) return;
+    setAnnotationState(cloneAnnotationState(snapshot));
+  }, [activeSnapshotId, annotationSnapshots]);
+
+  const deleteSnapshotSelection = useCallback(() => {
+    if (
+      !activeSnapshotId ||
+      activeSnapshotId === '__working__' ||
+      !activeSnapshotId.startsWith('user-')
+    ) {
+      return;
+    }
+    setAnnotationSnapshots((prev) =>
+      prev.filter((snap) => snap.id !== activeSnapshotId)
+    );
+    if (compareSnapshotId === activeSnapshotId) {
+      setCompareSnapshotId(null);
+    }
+    setActiveSnapshotId('__working__');
+  }, [activeSnapshotId, compareSnapshotId]);
+
+  const canDeleteActiveSnapshot =
+    !!activeSnapshotId &&
+    activeSnapshotId !== '__working__' &&
+    activeSnapshotId.startsWith('user-');
 
   if (engine === 'capstone') {
     return (
@@ -314,6 +551,7 @@ export default function GhidraApp() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
+              aria-label="Search function symbols"
             />
           </div>
           {query ? (
@@ -380,6 +618,9 @@ export default function GhidraApp() {
                   }
                   placeholder="note"
                   className="ml-2 w-24 text-xs text-black rounded"
+                  aria-label={`Inline note for ${(selected || 'current function').toString()} line ${
+                    idx + 1
+                  }`}
                 />
               </div>
             );
@@ -415,27 +656,29 @@ export default function GhidraApp() {
           onSelect={setSelected}
         />
       </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
-      </div>
-      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
-        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
-          <input
-            type="text"
-            value={stringQuery}
-            onChange={(e) => setStringQuery(e.target.value)}
-            placeholder="Search strings"
-            className="w-full mb-2 p-1 rounded text-black"
+        <div className="border-t border-gray-700 p-2">
+          <label className="block text-sm mb-1">
+            Notes for {selected || 'function'}
+          </label>
+          <textarea
+            value={funcNotes[selected] || ''}
+            onChange={(e) =>
+              setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+            }
+            className="w-full h-16 p-1 rounded text-black"
+            aria-label={`Function notes for ${selected || 'function'}`}
           />
+        </div>
+        <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
+          <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
+            <input
+              type="text"
+              value={stringQuery}
+              onChange={(e) => setStringQuery(e.target.value)}
+              placeholder="Search strings"
+              className="w-full mb-2 p-1 rounded text-black"
+              aria-label="Search decoded strings"
+            />
           <ul className="text-sm space-y-1">
             {filteredStrings.map((s) => (
               <li key={s.id}>
@@ -451,23 +694,150 @@ export default function GhidraApp() {
             ))}
           </ul>
         </div>
-        <div className="p-2">
-          <label className="block text-sm mb-1">
-            Notes for {
-              strings.find((s) => s.id === selectedString)?.value || 'string'
-            }
-          </label>
-          <textarea
-            value={stringNotes[selectedString] || ''}
-            onChange={(e) =>
-              setStringNotes({
-                ...stringNotes,
-                [selectedString]: e.target.value,
-              })
-            }
-            className="w-full h-full p-1 rounded text-black"
-          />
+          <div className="p-2">
+            <label className="block text-sm mb-1">
+              Notes for {
+                strings.find((s) => s.id === selectedString)?.value || 'string'
+              }
+            </label>
+            <textarea
+              value={stringNotes[selectedString] || ''}
+              onChange={(e) =>
+                setStringNotes({
+                  ...stringNotes,
+                  [selectedString]: e.target.value,
+                })
+              }
+              className="w-full h-full p-1 rounded text-black"
+              aria-label={`Notes for string ${
+                strings.find((s) => s.id === selectedString)?.value ||
+                selectedString ||
+                'string'
+              }`}
+            />
+          </div>
         </div>
+      <div className="border-t border-gray-700 bg-gray-950 p-3 space-y-3">
+        <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm">
+          <button
+            onClick={captureSnapshot}
+            className="rounded bg-blue-700 px-3 py-1 text-white hover:bg-blue-600"
+            type="button"
+          >
+            Capture snapshot
+          </button>
+          <button
+            onClick={applySnapshotSelection}
+            className={`rounded px-3 py-1 ${
+              activeSnapshotId && activeSnapshotId !== '__working__'
+                ? 'bg-gray-800 text-gray-100 hover:bg-gray-700'
+                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+            }`}
+            type="button"
+            disabled={!activeSnapshotId || activeSnapshotId === '__working__'}
+          >
+            Load base snapshot
+          </button>
+          <button
+            onClick={deleteSnapshotSelection}
+            className={`rounded px-3 py-1 ${
+              canDeleteActiveSnapshot
+                ? 'bg-red-700 text-white hover:bg-red-600'
+                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+            }`}
+            type="button"
+            disabled={!canDeleteActiveSnapshot}
+          >
+            Delete user snapshot
+          </button>
+          {snapshotLoading && (
+            <span className="text-xs text-gray-400">Loading snapshots…</span>
+          )}
+          <span className="ml-auto text-xs text-gray-400">
+            Comments: {annotationStats.comments} · Labels: {annotationStats.labels} · Types: {annotationStats.types}
+          </span>
+        </div>
+          <div className="grid gap-2 text-xs md:grid-cols-4 md:text-sm">
+            <label className="flex flex-col">
+              <span className="mb-1 font-semibold uppercase tracking-wide text-gray-300">
+                Category
+              </span>
+              <select
+                value={draftCategory}
+                onChange={(e) => setDraftCategory(e.target.value)}
+                className="rounded bg-gray-800 p-2 text-gray-100"
+                aria-label="Annotation category"
+              >
+              <option value="comments">Comments</option>
+              <option value="labels">Labels</option>
+              <option value="types">Types</option>
+            </select>
+          </label>
+            <label className="flex flex-col">
+              <span className="mb-1 font-semibold uppercase tracking-wide text-gray-300">
+                Address
+              </span>
+              <input
+                value={draftAddress}
+                onChange={(e) => setDraftAddress(e.target.value)}
+                className="rounded bg-gray-800 p-2 text-gray-100"
+                placeholder="0x401000"
+                aria-label="Annotation address"
+              />
+            {existingDraftValue && (
+              <span className="mt-1 text-[11px] text-gray-400">
+                Existing: {existingDraftValue}
+              </span>
+            )}
+          </label>
+            <label className="flex flex-col md:col-span-2">
+              <span className="mb-1 font-semibold uppercase tracking-wide text-gray-300">
+                Value
+              </span>
+              <textarea
+                value={draftValue}
+                onChange={(e) => setDraftValue(e.target.value)}
+                className="h-20 rounded bg-gray-800 p-2 text-gray-100"
+                placeholder={
+                  existingDraftValue || 'Describe the annotation for this address'
+                }
+                aria-label="Annotation value"
+              />
+          </label>
+          <div className="flex items-end gap-2 md:col-span-4">
+            <button
+              onClick={handleAnnotationUpsert}
+              className={`rounded px-3 py-1 ${
+                draftValue.trim() && normalizedDraftAddress
+                  ? 'bg-green-700 text-white hover:bg-green-600'
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              }`}
+              type="button"
+              disabled={!draftValue.trim() || !normalizedDraftAddress}
+            >
+              Upsert annotation
+            </button>
+            <button
+              onClick={handleAnnotationRemove}
+              className={`rounded px-3 py-1 ${
+                existingDraftValue
+                  ? 'bg-yellow-700 text-white hover:bg-yellow-600'
+                  : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              }`}
+              type="button"
+              disabled={!existingDraftValue}
+            >
+              Remove annotation
+            </button>
+          </div>
+        </div>
+        <AnnotDiff
+          snapshots={diffSnapshots}
+          baseSnapshotId={activeSnapshotId}
+          targetSnapshotId={compareSnapshotId}
+          onSelectBase={setActiveSnapshotId}
+          onSelectTarget={setCompareSnapshotId}
+        />
       </div>
       {/* S8: Hidden live region for assistive tech announcements */}
       <div aria-live="polite" role="status" className="sr-only">
