@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
@@ -10,7 +10,11 @@ import useOPFS from '../hooks/useOPFS';
 // simple overlay used for notes/transcripts.
 export default function YouTubePlayer({ videoId }) {
   const [activated, setActivated] = useState(false);
-  const containerRef = useRef(null); // DOM node hosting the iframe
+  const frameContainerRef = useRef(null); // Wraps the iframe so we can keep layout + PiP lookups
+  const playerTargetId = useMemo(
+    () => `yt-player-${videoId}-${Math.random().toString(36).slice(2, 9)}`,
+    [videoId]
+  );
   const playerRef = useRef(null); // YT.Player instance
   const [isPlaying, setIsPlaying] = useState(false);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
@@ -28,8 +32,10 @@ export default function YouTubePlayer({ videoId }) {
     setActivated(true);
 
     const createPlayer = () => {
-      if (!containerRef.current) return;
-      playerRef.current = new YT.Player(containerRef.current, {
+      if (typeof document === 'undefined') return;
+      const targetEl = document.getElementById(playerTargetId);
+      if (!targetEl) return;
+      playerRef.current = new YT.Player(playerTargetId, {
         videoId,
         host: 'https://www.youtube-nocookie.com',
         playerVars: {
@@ -60,17 +66,32 @@ export default function YouTubePlayer({ videoId }) {
       });
     };
 
-    if (typeof window !== 'undefined') {
-      // Load the IFrame Player API script only after user interaction
-      if (!window.YT) {
+    if (typeof window === 'undefined') return;
+
+    const runWhenReady = () => {
+      if (window.YT?.Player) {
+        createPlayer();
+        return;
+      }
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previous === 'function') previous();
+        createPlayer();
+      };
+    };
+
+    if (!window.YT?.Player) {
+      const existingScript = document.getElementById('youtube-iframe-api');
+      if (!existingScript) {
         const tag = document.createElement('script');
+        tag.id = 'youtube-iframe-api';
         tag.src = 'https://www.youtube-nocookie.com/iframe_api';
         tag.async = true;
-        window.onYouTubeIframeAPIReady = createPlayer;
         document.body.appendChild(tag);
-      } else {
-        createPlayer();
       }
+      runWhenReady();
+    } else {
+      createPlayer();
     }
   };
 
@@ -136,7 +157,7 @@ export default function YouTubePlayer({ videoId }) {
 
   // Trigger standard browser PiP on the iframe
   const triggerPiP = () => {
-    const iframe = containerRef.current?.querySelector('iframe');
+    const iframe = frameContainerRef.current?.querySelector('iframe');
     if (iframe?.requestPictureInPicture) {
       iframe.requestPictureInPicture().catch(() => {});
     }
@@ -202,32 +223,45 @@ export default function YouTubePlayer({ videoId }) {
         />
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Head>
-      <div
-        className="relative w-full"
-        style={{ aspectRatio: '16 / 9' }}
-        tabIndex={0}
-        onKeyDown={handleKey}
-      >
-        <div className="w-full h-full" ref={containerRef}>
+      <div className="relative">
+        <div
+          className="relative w-full"
+          style={{ aspectRatio: '16 / 9' }}
+          tabIndex={0}
+          onKeyDown={handleKey}
+        >
+          <div
+            ref={frameContainerRef}
+            className="absolute inset-0 w-full h-full"
+            aria-hidden={!activated}
+          >
+            <div id={playerTargetId} className="w-full h-full" />
+          </div>
           {!activated && (
             <button
               type="button"
               aria-label="Play video"
               onClick={loadPlayer}
-              className="relative w-full h-full flex items-center justify-center"
+              className="absolute inset-0 flex items-center justify-center overflow-hidden rounded bg-black/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
             >
               <img
                 src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
                 alt="YouTube video thumbnail"
                 loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
+                width="1280"
+                height="720"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 bg-black/40"
               />
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="68"
                 height="48"
                 viewBox="0 0 68 48"
-                className="relative z-10"
+                className="relative z-10 drop-shadow-lg"
               >
                 <path
                   className="ytp-large-play-button-bg"
@@ -238,16 +272,79 @@ export default function YouTubePlayer({ videoId }) {
               </svg>
             </button>
           )}
+
+          {/* Chapter drawer */}
+          {showChapters && chapters.length > 0 && (
+            <div className="absolute bottom-0 left-0 z-40 max-h-1/2 w-48 overflow-auto bg-black/80 text-sm text-white">
+              {chapters.map((ch) => (
+                <button
+                  key={ch.startTime}
+                  type="button"
+                  className="block w-full px-3 py-2 text-left hover:bg-black/60"
+                  onClick={() => {
+                    playerRef.current?.seekTo(ch.startTime, true);
+                    setShowChapters(false);
+                  }}
+                >
+                  {ch.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Notes side panel */}
+          {showNotes && (
+            <div className="absolute top-0 right-0 z-50 flex h-full w-64 flex-col bg-black/90 p-2 text-sm text-white">
+              <button
+                type="button"
+                aria-label="Close notes"
+                className="absolute right-1 top-1 px-2"
+                onClick={() => setShowNotes(false)}
+              >
+                ✕
+              </button>
+              {supported ? (
+                <>
+                  <input
+                    type="search"
+                    aria-label="Search saved notes"
+                    placeholder="Search notes"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="mb-2 border border-white/20 bg-black/80 p-1"
+                  />
+                  {search && results.length > 0 && (
+                    <ul className="mb-2 max-h-24 overflow-auto border border-white/20 p-1">
+                      {results.map((r) => (
+                        <li key={r.id} className="mb-1">
+                          <strong>{r.id}</strong>: {r.text.slice(0, 50)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <textarea
+                    aria-label="Video notes"
+                    value={notes}
+                    onChange={handleNoteChange}
+                    className="flex-1 border border-white/20 bg-black/80 p-1"
+                    placeholder="Write notes…"
+                  />
+                </>
+              ) : (
+                <p className="pr-4">OPFS not supported.</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Play/Pause, PiP + Doc-PiP buttons */}
         {activated && (
-          <div className="absolute top-2 right-2 flex gap-2 z-40">
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-sm md:absolute md:right-3 md:top-3 md:mt-0 md:flex-col md:items-end md:rounded md:bg-black/60 md:p-2 md:text-base md:backdrop-blur">
             <button
               type="button"
               aria-label={isPlaying ? 'Pause video' : 'Play video'}
               onClick={togglePlay}
-              className="bg-black/60 text-white px-2 py-1 rounded"
+              className="rounded bg-black/80 px-3 py-1 text-white md:bg-transparent md:px-2"
             >
               {isPlaying ? 'Pause' : 'Play'}
             </button>
@@ -255,7 +352,7 @@ export default function YouTubePlayer({ videoId }) {
               type="button"
               aria-label="Picture in Picture"
               onClick={triggerPiP}
-              className="bg-black/60 text-white px-2 py-1 rounded"
+              className="rounded bg-black/80 px-3 py-1 text-white md:bg-transparent md:px-2"
             >
               PiP
             </button>
@@ -263,71 +360,10 @@ export default function YouTubePlayer({ videoId }) {
               type="button"
               aria-label="Notes"
               onClick={() => setShowNotes((s) => !s)}
-              className="bg-black/60 text-white px-2 py-1 rounded"
+              className="rounded bg-black/80 px-3 py-1 text-white md:bg-transparent md:px-2"
             >
               Notes
             </button>
-          </div>
-        )}
-
-        {/* Chapter drawer */}
-        {showChapters && chapters.length > 0 && (
-          <div className="absolute bottom-0 left-0 bg-black/80 text-white text-sm max-h-1/2 overflow-auto w-48 z-40">
-            {chapters.map((ch) => (
-              <button
-                key={ch.startTime}
-                type="button"
-                className="block w-full text-left px-3 py-2 hover:bg-black/60"
-                onClick={() => {
-                  playerRef.current?.seekTo(ch.startTime, true);
-                  setShowChapters(false);
-                }}
-              >
-                {ch.title}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Notes side panel */}
-        {showNotes && (
-          <div className="absolute top-0 right-0 w-64 h-full bg-black/90 text-white text-sm p-2 z-50 flex flex-col">
-            <button
-              type="button"
-              aria-label="Close notes"
-              className="absolute top-1 right-1 px-2"
-              onClick={() => setShowNotes(false)}
-            >
-              ✕
-            </button>
-            {supported ? (
-              <>
-                <input
-                  type="search"
-                  placeholder="Search notes"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="mb-2 bg-black/80 border border-white/20 p-1"
-                />
-                {search && results.length > 0 && (
-                  <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
-                    {results.map((r) => (
-                      <li key={r.id} className="mb-1">
-                        <strong>{r.id}</strong>: {r.text.slice(0, 50)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <textarea
-                  value={notes}
-                  onChange={handleNoteChange}
-                  className="flex-1 bg-black/80 border border-white/20 p-1"
-                  placeholder="Write notes…"
-                />
-              </>
-            ) : (
-              <p className="pr-4">OPFS not supported.</p>
-            )}
           </div>
         )}
       </div>
