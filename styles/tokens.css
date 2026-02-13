@@ -86,6 +86,8 @@
   --font-multiplier: 1;
   /* Minimum interactive target size */
   --hit-area: 32px;
+  /* Default gap between windows */
+  --win-gap: 8px;
   /* Focus outline */
   --focus-outline-color: var(--kali-blue);
   --focus-outline-width: 2px;
