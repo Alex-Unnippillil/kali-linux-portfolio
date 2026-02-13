@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
+import { getSafeAreaInsets } from '../../utils/windowLayout';
 
 export interface MenuItem {
   label: React.ReactNode;
@@ -20,9 +21,22 @@ interface ContextMenuProps {
  * dispatches global events when opened/closed so backgrounds can
  * be made inert.
  */
+type PointerAnchor = {
+  type: 'pointer';
+  pageX: number;
+  pageY: number;
+};
+
+type ElementAnchor = {
+  type: 'element';
+};
+
+type Anchor = PointerAnchor | ElementAnchor;
+
 const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [anchor, setAnchor] = useState<Anchor | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useFocusTrap(menuRef as React.RefObject<HTMLElement>, open);
@@ -38,7 +52,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
 
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
-      setPos({ x: e.pageX, y: e.pageY });
+      const pointerAnchor: PointerAnchor = {
+        type: 'pointer',
+        pageX: e.pageX,
+        pageY: e.pageY,
+      };
+      setAnchor(pointerAnchor);
+      setPos({ x: pointerAnchor.pageX, y: pointerAnchor.pageY });
       setOpen(true);
     };
 
@@ -46,7 +66,12 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       if (e.shiftKey && e.key === 'F10') {
         e.preventDefault();
         const rect = node.getBoundingClientRect();
-        setPos({ x: rect.left, y: rect.bottom });
+        const baseLeft =
+          (typeof window !== 'undefined' ? window.scrollX : 0) + rect.left;
+        const baseTop =
+          (typeof window !== 'undefined' ? window.scrollY : 0) + rect.bottom;
+        setAnchor({ type: 'element' });
+        setPos({ x: baseLeft, y: baseTop });
         setOpen(true);
       }
     };
@@ -90,6 +115,137 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       document.removeEventListener('mousedown', handleClick);
       document.removeEventListener('keydown', handleEscape);
     };
+  }, [open]);
+
+  const updatePosition = useCallback(() => {
+    if (!anchor || typeof window === 'undefined') {
+      return;
+    }
+
+    const menuEl = menuRef.current;
+    const safeInsets = getSafeAreaInsets();
+    const scrollX = window.scrollX || window.pageXOffset || 0;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let left = 0;
+    let top = 0;
+
+    const clamp = (value: number, min: number, max: number) =>
+      Math.min(Math.max(value, min), max);
+
+    const menuWidth = menuEl?.offsetWidth ?? 0;
+    const menuHeight = menuEl?.offsetHeight ?? 0;
+
+    const minLeft = scrollX + safeInsets.left;
+    const minTop = scrollY + safeInsets.top;
+    const maxLeft = Math.max(
+      minLeft,
+      scrollX + viewportWidth - safeInsets.right - menuWidth,
+    );
+    const maxTop = Math.max(
+      minTop,
+      scrollY + viewportHeight - safeInsets.bottom - menuHeight,
+    );
+
+    const ensureAnchorBase = () => {
+      if (anchor.type === 'pointer') {
+        left = anchor.pageX;
+        top = anchor.pageY;
+        return;
+      }
+
+      const target = targetRef.current;
+      if (!target) {
+        return;
+      }
+      const rect = target.getBoundingClientRect();
+      left = scrollX + rect.left;
+      top = scrollY + rect.bottom;
+    };
+
+    ensureAnchorBase();
+
+    if (menuWidth > 0) {
+      const viewportRightEdge = scrollX + viewportWidth - safeInsets.right;
+      if (left + menuWidth > viewportRightEdge) {
+        let flippedLeft = left;
+        if (anchor.type === 'pointer') {
+          flippedLeft = anchor.pageX - menuWidth;
+        } else {
+          const target = targetRef.current;
+          if (target) {
+            const rect = target.getBoundingClientRect();
+            flippedLeft = scrollX + rect.right - menuWidth;
+          }
+        }
+        left = clamp(flippedLeft, minLeft, maxLeft);
+      }
+    }
+
+    left = clamp(left, minLeft, maxLeft);
+
+    if (menuHeight > 0) {
+      const viewportBottomEdge = scrollY + viewportHeight - safeInsets.bottom;
+      if (top + menuHeight > viewportBottomEdge) {
+        let flippedTop = top;
+        if (anchor.type === 'pointer') {
+          flippedTop = anchor.pageY - menuHeight;
+        } else {
+          const target = targetRef.current;
+          if (target) {
+            const rect = target.getBoundingClientRect();
+            flippedTop = scrollY + rect.top - menuHeight;
+          }
+        }
+        top = clamp(flippedTop, minTop, maxTop);
+      }
+    }
+
+    top = clamp(top, minTop, maxTop);
+
+    setPos((prev) => {
+      if (prev.x === left && prev.y === top) {
+        return prev;
+      }
+      return { x: left, y: top };
+    });
+  }, [anchor, targetRef]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const raf = window.requestAnimationFrame(() => {
+      updatePosition();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+    };
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleWindowChange = () => {
+      updatePosition();
+    };
+
+    window.addEventListener('resize', handleWindowChange);
+    window.addEventListener('scroll', handleWindowChange, true);
+    handleWindowChange();
+
+    return () => {
+      window.removeEventListener('resize', handleWindowChange);
+      window.removeEventListener('scroll', handleWindowChange, true);
+    };
+  }, [open, updatePosition]);
+
+  useEffect(() => {
+    if (!open) {
+      setAnchor(null);
+    }
   }, [open]);
 
   return (
