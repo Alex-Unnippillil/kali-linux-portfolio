@@ -1,0 +1,11 @@
+{
+  "locale": "es",
+  "messages": {
+    "desktop.welcome": "Bienvenido al portafolio de Kali Linux",
+    "desktop.launch": "Iniciar",
+    "desktop.loading": "Cargando…",
+    "desktop.search": "Buscar aplicaciones",
+    "desktop.recent": "Actividad reciente",
+    "desktop.language": "Idioma"
+  }
+}
