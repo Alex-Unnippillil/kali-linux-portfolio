@@ -16,18 +16,32 @@ export default function HelpPanel({ appId, docPath, embedded = false }: HelpPane
 
   useEffect(() => {
     if (!open) return;
-    const path = docPath || `/docs/apps/${appId}.md`;
-    fetch(path)
-      .then((res) => (res.ok ? res.text() : ""))
-      .then((md) => {
-        if (!md) {
-          setHtml("<p>No help available.</p>");
+
+    const defaultPath = `/docs/apps/${appId}.md`;
+    const candidates = [
+      docPath,
+      appId === "terminal" ? "/docs/apps/terminal-kali.md" : undefined,
+      defaultPath,
+    ].filter(Boolean) as string[];
+
+    const loadDoc = async () => {
+      for (const path of candidates) {
+        try {
+          const res = await fetch(path);
+          if (!res.ok) continue;
+          const md = await res.text();
+          if (!md) continue;
+          const rendered = DOMPurify.sanitize(marked.parse(md) as string);
+          setHtml(rendered);
           return;
+        } catch (error) {
+          // Try the next candidate.
         }
-        const rendered = DOMPurify.sanitize(marked.parse(md) as string);
-        setHtml(rendered);
-      })
-      .catch(() => setHtml("<p>No help available.</p>"));
+      }
+      setHtml("<p>No help available.</p>");
+    };
+
+    loadDoc();
   }, [open, appId, docPath]);
 
   useEffect(() => {
