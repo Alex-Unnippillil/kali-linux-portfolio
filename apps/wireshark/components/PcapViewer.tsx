@@ -1,14 +1,28 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import AutoSizer from 'react-virtualized-auto-sizer';
+import { List } from 'react-window';
+import type { ListImperativeAPI, RowComponentProps } from 'react-window';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
+import FilterBuilder, {
+  FilterBuilderState,
+  FilterCondition,
+  createConditionId,
+} from './FilterBuilder';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
 
-
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: Packet[];
 }
 
 const protocolColors: Record<string, string> = {
@@ -22,13 +36,25 @@ const samples = [
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
 
+const ROW_HEIGHT = 32;
+const HEADER_HEIGHT = 32;
+const VIEW_STORAGE_KEY = 'wireshark:pcap-views';
+const DEFAULT_COLUMNS = ['Time', 'Source', 'Destination', 'Protocol', 'Info'] as const;
+const DEFAULT_COLUMN_WIDTHS: Record<string, number> = {
+  Time: 160,
+  Source: 200,
+  Destination: 200,
+  Protocol: 140,
+  Info: 360,
+};
+
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
   Array.from(bytes, (b, i) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-interface Packet {
+export interface Packet {
   timestamp: string;
   src: string;
   dest: string;
@@ -43,6 +69,179 @@ interface Layer {
   name: string;
   fields: Record<string, string>;
 }
+
+interface SavedView {
+  name: string;
+  filter: string;
+  builder: FilterBuilderState;
+  columns: string[];
+  columnWidths: Record<string, number>;
+}
+
+interface PacketRowProps {
+  columns: string[];
+  columnWidths: Record<string, number>;
+  columnTemplate: string;
+  rows: Packet[];
+  onSelect: (index: number) => void;
+  selected: number | null;
+  listWidth: number;
+  onDropColumn: (target: string) => void;
+  onDragStartColumn: (column: string) => void;
+  onDragEndColumn: () => void;
+  onResizeStart: (
+    column: string,
+    event: React.MouseEvent<HTMLSpanElement> | React.TouchEvent<HTMLSpanElement>
+  ) => void;
+  onResizeKeyDown: (
+    column: string
+  ) => (event: React.KeyboardEvent<HTMLSpanElement>) => void;
+}
+
+const getColumnWidth = (column: string, widths: Record<string, number>) =>
+  widths[column] ?? DEFAULT_COLUMN_WIDTHS[column] ?? 160;
+
+const getColumnValue = (packet: Packet, column: string) => {
+  switch (column) {
+    case 'Time':
+      return packet.timestamp;
+    case 'Source':
+      return packet.src;
+    case 'Destination':
+      return packet.dest;
+    case 'Protocol':
+      return protocolName(packet.protocol);
+    case 'Info':
+      return packet.info;
+    default:
+      return '';
+  }
+};
+
+const matchesCondition = (packet: Packet, condition: FilterCondition) => {
+  const value = getColumnValue(packet, condition.column).toLowerCase();
+  const target = condition.value.toLowerCase();
+
+  switch (condition.operator) {
+    case 'equals':
+      return value === target;
+    case 'startsWith':
+      return value.startsWith(target);
+    case 'endsWith':
+      return value.endsWith(target);
+    case 'notContains':
+      return target ? !value.includes(target) : true;
+    case 'contains':
+    default:
+      return value.includes(target);
+  }
+};
+
+const PacketRow: React.FC<RowComponentProps<PacketRowProps>> = React.memo(
+  ({
+    index,
+    style,
+    columns,
+    columnWidths,
+    columnTemplate,
+    rows,
+    onSelect,
+    selected,
+    listWidth,
+    onDropColumn,
+    onDragStartColumn,
+    onDragEndColumn,
+    onResizeStart,
+    onResizeKeyDown,
+  }) => {
+    if (index === 0) {
+      return (
+        <div
+          role="row"
+          className="sticky top-0 z-10 border-b border-gray-700 bg-gray-800"
+          style={{
+            ...style,
+            width: listWidth,
+            display: 'grid',
+            gridTemplateColumns: columnTemplate,
+            alignItems: 'center',
+          }}
+        >
+          {columns.map((col) => {
+            const width = getColumnWidth(col, columnWidths);
+            return (
+              <div
+                key={col}
+                role="columnheader"
+                draggable
+                onDragStart={() => onDragStartColumn(col)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => onDropColumn(col)}
+                onDragEnd={onDragEndColumn}
+                className="relative flex items-center font-semibold text-left px-1 py-1 select-none"
+                style={{ width, minWidth: width }}
+              >
+                <span className="truncate">{col}</span>
+                <span
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label={`Resize ${col}`}
+                  tabIndex={0}
+                  onMouseDown={(event) => onResizeStart(col, event)}
+                  onTouchStart={(event) => onResizeStart(col, event)}
+                  onKeyDown={onResizeKeyDown(col)}
+                  className="absolute right-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-blue-500/50"
+                />
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+
+    const rowIndex = index - 1;
+    const packet = rows[rowIndex];
+    if (!packet) return null;
+
+    const protocolLabel = protocolName(packet.protocol);
+    const backgroundClass =
+      protocolColors[protocolLabel.toUpperCase()] || protocolColors[protocolLabel] || '';
+
+    return (
+      <div
+        role="row"
+        data-testid="packet-row"
+        data-index={rowIndex}
+        onClick={() => onSelect(rowIndex)}
+        className={`border-b border-gray-800 cursor-pointer px-1 ${backgroundClass} ${
+          selected === rowIndex ? 'ring-2 ring-white' : 'hover:bg-gray-700'
+        }`}
+        style={{
+          ...style,
+          width: listWidth,
+          display: 'grid',
+          gridTemplateColumns: columnTemplate,
+          alignItems: 'center',
+        }}
+      >
+        {columns.map((col) => {
+          const width = getColumnWidth(col, columnWidths);
+          return (
+            <div
+              key={col}
+              role="gridcell"
+              className="truncate pr-2"
+              style={{ width, minWidth: width }}
+            >
+              {getColumnValue(packet, col)}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+);
+PacketRow.displayName = 'PacketRow';
 
 // Basic Ethernet + IPv4 parser
 const parseEthernetIpv4 = (data: Uint8Array) => {
@@ -234,18 +433,40 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+const emptyBuilder: FilterBuilderState = { mode: 'all', conditions: [] };
+
+const PcapViewer: React.FC<PcapViewerProps> = ({
+  showLegend = true,
+  initialPackets = [],
+}) => {
+  const [packets, setPackets] = useState<Packet[]>(() => initialPackets);
   const [filter, setFilter] = useState('');
+  const [builder, setBuilder] = useState<FilterBuilderState>(emptyBuilder);
   const [selected, setSelected] = useState<number | null>(null);
-  const [columns, setColumns] = useState<string[]>([
-    'Time',
-    'Source',
-    'Destination',
-    'Protocol',
-    'Info',
-  ]);
+  const [columns, setColumns] = useState<string[]>(() => [...DEFAULT_COLUMNS]);
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    const widths: Record<string, number> = {};
+    DEFAULT_COLUMNS.forEach((column) => {
+      widths[column] = DEFAULT_COLUMN_WIDTHS[column];
+    });
+    return widths;
+  });
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [resizing, setResizing] = useState<{
+    column: string;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+  const [views, setViews] = useState<SavedView[]>([]);
+  const [activeView, setActiveView] = useState<string | null>(null);
+  const [viewName, setViewName] = useState('');
+  const listRef = useRef<ListImperativeAPI | null>(null);
+
+  useEffect(() => {
+    if (!initialPackets || initialPackets.length === 0) return;
+    setPackets(initialPackets);
+    setSelected(null);
+  }, [initialPackets]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -272,6 +493,179 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.history.replaceState(null, '', url.toString());
   }, [filter]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      if (!raw) return;
+      const parsed: SavedView[] = JSON.parse(raw);
+      const normalized = parsed.map((view) => ({
+        name: view.name,
+        filter: view.filter ?? '',
+        columns:
+          view.columns && view.columns.length > 0
+            ? [...view.columns]
+            : [...DEFAULT_COLUMNS],
+        columnWidths: {
+          ...DEFAULT_COLUMN_WIDTHS,
+          ...(view.columnWidths ?? {}),
+        },
+        builder: {
+          mode: view.builder?.mode === 'any' ? 'any' : 'all',
+          conditions: (view.builder?.conditions ?? []).map((condition) => ({
+            id: condition.id ?? createConditionId(),
+            column: condition.column ?? 'Source',
+            operator: condition.operator ?? 'contains',
+            value: condition.value ?? '',
+          })),
+        },
+      }));
+      setViews(normalized);
+    } catch {
+      // ignore bad data
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const serializable = views.map((view) => ({
+        ...view,
+        columns: [...view.columns],
+        columnWidths: { ...view.columnWidths },
+        builder: {
+          mode: view.builder.mode,
+          conditions: view.builder.conditions.map(({ id, column, operator, value }) => ({
+            id,
+            column,
+            operator,
+            value,
+          })),
+        },
+      }));
+      window.localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(serializable));
+    } catch {
+      // ignore write errors
+    }
+  }, [views]);
+
+  useEffect(() => {
+    if (!resizing) return;
+
+    const handleMove = (event: MouseEvent | TouchEvent) => {
+      const clientX =
+        event instanceof TouchEvent
+          ? event.touches[0]?.clientX ?? resizing.startX
+          : event.clientX;
+      const delta = clientX - resizing.startX;
+      setColumnWidths((prev) => {
+        const base = getColumnWidth(resizing.column, prev);
+        const nextWidth = Math.max(100, resizing.startWidth + delta);
+        if (base === nextWidth) return prev;
+        return { ...prev, [resizing.column]: nextWidth };
+      });
+      if (event instanceof TouchEvent) {
+        event.preventDefault();
+      }
+    };
+
+    const stop = () => setResizing(null);
+
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', stop);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', stop);
+    document.body.style.cursor = 'col-resize';
+
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', stop);
+      window.removeEventListener('touchmove', handleMove);
+      window.removeEventListener('touchend', stop);
+      document.body.style.cursor = '';
+    };
+  }, [resizing]);
+
+  const filtered = useMemo(() => {
+    const term = filter.trim().toLowerCase();
+    return packets.filter((packet) => {
+      const quickMatch =
+        !term ||
+        [
+          packet.timestamp,
+          packet.src,
+          packet.dest,
+          protocolName(packet.protocol),
+          packet.info ?? '',
+          packet.sport?.toString() ?? '',
+          packet.dport?.toString() ?? '',
+        ].some((value) => value.toLowerCase().includes(term));
+
+      if (!quickMatch) return false;
+      if (builder.conditions.length === 0) return true;
+      return builder.mode === 'all'
+        ? builder.conditions.every((condition) => matchesCondition(packet, condition))
+        : builder.conditions.some((condition) => matchesCondition(packet, condition));
+    });
+  }, [packets, filter, builder]);
+
+  useEffect(() => {
+    if (selected !== null && selected >= filtered.length) {
+      setSelected(filtered.length ? filtered.length - 1 : null);
+    }
+  }, [filtered.length, selected]);
+
+  useEffect(() => {
+    setSelected(null);
+    if (filtered.length > 0) {
+      listRef.current?.scrollToRow({ index: 0, align: 'start' });
+    }
+  }, [filter, builder, filtered.length]);
+
+  const columnTemplate = useMemo(
+    () => columns.map((col) => `${getColumnWidth(col, columnWidths)}px`).join(' '),
+    [columns, columnWidths]
+  );
+
+  const totalWidth = useMemo(
+    () => columns.reduce((acc, col) => acc + getColumnWidth(col, columnWidths), 0),
+    [columns, columnWidths]
+  );
+
+  const beginResize = useCallback(
+    (
+      column: string,
+      event: React.MouseEvent<HTMLSpanElement> | React.TouchEvent<HTMLSpanElement>
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const clientX =
+        'touches' in event ? event.touches[0]?.clientX ?? 0 : event.clientX;
+      setResizing({
+        column,
+        startX: clientX,
+        startWidth: getColumnWidth(column, columnWidths),
+      });
+    },
+    [columnWidths]
+  );
+
+  const handleResizeKeyDown = useCallback(
+    (column: string) => (event: React.KeyboardEvent<HTMLSpanElement>) => {
+      if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+        event.preventDefault();
+        const delta = event.key === 'ArrowLeft' ? -10 : 10;
+        setColumnWidths((prev) => {
+          const base = getColumnWidth(column, prev);
+          const next = Math.max(100, base + delta);
+          if (next === base) return prev;
+          return { ...prev, [column]: next };
+        });
+      }
+    },
+    []
+  );
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -289,16 +683,113 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const handleSaveView = () => {
+    const name = viewName.trim() || activeView?.trim();
+    if (!name) return;
+    const view: SavedView = {
+      name,
+      filter,
+      columns: [...columns],
+      columnWidths: { ...columnWidths },
+      builder: {
+        mode: builder.mode,
+        conditions: builder.conditions.map((condition) => ({ ...condition })),
+      },
+    };
+    setViews((prev) => {
+      const filteredPrev = prev.filter((existing) => existing.name !== name);
+      const next = [...filteredPrev, view].sort((a, b) => a.name.localeCompare(b.name));
+      return next;
+    });
+    setActiveView(name);
+    setViewName('');
+  };
+
+  const handleSelectView = (name: string) => {
+    if (!name) {
+      setActiveView(null);
+      setViewName('');
+      return;
+    }
+    const view = views.find((v) => v.name === name);
+    if (!view) return;
+    setFilter(view.filter);
+    setColumns(view.columns.length ? [...view.columns] : [...DEFAULT_COLUMNS]);
+    setColumnWidths({
+      ...DEFAULT_COLUMN_WIDTHS,
+      ...view.columnWidths,
+    });
+    setBuilder({
+      mode: view.builder.mode,
+      conditions: view.builder.conditions.map((condition) => ({ ...condition })),
+    });
+    setActiveView(view.name);
+    setViewName(view.name);
+    setSelected(null);
+    listRef.current?.scrollToRow({ index: 0, align: 'start' });
+  };
+
+  const handleDeleteView = () => {
+    if (!activeView) return;
+    setViews((prev) => prev.filter((view) => view.name !== activeView));
+    setActiveView(null);
+    setViewName('');
+  };
+
+  const handleDragStartColumn = useCallback((column: string) => {
+    setDragCol(column);
+  }, []);
+
+  const handleDragEndColumn = useCallback(() => {
+    setDragCol(null);
+  }, []);
+
+  const handleDropColumn = useCallback(
+    (target: string) => {
+      if (!dragCol || dragCol === target) return;
+      setColumns((prev) => {
+        const updated = [...prev];
+        const from = updated.indexOf(dragCol);
+        const to = updated.indexOf(target);
+        if (from === -1 || to === -1) return prev;
+        updated.splice(from, 1);
+        updated.splice(to, 0, dragCol);
+        return updated;
+      });
+      setDragCol(null);
+    },
+    [dragCol]
+  );
+
+  const baseRowProps = useMemo(
+    () => ({
+      columns,
+      columnWidths,
+      columnTemplate,
+      rows: filtered,
+      onSelect: setSelected,
+      selected,
+      onDropColumn: handleDropColumn,
+      onDragStartColumn: handleDragStartColumn,
+      onDragEndColumn: handleDragEndColumn,
+      onResizeStart: beginResize,
+      onResizeKeyDown: handleResizeKeyDown,
+    }),
+    [
+      columns,
+      columnWidths,
+      columnTemplate,
+      filtered,
+      selected,
+      handleDropColumn,
+      handleDragStartColumn,
+      handleDragEndColumn,
+      beginResize,
+      handleResizeKeyDown,
+    ]
+  );
+
+  const selectedPacket = selected !== null ? filtered[selected] : null;
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -308,6 +799,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Open capture file"
         />
         <select
           onChange={(e) => {
@@ -334,7 +826,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
       </div>
       {packets.length > 0 && (
         <>
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <FilterHelper value={filter} onChange={setFilter} />
             <button
               onClick={() => navigator.clipboard.writeText(filter)}
@@ -345,7 +837,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               Copy
             </button>
           </div>
-          <div className="flex space-x-1">
+          <div className="flex flex-wrap items-center gap-1">
             {presets.map(({ label, expression }) => (
               <button
                 key={expression}
@@ -354,6 +846,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   protocolColors[label.toUpperCase()] || 'bg-gray-500'
                 }`}
                 title={label}
+                aria-label={label}
                 type="button"
               />
             ))}
@@ -369,84 +862,108 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               ))}
             </div>
           )}
-          <div className="flex flex-1 overflow-hidden space-x-2">
-            <div className="overflow-auto flex-1">
-              <table className="text-xs w-full font-mono">
-                <thead>
-                  <tr className="bg-gray-800">
-                    {columns.map((col) => (
-                      <th
-                        key={col}
-                        draggable
-                        onDragStart={() => setDragCol(col)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={() => {
-                          if (!dragCol || dragCol === col) return;
-                          const updated = [...columns];
-                          const from = updated.indexOf(dragCol);
-                          const to = updated.indexOf(col);
-                          updated.splice(from, 1);
-                          updated.splice(to, 0, dragCol);
-                          setColumns(updated);
-                        }}
-                        className="px-1 text-left cursor-move"
-                      >
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((pkt, i) => (
-                    <tr
-                      key={i}
-                      className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i
-                          ? 'outline outline-2 outline-white'
-                          : protocolColors[
-                              protocolName(pkt.protocol).toString()
-                            ] || ''
-                      }`}
-                      onClick={() => setSelected(i)}
-                    >
-                      {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
-                        return (
-                          <td key={col} className="px-1 whitespace-nowrap">
-                            {val}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+          <div className="flex flex-wrap items-end gap-3 text-xs bg-gray-900 border border-gray-700 rounded p-3">
+            <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide">
+              View name
+              <input
+                aria-label="View name"
+                value={viewName}
+                onChange={(e) => setViewName(e.target.value)}
+                placeholder="View name"
+                className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-xs"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-[11px] uppercase tracking-wide">
+              Saved views
+              <select
+                aria-label="Saved views"
+                value={activeView ?? ''}
+                onChange={(e) => handleSelectView(e.target.value)}
+                className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-white text-xs"
+              >
+                <option value="">Select view...</option>
+                {views.map((view) => (
+                  <option key={view.name} value={view.name}>
+                    {view.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleSaveView}
+                className="px-3 py-1 bg-blue-600 rounded text-xs"
+              >
+                Save view
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteView}
+                disabled={!activeView}
+                className="px-3 py-1 bg-gray-700 rounded text-xs disabled:opacity-50"
+              >
+                Delete view
+              </button>
+            </div>
+            <span className="text-[10px] text-gray-400 ml-auto">
+              Views are stored locally in your browser.
+            </span>
+          </div>
+
+          <FilterBuilder
+            value={builder}
+            onChange={setBuilder}
+            columns={columns}
+          />
+
+          <div className="flex flex-1 overflow-hidden space-x-2 min-h-0">
+            <div
+              className="flex-1 min-h-0 border border-gray-700 rounded bg-[var(--kali-panel)]"
+              role="grid"
+              aria-label="Captured packets"
+            >
+              {filtered.length === 0 ? (
+                <div className="p-4 text-sm text-gray-400">
+                  No packets match the current filters.
+                </div>
+              ) : (
+                <AutoSizer>
+                  {({ height, width }) => {
+                    const listWidth = Math.max(width, totalWidth);
+                    const rowProps: PacketRowProps = {
+                      ...baseRowProps,
+                      listWidth,
+                    };
+
+                    return (
+                      <List
+                        className="focus:outline-none text-xs font-mono text-white"
+                        defaultHeight={height}
+                        listRef={listRef}
+                        rowComponent={PacketRow}
+                        rowCount={filtered.length + 1}
+                        rowHeight={(index) => (index === 0 ? HEADER_HEIGHT : ROW_HEIGHT)}
+                        rowProps={rowProps}
+                        overscanCount={6}
+                        style={{ height, width: listWidth }}
+                      />
+                    );
+                  }}
+                </AutoSizer>
+              )}
             </div>
             <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
+              {selectedPacket ? (
                 <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
+                  {decodePacketLayers(selectedPacket).map((layer, i) => (
                     <LayerView key={i} name={layer.name} fields={layer.fields} />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400">{toHex(selectedPacket.data)}</pre>
                 </>
+              ) : filtered.length === 0 ? (
+                'No packets match the current filters.'
               ) : (
                 'Select a packet'
               )}
@@ -459,4 +976,4 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
 };
 
 export default PcapViewer;
-
+export type { FilterBuilderState, FilterCondition } from './FilterBuilder';
