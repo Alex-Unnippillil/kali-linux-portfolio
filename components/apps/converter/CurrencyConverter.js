@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
+
+import HistoryLineChart from './charts/HistoryLineChart';
 
 const apiBase = process.env.NEXT_PUBLIC_CURRENCY_API_URL || 'https://api.exchangerate.host/latest';
 const isDemo = !process.env.NEXT_PUBLIC_CURRENCY_API_URL;
@@ -81,19 +83,6 @@ const CurrencyConverter = () => {
   const formatAmount = (val, curr) =>
     new Intl.NumberFormat(undefined, { style: 'currency', currency: curr }).format(val);
 
-  const chartPoints = useMemo(() => {
-    if (history.length < 2) return '';
-    const max = Math.max(...history.map((h) => h.rate));
-    const min = Math.min(...history.map((h) => h.rate));
-    return history
-      .map((h, i) => {
-        const x = (i / (history.length - 1)) * 100;
-        const y = 100 - ((h.rate - min) / ((max - min) || 1)) * 100;
-        return `${x},${y}`;
-      })
-      .join(' ');
-  }, [history]);
-
   return (
     <div className="bg-gray-700 p-4 rounded flex flex-col gap-2">
       <h2 className="text-xl mb-2">Currency Converter</h2>
@@ -103,6 +92,7 @@ const CurrencyConverter = () => {
         <input
           className="text-black p-1 rounded"
           type="number"
+          aria-label="Amount"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
@@ -143,21 +133,10 @@ const CurrencyConverter = () => {
       {lastUpdated && (
         <div className="text-xs">Last updated: {new Date(lastUpdated).toLocaleString()}</div>
       )}
-      {chartPoints && (
-        <svg
-          className="mt-2"
-          width="100%"
-          height="100"
-          role="img"
-          aria-label="exchange rate chart"
-        >
-          <polyline
-            fill="none"
-            stroke="#4ade80"
-            strokeWidth="2"
-            points={chartPoints}
-          />
-        </svg>
+      {history.length > 1 ? (
+        <HistoryLineChart history={history} />
+      ) : (
+        <div className="mt-2 text-xs text-slate-200">Insufficient history to plot</div>
       )}
     </div>
   );
