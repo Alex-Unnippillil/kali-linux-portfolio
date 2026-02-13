@@ -5,6 +5,7 @@ import {
   parsePuzzlePgn,
 } from "../../games/chess/pgn";
 import { createEngineRequestTracker } from "../../games/chess/engine/engineProtocol";
+import { suggestMoves } from "../../games/chess/engine/wasmEngine";
 
 const WHITE = 1;
 const BLACK = -1;
@@ -220,7 +221,7 @@ const ChessGame = () => {
   const [selected, setSelected] = useState(null);
   const [cursor, setCursor] = useState(0);
   const [moves, setMoves] = useState([]);
-  const [status, setStatus] = useState("Your move");
+  const [status, setStatus] = useState("White to move");
   const [paused, setPaused] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const [sound, setSound] = useState(storedSettings.sound ?? true);
@@ -250,6 +251,9 @@ const ChessGame = () => {
     difficultyConfig[resolveStoredDifficulty(storedSettings)].depth,
   );
   const [aiThinking, setAiThinking] = useState(false);
+  const [opponentMode, setOpponentMode] = useState(
+    storedSettings.opponentMode === "local" ? "local" : "ai",
+  );
   const [playerSide, setPlayerSide] = useState(
     storedSettings.playerSide ?? WHITE,
   );
@@ -291,8 +295,12 @@ const ChessGame = () => {
     const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
     setReduceMotion(mq.matches);
     const handler = () => setReduceMotion(mq.matches);
-    mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", handler);
+      return () => mq.removeEventListener("change", handler);
+    }
+    mq.addListener(handler);
+    return () => mq.removeListener(handler);
   }, []);
 
   useEffect(() => {
@@ -350,37 +358,6 @@ const ChessGame = () => {
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
-
-  useEffect(() => {
-    if (mode === "play") {
-      if (skipModeResetRef.current) {
-        skipModeResetRef.current = false;
-        return;
-      }
-      setPuzzleStatus("");
-      setOpeningFeedback("");
-      setOpeningOutOfLine(false);
-      setPuzzleStep(0);
-      setOpeningStep(0);
-      resetGame({ autoplayAi: true });
-      return;
-    }
-    if (mode === "puzzle" && puzzles.length > 0) {
-      loadPuzzle(puzzleIndex);
-    }
-    if (mode === "opening" && openings.length > 0) {
-      loadOpening(openingIndex);
-    }
-  }, [
-    loadOpening,
-    loadPuzzle,
-    mode,
-    openingIndex,
-    openings.length,
-    puzzleIndex,
-    puzzles.length,
-    resetGame,
-  ]);
 
   const stopAi = useCallback(() => {
     if (aiTimeoutRef.current) {
@@ -451,8 +428,25 @@ const ChessGame = () => {
     boardRef.current = next;
     sideRef.current = game.turn() === "w" ? WHITE : BLACK;
     setTurnLabel(game.turn() === "w" ? "White" : "Black");
-    updateCheckHighlight();
-  }, [updateCheckHighlight]);
+
+    if (!game.isCheck()) {
+      setCheckSquare(null);
+      return;
+    }
+
+    let kingSq = null;
+    for (let sq = 0; sq < 128; sq += 1) {
+      if (!inside(sq)) {
+        sq += 7;
+        continue;
+      }
+      if (next[sq] === sideRef.current * KING) {
+        kingSq = sq;
+        break;
+      }
+    }
+    setCheckSquare(kingSq);
+  }, []);
 
   const updateEval = useCallback(() => {
     setEvalScore(evaluateMaterial(boardRef.current));
@@ -652,9 +646,14 @@ const ChessGame = () => {
       setPaused(false);
       startClockForSide(sideRef.current);
       setStatus(
-        sideRef.current === playerSideRef.current ? "Your move" : "AI thinking...",
+        opponentMode === "local"
+          ? `${sideRef.current === WHITE ? "White" : "Black"} to move`
+          : sideRef.current === playerSideRef.current
+            ? "Your move"
+            : "AI thinking...",
       );
       if (
+        opponentMode === "ai" &&
         sideRef.current !== playerSideRef.current &&
         !gameOverRef.current &&
         !pausedRef.current
@@ -669,6 +668,7 @@ const ChessGame = () => {
     hasRestoredRef.current = true;
   }, [
     cancelReplay,
+    opponentMode,
     playerSide,
     reduceMotion,
     stopAi,
@@ -686,6 +686,7 @@ const ChessGame = () => {
           playerSide,
           aiDepth,
           aiDifficulty,
+          opponentMode,
           analysisDepth,
           sound,
           showHints,
@@ -706,6 +707,7 @@ const ChessGame = () => {
   }, [
     aiDepth,
     aiDifficulty,
+    opponentMode,
     analysisDepth,
     orientation,
     paused,
@@ -724,10 +726,14 @@ const ChessGame = () => {
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
-    const worker = new Worker(
-      new URL("./chess.engine.worker.ts", import.meta.url),
-    );
-    engineWorkerRef.current = worker;
+    let worker = null;
+    try {
+      worker = new Worker(new URL("./chess.engine.worker.ts", import.meta.url));
+      engineWorkerRef.current = worker;
+    } catch {
+      engineWorkerRef.current = null;
+      return undefined;
+    }
     const callbacks = engineCallbacksRef.current;
     const handleMessage = (event) => {
       const payload = event.data;
@@ -853,6 +859,8 @@ const ChessGame = () => {
 
       if (modeRef.current === "puzzle") {
         setStatus("Puzzle solved. Checkmate!");
+      } else if (opponentMode === "local") {
+        setStatus(`Checkmate! ${winner === WHITE ? "White" : "Black"} wins.`);
       } else {
         setStatus(youWin ? "Checkmate! You win." : "Checkmate! You lose.");
       }
@@ -861,7 +869,7 @@ const ChessGame = () => {
       setPaused(true);
       advanceClock();
       clockRef.current.active = null;
-      if (modeRef.current === "play") {
+      if (modeRef.current === "play" && opponentMode === "ai") {
         endGame(youWin ? "win" : "loss");
       }
       return true;
@@ -881,7 +889,7 @@ const ChessGame = () => {
       setPaused(true);
       advanceClock();
       clockRef.current.active = null;
-      if (modeRef.current === "play") {
+      if (modeRef.current === "play" && opponentMode === "ai") {
         endGame("draw");
       }
       return true;
@@ -891,16 +899,18 @@ const ChessGame = () => {
       updateCheckHighlight();
       setStatus(
         modeRef.current === "play"
-          ? sideRef.current === playerSideRef.current
-            ? "Check! Your move."
-            : "Check! AI thinking..."
+          ? opponentMode === "local"
+            ? `Check! ${sideRef.current === WHITE ? "White" : "Black"} to move.`
+            : sideRef.current === playerSideRef.current
+              ? "Check! Your move."
+              : "Check! AI thinking..."
           : "Check!",
       );
       return false;
     }
 
     updateCheckHighlight();
-    setStatus(defaultStatus || "Your move");
+    setStatus(defaultStatus || (opponentMode === "local" ? `${sideRef.current === WHITE ? "White" : "Black"} to move` : "Your move"));
     return false;
   };
 
@@ -914,6 +924,9 @@ const ChessGame = () => {
 
   const getDefaultStatus = () => {
     if (modeRef.current === "play") {
+      if (opponentMode === "local") {
+        return `${sideRef.current === WHITE ? "White" : "Black"} to move`;
+      }
       return sideRef.current === playerSideRef.current
         ? "Your move"
         : "AI thinking...";
@@ -1115,6 +1128,7 @@ const ChessGame = () => {
     if (
       triggerAi &&
       modeRef.current === "play" &&
+      opponentMode === "ai" &&
       !pausedRef.current &&
       sideRef.current !== playerSideRef.current
     ) {
@@ -1130,6 +1144,7 @@ const ChessGame = () => {
 
   const aiMove = () => {
     stopAi();
+    if (opponentMode !== "ai") return;
     if (pausedRef.current || gameOverRef.current) return;
     if (sideRef.current === playerSideRef.current) return;
     if (aiThinkingRef.current) return;
@@ -1142,8 +1157,13 @@ const ChessGame = () => {
       aiDifficulty,
       (payload) => {
         setAiThinking(false);
-        if (payload.type === "error") return;
         let chosen = null;
+        if (payload.type === "error") {
+          const list = chessRef.current.moves({ verbose: true });
+          if (list.length) {
+            chosen = list[Math.floor(Math.random() * list.length)];
+          }
+        }
         if (payload.suggestions?.length) {
           const [best] = payload.suggestions;
           const spread = payload.suggestions.filter(
@@ -1213,17 +1233,22 @@ const ChessGame = () => {
     updateMateHints();
     updateCheckHighlight();
 
-    if (autoplayAi && playerSideRef.current === BLACK) {
+    if (opponentMode === "ai" && autoplayAi && playerSideRef.current === BLACK) {
       setStatus("AI thinking...");
       aiTimeoutRef.current = setTimeout(
         () => aiMoveRef.current?.(),
         reduceMotion ? 100 : 260,
       );
     } else {
-      setStatus("Your move");
+      setStatus(
+        opponentMode === "local"
+          ? `${sideRef.current === WHITE ? "White" : "Black"} to move`
+          : "Your move",
+      );
     }
   }, [
     cancelReplay,
+    opponentMode,
     reduceMotion,
     stopAi,
     syncBoardFromChess,
@@ -1358,15 +1383,54 @@ const ChessGame = () => {
   );
 
   useEffect(() => {
+    if (mode === "play") {
+      if (skipModeResetRef.current) {
+        skipModeResetRef.current = false;
+        return;
+      }
+      setPuzzleStatus("");
+      setOpeningFeedback("");
+      setOpeningOutOfLine(false);
+      setPuzzleStep(0);
+      setOpeningStep(0);
+      resetGame({ autoplayAi: true });
+      return;
+    }
+    if (mode === "puzzle" && puzzles.length > 0) {
+      loadPuzzle(puzzleIndex);
+    }
+    if (mode === "opening" && openings.length > 0) {
+      loadOpening(openingIndex);
+    }
+  }, [
+    loadOpening,
+    loadPuzzle,
+    mode,
+    openingIndex,
+    openings.length,
+    puzzleIndex,
+    puzzles.length,
+    resetGame,
+  ]);
+
+  useEffect(() => {
     if (skipInitialResetRef.current) {
       skipInitialResetRef.current = false;
       return;
     }
     if (modeRef.current !== "play") return;
-    setOrientation(playerSide === WHITE ? "white" : "black");
+    if (opponentMode === "local") {
+      if (playerSide !== WHITE) {
+        setPlayerSide(WHITE);
+        return;
+      }
+      setOrientation("white");
+    } else {
+      setOrientation(playerSide === WHITE ? "white" : "black");
+    }
     resetGame({ autoplayAi: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [aiDifficulty, playerSide]);
+  }, [aiDifficulty, opponentMode, playerSide]);
 
   const undoMove = () => {
     if (modeRef.current !== "play") return;
@@ -1379,6 +1443,7 @@ const ChessGame = () => {
     setSanLog((l) => l.slice(0, -1));
 
     if (
+      opponentMode === "ai" &&
       chessRef.current.turn() === "b" &&
       chessRef.current.history().length > 0
     ) {
@@ -1406,7 +1471,7 @@ const ChessGame = () => {
 
     setClockDisplay({ white: clockRef.current.white, black: clockRef.current.black });
 
-    if (sideRef.current !== playerSideRef.current) {
+    if (opponentMode === "ai" && sideRef.current !== playerSideRef.current) {
       pausedRef.current = true;
       setPaused(true);
       clockRef.current.active = null;
@@ -1415,7 +1480,11 @@ const ChessGame = () => {
       pausedRef.current = false;
       setPaused(false);
       startClockForSide(sideRef.current);
-      setStatus("Your move");
+      setStatus(
+        opponentMode === "local"
+          ? `${sideRef.current === WHITE ? "White" : "Black"} to move`
+          : "Your move",
+      );
     }
   };
 
@@ -1432,8 +1501,14 @@ const ChessGame = () => {
       } else {
         const resumeSide = clockRef.current.resumeTarget ?? sideRef.current;
         startClockForSide(resumeSide);
-        setStatus(resumeSide === playerSideRef.current ? "Your move" : "AI thinking...");
-        if (resumeSide !== playerSideRef.current && !gameOverRef.current) {
+        setStatus(
+          opponentMode === "local"
+            ? `${resumeSide === WHITE ? "White" : "Black"} to move`
+            : resumeSide === playerSideRef.current
+              ? "Your move"
+              : "AI thinking...",
+        );
+        if (opponentMode === "ai" && resumeSide !== playerSideRef.current && !gameOverRef.current) {
           aiTimeoutRef.current = setTimeout(
             () => aiMoveRef.current?.(),
             reduceMotion ? 120 : 260,
@@ -1499,7 +1574,7 @@ const ChessGame = () => {
         pausedRef.current = false;
         setPaused(false);
         startClockForSide(sideRef.current);
-        checkGameState("Your move");
+        checkGameState(opponentMode === "local" ? `${sideRef.current === WHITE ? "White" : "Black"} to move` : "Your move");
         return;
       }
       const m = movesList[i++];
@@ -1566,12 +1641,24 @@ const ChessGame = () => {
       const key = `${channel}:${requestId}`;
       engineCallbacksRef.current.set(key, onResult);
       if (!worker) {
-        onResult({
-          type: "error",
-          channel,
-          requestId,
-          message: "Engine unavailable",
-        });
+        try {
+          const suggestions = suggestMoves(fen, depth, maxSuggestions, {
+            difficulty: difficulty || "expert",
+          });
+          onResult({
+            type: "result",
+            channel,
+            requestId,
+            suggestions,
+          });
+        } catch (error) {
+          onResult({
+            type: "error",
+            channel,
+            requestId,
+            message: error instanceof Error ? error.message : "Engine unavailable",
+          });
+        }
         engineCallbacksRef.current.delete(key);
         return requestId;
       }
@@ -1915,7 +2002,7 @@ const ChessGame = () => {
 
   const handleSquare = (sq) => {
     if (pausedRef.current || gameOverRef.current) return;
-    if (sideRef.current !== playerSideRef.current) return;
+    if (opponentMode === "ai" && sideRef.current !== playerSideRef.current) return;
     if (promotionPrompt) return;
 
     setCursor(sq);
@@ -2010,7 +2097,7 @@ const ChessGame = () => {
 
   const handleKey = (e) => {
     if (pausedRef.current || gameOverRef.current) return;
-    if (sideRef.current !== playerSideRef.current) return;
+    if (opponentMode === "ai" && sideRef.current !== playerSideRef.current) return;
     if (promotionPrompt) {
       if (e.key === "Escape") {
         e.preventDefault();
@@ -2086,7 +2173,7 @@ const ChessGame = () => {
   const formattedEval = (evalScore / 100).toFixed(2);
   const engineSuggestions = analysisMoves.slice(0, 5);
   const evalPercent = (1 / (1 + Math.exp(-displayEval / 200))) * 100;
-  const youLabel = playerSide === WHITE ? "White" : "Black";
+  const youLabel = opponentMode === "local" ? "Local 2-Player" : playerSide === WHITE ? "White" : "Black";
   const boardTransform = orientation === "white" ? "rotate(0deg)" : "rotate(180deg)";
   const currentPuzzle = puzzles[puzzleIndex];
   const currentOpening = openings[openingIndex];
@@ -2420,6 +2507,22 @@ const ChessGame = () => {
               </h2>
               <label
                 className="mt-2 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400"
+                htmlFor="chess-opponent-mode"
+              >
+                <span>Opponent</span>
+                <select
+                  id="chess-opponent-mode"
+                  className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  value={opponentMode}
+                  onChange={(e) => setOpponentMode(e.target.value)}
+                  disabled={mode !== "play"}
+                >
+                  <option value="ai">AI</option>
+                  <option value="local">Local 2-Player</option>
+                </select>
+              </label>
+              <label
+                className="mt-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-400"
                 htmlFor="chess-side"
               >
                 <span>Play As</span>
@@ -2428,7 +2531,7 @@ const ChessGame = () => {
                   className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   value={playerSide}
                   onChange={(e) => setPlayerSide(Number(e.target.value))}
-                  disabled={mode !== "play"}
+                  disabled={mode !== "play" || opponentMode === "local"}
                 >
                   <option value={WHITE}>White</option>
                   <option value={BLACK}>Black</option>
@@ -2444,7 +2547,7 @@ const ChessGame = () => {
                   className="rounded-lg border border-slate-700/70 bg-slate-900/70 px-2 py-1 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   value={aiDifficulty}
                   onChange={(e) => setAiDifficulty(e.target.value)}
-                  disabled={mode !== "play"}
+                  disabled={mode !== "play" || opponentMode === "local"}
                 >
                   {Object.entries(difficultyConfig).map(([key, config]) => (
                     <option key={key} value={key}>
@@ -2454,9 +2557,11 @@ const ChessGame = () => {
                 </select>
               </label>
               <p className="mt-2 text-xs text-slate-400">
-                {mode === "play"
-                  ? "Changing sides or AI difficulty restarts the game. Beginner plays simpler moves, intermediate balances tactics, and expert looks deeper."
-                  : "Player settings are locked while training modes are active."}
+                {mode !== "play"
+                  ? "Player settings are locked while training modes are active."
+                  : opponentMode === "local"
+                    ? "Local mode supports complete offline two-player chess with legal move validation and game-end detection."
+                    : "Changing sides or AI difficulty restarts the game. Beginner plays simpler moves, intermediate balances tactics, and expert looks deeper."}
               </p>
             </section>
             <section>
