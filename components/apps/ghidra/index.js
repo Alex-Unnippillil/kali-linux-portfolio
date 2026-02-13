@@ -3,6 +3,7 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import Strings from './Strings';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
@@ -83,13 +84,14 @@ export default function GhidraApp() {
   const [query, setQuery] = useState('');
   const [funcNotes, setFuncNotes] = useState({});
   const [strings, setStrings] = useState([]);
-  const [selectedString, setSelectedString] = useState(null);
+  const [selectedStringId, setSelectedStringId] = useState(null);
+  const [selectedStringMeta, setSelectedStringMeta] = useState(null);
   const [stringNotes, setStringNotes] = useState({});
-  const [stringQuery, setStringQuery] = useState('');
   const [lineNotes, setLineNotes] = useState({});
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [highlightTarget, setHighlightTarget] = useState(null);
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -173,12 +175,70 @@ export default function GhidraApp() {
       .then((r) => r.json())
       .then((data) => {
         setStrings(data.strings || []);
-        if (data.strings && data.strings[0]) {
-          setSelectedString(data.strings[0].id);
-        }
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!highlightTarget) return;
+    if (highlightTarget.functionName && highlightTarget.functionName !== selected) {
+      setHighlightTarget(null);
+    }
+  }, [selected, highlightTarget]);
+
+  useEffect(() => {
+    if (!highlightTarget) return;
+    if (highlightTarget.functionName && highlightTarget.functionName !== selected)
+      return;
+    if (highlightTarget.line == null) return;
+    const container = decompileRef.current;
+    if (!container) return;
+    const lineEl = container.querySelector(
+      `[data-line-index="${highlightTarget.line}"]`
+    );
+    if (!lineEl) return;
+    const offset =
+      lineEl.offsetTop - container.clientHeight / 2 + lineEl.clientHeight / 2;
+    container.scrollTo({
+      top: Math.max(offset, 0),
+      behavior: prefersReducedMotion ? 'auto' : 'smooth',
+    });
+  }, [highlightTarget, selected, prefersReducedMotion]);
+
+  const handleStringSelect = useCallback((entry) => {
+    setSelectedStringId(entry.id);
+    setSelectedStringMeta(entry);
+  }, []);
+
+  const handleStringJump = useCallback(
+    (location, entry) => {
+      if (location.functionName && funcMap[location.functionName]) {
+        setSelected(location.functionName);
+        if (typeof location.line === 'number') {
+          setHighlightTarget({
+            functionName: location.functionName,
+            line: location.line,
+            stringId: entry.id,
+          });
+        } else {
+          setHighlightTarget(null);
+        }
+        setLiveMessage(`Jumped to ${location.functionName} for string ${entry.value}`);
+      } else if (typeof location.address === 'number') {
+        setHighlightTarget({
+          functionName: null,
+          address: location.address,
+          stringId: entry.id,
+        });
+        setLiveMessage(
+          `Viewing memory address 0x${location.address.toString(16)} for string ${entry.value}`
+        );
+      } else {
+        setHighlightTarget(null);
+      }
+    },
+    [funcMap]
+  );
 
   // S2: Respect reduced motion preference
   useEffect(() => {
@@ -288,9 +348,12 @@ export default function GhidraApp() {
   const filteredFunctions = functions.filter((f) =>
     f.name.toLowerCase().includes(query.toLowerCase())
   );
-  const filteredStrings = strings.filter((s) =>
-    s.value.toLowerCase().includes(stringQuery.toLowerCase())
-  );
+  const safeFunctionName = (selected || 'function').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const functionNotesId = `func-notes-${safeFunctionName}`;
+  const safeStringId = selectedStringId
+    ? selectedStringId.replace(/[^a-zA-Z0-9_-]/g, '_')
+    : 'string';
+  const stringNotesId = `string-notes-${safeStringId}`;
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
@@ -313,6 +376,7 @@ export default function GhidraApp() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
+              aria-label="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
             />
           </div>
@@ -364,8 +428,18 @@ export default function GhidraApp() {
               codeElem = <div>{line}</div>;
             }
             const note = lineNotes[selected]?.[idx] || '';
+            const isHighlighted =
+              highlightTarget &&
+              highlightTarget.functionName === selected &&
+              highlightTarget.line === idx;
             return (
-              <div key={idx} className="flex items-start">
+              <div
+                key={idx}
+                data-line-index={idx}
+                className={`flex items-start rounded ${
+                  isHighlighted ? 'bg-yellow-900/40' : ''
+                }`}
+              >
                 <div className="flex-1">{codeElem}</div>
                 <input
                   value={note}
@@ -379,6 +453,7 @@ export default function GhidraApp() {
                     })
                   }
                   placeholder="note"
+                  aria-label={`Note for line ${idx + 1}`}
                   className="ml-2 w-24 text-xs text-black rounded"
                 />
               </div>
@@ -416,56 +491,48 @@ export default function GhidraApp() {
         />
       </div>
       <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
+        <label className="block text-sm mb-1" htmlFor={functionNotesId}>
           Notes for {selected || 'function'}
         </label>
         <textarea
+          id={functionNotesId}
           value={funcNotes[selected] || ''}
           onChange={(e) =>
             setFuncNotes({ ...funcNotes, [selected]: e.target.value })
           }
+          aria-label={`Notes for ${selected || 'function'}`}
           className="w-full h-16 p-1 rounded text-black"
         />
       </div>
-      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
-        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
-          <input
-            type="text"
-            value={stringQuery}
-            onChange={(e) => setStringQuery(e.target.value)}
-            placeholder="Search strings"
-            className="w-full mb-2 p-1 rounded text-black"
+      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-72">
+        <div className="min-h-0 border-b md:border-b-0 md:border-r border-gray-700 p-2">
+          <Strings
+            className="h-full"
+            functions={functions}
+            initialStrings={strings}
+            selectedId={selectedStringId}
+            onSelect={handleStringSelect}
+            onJump={handleStringJump}
           />
-          <ul className="text-sm space-y-1">
-            {filteredStrings.map((s) => (
-              <li key={s.id}>
-                <button
-                  onClick={() => setSelectedString(s.id)}
-                  className={`text-left w-full ${
-                    selectedString === s.id ? 'font-bold' : ''
-                  }`}
-                >
-                  {s.value}
-                </button>
-              </li>
-            ))}
-          </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
-            Notes for {
-              strings.find((s) => s.id === selectedString)?.value || 'string'
-            }
+          <label className="block text-sm mb-1" htmlFor={stringNotesId}>
+            Notes for {selectedStringMeta?.value || 'string'}
           </label>
           <textarea
-            value={stringNotes[selectedString] || ''}
-            onChange={(e) =>
+            id={stringNotesId}
+            value={selectedStringId ? stringNotes[selectedStringId] || '' : ''}
+            onChange={(e) => {
+              if (!selectedStringId) return;
               setStringNotes({
                 ...stringNotes,
-                [selectedString]: e.target.value,
-              })
-            }
-            className="w-full h-full p-1 rounded text-black"
+                [selectedStringId]: e.target.value,
+              });
+            }}
+            disabled={!selectedStringId}
+            placeholder={selectedStringId ? 'Add a note' : 'Select a string to add notes'}
+            aria-label={`Notes for ${selectedStringMeta?.value || 'string'}`}
+            className="w-full h-full p-1 rounded text-black disabled:bg-gray-200"
           />
         </div>
       </div>
