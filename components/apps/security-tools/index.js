@@ -202,6 +202,22 @@ export default function SecurityTools() {
                   <CommandBuilder
                     doc="Build a curl command. Output is copy-only and not executed."
                     build={({ target = '', opts = '' }) => `curl ${opts} ${target}`.trim()}
+                    fields={[
+                      {
+                        key: 'target',
+                        label: 'Target URL or Host',
+                        required: true,
+                        placeholder: 'https://example.com',
+                        example: 'https://demo.target',
+                      },
+                      {
+                        key: 'opts',
+                        label: 'Curl Flags',
+                        required: false,
+                        placeholder: '-I --user-agent "Demo"',
+                        example: '-I --user-agent "Demo"',
+                      },
+                    ]}
                   />
                 </div>
               )}
