@@ -192,11 +192,7 @@ function About() {
 }
 
 function Timeline() {
-    const events = [
-        
-  
-    ];
-
+    const milestones = React.useMemo(() => data.milestones || [], []);
     const [liveMessage, setLiveMessage] = React.useState('');
 
     React.useEffect(() => {
@@ -204,6 +200,9 @@ function Timeline() {
         const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         if (prefersReducedMotion.matches) {
             elements.forEach(el => el.classList.add('opacity-100', 'translate-y-0'));
+            if (milestones.length > 0) {
+                setLiveMessage(`${milestones[0].year}: ${milestones[0].description}`);
+            }
             return;
         }
 
@@ -224,7 +223,7 @@ function Timeline() {
         return () => {
             elements.forEach(el => observer.unobserve(el));
         };
-    }, []);
+    }, [milestones]);
 
     return (
         <div className="relative mt-8 w-5/6 md:w-3/4" aria-labelledby="timeline-heading">
@@ -232,20 +231,23 @@ function Timeline() {
             <div aria-live="polite" className="sr-only">{liveMessage}</div>
             <div className="hidden opacity-100 translate-y-0" aria-hidden="true"></div>
             <div className="border-l-2 border-ubt-blue ml-2">
-                {events.map((e, i) => (
-                    <div
-                        key={i}
-                        className="timeline-item opacity-0 translate-y-4 transition-all duration-700 ease-out relative mb-8 pl-4"
-                        data-description={`${e.date} ${e.description}`}
-                    >
+                {milestones.map((milestone, i) => {
+                    const description = `${milestone.year}: ${milestone.description}`;
+                    return (
                         <div
-                            aria-hidden="true"
-                            className="w-3 h-3 bg-ubt-blue rounded-full absolute -left-1.5 top-1.5"
-                        ></div>
-                        <div className="text-ubt-blue font-bold">{e.date}</div>
-                        <p className="text-gray-200">{e.description}</p>
-                    </div>
-                ))}
+                            key={i}
+                            className="timeline-item opacity-0 translate-y-4 transition-all duration-700 ease-out relative mb-8 pl-4"
+                            data-description={description}
+                        >
+                            <div
+                                aria-hidden="true"
+                                className="w-3 h-3 bg-ubt-blue rounded-full absolute -left-1.5 top-1.5"
+                            ></div>
+                            <div className="text-ubt-blue font-bold">{milestone.year}</div>
+                            <p className="text-gray-200">{milestone.description}</p>
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );
@@ -344,6 +346,13 @@ const SkillSection = ({ title, badges }) => {
   );
 };
 
+const activityCalendarContainerClass = "bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md";
+const activityCalendarProps = {
+  data: data.badges,
+  hideTotal: true,
+  colorScheme: 'light',
+};
+
 function Skills({ skills }) {
   const { networkingSecurity, softwaresOperating, languagesTools, frameworksLibraries } = skills;
 
@@ -372,11 +381,10 @@ function Skills({ skills }) {
       </div>
       <div className="w-full md:w-10/12 flex flex-col items-center mt-8">
         <div className="font-bold text-sm md:text-base mb-2 text-center">GitHub Contributions</div>
-        <div className="bg-ub-gedit-light bg-opacity-20 p-1 md:p-2 rounded-md shadow-md">
-          <img
-            src="https://ghchart.rshah.org/Alex-Unnippillil"
-            alt="Alex Unnippillil's GitHub contribution graph"
-            className="w-full rounded"
+        <div className={activityCalendarContainerClass}>
+          <ActivityCalendar
+            {...activityCalendarProps}
+            className="activity-calendar"
           />
         </div>
       </div>
@@ -542,7 +550,12 @@ function Resume({ data: resume }) {
                 </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Badges</div>
-                    <ActivityCalendar data={data.badges} hideTotal colorScheme="light" className="print:scale-90" />
+                    <div className={`${activityCalendarContainerClass} print:scale-90`}>
+                        <ActivityCalendar
+                            {...activityCalendarProps}
+                            className="activity-calendar"
+                        />
+                    </div>
                 </div>
                 <div className="mb-4">
                     <div className="font-bold text-lg">Skills</div>
