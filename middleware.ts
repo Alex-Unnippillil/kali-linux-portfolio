@@ -7,6 +7,10 @@ function nonce() {
 }
 
 export function middleware(req: NextRequest) {
+  if (req.nextUrl.pathname.startsWith('/desktop') && !req.cookies.get('session')) {
+    return NextResponse.redirect(new URL('/', req.url));
+  }
+
   const n = nonce();
   const scriptSrc = [
     "'self'",
