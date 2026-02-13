@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 interface TrashItem {
   id: string;
   title: string;
@@ -24,10 +26,14 @@ const formatAge = (closedAt: number): string => {
 export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   const [items, setItems] = useState<TrashItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
+  const [purgeDays, setPurgeDays] = useState<number>(() => {
+    if (typeof window === 'undefined') return 30;
+    const stored = parseInt(window.localStorage.getItem('trash-purge-days') || '30', 10);
+    return Number.isFinite(stored) && stored > 0 ? stored : 30;
+  });
+  const retentionOptions = [7, 30, 60];
 
   useEffect(() => {
-    const purgeDays = parseInt(localStorage.getItem('trash-purge-days') || '30', 10);
-    const ms = purgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
     let data: TrashItem[] = [];
     try {
@@ -35,15 +41,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     } catch {
       data = [];
     }
-    data = data.filter((item) => now - item.closedAt <= ms);
-    localStorage.setItem('window-trash', JSON.stringify(data));
-    setItems(data);
-  }, []);
+    const filtered = data.filter((item) => now - item.closedAt <= purgeDays * DAY_MS);
+    localStorage.setItem('window-trash', JSON.stringify(filtered));
+    localStorage.setItem('trash-purge-days', String(purgeDays));
+    setItems(filtered);
+  }, [purgeDays]);
 
-  const persist = (next: TrashItem[]) => {
-    setItems(next);
-    localStorage.setItem('window-trash', JSON.stringify(next));
-  };
+  const persist = useCallback(
+    (next: TrashItem[]) => {
+      const now = Date.now();
+      const filtered = next.filter((item) => now - item.closedAt <= purgeDays * DAY_MS);
+      setItems(filtered);
+      localStorage.setItem('window-trash', JSON.stringify(filtered));
+    },
+    [purgeDays]
+  );
 
   const restore = useCallback(() => {
     if (selected === null) return;
@@ -53,7 +65,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
-  }, [items, selected, openApp]);
+  }, [items, selected, openApp, persist]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
@@ -62,7 +74,7 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const next = items.filter((_, i) => i !== selected);
     persist(next);
     setSelected(null);
-  }, [items, selected]);
+  }, [items, selected, persist]);
 
   const restoreAll = () => {
     if (items.length === 0) return;
@@ -101,7 +113,10 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
       <div className="flex items-center justify-between w-full bg-ub-warm-grey bg-opacity-40 text-sm">
-        <span className="font-bold ml-2">Trash</span>
+        <div className="flex items-center gap-3 ml-2">
+          <span className="font-bold">Trash</span>
+          <span className="text-xs text-gray-300">Auto-purge after {purgeDays} days</span>
+        </div>
         <div className="flex">
           <button
             onClick={restore}
@@ -132,6 +147,26 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             Empty
           </button>
         </div>
+      </div>
+      <div className="bg-ub-warm-grey bg-opacity-20 px-3 py-2 text-xs text-gray-200 space-y-1">
+        <label className="flex items-center gap-2">
+          <span className="font-semibold text-gray-100">Retention</span>
+          <select
+            value={purgeDays}
+            onChange={(event) => setPurgeDays(parseInt(event.target.value, 10))}
+            className="bg-black bg-opacity-40 border border-black rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-ub-orange"
+          >
+            {retentionOptions.map((days) => (
+              <option key={days} value={days}>
+                {days} days
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="leading-snug text-[11px] text-gray-300">
+          Items older than {purgeDays} days are automatically removed when you open Trash or change this setting. Increase the
+          retention if you need to hold onto closed windows longer.
+        </p>
       </div>
       <div className="flex flex-wrap content-start p-2 overflow-auto">
         {items.length === 0 && <div className="w-full text-center mt-10">Trash is empty</div>}
