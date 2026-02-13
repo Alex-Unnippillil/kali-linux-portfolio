@@ -162,6 +162,8 @@ const DB_NAME = 'stickyNotes';
 const STORE_NAME = 'notes';
 const DB_VERSION = 1;
 
+// Lazily open a connection to IndexedDB to avoid errors in environments
+// where the API is unavailable (e.g. server-side rendering).
 let dbPromise = null;
 function getDB() {
   if (!dbPromise) {
