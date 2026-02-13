@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import TelemetryPanel from '@/components/util-components/TelemetryPanel';
+import { markTelemetry, measureTelemetry } from '@/utils/perfTelemetry';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
@@ -275,18 +277,43 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const buf = await file.arrayBuffer();
-    const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
-    setSelected(null);
+    try {
+      const buf = await file.arrayBuffer();
+      const parseStart = 'pcap-file-parse-start';
+      markTelemetry(parseStart);
+      const pkts = await parseWithWasm(buf);
+      measureTelemetry('pcap:file:parse', parseStart, 'pcap-file-parse-end');
+      setPackets(pkts);
+      setSelected(null);
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(error);
+      }
+    }
   };
 
   const handleSample = async (path: string) => {
-    const res = await fetch(path);
-    const buf = await res.arrayBuffer();
-    const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
-    setSelected(null);
+    try {
+      const fetchStart = 'pcap-sample-fetch-start';
+      markTelemetry(fetchStart);
+      const res = await fetch(path);
+      if (!res.ok) {
+        throw new Error(`Failed to fetch sample: ${res.status}`);
+      }
+      measureTelemetry('pcap:sample:fetch', fetchStart, 'pcap-sample-fetch-end');
+
+      const buf = await res.arrayBuffer();
+      const parseStart = 'pcap-sample-parse-start';
+      markTelemetry(parseStart);
+      const pkts = await parseWithWasm(buf);
+      measureTelemetry('pcap:sample:parse', parseStart, 'pcap-sample-parse-end');
+      setPackets(pkts);
+      setSelected(null);
+    } catch (error) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.error(error);
+      }
+    }
   };
 
   const filtered = packets.filter((p) => {
@@ -301,13 +328,14 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   });
 
   return (
-    <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
+    <div className="relative p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
       <div className="flex items-center space-x-2">
         <input
           type="file"
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Open capture file"
         />
         <select
           onChange={(e) => {
@@ -355,6 +383,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 }`}
                 title={label}
                 type="button"
+                aria-label={`Apply ${label} preset`}
               />
             ))}
           </div>
@@ -454,6 +483,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           </div>
         </>
       )}
+      <TelemetryPanel />
     </div>
   );
 };

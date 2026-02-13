@@ -4,6 +4,8 @@ import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import TelemetryPanel from '@/components/util-components/TelemetryPanel';
+import { markTelemetry, measureTelemetry } from '@/utils/perfTelemetry';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -147,9 +149,25 @@ export default function GhidraApp() {
 
   // Load pre-generated disassembly JSON
   useEffect(() => {
-    fetch('/demo-data/ghidra/disassembly.json')
-      .then((r) => r.json())
-      .then((data) => {
+    let active = true;
+
+    const loadDisassembly = async () => {
+      try {
+        const fetchStart = 'ghidra-disassembly-fetch-start';
+        markTelemetry(fetchStart);
+        const response = await fetch('/demo-data/ghidra/disassembly.json');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch disassembly: ${response.status}`);
+        }
+        measureTelemetry(
+          'ghidra:disassembly:fetch',
+          fetchStart,
+          'ghidra-disassembly-fetch-end'
+        );
+
+        const parseStart = 'ghidra-disassembly-parse-start';
+        markTelemetry(parseStart);
+        const data = await response.json();
         const map = {};
         const xr = {};
         data.functions.forEach((f) => {
@@ -161,23 +179,66 @@ export default function GhidraApp() {
             xr[c].push(f.name);
           });
         });
+        measureTelemetry(
+          'ghidra:disassembly:parse',
+          parseStart,
+          'ghidra-disassembly-parse-end'
+        );
+
+        if (!active) return;
         setFunctions(data.functions);
         setFuncMap(map);
         setXrefs(xr);
         setSelected(data.functions[0]?.name || null);
-      });
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(error);
+        }
+      }
+    };
+
+    loadDisassembly();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
-    fetch('/demo-data/ghidra/strings.json')
-      .then((r) => r.json())
-      .then((data) => {
+    let active = true;
+
+    const loadStrings = async () => {
+      try {
+        const fetchStart = 'ghidra-strings-fetch-start';
+        markTelemetry(fetchStart);
+        const response = await fetch('/demo-data/ghidra/strings.json');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch strings: ${response.status}`);
+        }
+        measureTelemetry('ghidra:strings:fetch', fetchStart, 'ghidra-strings-fetch-end');
+
+        const parseStart = 'ghidra-strings-parse-start';
+        markTelemetry(parseStart);
+        const data = await response.json();
+        measureTelemetry('ghidra:strings:parse', parseStart, 'ghidra-strings-parse-end');
+
+        if (!active) return;
         setStrings(data.strings || []);
         if (data.strings && data.strings[0]) {
           setSelectedString(data.strings[0].id);
         }
-      })
-      .catch(() => {});
+      } catch (error) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.error(error);
+        }
+      }
+    };
+
+    loadStrings();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   // S2: Respect reduced motion preference
@@ -244,7 +305,7 @@ export default function GhidraApp() {
   if (engine === 'capstone') {
     return (
       <div
-        className="w-full h-full flex flex-col bg-gray-900 text-gray-100"
+        className="relative w-full h-full flex flex-col bg-gray-900 text-gray-100"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
       >
@@ -280,6 +341,7 @@ export default function GhidraApp() {
               .join('\n')}
           </pre>
         )}
+        <TelemetryPanel />
       </div>
     );
   }
@@ -293,7 +355,7 @@ export default function GhidraApp() {
   );
 
   return (
-    <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
+    <div className="relative w-full h-full flex flex-col bg-gray-900 text-gray-100">
       <div className="p-2">
         <button
           onClick={switchEngine}
@@ -314,6 +376,7 @@ export default function GhidraApp() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
+              aria-label="Search symbols"
             />
           </div>
           {query ? (
@@ -380,6 +443,7 @@ export default function GhidraApp() {
                   }
                   placeholder="note"
                   className="ml-2 w-24 text-xs text-black rounded"
+                  aria-label={`Note for line ${idx + 1}`}
                 />
               </div>
             );
@@ -415,27 +479,30 @@ export default function GhidraApp() {
           onSelect={setSelected}
         />
       </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
-      </div>
-      <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
-        <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
-          <input
-            type="text"
-            value={stringQuery}
-            onChange={(e) => setStringQuery(e.target.value)}
-            placeholder="Search strings"
-            className="w-full mb-2 p-1 rounded text-black"
+        <div className="border-t border-gray-700 p-2">
+          <label className="block text-sm mb-1" htmlFor="function-notes">
+            Notes for {selected || 'function'}
+          </label>
+          <textarea
+            id="function-notes"
+            value={funcNotes[selected] || ''}
+            onChange={(e) =>
+              setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+            }
+            className="w-full h-16 p-1 rounded text-black"
+            aria-label="Function notes editor"
           />
+        </div>
+        <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
+          <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
+            <input
+              type="text"
+              value={stringQuery}
+              onChange={(e) => setStringQuery(e.target.value)}
+              placeholder="Search strings"
+              className="w-full mb-2 p-1 rounded text-black"
+              aria-label="Search strings"
+            />
           <ul className="text-sm space-y-1">
             {filteredStrings.map((s) => (
               <li key={s.id}>
@@ -452,12 +519,13 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label className="block text-sm mb-1" htmlFor="string-notes">
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
           </label>
           <textarea
+            id="string-notes"
             value={stringNotes[selectedString] || ''}
             onChange={(e) =>
               setStringNotes({
@@ -466,6 +534,7 @@ export default function GhidraApp() {
               })
             }
             className="w-full h-full p-1 rounded text-black"
+            aria-label="String notes editor"
           />
         </div>
       </div>
@@ -473,6 +542,7 @@ export default function GhidraApp() {
       <div aria-live="polite" role="status" className="sr-only">
         {liveMessage}
       </div>
+      <TelemetryPanel />
     </div>
   );
 }
