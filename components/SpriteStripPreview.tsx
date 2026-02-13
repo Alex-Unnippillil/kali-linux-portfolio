@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { importSpriteStrip } from '../utils/spriteStrip';
 
 interface SpriteStripPreviewProps {
@@ -27,6 +27,12 @@ const SpriteStripPreview: React.FC<SpriteStripPreviewProps> = ({
   fps = 12,
 }) => {
   const [frame, setFrame] = useState(0);
+  const [zoom, setZoom] = useState(100);
+  const sliderId = useId();
+
+  const minZoom = 50;
+  const maxZoom = 200;
+  const scale = zoom / 100;
 
   // Preload and cache the sprite strip
   useEffect(() => {
@@ -42,16 +48,60 @@ const SpriteStripPreview: React.FC<SpriteStripPreviewProps> = ({
     return () => window.clearInterval(id);
   }, [frames, fps]);
 
-  const style: React.CSSProperties = {
+  const containerStyle: React.CSSProperties = {
+    width: frameWidth * (maxZoom / 100),
+    height: frameHeight * (maxZoom / 100),
+    maxWidth: '100%',
+    aspectRatio: `${frameWidth} / ${frameHeight}`,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  };
+
+  const previewStyle: React.CSSProperties = {
     width: frameWidth,
     height: frameHeight,
     backgroundImage: `url(${src})`,
     backgroundPosition: `-${frame * frameWidth}px 0px`,
     backgroundRepeat: 'no-repeat',
     imageRendering: 'pixelated',
+    transform: `scale(${scale})`,
+    transformOrigin: 'center',
   };
 
-  return <div style={style} data-testid="sprite-strip-preview" />;
+  const sliderWrapperStyle: React.CSSProperties = {
+    marginTop: '0.5rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+  };
+
+  const sliderStyle: React.CSSProperties = {
+    flex: 1,
+  };
+
+  return (
+    <div>
+      <div style={containerStyle}>
+        <div style={previewStyle} data-testid="sprite-strip-preview" />
+      </div>
+      <div style={sliderWrapperStyle}>
+        <label htmlFor={sliderId}>Zoom</label>
+        <input
+          id={sliderId}
+          type="range"
+          min={minZoom}
+          max={maxZoom}
+          step={10}
+          value={zoom}
+          onChange={(event) => setZoom(Number(event.target.value))}
+          aria-valuetext={`${zoom}%`}
+          style={sliderStyle}
+        />
+        <span>{zoom}%</span>
+      </div>
+    </div>
+  );
 };
 
 export default SpriteStripPreview;
