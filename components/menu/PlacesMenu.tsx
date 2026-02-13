@@ -5,6 +5,7 @@ export type PlacesMenuItem = {
   label: string;
   icon: string;
   onSelect?: () => void;
+  section?: string;
 };
 
 export interface PlacesMenuProps {
@@ -47,57 +48,103 @@ const resolveKaliIcon = (id: string): string | undefined => {
 };
 
 const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
+  const sectionOrder = new Map<string, number>();
+  const sections = items.reduce<
+    Array<{
+      key: string;
+      label?: string;
+      items: PlacesMenuItem[];
+    }>
+  >((accumulator, item) => {
+    const sectionLabel = item.section?.trim();
+    const normalizedKey = sectionLabel ? sectionLabel.toLowerCase() : '__default__';
+
+    if (!sectionOrder.has(normalizedKey)) {
+      sectionOrder.set(normalizedKey, accumulator.length);
+      accumulator.push({
+        key: normalizedKey,
+        label: sectionLabel || undefined,
+        items: [],
+      });
+    }
+
+    const sectionIndex = sectionOrder.get(normalizedKey);
+    if (sectionIndex !== undefined) {
+      accumulator[sectionIndex].items.push(item);
+    }
+
+    return accumulator;
+  }, []);
+
   return (
-    <nav aria-label={heading} className="w-56 select-none text-sm text-white">
+    <nav aria-label={heading} className="w-full max-w-[14rem] select-none text-sm text-white">
       <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
         {heading}
       </header>
-      <ul className="space-y-1">
-        {items.map((item) => {
-          const kaliIcon = resolveKaliIcon(item.id);
-          const src = kaliIcon ?? item.icon;
-
-          const handleClick = () => {
-            item.onSelect?.();
-          };
-
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
+      <ul className="flex max-h-96 list-none flex-col overflow-y-auto pr-1">
+        {sections.map((section, sectionIndex) => (
+          <React.Fragment key={section.key || `section-${sectionIndex}`}>
+            {section.label ? (
+              <li
+                className={[
+                  'sticky top-0 z-10 bg-gray-900 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-ubt-grey first:mt-0',
+                  sectionIndex > 0 ? 'mt-2 border-t border-gray-800 pt-2' : undefined,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
               >
-                <img
-                  src={src}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 flex-shrink-0"
-                  data-fallback-src={item.icon}
-                  onError={(event) => {
-                    const target = event.currentTarget;
-                    if (target.getAttribute(FALLBACK_FLAG) === 'true') {
-                      return;
-                    }
+                {section.label}
+              </li>
+            ) : null}
+            {section.items.map((item, itemIndex) => {
+              const kaliIcon = resolveKaliIcon(item.id);
+              const src = kaliIcon ?? item.icon;
 
-                    const fallback = target.getAttribute(FALLBACK_SRC);
-                    if (!fallback) {
-                      return;
-                    }
+              const handleClick = () => {
+                item.onSelect?.();
+              };
 
-                    target.setAttribute(FALLBACK_FLAG, 'true');
-                    target.src = fallback;
-                  }}
-                />
-                <span className="truncate">{item.label}</span>
-              </button>
-            </li>
-          );
-        })}
+              return (
+                <li
+                  key={item.id}
+                  className={sectionIndex === 0 && itemIndex === 0 && !section.label ? 'mt-0' : 'mt-1'}
+                >
+                  <button
+                    type="button"
+                    onClick={handleClick}
+                    className="flex h-11 w-full flex-nowrap items-center gap-3 rounded px-3 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
+                  >
+                    <img
+                      src={src}
+                      alt=""
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 flex-shrink-0"
+                      data-fallback-src={item.icon}
+                      onError={(event) => {
+                        const target = event.currentTarget;
+                        if (target.getAttribute(FALLBACK_FLAG) === 'true') {
+                          return;
+                        }
+
+                        const fallback = target.getAttribute(FALLBACK_SRC);
+                        if (!fallback) {
+                          return;
+                        }
+
+                        target.setAttribute(FALLBACK_FLAG, 'true');
+                        target.src = fallback;
+                      }}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </React.Fragment>
+        ))}
       </ul>
     </nav>
-
   );
 };
 
