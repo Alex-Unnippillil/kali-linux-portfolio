@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { act } from 'react';
 import SpriteStripPreview from '../components/SpriteStripPreview';
 import { importSpriteStrip, clearSpriteStripCache } from '../utils/spriteStrip';
@@ -24,5 +24,19 @@ describe('sprite strip utilities', () => {
       jest.advanceTimersByTime(100);
     });
     expect(el).toHaveStyle('background-position: -10px 0px');
+  });
+
+  test('grid overlay can be toggled', () => {
+    const { getByRole, getByTestId, queryByTestId } = render(
+      <SpriteStripPreview src="foo.png" frameWidth={10} frameHeight={10} frames={3} fps={10} />,
+    );
+
+    expect(getByTestId('sprite-strip-grid')).toBeInTheDocument();
+
+    const toggleButton = getByRole('button', { name: /hide grid/i });
+    fireEvent.click(toggleButton);
+
+    expect(queryByTestId('sprite-strip-grid')).not.toBeInTheDocument();
+    expect(toggleButton).toHaveTextContent(/show grid/i);
   });
 });
