@@ -166,6 +166,55 @@ npx playwright test   # E2E, if tooling is available locally
 
 ---
 
+## 13. Polish pass protocol (final-touch optimization)
+
+When an issue asks for "polish", "final touches", or "overall UX improvements", treat the work as a focused finishing pass
+instead of broad refactoring. Use this sequence:
+
+1. **Visual consistency audit**
+   * Normalize spacing, alignment, icon sizing, and typography across dock, launcher, top bar, and app windows.
+   * Reuse existing Tailwind tokens and component patterns before adding new classes.
+2. **Layout resilience audit**
+   * Validate desktop shell behavior at common breakpoints (mobile landscape, tablet, laptop, ultrawide).
+   * Confirm windows never render unreachable controls (close/minimize/maximize) and avoid off-screen spawn positions.
+3. **Interaction quality audit**
+   * Tighten drag/resize affordances, hover states, loading states, and empty states.
+   * Ensure keyboard and pointer interactions are equivalent for menus, launcher search, and core app switching.
+4. **Performance and reliability audit**
+   * Prefer memoization/state-scope fixes over adding new dependencies.
+   * Verify static export fallback behavior for anything that can touch `/api/*`.
+
+Keep each polish PR scoped to user-perceivable improvements with measurable outcomes (for example, reduced overlap bugs,
+improved keyboard traversal, or cleaner responsive alignment).
+
+---
+
+## 14. Next-priority feature backlog for AI agents
+
+If no explicit roadmap item is provided, prioritize these features in order:
+
+1. **Desktop UX finishing work**
+   * Snap-to-grid or edge-aware window placement.
+   * Better z-index/focus recovery when many windows are open.
+   * Persisted per-app window bounds with safe reset behavior.
+2. **Navigation and discoverability upgrades**
+   * Faster launcher search relevance (aliases, tags, recent apps).
+   * Quick actions from dock/context menus (open new window, pin/unpin, recent).
+   * Clear onboarding hint layer that can be dismissed and remembered.
+3. **App quality and content depth**
+   * Expand educational copy in simulated security apps (what it demonstrates, what it does *not* do).
+   * Add deterministic demo datasets and richer empty/error states.
+   * Improve shared app chrome consistency (titles, action buttons, status text).
+4. **Trust, accessibility, and platform fit**
+   * Full keyboard parity for desktop shell flows.
+   * ARIA and focus-visible improvements for all interactive controls.
+   * Performance cleanup for drag/move/resize hot paths and animation jank.
+
+For any backlog item implemented, include before/after screenshots (when UI-facing), note feature flags touched, and confirm
+behavior in both serverful and static-export modes.
+
+---
+
 ## Appendix A — Directory map (high level)
 
 * `.github/workflows/` — CI including Pages export pipeline.
@@ -195,7 +244,61 @@ npx playwright test   # E2E, if tooling is available locally
 - [ ] Docs updated for new flags/apps
 - [ ] Reviewed in both serverful and static builds when `/api/*` is involved
 
+
 ---
+
+## 13. Product polish priorities (final touches)
+
+When a task asks for “final touches” or broad quality improvements, treat the following as the default execution order:
+
+1. **Finish visual polish first.**
+   * Normalize spacing, typography rhythm, icon sizing, and panel/window alignment.
+   * Prefer small, deliberate Tailwind adjustments over large-scale rewrites.
+   * Keep the Kali/Ubuntu desktop aesthetic cohesive (dark surfaces, readable contrast, restrained accent colors).
+2. **Then improve layout and responsiveness.**
+   * Verify desktop shell behavior at common breakpoints (mobile, tablet, laptop, widescreen).
+   * Ensure draggable windows, dock items, launchers, and context menus avoid overlap traps and clipping.
+   * Preserve keyboard flows while changing layout (focus order, escape behavior, arrow key handling).
+3. **Then harden functionality and UX quality.**
+   * Remove avoidable jank: reduce unnecessary renders, debounce heavy handlers, and avoid blocking interactions.
+   * Validate fallback behavior in static export mode when `/api/*` is unavailable.
+   * Favor deterministic demo data and clear empty/error states over silent failures.
+
+**Definition of done for polish tasks**
+
+- [ ] UI feels visually consistent across core desktop views.
+- [ ] Interaction quality is improved (fewer mis-clicks, clearer affordances, stable focus behavior).
+- [ ] Performance impact is neutral or better (especially drag/move/open/close flows).
+- [ ] Notes include what changed in styling, layout, and behavior.
+
+---
+
+## 14. AI-suggested feature queue (next priorities)
+
+If the request includes “integrate the next AI-suggested features,” implement from this queue in order unless product constraints override it:
+
+1. **Desktop onboarding and discoverability**
+   * Add a first-run helper (dismissible) that explains launcher, dock, window controls, and keyboard shortcuts.
+   * Include a “show again” toggle in settings.
+2. **Window/session persistence upgrades**
+   * Persist open apps, window bounds, z-order intent, and favorites safely in local storage.
+   * Recover gracefully when app definitions change between releases.
+3. **Global command/search palette**
+   * Provide a keyboard-invoked palette (e.g., `Ctrl/Cmd+K`) to launch apps, switch windows, and run quick actions.
+   * Keep results deterministic and local-only (no remote querying).
+4. **Accessibility pass for desktop primitives**
+   * Add/verify ARIA labels, roles, and screen-reader announcements for window state changes.
+   * Improve visible focus states and support reduced-motion preferences.
+5. **Performance instrumentation and guardrails**
+   * Add lightweight timing markers around high-frequency interactions (open, drag, resize).
+   * Use feature flags for optional instrumentation and keep analytics opt-in behavior intact.
+
+### Feature queue guardrails
+
+* Every new capability must work in demo/offline mode.
+* Any feature depending on secrets or network services must be behind explicit flags and disabled by default.
+* Never introduce real offensive security behavior; simulations only.
+* Add/update tests for any non-trivial state or interaction logic.
 
 ## Source notes for maintainers
 
