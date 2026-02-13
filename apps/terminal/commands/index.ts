@@ -44,12 +44,13 @@ function alias(args: string, ctx: CommandContext) {
     Object.entries(ctx.aliases).forEach(([k, v]) => ctx.writeLine(`${k}='${v}'`));
     return;
   }
-  const [name, value] = args.split('=');
+  const [name = '', value] = args.split('=');
+  const trimmedName = name.trim();
   if (value) {
-    ctx.setAlias(name.trim(), value.trim());
+    ctx.setAlias(trimmedName, value.trim());
   } else {
-    const existing = ctx.aliases[name.trim()];
-    if (existing) ctx.writeLine(`${name}='${existing}'`);
+    const existing = ctx.aliases[trimmedName];
+    if (existing) ctx.writeLine(`${trimmedName}='${existing}'`);
   }
 }
 
