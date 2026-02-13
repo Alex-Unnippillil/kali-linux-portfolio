@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import KeyspaceHeatmap, {
+  DEFAULT_CHARSETS as HEATMAP_DEFAULT_CHARSETS,
+} from './KeyspaceHeatmap';
 
 export const hashTypes = [
   {
@@ -244,6 +247,9 @@ function HashcatApp() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [attackMode, setAttackMode] = useState('0');
   const [mask, setMask] = useState('');
+  const [charsets, setCharsets] = useState(() => [
+    ...HEATMAP_DEFAULT_CHARSETS,
+  ]);
   const appendMask = (token) => setMask((m) => m + token);
   const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
   const showMask = ['3', '6', '7'].includes(attackMode);
@@ -270,13 +276,13 @@ function HashcatApp() {
       setMaskStats({ count: 0, time: 0 });
       return;
     }
-    const sets = { '?l': 26, '?u': 26, '?d': 10, '?s': 33, '?a': 95 };
+    const sets = new Map(charsets.map((set) => [set.id, set.size]));
     let total = 1;
     for (let i = 0; i < mask.length; i++) {
       if (mask[i] === '?' && i < mask.length - 1) {
         const token = mask.slice(i, i + 2);
-        if (sets[token]) {
-          total *= sets[token];
+        if (sets.has(token)) {
+          total *= sets.get(token);
           i++;
           continue;
         }
@@ -284,7 +290,7 @@ function HashcatApp() {
       total *= 1;
     }
     setMaskStats({ count: total, time: total / 1_000_000 });
-  }, [mask]);
+  }, [mask, charsets]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -507,29 +513,26 @@ function HashcatApp() {
         </select>
       </div>
       {showMask && (
-        <div>
-          <label className="block" htmlFor="mask-input">
-            Mask
-          </label>
-          <input
-            id="mask-input"
-            type="text"
-            aria-label="Mask pattern"
-            className="text-black px-2 py-1 w-full"
-            value={mask}
-            onChange={(e) => setMask(e.target.value)}
+        <div className="w-full">
+          <KeyspaceHeatmap
+            mask={mask}
+            onMaskChange={setMask}
+            charsets={charsets}
+            onCharsetsChange={setCharsets}
           />
-          <div className="space-x-2 mt-1">
-            {['?l', '?u', '?d', '?s', '?a'].map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => appendMask(t)}
-                aria-label={`Add ${t} to mask`}
-              >
-                {t}
-              </button>
-            ))}
+          <div className="space-x-2 mt-2">
+            {charsets
+              .filter((set) => set.id.startsWith('?'))
+              .map((set) => (
+                <button
+                  key={set.id}
+                  type="button"
+                  onClick={() => appendMask(set.id)}
+                  aria-label={`Add ${set.id} to mask`}
+                >
+                  {set.id}
+                </button>
+              ))}
           </div>
           {mask && (
             <div className="mt-2">
