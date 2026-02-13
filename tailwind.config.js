@@ -81,6 +81,7 @@ module.exports = {
           danger: withAlpha('--game-danger-rgb'),
         },
       },
+      // Custom shadow for Kali-style floating panels
       boxShadow: {
         'kali-panel': '0 6px 20px rgba(0,0,0,.35)',
       },
