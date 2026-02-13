@@ -39,6 +39,15 @@ type Star = {
   alpha: number;
 };
 
+type TonePreset = {
+  type: OscillatorType;
+  attack: number;
+  release: number;
+  volume: number;
+};
+
+const MARCH_FREQUENCIES = [180, 220, 165, 205];
+
 const getInvaderColor = (points: number) => {
   if (points >= 30) return '#f472b6';
   if (points >= 20) return '#34d399';
@@ -73,6 +82,56 @@ const createStarfield = () => {
       alpha: 0.4 + rand() * 0.5,
     } as Star;
   });
+};
+
+const drawPixelSprite = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  pixels: number[][],
+  color: string,
+  scale = 1,
+) => {
+  ctx.fillStyle = color;
+  for (let row = 0; row < pixels.length; row += 1) {
+    for (let col = 0; col < pixels[row].length; col += 1) {
+      if (!pixels[row][col]) continue;
+      ctx.fillRect(x + col * scale, y + row * scale, scale, scale);
+    }
+  }
+};
+
+const INVADER_SPRITES = {
+  top: [
+    [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+    [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 0, 1, 1, 1, 1, 1, 1, 0, 1],
+    [1, 0, 1, 0, 0, 0, 0, 1, 0, 1],
+    [0, 0, 0, 1, 1, 0, 1, 1, 0, 0],
+  ],
+  middle: [
+    [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 1, 1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 1, 1, 0],
+    [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
+  ],
+  bottom: [
+    [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [1, 1, 0, 1, 1, 1, 1, 0, 1, 1],
+    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    [0, 0, 1, 1, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0],
+    [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
+  ],
 };
 
 const SpaceInvaders: React.FC = () => {
@@ -181,7 +240,7 @@ const SpaceInvaders: React.FC = () => {
     [beginCountdown, highScore, resetInput],
   );
 
-  const handleAudio = useCallback((frequency: number, duration = 0.08) => {
+  const handleAudio = useCallback((frequency: number, duration = 0.08, preset?: Partial<TonePreset>) => {
     if (!soundEnabled || !hasInteractedRef.current) return;
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext ||
@@ -190,14 +249,27 @@ const SpaceInvaders: React.FC = () => {
     }
     const ctx = audioCtxRef.current;
     if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    gain.gain.value = 0.08;
+    const tone: TonePreset = {
+      type: 'square',
+      attack: 0.005,
+      release: duration,
+      volume: 0.08,
+      ...preset,
+    };
+    osc.type = tone.type;
     osc.frequency.value = frequency;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(tone.volume, ctx.currentTime + tone.attack);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + tone.release);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + duration);
+    osc.stop(ctx.currentTime + tone.release + 0.02);
   }, [soundEnabled]);
 
   const triggerShake = useCallback(
@@ -301,23 +373,27 @@ const SpaceInvaders: React.FC = () => {
       events.forEach((event) => {
         if (event.type === 'invader-destroyed') {
           const tone = 640 - (event.row ?? 0) * 24;
-          handleAudio(tone);
+          handleAudio(tone, 0.08, { type: 'square', volume: 0.05 });
           if (event.x !== undefined && event.y !== undefined) {
             spawnParticles(event.x, event.y, '#a7f3d0', 6);
           }
         }
         if (event.type === 'ufo-destroyed') {
-          handleAudio(900, 0.12);
+          handleAudio(920, 0.18, { type: 'sawtooth', volume: 0.09 });
           if (event.x !== undefined && event.y !== undefined) {
             spawnParticles(event.x, event.y, '#f472b6', 12);
           }
         }
         if (event.type === 'life-lost') {
-          handleAudio(180, 0.2);
+          handleAudio(150, 0.28, { type: 'triangle', volume: 0.1 });
           triggerShake(4);
         }
         if (event.type === 'shield-hit') {
-          handleAudio(280, 0.04);
+          handleAudio(260, 0.06, { type: 'square', volume: 0.04 });
+        }
+        if (event.type === 'invader-step') {
+          const march = MARCH_FREQUENCIES[event.value ?? 0] ?? MARCH_FREQUENCIES[0];
+          handleAudio(march, 0.07, { type: 'square', volume: 0.045 });
         }
         if (event.type === 'wave-complete') {
           setStatus('wave');
@@ -330,7 +406,7 @@ const SpaceInvaders: React.FC = () => {
         }
         if (event.type === 'extra-life') {
           announce('Extra life awarded.');
-          handleAudio(760, 0.12);
+          handleAudio(780, 0.16, { type: 'triangle', volume: 0.1 });
         }
         if (event.message) {
           announce(event.message);
@@ -400,19 +476,19 @@ const SpaceInvaders: React.FC = () => {
     });
     ctx.globalAlpha = 1;
 
-    ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(
-      state.player.x,
-      state.player.y,
-      state.player.w,
-      state.player.h,
-    );
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(
-      state.player.x + state.player.w * 0.35,
-      state.player.y - 3,
-      state.player.w * 0.3,
-      3,
+    drawPixelSprite(
+      ctx,
+      Math.floor(state.player.x),
+      Math.floor(state.player.y),
+      [
+        [0, 0, 0, 1, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+        [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 1, 1, 0, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      ],
+      '#f8fafc',
+      2,
     );
 
     if (state.player.shield) {
@@ -437,13 +513,10 @@ const SpaceInvaders: React.FC = () => {
       if (!invader.alive) return;
       ctx.fillStyle = getInvaderColor(invader.points);
       const bob = prefersReducedMotion ? 0 : Math.sin(invader.phase) * 1.5;
-      ctx.fillRect(invader.x, invader.y + bob, invader.w, invader.h);
-      if (state.invaderFrame === 1) {
-        ctx.fillRect(invader.x + 2, invader.y + invader.h + bob, 4, 2);
-        ctx.fillRect(invader.x + invader.w - 6, invader.y + invader.h + bob, 4, 2);
-      } else {
-        ctx.fillRect(invader.x + 4, invader.y - 2 + bob, invader.w - 8, 2);
-      }
+      const key = invader.points >= 30 ? 'top' : invader.points >= 20 ? 'middle' : 'bottom';
+      const sprite = INVADER_SPRITES[key];
+      const offsetY = state.invaderFrame === 0 ? 0 : 1;
+      drawPixelSprite(ctx, invader.x, invader.y + bob + offsetY, sprite, ctx.fillStyle as string, 2);
     });
 
     ctx.fillStyle = '#facc15';
@@ -494,10 +567,28 @@ const SpaceInvaders: React.FC = () => {
     ctx.globalAlpha = 1;
 
     if (state.ufo.active) {
-      ctx.fillStyle = '#f472b6';
-      ctx.fillRect(state.ufo.x, state.ufo.y, state.ufo.w, state.ufo.h);
-      ctx.fillStyle = '#fbcfe8';
-      ctx.fillRect(state.ufo.x + 4, state.ufo.y + 3, state.ufo.w - 8, 3);
+      drawPixelSprite(
+        ctx,
+        state.ufo.x,
+        state.ufo.y,
+        [
+          [0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+          [0, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+          [1, 1, 0, 1, 1, 1, 1, 0, 1, 1],
+          [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+          [0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
+        ],
+        '#fb7185',
+        3,
+      );
+      ctx.fillStyle = '#fef08a';
+      ctx.font = '10px monospace';
+      ctx.fillText(`${state.ufo.value}`, state.ufo.x + 6, state.ufo.y - 4);
+    }
+
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.06)';
+    for (let y = 0; y < BASE_HEIGHT; y += 4) {
+      ctx.fillRect(0, y, BASE_WIDTH, 1);
     }
 
     ctx.restore();
