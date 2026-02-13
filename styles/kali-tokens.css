@@ -1,0 +1,23 @@
+/* Kali theme tokens */
+
+:root {
+  /* Terminal color variables */
+  --term-bg: #000000;
+  --term-fg: #00ff00;
+  --term-accent: #1793d1;
+}
+
+/* Terminal screen styling */
+.terminal .screen {
+  background: var(--term-bg);
+  color: var(--term-fg);
+  caret-color: var(--term-accent);
+}
+
+/* Invert colors for light theme */
+html[data-theme='light'] .terminal .screen {
+  background: var(--term-fg);
+  color: var(--term-bg);
+  caret-color: var(--term-accent);
+}
+
