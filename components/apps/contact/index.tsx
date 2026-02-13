@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import FormError from '../../ui/FormError';
+import SpoofingWarning from '../../ui/SpoofingWarning';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
@@ -9,8 +10,9 @@ import AttachmentUploader, {
   MAX_TOTAL_ATTACHMENT_SIZE,
 } from '../../../apps/contact/components/AttachmentUploader';
 import AttachmentCarousel from '../../../apps/contact/components/AttachmentCarousel';
+import { sanitizeText } from '../../../utils/sanitizeText';
 
-const sanitize = (str: string) =>
+const escapeHtml = (str: string) =>
   str.replace(/[&<>"']/g, (c) => ({
     '&': '&amp;',
     '<': '&lt;',
@@ -42,6 +44,8 @@ export const processContactForm = async (
 ) => {
   try {
     const parsed = contactSchema.parse(data);
+    const sanitizedName = sanitizeText(parsed.name);
+    const sanitizedMessage = sanitizeText(parsed.message);
     const res = await fetchImpl('/api/contact', {
       method: 'POST',
       headers: {
@@ -49,9 +53,9 @@ export const processContactForm = async (
         'X-CSRF-Token': parsed.csrfToken,
       },
       body: JSON.stringify({
-        name: sanitize(parsed.name),
+        name: escapeHtml(sanitizedName.safe),
         email: parsed.email,
-        message: sanitize(parsed.message),
+        message: escapeHtml(sanitizedMessage.safe),
         honeypot: parsed.honeypot,
         recaptchaToken: parsed.recaptchaToken,
       }),
@@ -155,6 +159,8 @@ const ContactApp: React.FC = () => {
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const nameSanitization = useMemo(() => sanitizeText(name), [name]);
+  const messageSanitization = useMemo(() => sanitizeText(message), [message]);
 
   useEffect(() => {
     (async () => {
@@ -309,7 +315,7 @@ const ContactApp: React.FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => openMailto(EMAIL, '', message)}
+            onClick={() => openMailto(EMAIL, '', messageSanitization.safe)}
             className="underline"
           >
             Open email app
@@ -332,6 +338,7 @@ const ContactApp: React.FC = () => {
           >
             Name
           </label>
+          <SpoofingWarning result={nameSanitization} />
         </div>
         <div className="relative">
           <input
@@ -380,6 +387,7 @@ const ContactApp: React.FC = () => {
               {messageError}
             </FormError>
           )}
+          <SpoofingWarning result={messageSanitization} />
         </div>
         <AttachmentUploader
           attachments={attachments}
