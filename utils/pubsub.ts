@@ -13,14 +13,18 @@ function createPubSub(): PubSub {
       if (subs) subs.forEach((cb) => cb(data));
     },
     subscribe(topic, cb) {
-      let subs = channels.get(topic);
-      if (!subs) {
-        subs = new Set();
-        channels.set(topic, subs);
-      }
+      const existing = channels.get(topic);
+      const subs = existing ?? new Set<Callback>();
+
+      if (!existing) channels.set(topic, subs);
+
       subs.add(cb);
       return () => {
-        subs!.delete(cb);
+        const current = channels.get(topic);
+        if (!current) return;
+
+        current.delete(cb);
+        if (current.size === 0) channels.delete(topic);
       };
     },
   };
@@ -28,8 +32,12 @@ function createPubSub(): PubSub {
 
 const pubsub: PubSub = createPubSub();
 
+declare global {
+  var pubsub: PubSub | undefined;
+}
+
 if (typeof globalThis !== 'undefined') {
-  (globalThis as any).pubsub = pubsub;
+  globalThis.pubsub = pubsub;
 }
 
 export const publish = pubsub.publish;
