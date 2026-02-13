@@ -36,7 +36,12 @@ export default function CommandBuilder({ doc, build }: BuilderProps) {
         />
       </label>
       <div className="mt-2">
-        <TerminalOutput text={command} ariaLabel="command output" />
+        <TerminalOutput
+          text={command}
+          ariaLabel="command output"
+          copyButtonLabel="Copy command"
+          successMessage="Command copied to clipboard"
+        />
       </div>
     </form>
   );
