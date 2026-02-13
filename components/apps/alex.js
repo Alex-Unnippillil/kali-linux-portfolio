@@ -115,28 +115,61 @@ export default displayAboutAlex;
 
 
 function About() {
+    const ctaRef = React.useRef(null);
+    const [showStickyCta, setShowStickyCta] = React.useState(false);
+    const ctaHref = "mailto:alex.unnippillil@hotmail.com";
+    const ctaLabel = "Let's Connect";
+
+    React.useEffect(() => {
+        const target = ctaRef.current;
+
+        if (typeof window === 'undefined' || !target || !('IntersectionObserver' in window)) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setShowStickyCta(!entry.isIntersecting);
+            },
+            { threshold: 1 }
+        );
+
+        observer.observe(target);
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <>
-            <div className="w-20 md:w-28 my-4 full">
-                <Image
-                    className="w-full"
-                    src="/images/logos/bitmoji.png"
-                    alt="Alex Unnippillil Logo"
-                    width={256}
-                    height={256}
-                    sizes="(max-width: 768px) 50vw, 25vw"
-                    priority
-                />
-            </div>
-            <div className=" mt-4 md:mt-8 text-lg md:text-2xl text-center px-1">
-                <div>My name is <span className="font-bold">Alex Unnippillil</span>, </div>
-                 <div className="font-normal ml-1">I&apos;m a <span className="text-ubt-blue font-bold"> Cybersecurity Specialist!</span></div>
-            </div>
-            <div className=" mt-4 relative md:my-8 pt-px bg-white w-32 md:w-48">
-                <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0"></div>
-                <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0"></div>
-            </div>
-            <ul className=" mt-4 leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
+            <section className="w-full flex flex-col items-center text-center px-6 pt-6 pb-4 md:pt-8 md:pb-6 space-y-4">
+                <div className="w-24 md:w-32">
+                    <Image
+                        className="w-full"
+                        src="/images/logos/bitmoji.png"
+                        alt="Alex Unnippillil Logo"
+                        width={256}
+                        height={256}
+                        sizes="(max-width: 768px) 40vw, 20vw"
+                        priority
+                    />
+                </div>
+                <div className="space-y-1 text-lg md:text-2xl leading-snug">
+                    <div>My name is <span className="font-bold">Alex Unnippillil</span>,</div>
+                    <div className="font-normal">I&apos;m a <span className="text-ubt-blue font-bold">Cybersecurity Specialist!</span></div>
+                </div>
+                <a
+                    ref={ctaRef}
+                    href={ctaHref}
+                    className="inline-flex w-full max-w-xs items-center justify-center rounded-full bg-ubt-blue px-5 py-2 text-sm font-semibold text-black shadow-lg transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey hover:-translate-y-0.5 hover:bg-ubt-blue/90"
+                >
+                    {ctaLabel}
+                </a>
+                <div className="relative mt-2 pt-px h-px w-24 md:w-40 bg-white/80">
+                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-0"></div>
+                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-0"></div>
+                </div>
+            </section>
+            <ul className="leading-tight tracking-tight text-sm md:text-base w-5/6 md:w-3/4 emoji-list">
                 <li className="list-pc">
                     I&apos;m a <span className=" font-medium">Technology Enthusiast</span> who thrives on learning and mastering the rapidly evolving world of tech. I completed four years of a{" "}
                     <a
@@ -186,6 +219,21 @@ function About() {
                     I also have interests in deep learning, software development, and animation.
                 </li>
             </ul>
+            {showStickyCta && (
+                <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40">
+                    <div
+                        className="pointer-events-auto mx-auto w-full max-w-md px-4"
+                        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 1rem)' }}
+                    >
+                        <a
+                            href={ctaHref}
+                            className="inline-flex w-full items-center justify-center rounded-full bg-ubt-blue px-5 py-2 text-sm font-semibold text-black shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-ub-cool-grey hover:bg-ubt-blue/90"
+                        >
+                            {ctaLabel}
+                        </a>
+                    </div>
+                </div>
+            )}
             <Timeline />
         </>
     )
@@ -307,6 +355,7 @@ const SkillSection = ({ title, badges }) => {
         value={filter}
         aria-label="Filter skills"
         onChange={(e) => setFilter(e.target.value)}
+        aria-label={`Filter ${title}`}
       />
       <div className="flex flex-wrap justify-center items-start w-full mt-2">
         {filteredBadges.map(badge => (
