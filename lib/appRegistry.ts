@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export type AppMetadata = {
   title: string;
   description: string;
@@ -12,13 +14,44 @@ type AppEntry = {
   icon?: string;
 };
 
+type MetadataOverride = Partial<
+  Pick<AppMetadata, 'title' | 'description' | 'path' | 'keyboard' | 'icon'>
+>;
+
+const appEntrySchema = z.object({
+  id: z
+    .string({ required_error: 'App entry is missing an id' })
+    .min(1, 'App entry id cannot be empty'),
+  title: z
+    .string({ required_error: 'App entry is missing a title' })
+    .min(1, 'App entry title cannot be empty'),
+  icon: z
+    .string({ invalid_type_error: 'App entry icon must be a string' })
+    .min(1, 'App entry icon cannot be empty')
+    .optional(),
+});
+
+const appRegistrySchema = z.array(appEntrySchema, {
+  invalid_type_error: 'App registry must be an array of app entries',
+});
+
+const metadataOverrideSchema: z.ZodType<MetadataOverride> = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  path: z.string().optional(),
+  keyboard: z.array(z.string()).optional(),
+  icon: z.string().optional(),
+});
+
+const metadataOverridesSchema = z.record(metadataOverrideSchema);
+
 const DEFAULT_KEYBOARD_HINTS = [
   'Enter — Launch app',
   'Ctrl+, — Open settings',
   'Alt+Tab — Switch apps',
 ];
 
-const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
+const metadataOverrides = metadataOverridesSchema.parse({
   terminal: {
     description: 'Simulated shell with offline commands and command history.',
     keyboard: [
@@ -65,6 +98,25 @@ const metadataOverrides: Partial<Record<string, Partial<AppMetadata>>> = {
   'mimikatz/offline': {
     description: 'Offline walkthrough of mimikatz credential extraction stages with canned data.',
   },
+});
+
+export const parseRegistryEntries = (input: unknown): AppEntry[] => {
+  const result = appRegistrySchema.safeParse(input);
+
+  if (!result.success) {
+    const details = result.error.issues
+      .map((issue) => {
+        const path = issue.path.length ? issue.path.join('.') : 'entry';
+        return `${path}: ${issue.message}`;
+      })
+      .join('; ');
+
+    const errorMessage = `Invalid app registry configuration: ${details}`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
+
+  return result.data;
 };
 
 export const buildAppMetadata = (app: AppEntry): AppMetadata => {
@@ -87,7 +139,8 @@ export const createRegistryMap = (apps: AppEntry[]): Record<string, AppMetadata>
 
 export const loadAppRegistry = async () => {
   const mod = await import('../apps.config');
-  const list: AppEntry[] = Array.isArray(mod.default) ? mod.default : [];
+  const list = parseRegistryEntries(mod?.default);
+
   return {
     apps: list,
     metadata: createRegistryMap(list),
