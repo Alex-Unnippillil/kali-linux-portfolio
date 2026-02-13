@@ -17,24 +17,39 @@ const BOOKMARKS = [
   { label: 'GoogleHackingDB', url: 'https://www.exploit-db.com/google-hacking-database' },
 ];
 
-const normaliseUrl = (value: string) => {
+type NormalisedUrl = {
+  url: string;
+  didFallback: boolean;
+};
+
+const normaliseUrl = (value: string): NormalisedUrl => {
   const trimmed = value.trim();
   if (!trimmed) {
-    return DEFAULT_URL;
+    return { url: DEFAULT_URL, didFallback: true };
   }
+
+  const base = typeof window !== 'undefined' ? window.location.href : DEFAULT_URL;
+
   try {
-    const hasProtocol = /^(https?:)?\/\//i.test(trimmed);
-    if (hasProtocol) {
-      const url = new URL(trimmed, window.location.href);
-      if (url.protocol === 'http:' || url.protocol === 'https:') {
-        return url.toString();
+    const protocolMatch = trimmed.match(/^([a-z][a-z0-9+.-]*):/i);
+    if (protocolMatch) {
+      const scheme = protocolMatch[1].toLowerCase();
+      if (scheme === 'http' || scheme === 'https') {
+        const url = new URL(trimmed, base);
+        return { url: url.toString(), didFallback: false };
       }
-      return DEFAULT_URL;
+      return { url: DEFAULT_URL, didFallback: true };
     }
+
+    if (/^\/\//.test(trimmed)) {
+      const url = new URL(`https:${trimmed}`);
+      return { url: url.toString(), didFallback: false };
+    }
+
     const candidate = new URL(`https://${trimmed}`);
-    return candidate.toString();
+    return { url: candidate.toString(), didFallback: false };
   } catch {
-    return DEFAULT_URL;
+    return { url: DEFAULT_URL, didFallback: true };
   }
 };
 
@@ -75,12 +90,12 @@ const Firefox: React.FC = () => {
       const start = sessionStorage.getItem(START_URL_KEY);
       if (start) {
         sessionStorage.removeItem(START_URL_KEY);
-        const url = normaliseUrl(start);
+        const { url } = normaliseUrl(start);
         localStorage.setItem(STORAGE_KEY, url);
         return url;
       }
       const last = localStorage.getItem(STORAGE_KEY);
-      return last ? normaliseUrl(last) : DEFAULT_URL;
+      return last ? normaliseUrl(last).url : DEFAULT_URL;
     } catch {
       return DEFAULT_URL;
     }
@@ -90,6 +105,8 @@ const Firefox: React.FC = () => {
   const [inputValue, setInputValue] = useState(initialUrl);
   const [simulation, setSimulation] = useState(() => getSimulation(initialUrl));
   const [isLoading, setIsLoading] = useState(() => !getSimulation(initialUrl));
+  const [correction, setCorrection] = useState<{ originalInput: string } | null>(null);
+  const [shouldHighlightCorrection, setShouldHighlightCorrection] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -108,16 +125,32 @@ const Firefox: React.FC = () => {
   }, []);
 
   const updateAddress = (value: string) => {
-    const url = normaliseUrl(value);
+    const { url, didFallback } = normaliseUrl(value);
     setAddress(url);
     setInputValue(url);
     const nextSimulation = getSimulation(url);
     setSimulation(nextSimulation);
-    setIsLoading(!nextSimulation);
+    setIsLoading(didFallback ? false : !nextSimulation);
+
+    if (didFallback) {
+      setCorrection({ originalInput: value });
+      setShouldHighlightCorrection(true);
+    } else {
+      setCorrection(null);
+      setShouldHighlightCorrection(false);
+    }
+
     try {
       localStorage.setItem(STORAGE_KEY, url);
     } catch {
       /* ignore persistence errors */
+    }
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(event.target.value);
+    if (shouldHighlightCorrection) {
+      setShouldHighlightCorrection(false);
     }
   };
 
@@ -128,6 +161,20 @@ const Firefox: React.FC = () => {
 
   const handleQuickFill = (url: string) => {
     setInputValue(url);
+    setCorrection(null);
+    setShouldHighlightCorrection(false);
+    if (inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  };
+
+  const restoreLastInput = () => {
+    if (!correction) {
+      return;
+    }
+    setInputValue(correction.originalInput);
+    setShouldHighlightCorrection(true);
     if (inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
@@ -144,12 +191,18 @@ const Firefox: React.FC = () => {
           Address
         </label>
         <div className="flex w-full flex-col gap-2 sm:flex-1">
-          <div className="flex min-w-0 items-center gap-3 rounded-md border border-[color:var(--kali-border)] bg-[var(--kali-control-surface)] px-3 py-2 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_12%,transparent)] focus-within:border-[color:var(--color-primary)] focus-within:ring-1 focus-within:ring-[color:var(--color-primary)]">
+          <div
+            className={`flex min-w-0 items-center gap-3 rounded-md border bg-[var(--kali-control-surface)] px-3 py-2 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_12%,transparent)] transition ${
+              shouldHighlightCorrection
+                ? 'border-[color:color-mix(in_srgb,var(--color-warning)_55%,transparent)] ring-1 ring-[color:color-mix(in_srgb,var(--color-warning)_65%,transparent)]'
+                : 'border-[color:var(--kali-border)]'
+            } focus-within:border-[color:var(--color-primary)] focus-within:ring-1 focus-within:ring-[color:var(--color-primary)]`}
+          >
             <input
               id="firefox-address"
               ref={inputRef}
               value={inputValue}
-              onChange={(event) => setInputValue(event.target.value)}
+              onChange={handleInputChange}
               placeholder="Enter a URL"
               aria-label="Address bar"
               className="flex-1 bg-transparent text-sm text-[color:var(--kali-text)] placeholder:text-[color:color-mix(in_srgb,var(--kali-text)_60%,transparent)] focus:outline-none"
@@ -163,11 +216,56 @@ const Firefox: React.FC = () => {
                 >
                   <span className="h-4 w-4 animate-spin rounded-full border border-[color:var(--color-primary)] border-t-transparent" />
                 </span>
+              ) : correction ? (
+                <span className="text-xs font-semibold text-[color:var(--color-warning)]">Corrected</span>
               ) : (
                 <span className="text-xs font-medium text-[color:var(--color-primary)]">Ready</span>
               )}
             </div>
           </div>
+          {correction && (
+            <div
+              className="flex flex-col gap-2 rounded-md border border-[color:color-mix(in_srgb,var(--color-warning)_55%,transparent)] bg-[color-mix(in_srgb,var(--kali-overlay)_85%,var(--kali-bg))] px-3 py-2 text-xs text-[color:color-mix(in_srgb,var(--color-warning)_70%,var(--kali-text))]"
+              role="status"
+              aria-live="polite"
+            >
+              <p>
+                We redirected you to the Kali Docs homepage (
+                <a
+                  href={DEFAULT_URL}
+                  className="text-[color:var(--color-warning)] underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-warning)]"
+                >
+                  {DEFAULT_URL}
+                </a>
+                ) because
+                {correction.originalInput.trim() ? (
+                  <>
+                    {' '}
+                    “
+                    <span className="break-all font-semibold text-[color:var(--kali-text)]">
+                      {correction.originalInput.trim()}
+                    </span>
+                    ”
+                  </>
+                ) : (
+                  ' the address was empty'
+                )}{' '}
+                didn’t look like a safe URL.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={restoreLastInput}
+                  className="inline-flex items-center gap-1 rounded border border-[color:color-mix(in_srgb,var(--color-warning)_45%,transparent)] bg-[var(--kali-control-surface)] px-2 py-1 text-[color:var(--kali-text)] transition hover:border-[color:var(--color-warning)] hover:text-[color:var(--color-warning)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-warning)]"
+                >
+                  Restore &amp; edit
+                </button>
+                <span className="text-[color:color-mix(in_srgb,var(--kali-text)_70%,var(--kali-bg))]">
+                  Update the address above and press Go to try again.
+                </span>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_86%,var(--kali-bg))] sm:justify-start">
             <div className="flex items-center gap-1 overflow-x-auto">
               {BOOKMARKS.slice(0, 5).map((bookmark) => (
@@ -202,7 +300,7 @@ const Firefox: React.FC = () => {
       <nav className="border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-2 py-2 text-xs sm:px-4" aria-label="Pinned sites">
         <div className="flex gap-1 overflow-x-auto pb-1">
           {BOOKMARKS.map((bookmark) => {
-            const normalizedBookmark = normaliseUrl(bookmark.url);
+            const normalizedBookmark = normaliseUrl(bookmark.url).url;
             const isActive = address === normalizedBookmark;
             return (
               <button
