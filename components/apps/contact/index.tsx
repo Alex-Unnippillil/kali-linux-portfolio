@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import FormError from '../../ui/FormError';
+import FormErrorSummary, {
+  FormErrorSummaryItem,
+} from '../../ui/FormErrorSummary';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
@@ -140,6 +143,10 @@ const uploadAttachments = async (files: File[]) => {
   }
 };
 
+type BannerState =
+  | { type: 'success'; message: string }
+  | { type: 'error'; message: string; focusKey: number };
+
 const ContactApp: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -147,14 +154,17 @@ const ContactApp: React.FC = () => {
   const [honeypot, setHoneypot] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [error, setError] = useState('');
-  const [banner, setBanner] = useState<
-    { type: 'success' | 'error'; message: string } | null
-  >(null);
+  const [banner, setBanner] = useState<BannerState | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [csrfToken, setCsrfToken] = useState('');
   const [fallback, setFallback] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [messageError, setMessageError] = useState('');
+  const [errorSummaryItems, setErrorSummaryItems] = useState<
+    FormErrorSummaryItem[]
+  >([]);
+  const bannerRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusKeyRef = useRef<number | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -191,6 +201,17 @@ const ContactApp: React.FC = () => {
     void writeDraft({ name, email, message });
   }, [name, email, message]);
 
+  useEffect(() => {
+    if (banner?.type === 'error') {
+      if (banner.focusKey !== lastFocusKeyRef.current) {
+        lastFocusKeyRef.current = banner.focusKey;
+        bannerRef.current?.focus();
+      }
+    } else if (!banner) {
+      lastFocusKeyRef.current = null;
+    }
+  }, [banner]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (submitting) return;
@@ -199,31 +220,58 @@ const ContactApp: React.FC = () => {
     setBanner(null);
     setEmailError('');
     setMessageError('');
+    setErrorSummaryItems([]);
 
     const emailResult = contactSchema.shape.email.safeParse(email);
     const messageResult = contactSchema.shape.message.safeParse(message);
+    const summaryItems: FormErrorSummaryItem[] = [];
     let hasValidationError = false;
     if (!emailResult.success) {
       setEmailError('Invalid email');
       hasValidationError = true;
+      summaryItems.push({
+        fieldId: 'contact-email',
+        label: 'Email',
+        message: 'Invalid email',
+      });
     }
     if (!messageResult.success) {
       setMessageError('1-1000 chars');
       hasValidationError = true;
+      summaryItems.push({
+        fieldId: 'contact-message',
+        label: 'Message',
+        message: '1-1000 chars',
+      });
     }
     if (hasValidationError) {
-      setBanner({ type: 'error', message: 'Failed to send' });
+      setErrorSummaryItems(summaryItems);
+      setBanner({
+        type: 'error',
+        message: 'Fix the highlighted fields',
+        focusKey: Date.now(),
+      });
       setSubmitting(false);
       return;
     }
     const totalSize = attachments.reduce((s, f) => s + f.size, 0);
     if (totalSize > MAX_TOTAL_ATTACHMENT_SIZE) {
-      setError(
-        `Attachments exceed the ${
-          MAX_TOTAL_ATTACHMENT_SIZE / (1024 * 1024)
-        }MB total limit.`
-      );
-      setBanner({ type: 'error', message: 'Failed to send' });
+      const limitMessage = `Attachments exceed the ${
+        MAX_TOTAL_ATTACHMENT_SIZE / (1024 * 1024)
+      }MB total limit.`;
+      setError(limitMessage);
+      setErrorSummaryItems([
+        {
+          fieldId: 'contact-attachments',
+          label: 'Attachments',
+          message: limitMessage,
+        },
+      ]);
+      setBanner({
+        type: 'error',
+        message: 'Fix the highlighted fields',
+        focusKey: Date.now(),
+      });
       setSubmitting(false);
       return;
     }
@@ -242,7 +290,11 @@ const ContactApp: React.FC = () => {
     if (shouldFallback) {
       setFallback(true);
       setError('Email service unavailable. Use the options above.');
-      setBanner({ type: 'error', message: 'Failed to send' });
+      setBanner({
+        type: 'error',
+        message: 'Email service unavailable. Use the options above.',
+        focusKey: Date.now(),
+      });
       setSubmitting(false);
       return;
     }
@@ -266,7 +318,11 @@ const ContactApp: React.FC = () => {
     } else {
       const msg = result.error || 'Submission failed';
       setError(msg);
-      setBanner({ type: 'error', message: msg });
+      setBanner({
+        type: 'error',
+        message: msg,
+        focusKey: Date.now(),
+      });
       if (
         result.code === 'server_not_configured' ||
         result.error?.toLowerCase().includes('captcha') ||
@@ -278,17 +334,26 @@ const ContactApp: React.FC = () => {
     setSubmitting(false);
   };
 
+  const summaryDescription = errorSummaryItems.length
+    ? 'Select an error below to jump to the field.'
+    : undefined;
+
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <h1 className="mb-6 text-2xl">Contact</h1>
-      {banner && (
-        <div
-          className={`mb-6 rounded p-3 text-sm ${
-            banner.type === 'success' ? 'bg-green-600' : 'bg-red-600'
-          }`}
-        >
+      {banner?.type === 'success' && (
+        <div className="mb-6 rounded bg-green-600 p-3 text-sm">
           {banner.message}
         </div>
+      )}
+      {banner?.type === 'error' && (
+        <FormErrorSummary
+          ref={bannerRef}
+          className="mb-6"
+          title={banner.message}
+          description={summaryDescription}
+          errors={errorSummaryItems}
+        />
       )}
       {fallback && (
         <p className="mb-6 text-sm">
@@ -316,7 +381,11 @@ const ContactApp: React.FC = () => {
           </button>
         </p>
       )}
-      <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-6 max-w-md"
+        noValidate
+      >
         <div className="relative">
           <input
             id="contact-name"
