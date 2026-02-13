@@ -5,7 +5,7 @@ import BurstChart from './BurstChart';
 import { protocolName, getRowColor, matchesDisplayFilter } from './utils';
 import DecodeTree from './DecodeTree';
 import FlowGraph from '../../../apps/wireshark/components/FlowGraph';
-import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
+import FilterBuilder from '../../../apps/wireshark/components/FilterBuilder';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 import { parsePcap } from '../../../utils/pcap';
 import SimulationBanner from '../SimulationBanner';
@@ -393,7 +393,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           aria-label="TLS key file"
           className="px-2 py-1 bg-gray-800 rounded text-white"
         />
-        <FilterHelper value={filter} onChange={handleFilterChange} />
+        <FilterBuilder
+          value={filter}
+          onChange={handleFilterChange}
+          onApply={handleFilterChange}
+        />
         <input
           value={bpf}
           onChange={handleBpfChange}
