@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import data from '../components/apps/nessus/sample-report.json';
 
 const severityColors: Record<string, string> = {
@@ -29,6 +29,20 @@ const NessusReport: React.FC = () => {
   const [host, setHost] = useState<string>('All');
   const [family, setFamily] = useState<string>('All');
   const [findings, setFindings] = useState<Finding[]>(data as Finding[]);
+  const closeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (selected) {
+      closeRef.current?.focus();
+    }
+  }, [selected]);
+
+  const handleDialogKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      closeRef.current?.focus();
+    }
+  };
 
   const hosts = useMemo(
     () => Array.from(new Set(findings.map((f) => f.host))).sort(),
@@ -163,6 +177,7 @@ const NessusReport: React.FC = () => {
           accept=".json"
           className="text-black p-1 rounded"
           onChange={handleFile}
+          aria-label="Import report"
         />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
@@ -281,9 +296,11 @@ const NessusReport: React.FC = () => {
       {selected && (
         <div
           role="dialog"
+          onKeyDown={handleDialogKey}
           className="fixed top-0 right-0 h-full w-80 bg-gray-800 p-4 overflow-auto shadow-lg"
         >
           <button
+            ref={closeRef}
             type="button"
             onClick={() => setSelected(null)}
             className="mb-2 text-sm bg-red-600 px-2 py-1 rounded"
