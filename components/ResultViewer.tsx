@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 
 interface ViewerProps {
   data: any[];
@@ -10,6 +10,8 @@ export default function ResultViewer({ data }: ViewerProps) {
   const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>('raw');
   const [sortKey, setSortKey] = useState('');
   const [filter, setFilter] = useState('');
+  const [isWrapped, setIsWrapped] = useState(true);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
 
   useEffect(() => {
     try {
@@ -75,6 +77,23 @@ export default function ResultViewer({ data }: ViewerProps) {
     URL.revokeObjectURL(url);
   };
 
+  const rawJson = useMemo(() => JSON.stringify(data, null, 2), [data]);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(rawJson);
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 2000);
+    } catch {
+      setCopyState('error');
+      setTimeout(() => setCopyState('idle'), 2000);
+    }
+  }, [rawJson]);
+
+  const toggleWrap = useCallback(() => {
+    setIsWrapped((prev) => !prev);
+  }, []);
+
   return (
     <div className="text-xs" aria-label="result viewer">
       <div role="tablist" className="mb-2 flex flex-wrap gap-2">
@@ -88,7 +107,40 @@ export default function ResultViewer({ data }: ViewerProps) {
           Chart
         </button>
       </div>
-      {tab === 'raw' && <pre className="bg-black text-white p-1 h-40 overflow-auto">{JSON.stringify(data, null, 2)}</pre>}
+      {tab === 'raw' && (
+        <div>
+          <div className="mb-2 flex justify-end">
+            <button
+              type="button"
+              onClick={toggleWrap}
+              aria-pressed={!isWrapped}
+              className="px-2 py-1 bg-ub-cool-grey text-white"
+            >
+              {isWrapped ? 'Enable horizontal scroll' : 'Enable soft wrap'}
+            </button>
+          </div>
+          <pre
+            className={`bg-black text-white p-1 h-40 ${
+              isWrapped
+                ? 'whitespace-pre-wrap break-words overflow-y-auto'
+                : 'whitespace-pre overflow-auto'
+            }`}
+          >
+            {rawJson}
+          </pre>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="px-2 py-1 bg-ub-green text-black"
+            >
+              Copy JSON
+            </button>
+            {copyState === 'copied' && <span className="text-ub-green">Copied!</span>}
+            {copyState === 'error' && <span className="text-red-400">Copy failed</span>}
+          </div>
+        </div>
+      )}
       {tab === 'parsed' && (
         <div>
           <details className="mb-2 space-y-2 rounded border border-black/30 bg-black/10 p-2">
