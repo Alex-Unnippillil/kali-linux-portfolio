@@ -5,7 +5,11 @@ import type {
   SimulatorParserResponse,
   ParsedLine,
 } from '../../workers/simulatorParser.worker';
-interface TabDefinition { id: string; title: string; content: React.ReactNode; }
+
+const TABS = [
+  { id: 'raw', title: 'Raw' },
+  { id: 'parsed', title: 'Parsed' },
+];
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
 
@@ -27,6 +31,11 @@ const Simulator: React.FC = () => {
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
+  const [wrapLines, setWrapLines] = usePersistentState<boolean>(
+    'simulator:wrapMode',
+    true,
+    (value): value is boolean => typeof value === 'boolean',
+  );
 
   useEffect(() => {
     const worker = new Worker(
@@ -119,48 +128,76 @@ const Simulator: React.FC = () => {
   // to keep the simulator lightweight and avoid installation errors.
 
 
-  const tabs: TabDefinition[] = [
-    { id: 'raw', title: 'Raw', content: <pre className="p-2 overflow-auto" aria-label="Raw output">{fixtureText}</pre> },
-    {
-      id: 'parsed',
-      title: 'Parsed',
-      content: (
-        <div className="p-2 space-y-2">
-          <div className="flex items-center space-x-2">
-            <input aria-label="Filter rows" className="border p-1 flex-grow" value={filter} onChange={(e)=>setFilter(e.target.value)} />
-            <button className="px-2 py-1 bg-gray-200" onClick={exportCSV} aria-label="Export CSV">CSV</button>
-          </div>
-          <div className="overflow-auto" style={{ maxHeight: 200 }}>
-            <table className="min-w-full text-sm" aria-label="Parsed table">
-              <thead>
-                <tr>
-                  <th className="cursor-pointer" onClick={()=>sortBy('line')}>Line</th>
-                  <th className="cursor-pointer" onClick={()=>sortBy('key')}>Key</th>
-                  <th className="cursor-pointer" onClick={()=>sortBy('value')}>Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered().map(p => (
-                  <tr key={p.line} className="odd:bg-gray-100">
-                    <td>{p.line}</td>
-                    <td>{p.key}</td>
-                    <td>{p.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )
+  const filteredRows = filtered();
 
-    },
+  const copyOutput = async () => {
+    try {
+      if (activeTab === 'parsed') {
+        const text = filteredRows.map(row => `${row.line}\t${row.key}\t${row.value}`).join('\n');
+        await navigator.clipboard.writeText(text);
+      } else {
+        await navigator.clipboard.writeText(fixtureText);
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
-  ];
+  const rawContent = (
+    <pre
+      className={`p-2 overflow-auto ${wrapLines ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'}`}
+      aria-label="Raw output"
+    >
+      {fixtureText}
+    </pre>
+  );
+
+  const parsedContent = (
+    <div className="p-2 space-y-2">
+      <div className="flex items-center space-x-2">
+        <input
+          aria-label="Filter rows"
+          className="border p-1 flex-grow"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+        <button className="px-2 py-1 bg-gray-200" onClick={exportCSV} aria-label="Export CSV">CSV</button>
+      </div>
+      <div className="overflow-auto" style={{ maxHeight: 200 }}>
+        <table className="min-w-full text-sm" aria-label="Parsed table">
+          <thead>
+            <tr>
+              <th className="cursor-pointer px-2 py-1 text-left" onClick={() => sortBy('line')}>Line</th>
+              <th className="cursor-pointer px-2 py-1 text-left" onClick={() => sortBy('key')}>Key</th>
+              <th className="cursor-pointer px-2 py-1 text-left" onClick={() => sortBy('value')}>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.map((p) => (
+              <tr key={`${p.line}-${p.key}-${p.value}`} className="odd:bg-gray-100">
+                <td className={`px-2 py-1 ${wrapLines ? 'break-words whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{p.line}</td>
+                <td className={`px-2 py-1 ${wrapLines ? 'break-words whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{p.key}</td>
+                <td className={`px-2 py-1 ${wrapLines ? 'break-words whitespace-pre-wrap' : 'whitespace-nowrap'}`}>{p.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const activeContent = activeTab === 'parsed' ? parsedContent : rawContent;
 
   return (
     <div className="space-y-4" aria-label="Simulator">
       <div className="flex items-center space-x-2">
-        <input id="labmode" type="checkbox" checked={labMode} onChange={e=>setLabMode(e.target.checked)} />
+        <input
+          id="labmode"
+          type="checkbox"
+          checked={labMode}
+          onChange={e => setLabMode(e.target.checked)}
+          aria-label="Toggle lab mode"
+        />
         <label htmlFor="labmode" className="font-semibold">Lab Mode</label>
       </div>
       {!labMode && (
@@ -182,13 +219,44 @@ const Simulator: React.FC = () => {
       {fixtureText && (
         <div className="border rounded" aria-label="Results">
           <div className="flex border-b" role="tablist">
-            {tabs.map(t => (
-              <button key={t.id} role="tab" className={`px-2 py-1 ${activeTab===t.id ? 'bg-gray-200':''}`} onClick={()=>setActiveTab(t.id)}>
-                {t.title}
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                className={`px-2 py-1 ${activeTab === tab.id ? 'bg-gray-200' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.title}
               </button>
             ))}
           </div>
-          <div>{tabs.find(t=>t.id===activeTab)?.content}</div>
+          <div className="flex items-center justify-between border-b bg-gray-100 px-2 py-1 text-sm text-gray-700">
+            <span>{wrapLines ? 'Wrapped display' : 'Horizontal scroll'}</span>
+            <button
+              type="button"
+              className="rounded bg-gray-200 px-2 py-1 text-gray-900 hover:bg-gray-300"
+              onClick={() => setWrapLines((prev: boolean) => !prev)}
+              aria-pressed={wrapLines}
+              aria-label="Toggle wrap mode"
+            >
+              {wrapLines ? 'Switch to horizontal' : 'Switch to wrap'}
+            </button>
+          </div>
+          <div role="tabpanel" aria-label={`${activeTab} output`}>
+            {activeContent}
+          </div>
+          <div className="border-t bg-gray-100 px-2 py-2 text-right">
+            <button
+              type="button"
+              className="rounded bg-blue-600 px-3 py-1 text-white hover:bg-blue-500"
+              onClick={copyOutput}
+              aria-label="Copy output"
+            >
+              Copy {activeTab === 'parsed' ? 'parsed' : 'raw'} output
+            </button>
+          </div>
         </div>
       )}
       {progress > 0 && progress < 1 && (
