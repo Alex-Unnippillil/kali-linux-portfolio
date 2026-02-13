@@ -1,157 +1,115 @@
-import {
-  createGame,
-  spawnUFO,
-  advanceWave,
-  stepGame,
-} from '../apps/games/space-invaders';
+import { createEngine, FIXED_TIMESTEP_MS } from '../components/apps/space-invaders/engine/engine';
+import { createInitialState } from '../components/apps/space-invaders/engine/state';
+import { applyProgression, resolveCollisions, updateInvaders } from '../components/apps/space-invaders/engine/systems';
 
-describe('space-invaders logic', () => {
-  test('initializes with shields and inactive ufo', () => {
-    const game = createGame();
-    expect(game.shields).toHaveLength(3);
-    game.shields.forEach((s) => expect(s.hp).toBe(12));
-    expect(game.ufo.active).toBe(false);
-  });
-
-  test('spawnUFO activates bonus target', () => {
-    const game = createGame();
-    spawnUFO(game);
-    expect(game.ufo.active).toBe(true);
-  });
-
-  test('advanceWave increments stage and invader count', () => {
-    const game = createGame();
-    game.invaders.forEach((i) => (i.alive = false));
-    const initialCount = game.invaders.length;
-    advanceWave(game);
-    expect(game.stage).toBe(2);
-    expect(game.invaders.length).toBeGreaterThan(initialCount);
-  });
-
-  test('paused step prevents player movement', () => {
-    const game = createGame();
-    const startX = game.player.x;
-    stepGame(game, { left: false, right: true, fire: false }, 1, {
-      paused: true,
-    });
-    expect(game.player.x).toBe(startX);
-  });
-
-  test('game over updates high score', () => {
-    const game = createGame();
-    game.highScore = 10;
-    game.score = 20;
-    game.lives = 1;
-    game.bullets.push({
-      x: game.player.x + 1,
-      y: game.player.y + 1,
-      dx: 0,
-      dy: 0,
-      active: true,
-      owner: 'enemy',
-    });
-    stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    expect(game.gameOver).toBe(true);
-    expect(game.highScore).toBe(20);
-  });
-
-  test('ufo awards classic score values', () => {
-    const game = createGame();
-    game.ufo.active = true;
-    game.bullets.push({
-      x: game.ufo.x + 1,
-      y: game.ufo.y + 1,
-      dx: 0,
-      dy: 0,
-      active: true,
+describe('space-invaders engine systems', () => {
+  test('bullet vs invader collision increments score', () => {
+    const state = createInitialState(480, 360, 0);
+    const target = state.invaders[0];
+    state.playerBullets.push({
+      x: target.x + 3,
+      y: target.y + 3,
+      w: 2,
+      h: 7,
+      vy: 0,
       owner: 'player',
-    });
-    const result = stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    const event = result.events.find((ev) => ev.type === 'ufo-destroyed');
-    expect(event?.value).toBeDefined();
-    expect([50, 100, 150, 300]).toContain(event?.value);
-  });
-
-  test('invaders reaching player line trigger game over', () => {
-    const game = createGame();
-    const target = game.invaders[0];
-    target.alive = true;
-    target.y = game.player.y - target.h + 1;
-    stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    expect(game.gameOver).toBe(true);
-  });
-
-  test('enemy bullets originate from front-line invader per column', () => {
-    const game = createGame();
-    game.bullets = [];
-    game.invaders.forEach((invader) => (invader.alive = false));
-    const columnInvaders = game.invaders.filter((invader) => invader.column === 0);
-    const top = columnInvaders[0];
-    const bottom = columnInvaders[columnInvaders.length - 1];
-    top.alive = true;
-    bottom.alive = true;
-    top.y = 40;
-    bottom.y = 140;
-    game.enemyCooldown = 0;
-    stepGame(game, { left: false, right: false, fire: false }, 0.016);
-    const enemyBullet = game.bullets.find((b) => b.active && b.owner === 'enemy');
-    expect(enemyBullet).toBeDefined();
-    expect(enemyBullet?.y).toBeCloseTo(bottom.y + bottom.h, 5);
-  });
-
-  test('player bullet cap limits active shots', () => {
-    const game = createGame();
-    game.player.cooldown = 0;
-    stepGame(game, { left: false, right: false, fire: true }, 0.016);
-    const firstCount = game.bullets.filter(
-      (bullet) => bullet.active && bullet.owner === 'player',
-    ).length;
-    expect(firstCount).toBe(1);
-    game.player.cooldown = 0;
-    stepGame(game, { left: false, right: false, fire: true }, 0.016);
-    const secondCount = game.bullets.filter(
-      (bullet) => bullet.active && bullet.owner === 'player',
-    ).length;
-    expect(secondCount).toBe(1);
-  });
-
-  test('top row invaders award more points than bottom row', () => {
-    const topGame = createGame();
-    topGame.invaders.forEach((invader) => (invader.alive = false));
-    const topInvader = topGame.invaders.find((invader) => invader.row === 0);
-    expect(topInvader).toBeDefined();
-    if (!topInvader) return;
-    topInvader.alive = true;
-    topGame.bullets.push({
-      x: topInvader.x + 1,
-      y: topInvader.y + 1,
-      dx: 0,
-      dy: 0,
       active: true,
-      owner: 'player',
     });
-    stepGame(topGame, { left: false, right: false, fire: false }, 0);
-    const topScore = topGame.score;
 
-    const bottomGame = createGame();
-    bottomGame.invaders.forEach((invader) => (invader.alive = false));
-    const bottomInvader = bottomGame.invaders.find(
-      (invader) => invader.row === Math.max(...bottomGame.invaders.map((inv) => inv.row)),
-    );
-    expect(bottomInvader).toBeDefined();
-    if (!bottomInvader) return;
-    bottomInvader.alive = true;
-    bottomGame.bullets.push({
-      x: bottomInvader.x + 1,
-      y: bottomInvader.y + 1,
-      dx: 0,
-      dy: 0,
+    const events: Array<{ type: string }> = [];
+    resolveCollisions(state, FIXED_TIMESTEP_MS, events as any);
+
+    expect(target.alive).toBe(false);
+    expect(state.score).toBeGreaterThan(0);
+    expect(events.some((event) => event.type === 'invader-hit')).toBe(true);
+  });
+
+  test('bullet vs shield chips shield segments', () => {
+    const state = createInitialState(480, 360, 0);
+    const shield = state.shields[0];
+    const before = shield.segments[0];
+    state.playerBullets.push({
+      x: shield.x + 1,
+      y: shield.y + 1,
+      w: 2,
+      h: 7,
+      vy: 0,
+      owner: 'player',
       active: true,
-      owner: 'player',
     });
-    stepGame(bottomGame, { left: false, right: false, fire: false }, 0);
-    const bottomScore = bottomGame.score;
 
-    expect(topScore).toBeGreaterThan(bottomScore);
+    const events: Array<{ type: string }> = [];
+    resolveCollisions(state, FIXED_TIMESTEP_MS, events as any);
+
+    expect(shield.segments[0]).toBeLessThan(before);
+    expect(events.some((event) => event.type === 'shield-hit')).toBe(true);
+  });
+
+  test('alien bullet vs player consumes a life', () => {
+    const state = createInitialState(480, 360, 0);
+    state.invaderBullets.push({
+      x: state.player.x + 2,
+      y: state.player.y + 1,
+      w: 2,
+      h: 7,
+      vy: 0,
+      owner: 'invader',
+      active: true,
+    });
+
+    resolveCollisions(state, FIXED_TIMESTEP_MS, []);
+    expect(state.lives).toBe(2);
+  });
+
+  test('invader marching flips direction and steps down at edges', () => {
+    const state = createInitialState(480, 360, 0);
+    const invader = state.invaders[0];
+    state.invaders.forEach((item) => {
+      if (item.alive) item.x = state.width - item.w - 7;
+    });
+    const beforeY = invader.y;
+    const beforeDir = state.invaderDir;
+    state.invaderStepProgressMs = state.invaderMoveMs;
+
+    updateInvaders(state, FIXED_TIMESTEP_MS);
+
+    expect(state.invaderDir).toBe(beforeDir * -1);
+    expect(invader.y).toBeGreaterThan(beforeY);
+  });
+
+  test('speed increases as invaders are removed', () => {
+    const state = createInitialState(480, 360, 0);
+    const initialSpeed = state.invaderMoveMs;
+    state.invaders.slice(0, 20).forEach((invader) => {
+      invader.alive = false;
+    });
+    state.invaderStepProgressMs = state.invaderMoveMs;
+
+    updateInvaders(state, FIXED_TIMESTEP_MS);
+
+    expect(state.invaderMoveMs).toBeLessThan(initialSpeed);
+  });
+
+  test('level progression triggers when all invaders are defeated', () => {
+    const state = createInitialState(480, 360, 0);
+    state.invaders.forEach((invader) => {
+      invader.alive = false;
+    });
+
+    const events: Array<{ type: string }> = [];
+    applyProgression(state, events as any);
+
+    expect(state.level).toBe(2);
+    expect(events.some((event) => event.type === 'level-clear')).toBe(true);
+  });
+
+  test('engine high score keeps previous stored best', () => {
+    const engine = createEngine({ width: 480, height: 360, seed: 5 });
+    engine.setHighScore(1234);
+    engine.start();
+    for (let i = 0; i < 20; i += 1) {
+      engine.step(FIXED_TIMESTEP_MS, { left: false, right: false, fire: false });
+    }
+    expect(engine.getState().highScore).toBe(1234);
   });
 });
