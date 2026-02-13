@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
+import WordlistTools from './WordlistTools';
 
 export const hashTypes = [
   {
@@ -699,6 +700,9 @@ function HashcatApp() {
       </pre>
       <div className="text-xs mt-4">
         This tool simulates hash cracking for educational purposes only.
+      </div>
+      <div className="w-full mt-6">
+        <WordlistTools />
       </div>
     </div>
   );
