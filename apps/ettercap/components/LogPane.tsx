@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { KeyboardEvent, useEffect, useId, useState } from 'react';
+import { safeLocalStorage } from '../../../utils/safeStorage';
 
 export interface LogEntry {
   id: number;
   level: 'info' | 'warn' | 'error';
   message: string;
 }
+
+const STORAGE_KEY = 'ettercap.logPane.collapsed';
 
 const levelColors: Record<LogEntry['level'], string> = {
   info: 'bg-blue-600',
@@ -15,7 +18,24 @@ const levelColors: Record<LogEntry['level'], string> = {
 };
 
 export default function LogPane({ logs }: { logs: LogEntry[] }) {
-  const [collapsed, setCollapsed] = useState(false);
+  const regionId = useId();
+  const headingId = `${regionId}-heading`;
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    if (!safeLocalStorage) return false;
+    try {
+      return safeLocalStorage.getItem(STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      safeLocalStorage?.setItem(STORAGE_KEY, collapsed ? 'true' : 'false');
+    } catch {
+      // ignore storage quota failures
+    }
+  }, [collapsed]);
 
   const copyAll = () => {
     const text = logs
@@ -37,10 +57,21 @@ export default function LogPane({ logs }: { logs: LogEntry[] }) {
     URL.revokeObjectURL(url);
   };
 
+  const toggleCollapsed = () => setCollapsed((c) => !c);
+
+  const handleDisclosureKey = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+      event.preventDefault();
+      setCollapsed(event.key === 'ArrowLeft');
+    }
+  };
+
   return (
     <div className="mt-4 border rounded bg-gray-900 text-white text-sm">
       <div className="flex items-center justify-between px-2 py-1 bg-gray-800">
-        <span className="font-bold">Logs</span>
+        <h2 id={headingId} className="font-bold text-sm">
+          Logs
+        </h2>
         <div className="flex gap-2">
           <button
             type="button"
@@ -59,14 +90,26 @@ export default function LogPane({ logs }: { logs: LogEntry[] }) {
           <button
             type="button"
             className="text-xs underline"
-            onClick={() => setCollapsed((c) => !c)}
+            onClick={toggleCollapsed}
+            onKeyDown={handleDisclosureKey}
+            aria-expanded={!collapsed}
+            aria-controls={regionId}
+            aria-labelledby={`${headingId} ${regionId}-label`}
           >
-            {collapsed ? 'Expand' : 'Collapse'}
+            <span id={`${regionId}-label`}>
+              {collapsed ? 'Expand' : 'Collapse'}
+            </span>
           </button>
         </div>
       </div>
-      {!collapsed && (
-        <ul className="max-h-40 overflow-auto">
+      <div
+        id={regionId}
+        role="region"
+        aria-labelledby={headingId}
+        aria-hidden={collapsed}
+        className={`max-h-40 overflow-auto ${collapsed ? 'hidden' : ''}`}
+      >
+        <ul>
           {logs.map((log) => (
             <li
               key={log.id}
@@ -89,7 +132,7 @@ export default function LogPane({ logs }: { logs: LogEntry[] }) {
             </li>
           ))}
         </ul>
-      )}
+      </div>
     </div>
   );
 }
