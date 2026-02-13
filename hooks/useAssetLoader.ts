@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createCancelScope, type CancelScope } from '../utils/cancel';
 
 interface AssetLoaderOptions {
   images?: string[];
@@ -20,8 +21,24 @@ export default function useAssetLoader(
 ): AssetLoaderState {
   const [state, setState] = useState<AssetLoaderState>({ loading: true, error: false });
 
+  const scopeRef = useRef<CancelScope | null>(null);
+
   useEffect(() => {
-    let cancelled = false;
+    let unmounted = false;
+    if (scopeRef.current) {
+      scopeRef.current.abort({ message: 'restart asset load' });
+      scopeRef.current.dispose();
+    }
+    const cancelScope = createCancelScope('useAssetLoader', {
+      meta: { images: images.length, sounds: sounds.length },
+    });
+    scopeRef.current = cancelScope;
+
+    const removeAbort = cancelScope.onAbort(() => {
+      if (!unmounted) {
+        setState((prev) => (prev.loading ? { ...prev, loading: false } : prev));
+      }
+    });
 
     const loadImage = (src: string) => new Promise<void>((resolve, reject) => {
       const img = new Image();
@@ -45,14 +62,17 @@ export default function useAssetLoader(
       ...sounds.map(loadSound),
     ])
       .then(() => {
-        if (!cancelled) setState({ loading: false, error: false });
+        if (!cancelScope.signal.aborted) setState({ loading: false, error: false });
       })
       .catch(() => {
-        if (!cancelled) setState({ loading: false, error: true });
+        if (!cancelScope.signal.aborted) setState({ loading: false, error: true });
       });
 
     return () => {
-      cancelled = true;
+      unmounted = true;
+      removeAbort();
+      cancelScope.abort({ message: 'asset loader cleanup' });
+      cancelScope.dispose();
     };
   }, [images, sounds]);
 
