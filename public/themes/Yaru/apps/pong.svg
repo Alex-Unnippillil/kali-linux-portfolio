@@ -1,6 +1,26 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <rect x="8" y="20" width="4" height="24" fill="#ffffff"/>
-  <rect x="52" y="20" width="4" height="24" fill="#ffffff"/>
-  <circle cx="32" cy="32" r="4" fill="#ffffff"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Retro Pong paddles and ball icon</title>
+  <desc id="desc">Dark court with two white paddles, a glowing ball, and a dotted center line.</desc>
+  <defs>
+    <linearGradient id="court" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1f24" />
+      <stop offset="100%" stop-color="#14181c" />
+    </linearGradient>
+    <radialGradient id="ball" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f7fbff" />
+      <stop offset="0.6" stop-color="#f7fbff" />
+      <stop offset="1" stop-color="#9cc9ff" stop-opacity="0.65" />
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="8" fill="url(#court)" />
+  <g opacity="0.35" stroke="#9aa3ab" stroke-dasharray="2 3" stroke-width="1" transform="translate(32 8)">
+    <line y1="0" y2="48" />
+  </g>
+  <rect x="10" y="18" width="5" height="28" rx="2" fill="#f3f6f9" />
+  <rect x="49" y="22" width="5" height="20" rx="2" fill="#f3f6f9" />
+  <circle cx="33" cy="28" r="5" fill="url(#ball)" />
+  <path d="M23 12h18a2 2 0 0 1 2 2v4H21v-4a2 2 0 0 1 2-2z" fill="#1f2630" opacity="0.55" />
+  <text x="32" y="19" fill="#f3f6f9" font-family="'Share Tech Mono', 'Roboto Mono', monospace" font-size="6" text-anchor="middle">
+    08 : 12
+  </text>
 </svg>
