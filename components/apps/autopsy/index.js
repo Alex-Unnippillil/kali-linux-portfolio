@@ -9,6 +9,185 @@ import demoArtifacts from './data/sample-artifacts.json';
 import ReportExport from '../../../apps/autopsy/components/ReportExport';
 import demoCase from '../../../apps/autopsy/data/case.json';
 
+const FNV_OFFSET_BASIS = 0x811c9dc5;
+const FNV_PRIME = 0x01000193;
+
+const defaultNow = () =>
+  typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+
+const defaultRandom = () => Math.random();
+
+const randomHex = (rng = defaultRandom, length = 64) => {
+  let out = '';
+  for (let i = 0; i < length; i += 1) {
+    const val = Math.floor(rng() * 16) & 0xf;
+    out += val.toString(16);
+  }
+  return out;
+};
+
+const normalizeHash = (hash) => (typeof hash === 'string' ? hash.toLowerCase() : String(hash || ''));
+
+const fnv1a = (value, seed = FNV_OFFSET_BASIS) => {
+  let hash = seed >>> 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, FNV_PRIME);
+  }
+  return hash >>> 0;
+};
+
+export class CompactBloomFilter {
+  constructor(bitSize, hashCount) {
+    const size = Math.max(1, bitSize | 0);
+    const hashes = Math.max(1, hashCount | 0);
+    this.size = size;
+    this.hashCount = hashes;
+    this.words = new Uint32Array(Math.ceil(size / 32));
+    this.count = 0;
+  }
+
+  static optimalSize(itemCount, falsePositiveRate) {
+    if (!itemCount || itemCount <= 0) return 1;
+    const rate = Math.min(Math.max(falsePositiveRate, 1e-9), 0.5);
+    const ln2 = Math.log(2);
+    return Math.max(1, Math.ceil((-itemCount * Math.log(rate)) / (ln2 * ln2)));
+  }
+
+  static optimalHashes(bitSize, itemCount) {
+    if (!itemCount || itemCount <= 0) return 1;
+    return Math.max(1, Math.round((bitSize / itemCount) * Math.log(2)));
+  }
+
+  static create(itemCount, falsePositiveRate = 0.001) {
+    const bitSize = CompactBloomFilter.optimalSize(itemCount, falsePositiveRate);
+    const hashCount = CompactBloomFilter.optimalHashes(bitSize, itemCount);
+    return new CompactBloomFilter(bitSize, hashCount);
+  }
+
+  add(value) {
+    const normalized = normalizeHash(value);
+    const [h1, h2] = this.#hashes(normalized);
+    const size = this.size;
+    const stepRaw = ((h2 % size) + size) % size;
+    const step = stepRaw === 0 ? 1 : stepRaw;
+    for (let i = 0; i < this.hashCount; i += 1) {
+      const combined = (h1 + Math.imul(i, step)) >>> 0;
+      const idx = combined % size;
+      const wordIndex = idx >>> 5;
+      const mask = 1 << (idx & 31);
+      this.words[wordIndex] |= mask;
+    }
+    this.count += 1;
+  }
+
+  has(value) {
+    const normalized = normalizeHash(value);
+    const [h1, h2] = this.#hashes(normalized);
+    const size = this.size;
+    const stepRaw = ((h2 % size) + size) % size;
+    const step = stepRaw === 0 ? 1 : stepRaw;
+    for (let i = 0; i < this.hashCount; i += 1) {
+      const combined = (h1 + Math.imul(i, step)) >>> 0;
+      const idx = combined % size;
+      const wordIndex = idx >>> 5;
+      const mask = 1 << (idx & 31);
+      if ((this.words[wordIndex] & mask) === 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  #hashes(value) {
+    const seedA = fnv1a(value, FNV_OFFSET_BASIS);
+    const seedB = fnv1a(value, FNV_OFFSET_BASIS ^ 0xdeadbeef);
+    const h1 = seedA >>> 0;
+    const h2 = (seedB | 1) >>> 0; // ensure odd to avoid cycling over same index
+    return [h1, h2];
+  }
+}
+
+export const createHashLookup = (input, falsePositiveRate = 0.001) => {
+  const entries = Array.isArray(input)
+    ? input.filter((item) => Array.isArray(item) && item.length >= 1)
+    : Object.entries(input || {});
+  const fallback = new Map();
+  const hashes = [];
+  for (const [hash, value] of entries) {
+    if (!hash) continue;
+    const normalized = normalizeHash(hash);
+    fallback.set(normalized, value);
+    hashes.push(normalized);
+  }
+  if (hashes.length === 0) {
+    return { filter: null, fallback };
+  }
+  const filter = CompactBloomFilter.create(hashes.length, falsePositiveRate);
+  hashes.forEach((hash) => filter.add(hash));
+  return { filter, fallback };
+};
+
+export const benchmarkHashLookup = (
+  filter,
+  fallback,
+  { iterations = 10000, randomFn = defaultRandom, now = defaultNow } = {}
+) => {
+  if (!filter) {
+    return {
+      lookups: 0,
+      positivesChecked: 0,
+      randomLookups: 0,
+      falsePositives: 0,
+      falsePositiveRate: 0,
+      misses: 0,
+      durationMs: 0,
+    };
+  }
+  const positivesChecked = Math.min(
+    fallback.size,
+    Math.max(1, Math.floor(iterations * 0.05))
+  );
+  const keys = [];
+  if (positivesChecked > 0) {
+    for (const key of fallback.keys()) {
+      keys.push(key);
+      if (keys.length >= positivesChecked) break;
+    }
+  }
+  const totalLookups = Math.max(iterations, keys.length);
+  const randomLookups = Math.max(0, totalLookups - keys.length);
+  const start = now();
+  let falsePositives = 0;
+  let misses = 0;
+  for (let i = 0; i < totalLookups; i += 1) {
+    if (i < keys.length) {
+      const candidate = keys[i];
+      if (!filter.has(candidate)) {
+        misses += 1;
+      }
+    } else {
+      const candidate = randomHex(randomFn);
+      if (filter.has(candidate) && !fallback.has(candidate)) {
+        falsePositives += 1;
+      }
+    }
+  }
+  const durationMs = Math.max(0, now() - start);
+  const rate = randomLookups > 0 ? falsePositives / randomLookups : 0;
+  return {
+    lookups: totalLookups,
+    positivesChecked: keys.length,
+    randomLookups,
+    falsePositives,
+    falsePositiveRate: rate,
+    misses,
+    durationMs,
+  };
+};
+
 const escapeFilename = (str = '') =>
   str
     .replace(/&/g, '&amp;')
@@ -356,7 +535,11 @@ function Autopsy({ initialArtifacts = null }) {
   const [endTime, setEndTime] = useState('');
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [fileTree, setFileTree] = useState(null);
-  const [hashDB, setHashDB] = useState({});
+  const [hashLookup, setHashLookup] = useState(() => ({
+    filter: null,
+    fallback: new Map(),
+    metrics: null,
+  }));
   const [selectedFile, setSelectedFile] = useState(null);
   const [keyword, setKeyword] = useState('');
   const [previewTab, setPreviewTab] = useState('hex');
@@ -420,14 +603,32 @@ function Autopsy({ initialArtifacts = null }) {
         })
         .catch(() => setArtifacts(demoArtifacts));
     }
+    let cancelled = false;
     fetch('/demo-data/autopsy/filetree.json')
       .then((res) => res.json())
-      .then((data) => setFileTree(data && data.name ? data : null))
-      .catch(() => setFileTree(null));
+      .then((data) => {
+        if (!cancelled) {
+          setFileTree(data && data.name ? data : null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setFileTree(null);
+      });
     fetch('/demo-data/autopsy/hashes.json')
       .then((res) => res.json())
-      .then((data) => setHashDB(data || {}))
-      .catch(() => setHashDB({}));
+      .then((data) => {
+        if (cancelled) return;
+        const { filter, fallback } = createHashLookup(data || {});
+        const metrics = benchmarkHashLookup(filter, fallback);
+        setHashLookup({ filter, fallback, metrics });
+      })
+      .catch(() => {
+        if (!cancelled)
+          setHashLookup({ filter: null, fallback: new Map(), metrics: null });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [currentCase, initialArtifacts]);
 
   useEffect(() => {
@@ -533,7 +734,13 @@ function Autopsy({ initialArtifacts = null }) {
         const buf = await crypto.subtle.digest('SHA-256', bytes);
         hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
       }
-      const known = hashDB[hash];
+      const normalizedHash = normalizeHash(hash);
+      const filterHit =
+        hashLookup.filter?.has(normalizedHash) ||
+        hashLookup.fallback.has(normalizedHash);
+      const known = filterHit
+        ? hashLookup.fallback.get(normalizedHash) || null
+        : null;
       let imageUrl = null;
       const isImage = /\.(png|jpe?g|gif|bmp|webp)$/i.test(file.name);
       if (isImage && typeof URL !== 'undefined') {
@@ -547,7 +754,7 @@ function Autopsy({ initialArtifacts = null }) {
         name: file.name,
         hex,
         strings,
-        hash,
+        hash: normalizedHash,
         known,
         imageUrl,
       });
@@ -756,6 +963,24 @@ function Autopsy({ initialArtifacts = null }) {
                   {selectedFile.known && (
                     <div className="mb-1 text-kali-accent">
                       Known: {selectedFile.known}
+                    </div>
+                  )}
+                  {hashLookup.metrics && (
+                    <div className="mb-2 text-[10px] text-gray-300 space-y-0.5">
+                      <div className="uppercase tracking-wide text-gray-400">
+                        Bloom filter benchmark (10k lookups)
+                      </div>
+                      <div>
+                        Time: {hashLookup.metrics.durationMs.toFixed(2)} ms
+                      </div>
+                      <div>
+                        False positives: {(hashLookup.metrics.falsePositiveRate * 100).toFixed(3)}%
+                      </div>
+                      {hashLookup.metrics.misses > 0 && (
+                        <div className="text-ub-orange">
+                          Missed positives: {hashLookup.metrics.misses}
+                        </div>
+                      )}
                     </div>
                   )}
                   <div className="flex space-x-2 mb-2">
