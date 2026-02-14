@@ -3,7 +3,7 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
-import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import { Capstone, Const, loadCapstone } from 'libs/capstone';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
