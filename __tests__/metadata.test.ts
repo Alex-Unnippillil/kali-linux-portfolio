@@ -14,6 +14,7 @@ describe('modules metadata', () => {
             description: 'The session to run this module on.',
           },
         ],
+        docPath: '/docs/modules/getsystem.md',
       },
       {
         name: 'keyscan_start',
@@ -26,6 +27,7 @@ describe('modules metadata', () => {
             description: 'The session to run this module on.',
           },
         ],
+        docPath: '/docs/modules/keyscan_start.md',
       },
       {
         name: 'persistence_service',
@@ -43,6 +45,7 @@ describe('modules metadata', () => {
             description: 'Remote port used for callback.',
           },
         ],
+        docPath: '/docs/modules/persistence_service.md',
       },
       {
         name: 'hashdump',
@@ -55,6 +58,7 @@ describe('modules metadata', () => {
             description: 'The session to run this module on.',
           },
         ],
+        docPath: '/docs/modules/hashdump.md',
       },
     ]);
   });
