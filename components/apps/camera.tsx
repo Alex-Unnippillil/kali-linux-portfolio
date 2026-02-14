@@ -107,6 +107,7 @@ const CameraApp = () => {
   const [trackCaps, setTrackCaps] = useState<VideoTrackCaps>({});
   const [zoom, setZoom] = useState<number | null>(null);
   const [torch, setTorch] = useState(false);
+  const [cameraPermissionState, setCameraPermissionState] = useState<PermissionState | 'unknown'>('unknown');
 
   const hasMediaSupport = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
   const hasMediaRecorder = typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined';
@@ -362,11 +363,13 @@ const CameraApp = () => {
 
   const persistCapture = useCallback(
     async (filename: string, blob: Blob) => {
-      if (!opfsSupported) return;
+      if (!opfsSupported) return false;
       const dir = await getDir('Media/Camera', { create: true });
-      if (!dir) return;
-      await writeFile(filename, blob, dir);
+      if (!dir) return false;
+      const wrote = await writeFile(filename, blob, dir);
+      if (!wrote) return false;
       await loadPersistedFiles();
+      return true;
     },
     [getDir, loadPersistedFiles, opfsSupported, writeFile],
   );
@@ -415,16 +418,22 @@ const CameraApp = () => {
     if (!blob) return;
     const stamp = formatDateStamp(new Date());
     const name = `IMG_${stamp}.png`;
-    const url = URL.createObjectURL(blob);
-    sessionUrlRef.current.push(url);
-    addSessionCapture({
-      name,
-      type: 'photo',
-      url,
-      createdAt: new Date().toISOString(),
-    });
-    await persistCapture(name, blob);
-    setLiveMessage('Photo captured.');
+    const persisted = await persistCapture(name, blob);
+
+    if (!persisted) {
+      const url = URL.createObjectURL(blob);
+      sessionUrlRef.current.push(url);
+      addSessionCapture({
+        name,
+        type: 'photo',
+        url,
+        createdAt: new Date().toISOString(),
+      });
+      setLiveMessage('Photo captured for this session. Use Download to save locally.');
+      return;
+    }
+
+    setLiveMessage('Photo saved to Files > Media/Camera.');
   }, [addSessionCapture, capturePhotoBlob, persistCapture]);
 
   const cancelCountdown = useCallback(() => {
@@ -501,18 +510,24 @@ const CameraApp = () => {
       const ext = recorder.mimeType.includes('webm') ? 'webm' : 'dat';
       const stamp = formatDateStamp(new Date());
       const name = `VID_${stamp}.${ext}`;
-      const url = URL.createObjectURL(blob);
-      sessionUrlRef.current.push(url);
-      addSessionCapture({
-        name,
-        type: 'video',
-        url,
-        createdAt: new Date().toISOString(),
+      void persistCapture(name, blob).then((persisted) => {
+        if (persisted) {
+          setLiveMessage('Recording saved to Files > Media/Camera.');
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        sessionUrlRef.current.push(url);
+        addSessionCapture({
+          name,
+          type: 'video',
+          url,
+          createdAt: new Date().toISOString(),
+        });
+        setLiveMessage('Recording kept for this session. Use Download to save locally.');
       });
-      void persistCapture(name, blob);
       setIsRecording(false);
       setIsPaused(false);
-      setLiveMessage('Recording saved.');
     };
 
     recorder.start();
@@ -579,6 +594,44 @@ const CameraApp = () => {
   }, [loadDevices]);
 
   useEffect(() => {
+    if (typeof navigator === 'undefined' || !navigator.permissions?.query) return;
+
+    let mounted = true;
+    let permissionStatus: PermissionStatus | null = null;
+
+    const syncPermissionState = async () => {
+      try {
+        permissionStatus = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        if (!mounted) return;
+
+        const nextState = permissionStatus.state;
+        setCameraPermissionState(nextState);
+
+        permissionStatus.onchange = () => {
+          const currentState = permissionStatus?.state ?? 'prompt';
+          setCameraPermissionState(currentState);
+          if (currentState === 'granted') {
+            setError(null);
+            setLiveMessage('Camera permission granted. Start camera to connect.');
+            void loadDevices();
+          }
+        };
+      } catch {
+        setCameraPermissionState('unknown');
+      }
+    };
+
+    void syncPermissionState();
+
+    return () => {
+      mounted = false;
+      if (permissionStatus) {
+        permissionStatus.onchange = null;
+      }
+    };
+  }, [loadDevices]);
+
+  useEffect(() => {
     const sessionUrls = sessionUrlRef.current;
     const persistedUrls = persistedUrlRef.current;
     return () => {
@@ -638,127 +691,137 @@ const CameraApp = () => {
         {liveMessage} {countdown > 0 ? `Countdown ${countdown}` : ''}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3 text-sm">
-        <div className="flex items-center gap-2">
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">{status === 'streaming' ? 'Live' : 'Offline'}</span>
-          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">{allCaptures.length} items</span>
-          {audioEnabled && mode === 'video' && <span className="text-emerald-300">Audio On</span>}
-        </div>
-        <button className="rounded border border-white/10 px-3 py-1 hover:bg-white/10" onClick={openInFiles}>
-          Open in Files
-        </button>
-      </div>
+      <div className="mx-auto flex h-full w-full max-w-5xl flex-1 flex-col gap-4 overflow-hidden p-4">
+        <section className="mx-auto flex h-full w-full max-w-md flex-1 flex-col gap-3">
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-3 py-2 text-sm">
+            <span className="text-slate-300">Camera</span>
+            <div className="flex items-center gap-2">
+              {status === 'streaming' && <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-semibold text-black">Live</span>}
+              <button className="rounded-lg border border-white/10 px-2 py-1 hover:bg-white/10" onClick={openInFiles}>
+                Files
+              </button>
+            </div>
+          </div>
 
-      <div className="grid flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr_320px]">
-        <section className="flex min-h-0 flex-col gap-3">
           <div className="flex flex-wrap gap-2">
             <button
-              className={`rounded px-3 py-2 ${mode === 'photo' ? 'bg-cyan-500 text-black' : 'bg-white/10'}`}
-              aria-pressed={mode === 'photo'}
-              onClick={() => setMode('photo')}
-            >
-              Photo
-            </button>
-            <button
-              className={`rounded px-3 py-2 ${mode === 'video' ? 'bg-cyan-500 text-black' : 'bg-white/10'} ${!hasMediaRecorder ? 'cursor-not-allowed opacity-60' : ''}`}
-              aria-pressed={mode === 'video'}
-              onClick={() => hasMediaRecorder && setMode('video')}
-              disabled={!hasMediaRecorder}
-            >
-              Video
-            </button>
-            <button
               aria-label="Start camera"
-              className="rounded bg-emerald-500 px-3 py-2 font-semibold text-black disabled:opacity-60"
+              className="rounded-xl bg-emerald-500 px-3 py-2 text-sm font-semibold text-black disabled:opacity-60"
               onClick={() => void startCameraFromAction()}
               disabled={status === 'loading'}
             >
               Start Camera
             </button>
-            <button aria-label="Stop camera" className="rounded bg-white/10 px-3 py-2" onClick={stopStream}>
+            <button aria-label="Stop camera" className="rounded-xl bg-white/10 px-3 py-2 text-sm" onClick={stopStream}>
               Stop
             </button>
           </div>
 
           {error && <div className="rounded border border-red-500/50 bg-red-500/10 p-2 text-sm text-red-200">{error}</div>}
+          {cameraPermissionState === 'denied' && (
+            <div className="rounded border border-amber-500/50 bg-amber-500/10 p-2 text-xs text-amber-100">
+              Camera access is blocked in browser/site settings. Allow camera access, then click “Start Camera”.
+            </div>
+          )}
           {videoUnavailableMessage && <div className="rounded border border-yellow-500/50 bg-yellow-500/10 p-2 text-xs">{videoUnavailableMessage}</div>}
 
-          <div className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">
-            <label className="flex flex-col gap-1">
-              Camera source
-              <select
-                className="rounded bg-black/50 px-2 py-1"
-                value={activeDeviceId}
-                onChange={(event) => {
-                  const id = event.target.value;
-                  setActiveDeviceId(id);
-                  void startStream(id || undefined);
-                }}
-              >
-                <option value="">Default</option>
-                {devices.map((device, index) => (
-                  <option key={device.deviceId} value={device.deviceId}>
-                    {device.label || `Camera ${index + 1}`}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1">
-              Effects
-              <select className="rounded bg-black/50 px-2 py-1" value={effect} onChange={(event) => setEffect(event.target.value as EffectMode)}>
-                {EFFECT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {mode === 'photo' && (
+          <details className="rounded-2xl border border-white/10 bg-black/30 p-3" open>
+            <summary className="cursor-pointer text-sm font-medium text-slate-200">Controls</summary>
+            <div className="mt-3 grid gap-3 text-sm">
               <label className="flex flex-col gap-1">
-                Timer
+                Capture mode
                 <select
-                  className="rounded bg-black/50 px-2 py-1"
-                  value={timerOption}
-                  onChange={(event) => setTimerOption(Number(event.target.value) as TimerOption)}
+                  aria-label="Capture mode"
+                  className="rounded-xl bg-black/50 px-2 py-2"
+                  value={mode}
+                  onChange={(event) => {
+                    const nextMode = event.target.value as CaptureMode;
+                    if (nextMode === 'video' && !hasMediaRecorder) return;
+                    setMode(nextMode);
+                  }}
                 >
-                  <option value={0}>Off</option>
-                  <option value={3}>3s</option>
-                  <option value={10}>10s</option>
+                  <option value="photo">Still</option>
+                  <option value="video" disabled={!hasMediaRecorder}>
+                    Clip
+                  </option>
                 </select>
               </label>
-            )}
 
-            <button
-              className="rounded bg-white/10 px-2 py-1 text-left"
-              aria-label="Toggle mirror preview"
-              aria-pressed={isPreviewMirrored}
-              onClick={() => setIsPreviewMirrored((prev) => !prev)}
-            >
-              Mirror preview: {isPreviewMirrored ? 'On' : 'Off'}
-            </button>
-
-            <button
-              className="rounded bg-white/10 px-2 py-1 text-left"
-              aria-label="Toggle mirror selfie captures"
-              aria-pressed={mirrorSelfieCapture}
-              onClick={() => setMirrorSelfieCapture((prev) => !prev)}
-            >
-              Mirror selfie captures: {mirrorSelfieCapture ? 'On' : 'Off'}
-            </button>
-
-            <button
-              className="rounded bg-white/10 px-2 py-1 text-left"
-              aria-label="Toggle grid overlay"
-              aria-pressed={showGrid}
-              onClick={() => setShowGrid((prev) => !prev)}
-            >
-              Grid overlay: {showGrid ? 'On' : 'Off'}
-            </button>
-
-            {trackCaps.zoom && zoom !== null && (
               <label className="flex flex-col gap-1">
+                Camera source
+                <select
+                  className="rounded-xl bg-black/50 px-2 py-2"
+                  value={activeDeviceId}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    setActiveDeviceId(id);
+                    void startStream(id || undefined);
+                  }}
+                >
+                  <option value="">Default</option>
+                  {devices.map((device, index) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || `Camera ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="flex flex-col gap-1">
+                Effects
+                <select className="rounded-xl bg-black/50 px-2 py-2" value={effect} onChange={(event) => setEffect(event.target.value as EffectMode)}>
+                  {EFFECT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {mode === 'photo' && (
+                <label className="flex flex-col gap-1">
+                  Timer
+                  <select
+                    className="rounded-xl bg-black/50 px-2 py-2"
+                    value={timerOption}
+                    onChange={(event) => setTimerOption(Number(event.target.value) as TimerOption)}
+                  >
+                    <option value={0}>Off</option>
+                    <option value={3}>3s</option>
+                    <option value={10}>10s</option>
+                  </select>
+                </label>
+              )}
+
+              <button
+                className="rounded-xl bg-white/10 px-2 py-2 text-left"
+                aria-label="Toggle mirror preview"
+                aria-pressed={isPreviewMirrored}
+                onClick={() => setIsPreviewMirrored((prev) => !prev)}
+              >
+                Mirror preview: {isPreviewMirrored ? 'On' : 'Off'}
+              </button>
+
+              <button
+                className="rounded-xl bg-white/10 px-2 py-2 text-left"
+                aria-label="Toggle mirror selfie captures"
+                aria-pressed={mirrorSelfieCapture}
+                onClick={() => setMirrorSelfieCapture((prev) => !prev)}
+              >
+                Mirror selfie captures: {mirrorSelfieCapture ? 'On' : 'Off'}
+              </button>
+
+              <button
+                className="rounded-xl bg-white/10 px-2 py-2 text-left"
+                aria-label="Toggle grid overlay"
+                aria-pressed={showGrid}
+                onClick={() => setShowGrid((prev) => !prev)}
+              >
+                Grid overlay: {showGrid ? 'On' : 'Off'}
+              </button>
+
+              {trackCaps.zoom && zoom !== null && (
+                <label className="flex flex-col gap-1">
                 Zoom
                 <input
                   aria-label="Zoom level"
@@ -769,43 +832,44 @@ const CameraApp = () => {
                   value={zoom}
                   onChange={(event) => setZoom(Number(event.target.value))}
                 />
-              </label>
-            )}
+                </label>
+              )}
 
-            {trackCaps.torch && (
-              <button
-                className="rounded bg-white/10 px-2 py-1 text-left"
+              {trackCaps.torch && (
+                <button
+                  className="rounded-xl bg-white/10 px-2 py-2 text-left"
                 aria-label="Toggle torch"
                 aria-pressed={torch}
                 onClick={() => setTorch((prev) => !prev)}
               >
                 Torch: {torch ? 'On' : 'Off'}
-              </button>
-            )}
+                </button>
+              )}
 
-            {mode === 'video' && (
-              <>
-                <button
-                  className="rounded bg-white/10 px-2 py-1 text-left"
+              {mode === 'video' && (
+                <>
+                  <button
+                    className="rounded-xl bg-white/10 px-2 py-2 text-left"
                   aria-label="Toggle audio"
                   aria-pressed={audioEnabled}
                   onClick={() => setAudioEnabled((prev) => !prev)}
                 >
                   Audio: {audioEnabled ? 'On' : 'Off'}
-                </button>
-                <button
-                  className="rounded bg-white/10 px-2 py-1 text-left"
+                  </button>
+                  <button
+                    className="rounded-xl bg-white/10 px-2 py-2 text-left"
                   aria-label="Toggle record with effects"
                   aria-pressed={recordWithEffects}
                   onClick={() => setRecordWithEffects((prev) => !prev)}
                 >
                   Record with effects: {recordWithEffects ? 'On' : 'Off'}
-                </button>
-              </>
-            )}
-          </div>
+                  </button>
+                </>
+              )}
+            </div>
+          </details>
 
-          <div className="relative min-h-[220px] flex-1 overflow-hidden rounded-xl border border-white/10 bg-black">
+          <div className="relative min-h-[280px] flex-1 overflow-hidden rounded-[1.75rem] border border-white/10 bg-black">
             <video ref={videoRef} playsInline autoPlay muted aria-label="Camera source feed" className="hidden" />
             <canvas ref={previewCanvasRef} aria-label="Camera preview" className="h-full w-full object-cover" />
             {showGrid && (
@@ -821,35 +885,34 @@ const CameraApp = () => {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {mode === 'photo' ? (
               <button
-                className="rounded bg-cyan-500 px-4 py-2 font-semibold text-black disabled:opacity-50"
+                className="rounded-full bg-cyan-500 px-5 py-2 font-semibold text-black disabled:opacity-50"
                 onClick={() => void handleCapturePhoto()}
                 disabled={status !== 'streaming'}
               >
-                Capture Photo
+                Shoot
               </button>
             ) : (
               <>
                 <button
-                  className="rounded bg-cyan-500 px-4 py-2 font-semibold text-black disabled:opacity-50"
+                  className="rounded-full bg-cyan-500 px-5 py-2 font-semibold text-black disabled:opacity-50"
                   onClick={isRecording ? stopRecording : startRecording}
                   disabled={status !== 'streaming' || !hasMediaRecorder}
                 >
-                  {isRecording ? 'Stop Recording' : 'Start Recording'}
+                  {isRecording ? 'Stop' : 'Record'}
                 </button>
-                <button className="rounded bg-white/10 px-4 py-2 disabled:opacity-50" disabled={!isRecording || !canPause} onClick={togglePause}>
+                <button className="rounded-full bg-white/10 px-4 py-2 disabled:opacity-50" disabled={!isRecording || !canPause} onClick={togglePause}>
                   {isPaused ? 'Resume' : 'Pause'}
                 </button>
               </>
             )}
           </div>
-        </section>
 
-        <aside className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10">
-          <div className="border-b border-white/10 p-3 text-sm">Gallery</div>
-          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+          <aside className="flex min-h-[140px] flex-col overflow-hidden rounded-2xl border border-white/10">
+            <div className="border-b border-white/10 p-3 text-sm">Gallery</div>
+            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
             {allCaptures.length === 0 && <p className="text-xs text-slate-400">No captures yet.</p>}
             {allCaptures.map((item) => (
               <div key={item.id} className="rounded border border-white/10 bg-black/30 p-2 text-xs">
@@ -863,14 +926,22 @@ const CameraApp = () => {
                     <p className="truncate">{item.name}</p>
                     <p className="text-slate-400">{item.persisted ? 'OPFS' : 'Session'}</p>
                   </div>
+                  <a
+                    className="rounded bg-cyan-600/70 px-2 py-1 text-cyan-50 hover:bg-cyan-500"
+                    href={item.url}
+                    download={item.name}
+                  >
+                    Download
+                  </a>
                   <button className="rounded bg-white/10 px-2 py-1" onClick={() => void handleDelete(item)}>
                     Delete
                   </button>
                 </div>
               </div>
             ))}
-          </div>
-        </aside>
+            </div>
+          </aside>
+        </section>
       </div>
     </div>
   );

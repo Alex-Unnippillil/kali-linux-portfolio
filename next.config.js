@@ -16,7 +16,8 @@ const ContentSecurityPolicy = [
   // Disallow all plugins and other embedded objects
   "object-src 'none'",
   // Allow external images and data URIs for badges/icons
-  "img-src 'self' https: data:",
+  "img-src 'self' https: data: blob:",
+  "media-src 'self' data: blob:",
   // Allow inline styles
   "style-src 'self' 'unsafe-inline'",
   // Explicitly allow inline style tags
@@ -51,7 +52,7 @@ const securityHeaders = [
   },
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=*',
+    value: 'camera=(self), microphone=(self), geolocation=*',
   },
   {
     // Allow same-origin framing so the PDF resume renders in an <object>
