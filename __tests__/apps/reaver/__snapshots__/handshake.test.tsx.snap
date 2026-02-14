@@ -1,0 +1,617 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`HandshakeVisualizer renders the handshake diagram 1`] = `
+<DocumentFragment>
+  <section
+    aria-labelledby="«r0»"
+    class="bg-gray-800 rounded p-4"
+  >
+    <h3
+      class="text-base font-semibold text-white mb-3"
+      id="«r0»"
+    >
+      WPA2 4-Way Handshake
+    </h3>
+    <div
+      class="relative"
+    >
+      <svg
+        aria-describedby="«r0»-desc"
+        class="w-full h-auto text-gray-200"
+        role="img"
+        viewBox="0 0 380 550"
+      >
+        <title>
+          WPA2 4-Way Handshake sequence diagram
+        </title>
+        <desc
+          id="«r0»-desc"
+        >
+          M1 from Access Point to Client. M2 from Client to Access Point. M3 from Access Point to Client. M4 from Client to Access Point
+        </desc>
+        <defs>
+          <marker
+            fill="currentColor"
+            id="arrow-head"
+            markerHeight="7"
+            markerWidth="10"
+            orient="auto"
+            refX="10"
+            refY="3.5"
+          >
+            <polygon
+              points="0 0, 10 3.5, 0 7"
+            />
+          </marker>
+        </defs>
+        <g>
+          <text
+            class="fill-gray-100 text-xs uppercase tracking-wide"
+            text-anchor="middle"
+            x="80"
+            y="18"
+          >
+            Access Point
+          </text>
+          <circle
+            class="fill-gray-200"
+            cx="80"
+            cy="40"
+            r="6"
+          />
+          <line
+            class="stroke-gray-600"
+            stroke-dasharray="6 6"
+            stroke-width="2"
+            x1="80"
+            x2="80"
+            y1="40"
+            y2="510"
+          />
+        </g>
+        <g>
+          <text
+            class="fill-gray-100 text-xs uppercase tracking-wide"
+            text-anchor="middle"
+            x="300"
+            y="18"
+          >
+            Client
+          </text>
+          <circle
+            class="fill-gray-200"
+            cx="300"
+            cy="40"
+            r="6"
+          />
+          <line
+            class="stroke-gray-600"
+            stroke-dasharray="6 6"
+            stroke-width="2"
+            x1="300"
+            x2="300"
+            y1="40"
+            y2="510"
+          />
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="80"
+            x2="300"
+            y1="80"
+            y2="80"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="70"
+          >
+            M1
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="49"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Access Point → Client
+              </span>
+              <button
+                aria-label="Copy M1 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="300"
+            x2="80"
+            y1="190"
+            y2="190"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="180"
+          >
+            M2
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="159"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Client → Access Point
+              </span>
+              <button
+                aria-label="Copy M2 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="80"
+            x2="300"
+            y1="300"
+            y2="300"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="290"
+          >
+            M3
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="269"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Access Point → Client
+              </span>
+              <button
+                aria-label="Copy M3 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="300"
+            x2="80"
+            y1="410"
+            y2="410"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="400"
+          >
+            M4
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="379"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Client → Access Point
+              </span>
+              <button
+                aria-label="Copy M4 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+      </svg>
+    </div>
+    <ol
+      class="mt-4 space-y-3 text-sm text-gray-200"
+    >
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M1:
+        </span>
+         Authenticator sends ANonce and security parameters to start the handshake.
+      </li>
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M2:
+        </span>
+         Supplicant responds with SNonce and a MIC computed with the PTK.
+      </li>
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M3:
+        </span>
+         Authenticator sends the GTK and a MIC, instructing the client to install the PTK.
+      </li>
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M4:
+        </span>
+         Supplicant acknowledges installation of the PTK completing the handshake.
+      </li>
+    </ol>
+  </section>
+</DocumentFragment>
+`;
+
+exports[`HandshakeVisualizer shows feedback after copying a step: copied state 1`] = `
+<DocumentFragment>
+  <section
+    aria-labelledby="«r1»"
+    class="bg-gray-800 rounded p-4"
+  >
+    <h3
+      class="text-base font-semibold text-white mb-3"
+      id="«r1»"
+    >
+      WPA2 4-Way Handshake
+    </h3>
+    <div
+      class="relative"
+    >
+      <svg
+        aria-describedby="«r1»-desc"
+        class="w-full h-auto text-gray-200"
+        role="img"
+        viewBox="0 0 380 550"
+      >
+        <title>
+          WPA2 4-Way Handshake sequence diagram
+        </title>
+        <desc
+          id="«r1»-desc"
+        >
+          M1 from Access Point to Client. M2 from Client to Access Point. M3 from Access Point to Client. M4 from Client to Access Point
+        </desc>
+        <defs>
+          <marker
+            fill="currentColor"
+            id="arrow-head"
+            markerHeight="7"
+            markerWidth="10"
+            orient="auto"
+            refX="10"
+            refY="3.5"
+          >
+            <polygon
+              points="0 0, 10 3.5, 0 7"
+            />
+          </marker>
+        </defs>
+        <g>
+          <text
+            class="fill-gray-100 text-xs uppercase tracking-wide"
+            text-anchor="middle"
+            x="80"
+            y="18"
+          >
+            Access Point
+          </text>
+          <circle
+            class="fill-gray-200"
+            cx="80"
+            cy="40"
+            r="6"
+          />
+          <line
+            class="stroke-gray-600"
+            stroke-dasharray="6 6"
+            stroke-width="2"
+            x1="80"
+            x2="80"
+            y1="40"
+            y2="510"
+          />
+        </g>
+        <g>
+          <text
+            class="fill-gray-100 text-xs uppercase tracking-wide"
+            text-anchor="middle"
+            x="300"
+            y="18"
+          >
+            Client
+          </text>
+          <circle
+            class="fill-gray-200"
+            cx="300"
+            cy="40"
+            r="6"
+          />
+          <line
+            class="stroke-gray-600"
+            stroke-dasharray="6 6"
+            stroke-width="2"
+            x1="300"
+            x2="300"
+            y1="40"
+            y2="510"
+          />
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="80"
+            x2="300"
+            y1="80"
+            y2="80"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="70"
+          >
+            M1
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="49"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Access Point → Client
+              </span>
+              <button
+                aria-label="Copy M1 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copied!
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="300"
+            x2="80"
+            y1="190"
+            y2="190"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="180"
+          >
+            M2
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="159"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Client → Access Point
+              </span>
+              <button
+                aria-label="Copy M2 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="80"
+            x2="300"
+            y1="300"
+            y2="300"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="290"
+          >
+            M3
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="269"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Access Point → Client
+              </span>
+              <button
+                aria-label="Copy M3 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+        <g>
+          <line
+            class="stroke-green-400"
+            marker-end="url(#arrow-head)"
+            stroke-width="3"
+            x1="300"
+            x2="80"
+            y1="410"
+            y2="410"
+          />
+          <text
+            class="fill-gray-200 text-xs font-semibold"
+            text-anchor="middle"
+            x="190"
+            y="400"
+          >
+            M4
+          </text>
+          <foreignobject
+            height="46"
+            width="200"
+            x="90"
+            y="379"
+          >
+            <div
+              class="pointer-events-auto flex items-center justify-center gap-2"
+              xmlns="http://www.w3.org/1999/xhtml"
+            >
+              <span
+                class="rounded bg-gray-900/80 px-2 py-1 text-xs text-gray-200 shadow"
+              >
+                Client → Access Point
+              </span>
+              <button
+                aria-label="Copy M4 details"
+                class="rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                type="button"
+              >
+                Copy
+              </button>
+            </div>
+          </foreignobject>
+        </g>
+      </svg>
+    </div>
+    <ol
+      class="mt-4 space-y-3 text-sm text-gray-200"
+    >
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M1:
+        </span>
+         Authenticator sends ANonce and security parameters to start the handshake.
+      </li>
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M2:
+        </span>
+         Supplicant responds with SNonce and a MIC computed with the PTK.
+      </li>
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M3:
+        </span>
+         Authenticator sends the GTK and a MIC, instructing the client to install the PTK.
+      </li>
+      <li>
+        <span
+          class="font-semibold text-white"
+        >
+          M4:
+        </span>
+         Supplicant acknowledges installation of the PTK completing the handshake.
+      </li>
+    </ol>
+  </section>
+</DocumentFragment>
+`;
