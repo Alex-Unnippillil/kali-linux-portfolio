@@ -146,6 +146,16 @@ describe('Camera app', () => {
   });
 
   it('Photo capture adds Blob object URL and not base64', async () => {
+    mockedUseOPFS.mockReturnValue({
+      supported: false,
+      root: null,
+      getDir: jest.fn(),
+      readFile: jest.fn(),
+      writeFile: jest.fn(),
+      deleteFile: jest.fn(),
+      listFiles: jest.fn(() => Promise.resolve([])),
+    });
+
     render(<CameraApp />);
     await startCamera();
 
@@ -155,6 +165,7 @@ describe('Camera app', () => {
     const photo = screen.getByRole('img');
     expect(photo).toHaveAttribute('src', 'blob:test-url');
     expect(photo.getAttribute('src')).not.toContain('data:image');
+    expect(screen.getByRole('link', { name: /download/i })).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
   });
 
   it('Countdown appears and can be canceled', async () => {

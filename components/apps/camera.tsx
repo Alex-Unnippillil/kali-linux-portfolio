@@ -363,11 +363,13 @@ const CameraApp = () => {
 
   const persistCapture = useCallback(
     async (filename: string, blob: Blob) => {
-      if (!opfsSupported) return;
+      if (!opfsSupported) return false;
       const dir = await getDir('Media/Camera', { create: true });
-      if (!dir) return;
-      await writeFile(filename, blob, dir);
+      if (!dir) return false;
+      const wrote = await writeFile(filename, blob, dir);
+      if (!wrote) return false;
       await loadPersistedFiles();
+      return true;
     },
     [getDir, loadPersistedFiles, opfsSupported, writeFile],
   );
@@ -416,16 +418,22 @@ const CameraApp = () => {
     if (!blob) return;
     const stamp = formatDateStamp(new Date());
     const name = `IMG_${stamp}.png`;
-    const url = URL.createObjectURL(blob);
-    sessionUrlRef.current.push(url);
-    addSessionCapture({
-      name,
-      type: 'photo',
-      url,
-      createdAt: new Date().toISOString(),
-    });
-    await persistCapture(name, blob);
-    setLiveMessage('Photo captured.');
+    const persisted = await persistCapture(name, blob);
+
+    if (!persisted) {
+      const url = URL.createObjectURL(blob);
+      sessionUrlRef.current.push(url);
+      addSessionCapture({
+        name,
+        type: 'photo',
+        url,
+        createdAt: new Date().toISOString(),
+      });
+      setLiveMessage('Photo captured for this session. Use Download to save locally.');
+      return;
+    }
+
+    setLiveMessage('Photo saved to Files > Media/Camera.');
   }, [addSessionCapture, capturePhotoBlob, persistCapture]);
 
   const cancelCountdown = useCallback(() => {
@@ -502,18 +510,24 @@ const CameraApp = () => {
       const ext = recorder.mimeType.includes('webm') ? 'webm' : 'dat';
       const stamp = formatDateStamp(new Date());
       const name = `VID_${stamp}.${ext}`;
-      const url = URL.createObjectURL(blob);
-      sessionUrlRef.current.push(url);
-      addSessionCapture({
-        name,
-        type: 'video',
-        url,
-        createdAt: new Date().toISOString(),
+      void persistCapture(name, blob).then((persisted) => {
+        if (persisted) {
+          setLiveMessage('Recording saved to Files > Media/Camera.');
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        sessionUrlRef.current.push(url);
+        addSessionCapture({
+          name,
+          type: 'video',
+          url,
+          createdAt: new Date().toISOString(),
+        });
+        setLiveMessage('Recording kept for this session. Use Download to save locally.');
       });
-      void persistCapture(name, blob);
       setIsRecording(false);
       setIsPaused(false);
-      setLiveMessage('Recording saved.');
     };
 
     recorder.start();
@@ -912,6 +926,13 @@ const CameraApp = () => {
                     <p className="truncate">{item.name}</p>
                     <p className="text-slate-400">{item.persisted ? 'OPFS' : 'Session'}</p>
                   </div>
+                  <a
+                    className="rounded bg-cyan-600/70 px-2 py-1 text-cyan-50 hover:bg-cyan-500"
+                    href={item.url}
+                    download={item.name}
+                  >
+                    Download
+                  </a>
                   <button className="rounded bg-white/10 px-2 py-1" onClick={() => void handleDelete(item)}>
                     Delete
                   </button>

@@ -28,7 +28,8 @@ export function middleware(req: NextRequest) {
 
   const csp = [
     "default-src 'self'",
-    "img-src 'self' https: data:",
+    "img-src 'self' https: data: blob:",
+    "media-src 'self' data: blob:",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
     `script-src ${scriptSrc.join(' ')}`,
