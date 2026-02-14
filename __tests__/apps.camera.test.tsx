@@ -149,7 +149,7 @@ describe('Camera app', () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.click(screen.getByRole('button', { name: /capture photo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob)));
     const photo = screen.getByRole('img');
@@ -163,7 +163,7 @@ describe('Camera app', () => {
     await startCamera();
 
     fireEvent.change(screen.getByLabelText('Timer'), { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: /capture photo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
 
     expect(screen.getByText('3')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
@@ -182,7 +182,7 @@ describe('Camera app', () => {
     render(<CameraApp />);
 
     expect(screen.getByText(/video mode is unavailable/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Video' })).toBeDisabled();
+    expect(screen.getByRole('option', { name: 'Clip' })).toBeDisabled();
   });
 
   it('OPFS save path uses getDir(Media/Camera) and writeFile with Blob', async () => {
@@ -202,7 +202,7 @@ describe('Camera app', () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.click(screen.getByRole('button', { name: /capture photo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
 
     await waitFor(() => expect(getDir).toHaveBeenCalledWith('Media/Camera', { create: true }));
     await waitFor(() => expect(writeFile).toHaveBeenCalledWith(expect.stringMatching(/^IMG_/), expect.any(Blob), expect.anything()));
