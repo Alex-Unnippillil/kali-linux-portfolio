@@ -88,9 +88,18 @@ const Firefox: React.FC = () => {
 
   const [address, setAddress] = useState(initialUrl);
   const [inputValue, setInputValue] = useState(initialUrl);
+  const [historyState, setHistoryState] = useState(() => ({
+    stack: [initialUrl],
+    index: 0,
+  }));
   const [simulation, setSimulation] = useState(() => getSimulation(initialUrl));
   const [isLoading, setIsLoading] = useState(() => !getSimulation(initialUrl));
   const inputRef = useRef<HTMLInputElement>(null);
+  const frameRef = useRef<HTMLIFrameElement>(null);
+  const historyStack = historyState.stack;
+  const historyIndex = historyState.index;
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < historyStack.length - 1;
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -107,7 +116,7 @@ const Firefox: React.FC = () => {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
-  const updateAddress = (value: string) => {
+  const updateAddress = (value: string, options?: { pushHistory?: boolean }) => {
     const url = normaliseUrl(value);
     setAddress(url);
     setInputValue(url);
@@ -118,6 +127,22 @@ const Firefox: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, url);
     } catch {
       /* ignore persistence errors */
+    }
+    if (options?.pushHistory ?? true) {
+      setHistoryState((current) => {
+        const trimmed = current.stack.slice(0, current.index + 1);
+        if (trimmed[trimmed.length - 1] === url) {
+          return {
+            stack: trimmed,
+            index: trimmed.length - 1,
+          };
+        }
+        const nextStack = [...trimmed, url];
+        return {
+          stack: nextStack,
+          index: nextStack.length - 1,
+        };
+      });
     }
   };
 
@@ -134,6 +159,64 @@ const Firefox: React.FC = () => {
     }
   };
 
+  const getFrameWindow = () => {
+    if (simulation) {
+      return null;
+    }
+    try {
+      const frameWindow = frameRef.current?.contentWindow;
+      if (!frameWindow) {
+        return null;
+      }
+      void frameWindow.location.href;
+      return frameWindow;
+    } catch {
+      return null;
+    }
+  };
+
+  const syncFrameLocation = () => {
+    const frameWindow = getFrameWindow();
+    if (!frameWindow) {
+      return false;
+    }
+    const href = frameWindow.location.href;
+    if (!href) {
+      return false;
+    }
+    updateAddress(href, { pushHistory: false });
+    return true;
+  };
+
+  const handleHistoryNavigation = (direction: 'back' | 'forward') => {
+    const delta = direction === 'back' ? -1 : 1;
+    const nextIndex = historyIndex + delta;
+    if (nextIndex < 0 || nextIndex >= historyStack.length) {
+      return;
+    }
+    const frameWindow = getFrameWindow();
+    if (frameWindow?.history) {
+      frameWindow.history[direction]();
+      setHistoryState((current) => ({
+        ...current,
+        index: nextIndex,
+      }));
+      if (typeof window !== 'undefined') {
+        window.setTimeout(() => {
+          if (!syncFrameLocation()) {
+            updateAddress(historyStack[nextIndex], { pushHistory: false });
+          }
+        }, 0);
+      }
+      return;
+    }
+    setHistoryState((current) => ({
+      ...current,
+      index: nextIndex,
+    }));
+    updateAddress(historyStack[nextIndex], { pushHistory: false });
+  };
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-[var(--kali-surface)] text-[color:var(--kali-text)]">
       <form
@@ -145,6 +228,34 @@ const Firefox: React.FC = () => {
         </label>
         <div className="flex w-full flex-col gap-2 sm:flex-1">
           <div className="flex min-w-0 items-center gap-3 rounded-md border border-[color:var(--kali-border)] bg-[var(--kali-control-surface)] px-3 py-2 shadow-[inset_0_1px_0_color-mix(in_srgb,var(--kali-text)_12%,transparent)] focus-within:border-[color:var(--color-primary)] focus-within:ring-1 focus-within:ring-[color:var(--color-primary)]">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleHistoryNavigation('back')}
+                disabled={!canGoBack}
+                aria-label="Go back"
+                className={`inline-flex h-7 w-7 items-center justify-center rounded border border-[color:var(--kali-border)] text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)] ${
+                  canGoBack
+                    ? 'bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] text-[color:var(--kali-text)] hover:border-[color:var(--color-primary)]'
+                    : 'cursor-not-allowed bg-[color-mix(in_srgb,var(--kali-overlay)_60%,var(--kali-bg))] text-[color:color-mix(in_srgb,var(--kali-text)_50%,var(--kali-bg))]'
+                }`}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                onClick={() => handleHistoryNavigation('forward')}
+                disabled={!canGoForward}
+                aria-label="Go forward"
+                className={`inline-flex h-7 w-7 items-center justify-center rounded border border-[color:var(--kali-border)] text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)] ${
+                  canGoForward
+                    ? 'bg-[color-mix(in_srgb,var(--kali-overlay)_90%,var(--kali-bg))] text-[color:var(--kali-text)] hover:border-[color:var(--color-primary)]'
+                    : 'cursor-not-allowed bg-[color-mix(in_srgb,var(--kali-overlay)_60%,var(--kali-bg))] text-[color:color-mix(in_srgb,var(--kali-text)_50%,var(--kali-bg))]'
+                }`}
+              >
+                →
+              </button>
+            </div>
             <input
               id="firefox-address"
               ref={inputRef}
@@ -250,6 +361,7 @@ const Firefox: React.FC = () => {
           <FirefoxSimulationView simulation={simulation} />
         ) : (
           <EmbedFrame
+            ref={frameRef}
             key={address}
             title="Firefox"
             src={address}
