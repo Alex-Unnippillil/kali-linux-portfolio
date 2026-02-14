@@ -1,22 +1,29 @@
 import React, { useRef } from 'react';
 import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
-
-interface Rule {
-  expression: string;
-  color: string;
-}
+import {
+  ColorRule,
+  parseColorRules,
+  serializeColorRules,
+} from './colorRuleUtils';
 
 interface Props {
-  rules: Rule[];
-  onChange: (rules: Rule[]) => void;
+  rules: ColorRule[];
+  onChange: (rules: ColorRule[]) => void;
+  onReset?: () => void;
+  defaultRules?: ColorRule[];
 }
 
-const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
+const ColorRuleEditor: React.FC<Props> = ({
+  rules,
+  onChange,
+  onReset,
+  defaultRules = [],
+}) => {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleRuleChange = (
     index: number,
-    field: keyof Rule,
+    field: keyof ColorRule,
     value: string
   ) => {
     const updated = rules.map((r, i) => (i === index ? { ...r, [field]: value } : r));
@@ -32,7 +39,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
   };
 
   const handleExport = () => {
-    const json = JSON.stringify(rules, null, 2);
+    const json = serializeColorRules(rules);
     if (navigator?.clipboard?.writeText) {
       try {
         navigator.clipboard.writeText(json);
@@ -56,10 +63,8 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const parsed = JSON.parse(reader.result as string);
-          if (Array.isArray(parsed)) {
-            onChange(parsed);
-          }
+          const parsed = parseColorRules(reader.result as string);
+          onChange(parsed);
         } catch {
           // ignore invalid JSON
         }
@@ -70,6 +75,14 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
   };
 
   const triggerImport = () => fileRef.current?.click();
+
+  const handleReset = () => {
+    if (onReset) {
+      onReset();
+    } else {
+      onChange(defaultRules.map((rule) => ({ ...rule })));
+    }
+  };
 
   return (
     <div className="flex flex-col space-y-1">
@@ -125,6 +138,13 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
           className="px-1 py-0.5 bg-gray-700 rounded text-xs"
         >
           Export JSON
+        </button>
+        <button
+          onClick={handleReset}
+          type="button"
+          className="px-1 py-0.5 bg-gray-700 rounded text-xs"
+        >
+          Reset
         </button>
       </div>
       <input
