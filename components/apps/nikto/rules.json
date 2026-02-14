@@ -1,0 +1,38 @@
+{
+  "info leak": [
+    {
+      "id": "server-banner",
+      "title": "Server banner disclosure",
+      "description": "Check for verbose Server and X-Powered-By headers that reveal software versions."
+    },
+    {
+      "id": "robots-review",
+      "title": "Robots.txt secrets",
+      "description": "Review robots.txt for disallowed entries that may expose sensitive directories."
+    }
+  ],
+  "default files": [
+    {
+      "id": "admin-console",
+      "title": "Admin console discovery",
+      "description": "Probe for default admin panels and dashboards left accessible."
+    },
+    {
+      "id": "cgi-leftovers",
+      "title": "Legacy CGI scripts",
+      "description": "Check for leftover CGI scripts such as /cgi-bin/test that leak system info."
+    }
+  ],
+  "headers": [
+    {
+      "id": "security-headers",
+      "title": "Missing security headers",
+      "description": "Verify presence of CSP, HSTS, and X-Frame-Options defensive headers."
+    },
+    {
+      "id": "etag-audit",
+      "title": "ETag fingerprinting",
+      "description": "Inspect ETag responses that may disclose inode values or deployment details."
+    }
+  ]
+}
