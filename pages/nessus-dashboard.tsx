@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/index';
-import { WindowMainScreen } from '../components/base/window';
+import { loadFalsePositives, loadJobDefinitions } from '../components/apps/nessus/storage';
+import WindowMainScreen from '../components/base/WindowMainScreen.server';
 
 const NessusDashboard: React.FC = () => {
   const [totals, setTotals] = useState({ jobs: 0, falsePositives: 0 });
