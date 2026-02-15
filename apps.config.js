@@ -219,6 +219,14 @@ const ScreenRecorderApp = createDynamicApp(() => import('./components/apps/scree
 const NiktoApp = createDynamicApp(() => import('./components/apps/nikto'), 'Nikto');
 const CameraApp = createDynamicApp(() => import('./components/apps/camera'), 'Camera');
 
+const KaliDesktopApp = () => (
+  <iframe
+    src="/apps/kali-desktop"
+    title="Kali Desktop"
+    className="h-full w-full"
+  />
+);
+
 
 
 const displayTerminal = createDisplay(TerminalApp);
@@ -284,6 +292,7 @@ const displayBleSensor = createDisplay(BleSensorApp);
 const displayBeef = createDisplay(BeefApp);
 const displayMetasploit = createDisplay(MetasploitApp);
 const displayDsniff = createDisplay(DsniffApp);
+const displayKaliDesktop = createDisplay(KaliDesktopApp);
 const displayGomoku = createDisplay(GomokuApp);
 const displayPinball = createDisplay(PinballApp);
 const displayVolatility = createDisplay(VolatilityApp);
@@ -1355,6 +1364,15 @@ const apps = [
     category: 'recon',
     responsiveWidth: { mobile: 95, desktop: 70 },
     responsiveHeight: { mobile: 90, desktop: 80 },
+  },
+  {
+    id: 'kali-desktop',
+    title: 'Kali Desktop',
+    icon: '/themes/Yaru/status/icons8-kali-linux.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayKaliDesktop,
   },
   // Utilities are grouped separately
   ...utilities,
