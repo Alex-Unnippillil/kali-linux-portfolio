@@ -717,11 +717,26 @@ html[data-theme='matrix'] .word-search-clue {
     text-decoration-color: currentColor;
 }
 
-/* Ensure monospace layout for app outputs */
+/* Ensure monospace layout for app outputs and code blocks */
+textarea,
+pre,
+code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+pre,
+code {
+    caret-color: var(--color-accent);
+}
+
 textarea,
 pre {
-    font-family: monospace;
     line-height: 1.2;
+}
+
+pre {
+    overflow-x: auto;
+    max-width: 100%;
 }
 
 /* Visible focus rings for copy buttons and text areas */
