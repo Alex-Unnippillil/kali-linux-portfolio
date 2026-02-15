@@ -6,7 +6,7 @@ function nonce() {
   return Buffer.from(arr).toString('base64');
 }
 
-export function middleware(req: NextRequest) {
+function withSecurityHeaders(res: NextResponse) {
   const n = nonce();
   const scriptSrc = [
     "'self'",
@@ -38,11 +38,36 @@ export function middleware(req: NextRequest) {
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
   ].join('; ');
 
-  const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
   return res;
 }
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const isAuthed = Boolean(req.cookies.get('auth'));
+
+  if (!isAuthed && pathname !== '/login') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/login';
+    return withSecurityHeaders(NextResponse.redirect(url));
+  }
+
+  if (isAuthed && pathname === '/login') {
+    const url = req.nextUrl.clone();
+    url.pathname = '/';
+    return withSecurityHeaders(NextResponse.redirect(url));
+  }
+
+  return withSecurityHeaders(NextResponse.next());
+}
+
+export const config = {
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\..*|health).*)',
+  ],
+};
+
