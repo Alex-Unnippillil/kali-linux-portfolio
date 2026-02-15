@@ -788,3 +788,17 @@ textarea:focus-visible {
     font-variant-numeric: tabular-nums;
     opacity: 0.7;
 }
+
+.tile-moving-idle,
+.tile-moving-active {
+    will-change: transform;
+    transition-property: transform;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tile-moving-idle,
+    .tile-moving-active {
+        transition: none !important;
+    }
+}
