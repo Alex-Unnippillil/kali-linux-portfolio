@@ -85,6 +85,7 @@ button:focus-visible {
         animation-duration: 0.01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
+        transition-property: opacity, background-color, color, border-color, text-decoration-color, fill, stroke, box-shadow, transform !important;
         scroll-behavior: auto !important;
     }
 }
@@ -93,6 +94,7 @@ button:focus-visible {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transition-property: opacity, background-color, color, border-color, text-decoration-color, fill, stroke, box-shadow, transform !important;
     scroll-behavior: auto !important;
 }
 

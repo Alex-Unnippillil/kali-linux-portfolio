@@ -712,7 +712,9 @@ export default function Todoist() {
           </button>
         </div>
         <div
-          className={`transition-[max-height] duration-300 overflow-hidden px-2 ${isEditing ? 'max-h-20' : 'max-h-0'}`}
+          className={`overflow-hidden px-2 ${
+            !prefersReducedMotion.current ? 'transition-[max-height] duration-300' : ''
+          } ${isEditing ? 'max-h-20' : 'max-h-0'}`}
         >
           {isEditing && (
             <input
