@@ -737,15 +737,15 @@ const CameraApp = () => {
   const canPause = !!mediaRecorderRef.current && typeof mediaRecorderRef.current.pause === 'function';
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#0f1115] text-slate-100">
+    <div className="flex h-full w-full flex-col bg-[#11141a] text-slate-100">
       <div className="sr-only" aria-live="polite">
         {liveMessage} {countdown > 0 ? `Countdown ${countdown}` : ''}
       </div>
 
-      <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden p-4">
-        <section className="mx-auto flex h-full w-full max-w-5xl flex-1 overflow-hidden rounded-2xl border border-black/15 bg-[#d7d9dd] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
+      <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden p-3">
+        <section className="mx-auto flex h-full w-full max-w-5xl flex-1 overflow-hidden rounded-xl border border-black/20 bg-[#d2d6d6]">
           <div className="flex h-full w-full flex-col">
-            <div className="flex items-center justify-between border-b border-black/10 bg-[#f6f7f9] px-3 py-2 text-sm">
+            <div className="flex items-center justify-between border-b border-black/10 bg-[#e6e8e8] px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <button
                   aria-label="Start camera"
@@ -765,8 +765,8 @@ const CameraApp = () => {
               </div>
             </div>
 
-            <div className="relative flex-1 overflow-hidden bg-[linear-gradient(45deg,#e5e7eb_25%,transparent_25%),linear-gradient(-45deg,#e5e7eb_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#e5e7eb_75%),linear-gradient(-45deg,transparent_75%,#e5e7eb_75%)] bg-[length:28px_28px] bg-[position:0_0,0_14px,14px_-14px,-14px_0] p-4">
-              <div className="relative h-full w-full overflow-hidden rounded-2xl border border-black/10 bg-black">
+            <div className="relative flex-1 overflow-hidden bg-[#cfd4d4] p-2">
+              <div className="relative h-full w-full overflow-hidden rounded-lg border border-black/25 bg-black">
                 <video ref={videoRef} playsInline autoPlay muted aria-label="Camera source feed" className="hidden" />
                 <canvas ref={previewCanvasRef} aria-label="Camera preview" className="h-full w-full object-cover" />
                 {countdown > 0 && (
@@ -788,18 +788,18 @@ const CameraApp = () => {
             )}
             {videoUnavailableMessage && <div className="border-t border-yellow-500/60 bg-yellow-50 px-4 py-2 text-xs text-yellow-900">{videoUnavailableMessage}</div>}
 
-            <div className="grid gap-2 border-t border-black/10 bg-[#c6d4c8] px-3 py-2 lg:grid-cols-[minmax(300px,1fr)_92px_250px] lg:items-stretch">
-              <aside className="order-2 rounded-lg border border-black/10 bg-white/35 p-2 lg:order-1 lg:h-24 lg:overflow-hidden">
+            <div className="grid gap-2 border-t border-black/10 bg-[#bec7be] px-2 py-2 lg:grid-cols-[minmax(300px,1fr)_92px_250px] lg:items-stretch">
+              <aside className="order-2 rounded-md border border-black/10 bg-[#c7ceca] p-2 lg:order-1 lg:h-24 lg:overflow-hidden">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Recent shots</p>
-                  <button className="rounded border border-black/15 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100" onClick={openInFiles}>
+                  <button className="rounded border border-black/15 bg-[#e6e8e8] px-2 py-1 text-[11px] text-slate-700 hover:bg-white" onClick={openInFiles}>
                     Open Files
                   </button>
                 </div>
                 <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-5">
                   {allCaptures.length === 0 && <p className="col-span-full text-xs text-slate-600">No captures yet.</p>}
                   {allCaptures.slice(0, 10).map((item) => (
-                    <div key={item.id} className="group relative h-12 overflow-hidden rounded border border-black/20 bg-black/70">
+                    <div key={item.id} className="group relative h-12 overflow-hidden rounded border border-black/25 bg-black/70">
                       {item.type === 'photo' ? (
                         <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
                       ) : (
@@ -817,7 +817,7 @@ const CameraApp = () => {
                 </div>
               </aside>
 
-              <div className="order-1 flex items-center justify-center rounded-lg border border-black/10 bg-white/25 p-1.5 lg:order-2 lg:h-24">
+              <div className="order-1 flex items-center justify-center rounded-md border border-black/10 bg-[#c7ceca] p-1.5 lg:order-2 lg:h-24">
                 {mode === 'photo' ? (
                   <button
                     className="h-16 w-16 rounded-full border-4 border-red-200 bg-red-500 text-sm font-semibold text-white shadow"
@@ -842,8 +842,8 @@ const CameraApp = () => {
                 )}
               </div>
 
-              <div className="order-3 rounded-lg border border-black/15 bg-white/70 p-2 text-sm lg:h-24">
-                <div className="rounded bg-white px-2 py-1 text-right font-semibold text-slate-700">Effects</div>
+              <div className="order-3 rounded-md border border-black/15 bg-[#c7ceca] p-2 text-sm lg:h-24">
+                <div className="rounded bg-[#e6e8e8] px-2 py-1 text-right font-semibold text-slate-700">Effects</div>
                 <div className="mt-2 grid gap-1 text-slate-700">
                   <label className="flex flex-col gap-1">
                     <select className="rounded border border-black/15 bg-white px-2 py-1.5" value={effect} onChange={(event) => setEffect(event.target.value as EffectMode)}>
