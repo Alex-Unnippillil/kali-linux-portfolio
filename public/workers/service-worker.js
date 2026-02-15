@@ -11,6 +11,7 @@ const ASSETS = [
   '/apps/checkers',
   '/offline.html',
   '/manifest.webmanifest',
+  '/api/inbox/unread-count',
 ];
 
 async function prefetchAssets() {
