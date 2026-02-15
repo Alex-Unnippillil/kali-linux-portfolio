@@ -1,158 +1,155 @@
-export const GRID_SIZE = 10;
-export const START = { x: 0, y: Math.floor(GRID_SIZE / 2) };
-export const GOAL = { x: GRID_SIZE - 1, y: Math.floor(GRID_SIZE / 2) };
+export type Vec = { x: number; y: number };
 
-// ---- pathfinding with caching ----
-let cachedKey = '';
-let cachedPath: { x: number; y: number }[] = [];
-export let pathComputationCount = 0;
+export type EnemyTypeKey = 'normal' | 'fast' | 'tank';
+export type TowerTypeKey = 'basic' | 'rapid' | 'sniper' | 'splash';
+export type TargetingMode = 'first' | 'strongest';
 
-export const getPath = (towers: { x: number; y: number }[]) => {
-  const key = towers
-    .map((t) => `${t.x},${t.y}`)
-    .sort()
-    .join('|');
-  if (key === cachedKey && cachedPath.length) return cachedPath;
-  pathComputationCount += 1;
-  const path: { x: number; y: number }[] = [];
-  for (let x = START.x; x <= GOAL.x; x += 1) {
-    path.push({ x, y: START.y });
-  }
-  cachedKey = key;
-  cachedPath = path;
-  return path;
+export type EnemySpec = {
+  label: string;
+  baseHp: number;
+  speed: number; // cells per second
+  reward: number;
+  color: string;
 };
 
-export const resetPathCache = () => {
-  cachedKey = '';
-  cachedPath = [];
-  pathComputationCount = 0;
-};
-
-// ---- simple object pools ----
-export type Projectile = {
-  active: boolean;
-  x: number;
-  y: number;
-  targetId: number;
-  damage: number;
-  speed: number;
-};
-
-export const createProjectilePool = (size: number): Projectile[] =>
-  Array.from({ length: size }, () => ({
-    active: false,
-    x: 0,
-    y: 0,
-    targetId: 0,
-    damage: 0,
-    speed: 0,
-  }));
-
-export const fireProjectile = (
-  pool: Projectile[],
-  data: Omit<Projectile, 'active'>
-) => {
-  const p = pool.find((pr) => !pr.active);
-  if (!p) return null;
-  Object.assign(p, data, { active: true });
-  return p;
-};
-
-export const deactivateProjectile = (p: Projectile) => {
-  p.active = false;
-};
-
-export type Enemy = {
-  active: boolean;
-  id: number;
-  x: number;
-  y: number;
-  pathIndex: number;
-  progress: number;
-  health: number;
-  resistance: number;
-  baseSpeed: number;
-  slow: null | { amount: number; duration: number };
-  dot: null | { damage: number; duration: number };
-  type?: string;
-};
-
-export const createEnemyPool = (size: number): Enemy[] =>
-  Array.from({ length: size }, () => ({
-    active: false,
-    id: 0,
-    x: 0,
-    y: 0,
-    pathIndex: 0,
-    progress: 0,
-    health: 0,
-    resistance: 0,
-    baseSpeed: 0,
-    slow: null,
-    dot: null,
-    type: 'basic',
-  }));
-
-export const spawnEnemy = (pool: Enemy[], data: Omit<Enemy, 'active'>) => {
-  const e = pool.find((en) => !en.active);
-  if (!e) return null;
-  Object.assign(e, data, { active: true });
-  return e;
-};
-
-export const deactivateEnemy = (e: Enemy) => {
-  e.active = false;
-};
-
-// ---- sprite cache ----
-const spriteCache: Record<string, HTMLImageElement> = {};
-export const loadSprite = (src: string) => {
-  if (!spriteCache[src]) {
-    const img = new Image();
-    img.src = src;
-    spriteCache[src] = img;
-  }
-  return spriteCache[src];
-};
-
-export const clearSpriteCache = () => {
-  Object.keys(spriteCache).forEach((k) => delete spriteCache[k]);
-};
-
-// ---- tower stats and upgrades ----
-export const TOWER_TYPES = {
-  single: [
-    { range: 1.5, damage: 2 },
-    { range: 2.5, damage: 3 },
-    { range: 3.5, damage: 4 },
-  ],
-} as const;
-
-export type TowerType = keyof typeof TOWER_TYPES;
-
-export const getTowerDPS = (type: TowerType, level: number) => {
-  const stats = TOWER_TYPES[type]?.[level - 1];
-  if (!stats) return 0;
-  return stats.damage; // 1 shot per second
-};
-
-export const ENEMY_TYPES = {
-  fast: { speed: 60, health: 5 },
-  tank: { speed: 30, health: 15 },
-};
-
-export type Tower = {
-  x: number;
-  y: number;
+export type TowerSpec = {
+  label: string;
+  cost: number;
   range: number;
   damage: number;
-  level: number;
-  type?: TowerType;
+  fireRate: number; // shots per second
+  projectileSpeed: number;
+  targetingModes: TargetingMode[];
+  splashRadius?: number;
+  color: string;
+  upgradeScaling: {
+    damage: number;
+    range: number;
+    fireRate: number;
+  };
 };
 
-export const upgradeTower = (tower: Tower, path: 'range' | 'damage') => {
-  tower.level += 1;
-  if (path === 'range') tower.range += 1;
-  else tower.damage += 1;
+export type WaveEnemyEntry = {
+  type: EnemyTypeKey;
+  count: number;
+};
+
+export type WaveConfig = {
+  id: string;
+  enemies: WaveEnemyEntry[];
+  spawnInterval: number;
+  rewardBonus: number;
+};
+
+export const GRID_SIZE = 12;
+
+export const ENEMY_TYPES: Record<EnemyTypeKey, EnemySpec> = {
+  normal: {
+    label: 'Normal',
+    baseHp: 28,
+    speed: 1.1,
+    reward: 5,
+    color: '#fca5a5',
+  },
+  fast: {
+    label: 'Fast',
+    baseHp: 16,
+    speed: 1.85,
+    reward: 4,
+    color: '#fde68a',
+  },
+  tank: {
+    label: 'Tank',
+    baseHp: 56,
+    speed: 0.72,
+    reward: 8,
+    color: '#c4b5fd',
+  },
+};
+
+export const TOWER_TYPES: Record<TowerTypeKey, TowerSpec> = {
+  basic: {
+    label: 'Basic',
+    cost: 16,
+    range: 2.2,
+    damage: 10,
+    fireRate: 1,
+    projectileSpeed: 8,
+    targetingModes: ['first', 'strongest'],
+    color: '#38bdf8',
+    upgradeScaling: {
+      damage: 1.26,
+      range: 1.07,
+      fireRate: 1.1,
+    },
+  },
+  rapid: {
+    label: 'Rapid',
+    cost: 20,
+    range: 1.95,
+    damage: 4,
+    fireRate: 2.8,
+    projectileSpeed: 11,
+    targetingModes: ['first', 'strongest'],
+    color: '#4ade80',
+    upgradeScaling: {
+      damage: 1.22,
+      range: 1.06,
+      fireRate: 1.12,
+    },
+  },
+  sniper: {
+    label: 'Sniper',
+    cost: 32,
+    range: 3.8,
+    damage: 26,
+    fireRate: 0.45,
+    projectileSpeed: 13,
+    targetingModes: ['strongest', 'first'],
+    color: '#60a5fa',
+    upgradeScaling: {
+      damage: 1.34,
+      range: 1.1,
+      fireRate: 1.08,
+    },
+  },
+  splash: {
+    label: 'Splash',
+    cost: 28,
+    range: 2.35,
+    damage: 12,
+    fireRate: 0.7,
+    projectileSpeed: 7,
+    splashRadius: 1,
+    targetingModes: ['first', 'strongest'],
+    color: '#f97316',
+    upgradeScaling: {
+      damage: 1.24,
+      range: 1.05,
+      fireRate: 1.08,
+    },
+  },
+};
+
+export const getUpgradeCost = (towerType: TowerTypeKey, level: number) => {
+  const base = Math.floor(TOWER_TYPES[towerType].cost * 0.65);
+  return Math.max(8, Math.floor(base + level * 6));
+};
+
+export const getTowerStatsAtLevel = (
+  type: TowerTypeKey,
+  level: number,
+): Pick<TowerSpec, 'range' | 'damage' | 'fireRate' | 'splashRadius'> => {
+  const spec = TOWER_TYPES[type];
+  const lvl = Math.max(1, level);
+  const damage = spec.damage * spec.upgradeScaling.damage ** (lvl - 1);
+  const range = spec.range * spec.upgradeScaling.range ** (lvl - 1);
+  const fireRate = spec.fireRate * spec.upgradeScaling.fireRate ** (lvl - 1);
+  const splashRadius = spec.splashRadius ? spec.splashRadius + (lvl - 1) * 0.08 : undefined;
+  return { damage, range, fireRate, splashRadius };
+};
+
+export const getTowerDPS = (type: TowerTypeKey, level: number) => {
+  const stats = getTowerStatsAtLevel(type, level);
+  return stats.damage * stats.fireRate;
 };
