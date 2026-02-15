@@ -168,23 +168,12 @@ describe('Camera app', () => {
     expect(screen.getByRole('link', { name: /save|download/i })).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
   });
 
-  it('Countdown appears and can be canceled', async () => {
-    jest.useFakeTimers();
+  it('keeps the simplified compact controls without timer selector', async () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.change(screen.getByLabelText('Timer'), { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
-
-    expect(screen.getByText('3')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-
-    act(() => {
-      jest.advanceTimersByTime(3000);
-    });
-
-    expect(screen.queryByText('3')).not.toBeInTheDocument();
-    jest.useRealTimers();
+    expect(screen.queryByLabelText('Timer')).not.toBeInTheDocument();
+    expect(screen.getByText('Effects')).toBeInTheDocument();
   });
 
   it('Video mode is disabled with a clear message if MediaRecorder is missing', () => {
