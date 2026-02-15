@@ -66,6 +66,8 @@ const ExposureExplainer: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
+  const currentStep = steps[index] ?? steps[0];
+
   return (
     <div className="text-white p-4">
       <div className="bg-yellow-400 text-black text-center font-bold mb-4">
@@ -83,8 +85,8 @@ const ExposureExplainer: React.FC = () => {
           </div>
         ))}
       </div>
-      <h3 className="text-lg font-bold text-center mb-2">{steps[index].title}</h3>
-      <p className="text-center max-w-md mx-auto mb-4">{steps[index].description}</p>
+      <h3 className="text-lg font-bold text-center mb-2">{currentStep.title}</h3>
+      <p className="text-center max-w-md mx-auto mb-4">{currentStep.description}</p>
       <div className="flex justify-center space-x-2">
         {steps.map((_, i) => (
           <button
