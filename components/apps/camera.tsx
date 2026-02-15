@@ -787,61 +787,18 @@ const CameraApp = () => {
             )}
             {videoUnavailableMessage && <div className="border-t border-yellow-500/60 bg-yellow-50 px-4 py-2 text-xs text-yellow-900">{videoUnavailableMessage}</div>}
 
-            <div className="grid gap-3 border-t border-black/10 bg-[#c6d4c8] px-3 py-3 lg:grid-cols-[minmax(300px,1fr)_100px_260px] lg:items-stretch">
-              <aside className="order-2 rounded-lg border border-black/10 bg-white/35 p-2 lg:order-1">
+            <div className="grid gap-2 border-t border-black/10 bg-[#c6d4c8] px-3 py-2 lg:grid-cols-[minmax(300px,1fr)_92px_250px] lg:items-start">
+              <aside className="order-2 rounded-lg border border-black/10 bg-white/35 p-2 lg:order-1 lg:max-h-28 lg:overflow-hidden">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Recent shots</p>
                   <button className="rounded border border-black/15 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100" onClick={openInFiles}>
                     Open Files
                   </button>
-                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle mirror selfie captures" aria-pressed={mirrorSelfieCapture} onClick={() => setMirrorSelfieCapture((prev) => !prev)}>
-                    Mirror selfie captures: {mirrorSelfieCapture ? 'On' : 'Off'}
-                  </button>
-                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle grid overlay" aria-pressed={showGrid} onClick={() => setShowGrid((prev) => !prev)}>
-                    Grid overlay: {showGrid ? 'On' : 'Off'}
-                  </button>
-
-                  {trackCaps.zoom && zoom !== null && (
-                    <label className="flex flex-col gap-1">
-                      Zoom
-                      <input
-                        aria-label="Zoom level"
-                        type="range"
-                        min={trackCaps.zoom.min ?? 1}
-                        max={trackCaps.zoom.max ?? 4}
-                        step={trackCaps.zoom.step ?? 0.1}
-                        value={zoom}
-                        onChange={(event) => setZoom(Number(event.target.value))}
-                      />
-                    </label>
-                  )}
-
-                  {trackCaps.torch && (
-                    <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle torch" aria-pressed={torch} onClick={() => setTorch((prev) => !prev)}>
-                      Torch: {torch ? 'On' : 'Off'}
-                    </button>
-                  )}
-
-                  {mode === 'video' && (
-                    <>
-                      <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle audio" aria-pressed={audioEnabled} onClick={() => setAudioEnabled((prev) => !prev)}>
-                        Audio: {audioEnabled ? 'On' : 'Off'}
-                      </button>
-                      <button
-                        className="rounded bg-slate-200 px-2 py-1 text-left"
-                        aria-label="Toggle record with effects"
-                        aria-pressed={recordWithEffects}
-                        onClick={() => setRecordWithEffects((prev) => !prev)}
-                      >
-                        Record with effects: {recordWithEffects ? 'On' : 'Off'}
-                      </button>
-                    </>
-                  )}
                 </div>
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-5">
                   {allCaptures.length === 0 && <p className="col-span-full text-xs text-slate-600">No captures yet.</p>}
                   {allCaptures.slice(0, 10).map((item) => (
-                    <div key={item.id} className="group relative h-16 overflow-hidden rounded border border-black/20 bg-black/70">
+                    <div key={item.id} className="group relative h-12 overflow-hidden rounded border border-black/20 bg-black/70">
                       {item.type === 'photo' ? (
                         <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
                       ) : (
@@ -859,7 +816,7 @@ const CameraApp = () => {
                 </div>
               </aside>
 
-              <div className="order-1 flex items-center justify-center rounded-lg border border-black/10 bg-white/25 p-2 lg:order-2">
+              <div className="order-1 flex items-center justify-center rounded-lg border border-black/10 bg-white/25 p-1.5 lg:order-2 lg:max-h-28">
                 {mode === 'photo' ? (
                   <button
                     className="h-16 w-16 rounded-full border-4 border-red-200 bg-red-500 text-sm font-semibold text-white shadow"
@@ -884,9 +841,9 @@ const CameraApp = () => {
                 )}
               </div>
 
-              <details className="order-3 rounded-lg border border-black/15 bg-white/70 p-2 text-sm" open>
+              <details className="order-3 rounded-lg border border-black/15 bg-white/70 p-2 text-sm lg:max-h-28" open>
                 <summary className="cursor-pointer rounded bg-white px-2 py-1 text-right font-semibold text-slate-700">Effects & Controls</summary>
-                <div className="mt-2 grid max-h-48 gap-2 overflow-y-auto pr-1 text-slate-700">
+                <div className="mt-2 grid max-h-24 gap-2 overflow-y-auto pr-1 text-slate-700">
                   <label className="flex flex-col gap-1">
                     Effects
                     <select className="rounded border border-black/15 bg-white px-2 py-1.5" value={effect} onChange={(event) => setEffect(event.target.value as EffectMode)}>
