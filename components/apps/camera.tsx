@@ -744,18 +744,6 @@ const CameraApp = () => {
       <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden p-4">
         <section className="mx-auto flex h-full w-full max-w-5xl flex-1 overflow-hidden rounded-2xl border border-black/15 bg-[#d7d9dd] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
           <div className="flex h-full w-full flex-col">
-            <div className="flex items-center justify-between border-b border-black/10 bg-[#ececec] px-3 py-2 text-sm text-slate-700">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-red-400" />
-                <span className="h-3 w-3 rounded-full bg-amber-300" />
-                <span className="h-3 w-3 rounded-full bg-emerald-400" />
-              </div>
-              <span className="text-sm font-semibold">Photo Booth</span>
-              <button className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50" onClick={openInFiles}>
-                Open Files
-              </button>
-            </div>
-
             <div className="flex items-center justify-between border-b border-black/10 bg-[#f6f7f9] px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <button
@@ -801,7 +789,12 @@ const CameraApp = () => {
 
             <div className="grid gap-3 border-t border-black/10 bg-[#c6d4c8] px-3 py-3 lg:grid-cols-[220px_1fr_220px] lg:items-end">
               <aside className="order-2 lg:order-1">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-700">Recent shots</p>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Recent shots</p>
+                  <button className="rounded border border-black/15 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100" onClick={openInFiles}>
+                    Open Files
+                  </button>
+                </div>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {allCaptures.length === 0 && <p className="text-xs text-slate-600">No captures yet.</p>}
                   {allCaptures.slice(0, 6).map((item) => (
