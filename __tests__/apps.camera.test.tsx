@@ -165,7 +165,7 @@ describe('Camera app', () => {
     const photo = screen.getByRole('img');
     expect(photo).toHaveAttribute('src', 'blob:test-url');
     expect(photo.getAttribute('src')).not.toContain('data:image');
-    expect(screen.getByRole('link', { name: /download/i })).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
+    expect(screen.getByRole('link', { name: /save|download/i })).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
   });
 
   it('Countdown appears and can be canceled', async () => {
