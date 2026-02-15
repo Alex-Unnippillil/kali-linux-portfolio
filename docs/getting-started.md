@@ -22,3 +22,7 @@ yarn dev
 See the [Architecture](./architecture.md) document for an overview of how the project is organized.
 
 For app contributions, see the [New App Checklist](./new-app-checklist.md).
+
+## Printing
+
+Use your browser's print function for an export that hides site chrome and optimizes colors for monochrome output. The stylesheet keeps this guide within ten pages.
