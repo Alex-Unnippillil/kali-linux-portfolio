@@ -8,37 +8,38 @@ exercise the game across desktop, mobile, and gamepad setups.
 - **Movement** – Arrow keys trigger the movement queue through the shared game
   controls hook. Opposite directions are ignored to prevent 180° turns that
   would instantly collide with the snake's body.
-- **Pause / Resume** – The in-game Pause button or window blur pauses the loop.
-  Resume the game via the same button or by refocusing the window.
+- **Pause / Resume** – Use the Pause button or focus behavior in `GameLayout`.
+  Resume now uses a short 3-2-1 countdown unless reduced motion is enabled.
+- **Restart** – Press `R` or click Restart. Restart also uses the same countdown
+  for predictable re-entry.
 
 ## Touch
 
 - **Movement** – Swipe on the game canvas; the dominant axis determines the
   direction. A swipe must travel ~30px before it registers to avoid accidental
   turns, and the gesture is scoped to the board so other apps do not receive it.
-- **Pause / Resume** – Tap the Pause button below the canvas.
+- **D-pad** – Optional on-screen controls are still available and now trigger a
+  light haptic pulse when haptics are enabled.
 
-## Gamepad
+## Replay Management
 
-- **Movement** – The left analog stick or D-pad maps through the game control
-  abstraction. A magnitude threshold prevents micro-movements from issuing
-  rapid direction changes.
-- **Pause / Resume** – Use the on-screen Pause button; gamepad focus follows
-  the desktop UI, so press the confirm button (`A`/`Cross`) while the Pause
-  button is focused.
+- **Play/Delete** – Use the Replay selector in Settings.
+- **Rename** – Enter a custom replay name and click **Rename**.
+- **Export JSON** – Copies JSON to clipboard when possible, otherwise downloads
+  a `.json` file.
+- **Import JSON** – Paste replay JSON and click **Import JSON**. Invalid payloads
+  show a safe inline message and never crash the app.
 
 ## Audio & Accessibility
 
-- **Sound toggle** – The Sound button mutes or restores the synthesized beeps
-  that play on collisions and scoring.
-- **Reduced motion** – Respecting the OS-level reduce motion setting pauses the
-  automatic loop until the player explicitly resumes via the on-screen Resume
-  button.
+- **Sound toggle** – Mutes or restores synthesized beeps for collisions and
+  scoring.
+- **Reduced motion** – Respecting OS-level reduced motion keeps the game paused
+  until the player explicitly resumes.
 
 ## Persistence
 
-- **High score** – Scores persist in `localStorage` under `snake:highScore` so
-  testers can confirm high-score saves survive reloads.
-- **Settings** – Wrap, skin, colorblind assist, sound, base speed, and touch
-  controls use `snake:*` keys (for example `snake:wrap` and `snake:baseSpeed`)
-  to keep preferences consistent across sessions.
+- **High score** – `snake:highScore`.
+- **Settings** – Wrap, skin, colorblind assist, sound, base speed, touch
+  controls, obstacle preferences, and speed-application mode persist in
+  `snake:*` keys.
