@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { deriveCookies } from './utils/geoCookies';
 
 function nonce() {
   const arr = new Uint8Array(16);
@@ -41,8 +42,19 @@ export function middleware(req: NextRequest) {
     "form-action 'self'"
   ].join('; ');
 
+  const { country } = req.geo ?? {};
+  const { preferredMirror, locale } = deriveCookies(country);
+
   const res = NextResponse.next();
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
+
+  if (!req.cookies.get('preferredMirror')) {
+    res.cookies.set('preferredMirror', preferredMirror, { path: '/' });
+  }
+  if (!req.cookies.get('locale')) {
+    res.cookies.set('locale', locale, { path: '/' });
+  }
+
   return res;
 }
