@@ -875,7 +875,7 @@ const CameraApp = () => {
                     </div>
                   ))}
                 </div>
-              </aside>
+              </div>
 
               <div className="order-1 flex items-center justify-center rounded-lg border border-black/10 bg-white/25 p-1.5 lg:order-2 lg:max-h-28">
                 {mode === 'photo' ? (
