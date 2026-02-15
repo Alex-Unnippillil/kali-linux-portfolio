@@ -237,14 +237,14 @@ const HelpOverlay: React.FC<HelpOverlayProps> = ({ gameId, onClose }) => {
     prevFocus.current = document.activeElement as HTMLElement | null;
     const selectors =
       'a[href], button, textarea, input, select, [tabindex]:not([tabindex="-1"])';
-    const focusables = Array.from(
-      overlayRef.current.querySelectorAll<HTMLElement>(selectors),
+    const focusables = overlayRef.current.querySelectorAll<HTMLElement>(
+      selectors,
     );
-    focusables[0]?.focus();
+    focusables.item(0)?.focus();
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Tab" && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
+        const first = focusables.item(0)!;
+        const last = focusables.item(focusables.length - 1)!;
         if (e.shiftKey) {
           if (document.activeElement === first) {
             e.preventDefault();
