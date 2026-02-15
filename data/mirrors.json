@@ -1,0 +1,29 @@
+[
+  {
+    "id": "us",
+    "name": "US Mirror",
+    "location": "New York, USA",
+    "url": "https://us.example.com/kali",
+    "description": "Primary mirror in the United States.",
+    "x": 150,
+    "y": 120
+  },
+  {
+    "id": "de",
+    "name": "Germany Mirror",
+    "location": "Frankfurt, Germany",
+    "url": "https://de.example.com/kali",
+    "description": "European mirror serving Germany.",
+    "x": 400,
+    "y": 110
+  },
+  {
+    "id": "jp",
+    "name": "Japan Mirror",
+    "location": "Tokyo, Japan",
+    "url": "https://jp.example.com/kali",
+    "description": "Asia mirror located in Tokyo.",
+    "x": 620,
+    "y": 130
+  }
+]
