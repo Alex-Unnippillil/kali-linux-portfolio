@@ -91,6 +91,18 @@
   --focus-outline-width: 2px;
 }
 
+[data-theme="kali"] {
+  --kali-surface-0: var(--color-ub-grey);
+  --kali-surface-1: var(--color-ub-cool-grey);
+  --kali-surface-2: var(--color-ub-lite-abrgn);
+  --kali-surface-3: var(--color-ub-dark-grey);
+  --kali-border: var(--color-ub-border-orange);
+  --kali-accent: var(--color-ub-orange);
+  --kali-accent-weak: var(--color-ubt-blue);
+  --kali-text: var(--color-text);
+  --kali-muted: var(--color-ub-warm-grey);
+}
+
 /* High contrast theme */
 .high-contrast {
   --color-bg: #000000;
