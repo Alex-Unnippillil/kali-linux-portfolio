@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Resume</title>
+  <style>
+    :root {
+      --font-stack: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    body {
+      font-family: var(--font-stack);
+      margin: 0;
+    }
+    @page {
+      size: A4;
+      margin: 1in;
+    }
+    #resume-content {
+      max-width: 210mm; /* Fit within A4 width; also fits Letter */
+      margin: 0 auto;
+    }
+    .page {
+      padding: 0.5rem 0.75rem;
+    }
+    @media print {
+      body {
+        -webkit-print-color-adjust: exact;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page {
+        page-break-after: always;
+      }
+      .page:last-child {
+        page-break-after: auto;
+      }
+    }
+    header {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    h1, h2, h3 {
+      margin: 0 0 0.5rem;
+    }
+    section {
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <button class="no-print" onclick="window.print()">Print</button>
+  <div id="resume-content">
+    <div class="page">
+      <header>
+        <h1>John Doe</h1>
+        <p>john@example.com · github.com/johndoe</p>
+      </header>
+      <section>
+        <h2>Experience</h2>
+        <h3>Job Title – Company</h3>
+        <p>Description of accomplishments and responsibilities.</p>
+      </section>
+      <section>
+        <h2>Skills</h2>
+        <p>JavaScript, TypeScript, Node.js, React, CSS, HTML.</p>
+      </section>
+    </div>
+    <div class="page">
+      <section>
+        <h2>Projects</h2>
+        <h3>Project Name</h3>
+        <p>Short description of the project and technologies used.</p>
+      </section>
+      <section>
+        <h2>Education</h2>
+        <p>B.S. in Computer Science, University Name</p>
+      </section>
+    </div>
+  </div>
+</body>
+</html>
