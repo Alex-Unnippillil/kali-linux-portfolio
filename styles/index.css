@@ -74,9 +74,9 @@ button, [role="button"], input[type="button"], input[type="submit"], input[type=
     min-height: var(--hit-area);
 }
 
-a:focus-visible,
-button:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color) !important;
+/* Consistent focus rings for interactive elements */
+:is(a, button, [role="button"], input, textarea, select, summary, [tabindex]):focus-visible {
+    outline: var(--focus-outline-width) solid var(--color-focus-ring) !important;
     outline-offset: 2px;
 }
 
@@ -722,13 +722,6 @@ textarea,
 pre {
     font-family: monospace;
     line-height: 1.2;
-}
-
-/* Visible focus rings for copy buttons and text areas */
-button:focus-visible,
-textarea:focus-visible {
-    outline: var(--focus-outline-width) solid var(--focus-outline-color);
-    outline-offset: 2px;
 }
 
 /* Enable scroll snapping for gallery containers */
