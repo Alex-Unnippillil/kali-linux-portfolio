@@ -133,6 +133,7 @@ const CameraApp = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [effect, setEffect] = useState<EffectMode>('none');
+  const [showGrid, setShowGrid] = useState(false);
   const [trackCaps, setTrackCaps] = useState<VideoTrackCaps>({});
   const [zoom, setZoom] = useState<number | null>(null);
   const [torch, setTorch] = useState(false);
@@ -855,6 +856,50 @@ const CameraApp = () => {
                     <span className="text-xs text-slate-500">{EFFECT_DETAILS[effect]}</span>
                   </label>
                 </div>
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-5">
+                  {allCaptures.length === 0 && <p className="col-span-full text-xs text-slate-600">No captures yet.</p>}
+                  {allCaptures.slice(0, 10).map((item) => (
+                    <div key={item.id} className="group relative h-12 overflow-hidden rounded border border-black/20 bg-black/70">
+                      {item.type === 'photo' ? (
+                        <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <video src={item.url} aria-label={item.name} className="h-full w-full object-cover" />
+                      )}
+                      <a
+                        className="absolute inset-x-0 bottom-0 bg-black/60 px-1 py-0.5 text-center text-[10px] text-white opacity-0 transition group-hover:opacity-100"
+                        href={item.url}
+                        download={item.name}
+                      >
+                        Save
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </aside>
+
+              <div className="order-1 flex items-center justify-center rounded-lg border border-black/10 bg-white/25 p-1.5 lg:order-2 lg:max-h-28">
+                {mode === 'photo' ? (
+                  <button
+                    className="h-16 w-16 rounded-full border-4 border-red-200 bg-red-500 text-sm font-semibold text-white shadow"
+                    onClick={() => void handleCapturePhoto()}
+                    disabled={status !== 'streaming'}
+                  >
+                    Shoot
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="rounded-full bg-red-500 px-5 py-2 font-semibold text-white disabled:opacity-50"
+                      onClick={isRecording ? stopRecording : startRecording}
+                      disabled={status !== 'streaming' || !hasMediaRecorder}
+                    >
+                      {isRecording ? 'Stop' : 'Record'}
+                    </button>
+                    <button className="rounded-full bg-slate-100 px-4 py-2 text-slate-700 disabled:opacity-50" disabled={!isRecording || !canPause} onClick={togglePause}>
+                      {isPaused ? 'Resume' : 'Pause'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
