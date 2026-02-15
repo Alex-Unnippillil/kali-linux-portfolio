@@ -193,7 +193,8 @@ describe('Camera app', () => {
     render(<CameraApp />);
 
     expect(screen.getByText(/video mode is unavailable/i)).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Clip' })).toBeDisabled();
+    expect(screen.queryByLabelText('Capture mode')).not.toBeInTheDocument();
+    expect(screen.queryByText('Camera source')).not.toBeInTheDocument();
   });
 
   it('OPFS save path uses getDir(Media/Camera) and writeFile with Blob', async () => {

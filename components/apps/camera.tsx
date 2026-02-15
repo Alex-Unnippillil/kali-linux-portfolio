@@ -3,7 +3,19 @@ import useOPFS from '../../hooks/useOPFS';
 
 type CameraStatus = 'idle' | 'loading' | 'streaming' | 'error';
 type CaptureMode = 'photo' | 'video';
-type EffectMode = 'none' | 'noir' | 'night-vision' | 'vhs' | 'pixelate' | 'cyberpunk' | 'glitch';
+type EffectMode =
+  | 'none'
+  | 'noir'
+  | 'night-vision'
+  | 'vhs'
+  | 'pixelate'
+  | 'cyberpunk'
+  | 'glitch'
+  | 'warm'
+  | 'cool'
+  | 'comic'
+  | 'soft-glow'
+  | 'face-focus';
 type TimerOption = 0 | 3 | 10;
 
 type CaptureItem = {
@@ -33,7 +45,27 @@ const EFFECT_OPTIONS: Array<{ value: EffectMode; label: string }> = [
   { value: 'pixelate', label: 'Pixelate' },
   { value: 'cyberpunk', label: 'Cyberpunk' },
   { value: 'glitch', label: 'Glitch' },
+  { value: 'warm', label: 'Warm Portrait' },
+  { value: 'cool', label: 'Cool Tone' },
+  { value: 'comic', label: 'Comic Ink' },
+  { value: 'soft-glow', label: 'Soft Glow' },
+  { value: 'face-focus', label: 'Face Focus (simulated)' },
 ];
+
+const EFFECT_DETAILS: Record<EffectMode, string> = {
+  none: 'Clean camera output with no effect.',
+  noir: 'High-contrast black-and-white look.',
+  'night-vision': 'Green-tinted low-light simulation with grain.',
+  vhs: 'Retro tape scanline and timestamp treatment.',
+  pixelate: 'Blocky low-resolution mosaic effect.',
+  cyberpunk: 'Neon-heavy magenta/cyan color grading.',
+  glitch: 'Intermittent digital slice shift artifact.',
+  warm: 'Portrait-style warmer skin tones and gentle contrast.',
+  cool: 'Cooler blue cinematic grading.',
+  comic: 'Edge-enhanced comic-book style.',
+  'soft-glow': 'Diffused highlight bloom for a dreamy finish.',
+  'face-focus': 'Simulated face spotlight with a soft vignette.',
+};
 
 const mapDomError = (err: unknown): MappedError => {
   if (!(err instanceof DOMException)) {
@@ -87,14 +119,11 @@ const CameraApp = () => {
   const sessionUrlRef = useRef<string[]>([]);
 
   const [status, setStatus] = useState<CameraStatus>('idle');
-  const [mode, setMode] = useState<CaptureMode>('photo');
+  const [mode] = useState<CaptureMode>('photo');
   const [error, setError] = useState<string | null>(null);
   const [liveMessage, setLiveMessage] = useState('');
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [activeDeviceId, setActiveDeviceId] = useState('');
-  const [isPreviewMirrored, setIsPreviewMirrored] = useState(true);
-  const [mirrorSelfieCapture, setMirrorSelfieCapture] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
+  const [isPreviewMirrored] = useState(true);
+  const [mirrorSelfieCapture] = useState(false);
   const [timerOption, setTimerOption] = useState<TimerOption>(0);
   const [countdown, setCountdown] = useState(0);
   const [sessionCaptures, setSessionCaptures] = useState<CaptureItem[]>([]);
@@ -131,8 +160,7 @@ const CameraApp = () => {
 
   const loadDevices = useCallback(async () => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
-    const all = await navigator.mediaDevices.enumerateDevices();
-    setDevices(all.filter((d) => d.kind === 'videoinput'));
+    await navigator.mediaDevices.enumerateDevices();
   }, []);
 
   const loadPersistedFiles = useCallback(async () => {
@@ -230,8 +258,6 @@ const CameraApp = () => {
 
         applyTrackCapabilities(newStream);
         await loadDevices();
-        const id = newStream.getVideoTracks()[0]?.getSettings().deviceId;
-        if (id) setActiveDeviceId(id);
         setStatus('streaming');
         setLiveMessage('Camera is live.');
       } catch (err) {
@@ -282,6 +308,11 @@ const CameraApp = () => {
       if (effect === 'night-vision') filter = 'grayscale(70%) contrast(135%) saturate(120%)';
       if (effect === 'vhs') filter = 'contrast(115%) saturate(85%) blur(0.6px)';
       if (effect === 'cyberpunk') filter = 'saturate(175%) hue-rotate(310deg) contrast(120%)';
+      if (effect === 'warm') filter = 'sepia(22%) saturate(125%) contrast(108%)';
+      if (effect === 'cool') filter = 'hue-rotate(185deg) saturate(105%) contrast(108%)';
+      if (effect === 'comic') filter = 'contrast(165%) saturate(118%)';
+      if (effect === 'soft-glow') filter = 'brightness(106%) contrast(105%) saturate(108%) blur(0.8px)';
+      if (effect === 'face-focus') filter = 'contrast(110%) saturate(112%)';
       context.filter = filter;
 
       if (effect === 'pixelate') {
@@ -332,6 +363,25 @@ const CameraApp = () => {
         const y = Math.floor((now % height) / 1.8);
         const shift = Math.floor(Math.sin(now / 40) * 18);
         context.drawImage(context.canvas, 0, y, width, sliceHeight, shift, y, width, sliceHeight);
+      }
+
+      if (effect === 'comic') {
+        context.globalCompositeOperation = 'multiply';
+        context.fillStyle = 'rgba(0, 0, 0, 0.09)';
+        for (let y = 0; y < height; y += 6) {
+          context.fillRect(0, y, width, 1);
+        }
+        context.globalCompositeOperation = 'source-over';
+      }
+
+      if (effect === 'face-focus') {
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const focus = context.createRadialGradient(centerX, centerY, width * 0.08, centerX, centerY, width * 0.62);
+        focus.addColorStop(0, 'rgba(255, 240, 225, 0)');
+        focus.addColorStop(1, 'rgba(10, 10, 20, 0.42)');
+        context.fillStyle = focus;
+        context.fillRect(0, 0, width, height);
       }
 
       context.restore();
@@ -554,8 +604,8 @@ const CameraApp = () => {
   }, []);
 
   const startCameraFromAction = useCallback(async () => {
-    await startStream(activeDeviceId || undefined);
-  }, [activeDeviceId, startStream]);
+    await startStream();
+  }, [startStream]);
 
   const handleDelete = useCallback(
     async (capture: CaptureItem) => {
@@ -694,18 +744,6 @@ const CameraApp = () => {
       <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col overflow-hidden p-4">
         <section className="mx-auto flex h-full w-full max-w-5xl flex-1 overflow-hidden rounded-2xl border border-black/15 bg-[#d7d9dd] shadow-[0_12px_40px_rgba(0,0,0,0.35)]">
           <div className="flex h-full w-full flex-col">
-            <div className="flex items-center justify-between border-b border-black/10 bg-[#ececec] px-3 py-2 text-sm text-slate-700">
-              <div className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full bg-red-400" />
-                <span className="h-3 w-3 rounded-full bg-amber-300" />
-                <span className="h-3 w-3 rounded-full bg-emerald-400" />
-              </div>
-              <span className="text-sm font-semibold">Photo Booth</span>
-              <button className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50" onClick={openInFiles}>
-                Open Files
-              </button>
-            </div>
-
             <div className="flex items-center justify-between border-b border-black/10 bg-[#f6f7f9] px-3 py-2 text-sm">
               <div className="flex items-center gap-2">
                 <button
@@ -730,9 +768,6 @@ const CameraApp = () => {
               <div className="relative h-full w-full overflow-hidden rounded-2xl border border-black/10 bg-black">
                 <video ref={videoRef} playsInline autoPlay muted aria-label="Camera source feed" className="hidden" />
                 <canvas ref={previewCanvasRef} aria-label="Camera preview" className="h-full w-full object-cover" />
-                {showGrid && (
-                  <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,transparent_32%,rgba(255,255,255,0.24)_33%,transparent_34%,transparent_65%,rgba(255,255,255,0.24)_66%,transparent_67%),linear-gradient(to_bottom,transparent_32%,rgba(255,255,255,0.24)_33%,transparent_34%,transparent_65%,rgba(255,255,255,0.24)_66%,transparent_67%)]" />
-                )}
                 {countdown > 0 && (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/45">
                     <span className="text-6xl font-bold text-white">{countdown}</span>
@@ -752,13 +787,61 @@ const CameraApp = () => {
             )}
             {videoUnavailableMessage && <div className="border-t border-yellow-500/60 bg-yellow-50 px-4 py-2 text-xs text-yellow-900">{videoUnavailableMessage}</div>}
 
-            <div className="grid gap-3 border-t border-black/10 bg-[#c6d4c8] px-3 py-3 lg:grid-cols-[220px_1fr_220px] lg:items-end">
-              <aside className="order-2 lg:order-1">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-700">Recent shots</p>
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {allCaptures.length === 0 && <p className="text-xs text-slate-600">No captures yet.</p>}
-                  {allCaptures.slice(0, 6).map((item) => (
-                    <div key={item.id} className="group relative h-16 w-20 flex-none overflow-hidden rounded border border-black/20 bg-black/70">
+            <div className="grid gap-3 border-t border-black/10 bg-[#c6d4c8] px-3 py-3 lg:grid-cols-[minmax(300px,1fr)_100px_260px] lg:items-stretch">
+              <aside className="order-2 rounded-lg border border-black/10 bg-white/35 p-2 lg:order-1">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-700">Recent shots</p>
+                  <button className="rounded border border-black/15 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100" onClick={openInFiles}>
+                    Open Files
+                  </button>
+                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle mirror selfie captures" aria-pressed={mirrorSelfieCapture} onClick={() => setMirrorSelfieCapture((prev) => !prev)}>
+                    Mirror selfie captures: {mirrorSelfieCapture ? 'On' : 'Off'}
+                  </button>
+                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle grid overlay" aria-pressed={showGrid} onClick={() => setShowGrid((prev) => !prev)}>
+                    Grid overlay: {showGrid ? 'On' : 'Off'}
+                  </button>
+
+                  {trackCaps.zoom && zoom !== null && (
+                    <label className="flex flex-col gap-1">
+                      Zoom
+                      <input
+                        aria-label="Zoom level"
+                        type="range"
+                        min={trackCaps.zoom.min ?? 1}
+                        max={trackCaps.zoom.max ?? 4}
+                        step={trackCaps.zoom.step ?? 0.1}
+                        value={zoom}
+                        onChange={(event) => setZoom(Number(event.target.value))}
+                      />
+                    </label>
+                  )}
+
+                  {trackCaps.torch && (
+                    <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle torch" aria-pressed={torch} onClick={() => setTorch((prev) => !prev)}>
+                      Torch: {torch ? 'On' : 'Off'}
+                    </button>
+                  )}
+
+                  {mode === 'video' && (
+                    <>
+                      <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle audio" aria-pressed={audioEnabled} onClick={() => setAudioEnabled((prev) => !prev)}>
+                        Audio: {audioEnabled ? 'On' : 'Off'}
+                      </button>
+                      <button
+                        className="rounded bg-slate-200 px-2 py-1 text-left"
+                        aria-label="Toggle record with effects"
+                        aria-pressed={recordWithEffects}
+                        onClick={() => setRecordWithEffects((prev) => !prev)}
+                      >
+                        Record with effects: {recordWithEffects ? 'On' : 'Off'}
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
+                  {allCaptures.length === 0 && <p className="col-span-full text-xs text-slate-600">No captures yet.</p>}
+                  {allCaptures.slice(0, 10).map((item) => (
+                    <div key={item.id} className="group relative h-16 overflow-hidden rounded border border-black/20 bg-black/70">
                       {item.type === 'photo' ? (
                         <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
                       ) : (
@@ -776,7 +859,7 @@ const CameraApp = () => {
                 </div>
               </aside>
 
-              <div className="order-1 flex items-center justify-center lg:order-2">
+              <div className="order-1 flex items-center justify-center rounded-lg border border-black/10 bg-white/25 p-2 lg:order-2">
                 {mode === 'photo' ? (
                   <button
                     className="h-16 w-16 rounded-full border-4 border-red-200 bg-red-500 text-sm font-semibold text-white shadow"
@@ -803,46 +886,7 @@ const CameraApp = () => {
 
               <details className="order-3 rounded-lg border border-black/15 bg-white/70 p-2 text-sm" open>
                 <summary className="cursor-pointer rounded bg-white px-2 py-1 text-right font-semibold text-slate-700">Effects & Controls</summary>
-                <div className="mt-2 grid gap-2 text-slate-700">
-                  <label className="flex flex-col gap-1">
-                    Capture mode
-                    <select
-                      aria-label="Capture mode"
-                      className="rounded border border-black/15 bg-white px-2 py-1.5"
-                      value={mode}
-                      onChange={(event) => {
-                        const nextMode = event.target.value as CaptureMode;
-                        if (nextMode === 'video' && !hasMediaRecorder) return;
-                        setMode(nextMode);
-                      }}
-                    >
-                      <option value="photo">Still</option>
-                      <option value="video" disabled={!hasMediaRecorder}>
-                        Clip
-                      </option>
-                    </select>
-                  </label>
-
-                  <label className="flex flex-col gap-1">
-                    Camera source
-                    <select
-                      className="rounded border border-black/15 bg-white px-2 py-1.5"
-                      value={activeDeviceId}
-                      onChange={(event) => {
-                        const id = event.target.value;
-                        setActiveDeviceId(id);
-                        void startStream(id || undefined);
-                      }}
-                    >
-                      <option value="">Default</option>
-                      {devices.map((device, index) => (
-                        <option key={device.deviceId} value={device.deviceId}>
-                          {device.label || `Camera ${index + 1}`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
+                <div className="mt-2 grid max-h-48 gap-2 overflow-y-auto pr-1 text-slate-700">
                   <label className="flex flex-col gap-1">
                     Effects
                     <select className="rounded border border-black/15 bg-white px-2 py-1.5" value={effect} onChange={(event) => setEffect(event.target.value as EffectMode)}>
@@ -852,6 +896,7 @@ const CameraApp = () => {
                         </option>
                       ))}
                     </select>
+                    <span className="text-xs text-slate-500">{EFFECT_DETAILS[effect]}</span>
                   </label>
 
                   {mode === 'photo' && (
@@ -868,16 +913,6 @@ const CameraApp = () => {
                       </select>
                     </label>
                   )}
-
-                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle mirror preview" aria-pressed={isPreviewMirrored} onClick={() => setIsPreviewMirrored((prev) => !prev)}>
-                    Mirror preview: {isPreviewMirrored ? 'On' : 'Off'}
-                  </button>
-                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle mirror selfie captures" aria-pressed={mirrorSelfieCapture} onClick={() => setMirrorSelfieCapture((prev) => !prev)}>
-                    Mirror selfie captures: {mirrorSelfieCapture ? 'On' : 'Off'}
-                  </button>
-                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle grid overlay" aria-pressed={showGrid} onClick={() => setShowGrid((prev) => !prev)}>
-                    Grid overlay: {showGrid ? 'On' : 'Off'}
-                  </button>
 
                   {trackCaps.zoom && zoom !== null && (
                     <label className="flex flex-col gap-1">
