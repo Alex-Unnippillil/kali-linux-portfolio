@@ -146,34 +146,34 @@ describe('Camera app', () => {
   });
 
   it('Photo capture adds Blob object URL and not base64', async () => {
+    mockedUseOPFS.mockReturnValue({
+      supported: false,
+      root: null,
+      getDir: jest.fn(),
+      readFile: jest.fn(),
+      writeFile: jest.fn(),
+      deleteFile: jest.fn(),
+      listFiles: jest.fn(() => Promise.resolve([])),
+    });
+
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.click(screen.getByRole('button', { name: /capture photo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob)));
     const photo = screen.getByRole('img');
     expect(photo).toHaveAttribute('src', 'blob:test-url');
     expect(photo.getAttribute('src')).not.toContain('data:image');
+    expect(screen.getByRole('link', { name: /save|download/i })).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
   });
 
-  it('Countdown appears and can be canceled', async () => {
-    jest.useFakeTimers();
+  it('keeps the simplified compact controls without timer selector', async () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.change(screen.getByLabelText('Timer'), { target: { value: '3' } });
-    fireEvent.click(screen.getByRole('button', { name: /capture photo/i }));
-
-    expect(screen.getByText('3')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
-
-    act(() => {
-      jest.advanceTimersByTime(3000);
-    });
-
-    expect(screen.queryByText('3')).not.toBeInTheDocument();
-    jest.useRealTimers();
+    expect(screen.queryByLabelText('Timer')).not.toBeInTheDocument();
+    expect(screen.getByText('Effects')).toBeInTheDocument();
   });
 
   it('Video mode is disabled with a clear message if MediaRecorder is missing', () => {
@@ -182,7 +182,8 @@ describe('Camera app', () => {
     render(<CameraApp />);
 
     expect(screen.getByText(/video mode is unavailable/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Video' })).toBeDisabled();
+    expect(screen.queryByLabelText('Capture mode')).not.toBeInTheDocument();
+    expect(screen.queryByText('Camera source')).not.toBeInTheDocument();
   });
 
   it('OPFS save path uses getDir(Media/Camera) and writeFile with Blob', async () => {
@@ -202,7 +203,7 @@ describe('Camera app', () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.click(screen.getByRole('button', { name: /capture photo/i }));
+    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
 
     await waitFor(() => expect(getDir).toHaveBeenCalledWith('Media/Camera', { create: true }));
     await waitFor(() => expect(writeFile).toHaveBeenCalledWith(expect.stringMatching(/^IMG_/), expect.any(Blob), expect.anything()));
