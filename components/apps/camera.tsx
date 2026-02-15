@@ -123,7 +123,7 @@ const CameraApp = () => {
   const [error, setError] = useState<string | null>(null);
   const [liveMessage, setLiveMessage] = useState('');
   const [isPreviewMirrored] = useState(true);
-  const [mirrorSelfieCapture] = useState(false);
+  const [mirrorSelfieCapture, setMirrorSelfieCapture] = useState(false);
   const [timerOption, setTimerOption] = useState<TimerOption>(0);
   const [countdown, setCountdown] = useState(0);
   const [sessionCaptures, setSessionCaptures] = useState<CaptureItem[]>([]);
@@ -133,6 +133,7 @@ const CameraApp = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [effect, setEffect] = useState<EffectMode>('none');
+  const [showGrid, setShowGrid] = useState(false);
   const [trackCaps, setTrackCaps] = useState<VideoTrackCaps>({});
   const [zoom, setZoom] = useState<number | null>(null);
   const [torch, setTorch] = useState(false);
