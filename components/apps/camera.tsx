@@ -794,6 +794,49 @@ const CameraApp = () => {
                   <button className="rounded border border-black/15 bg-white px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-100" onClick={openInFiles}>
                     Open Files
                   </button>
+                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle mirror selfie captures" aria-pressed={mirrorSelfieCapture} onClick={() => setMirrorSelfieCapture((prev) => !prev)}>
+                    Mirror selfie captures: {mirrorSelfieCapture ? 'On' : 'Off'}
+                  </button>
+                  <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle grid overlay" aria-pressed={showGrid} onClick={() => setShowGrid((prev) => !prev)}>
+                    Grid overlay: {showGrid ? 'On' : 'Off'}
+                  </button>
+
+                  {trackCaps.zoom && zoom !== null && (
+                    <label className="flex flex-col gap-1">
+                      Zoom
+                      <input
+                        aria-label="Zoom level"
+                        type="range"
+                        min={trackCaps.zoom.min ?? 1}
+                        max={trackCaps.zoom.max ?? 4}
+                        step={trackCaps.zoom.step ?? 0.1}
+                        value={zoom}
+                        onChange={(event) => setZoom(Number(event.target.value))}
+                      />
+                    </label>
+                  )}
+
+                  {trackCaps.torch && (
+                    <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle torch" aria-pressed={torch} onClick={() => setTorch((prev) => !prev)}>
+                      Torch: {torch ? 'On' : 'Off'}
+                    </button>
+                  )}
+
+                  {mode === 'video' && (
+                    <>
+                      <button className="rounded bg-slate-200 px-2 py-1 text-left" aria-label="Toggle audio" aria-pressed={audioEnabled} onClick={() => setAudioEnabled((prev) => !prev)}>
+                        Audio: {audioEnabled ? 'On' : 'Off'}
+                      </button>
+                      <button
+                        className="rounded bg-slate-200 px-2 py-1 text-left"
+                        aria-label="Toggle record with effects"
+                        aria-pressed={recordWithEffects}
+                        onClick={() => setRecordWithEffects((prev) => !prev)}
+                      >
+                        Record with effects: {recordWithEffects ? 'On' : 'Off'}
+                      </button>
+                    </>
+                  )}
                 </div>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
                   {allCaptures.length === 0 && <p className="col-span-full text-xs text-slate-600">No captures yet.</p>}
