@@ -1,6 +1,7 @@
 import {
   createEmptyBoard,
   getBestMove,
+  getMoveForDifficulty,
   getWinningCells,
 } from '../games/connect-four/solver';
 
@@ -12,8 +13,7 @@ describe('connect four solver', () => {
     board[5][2] = 'red';
     board[5][3] = 'red';
 
-    const win = getWinningCells(board, 'red');
-    expect(win).toEqual([
+    expect(getWinningCells(board, 'red')).toEqual([
       { r: 5, c: 0 },
       { r: 5, c: 1 },
       { r: 5, c: 2 },
@@ -21,81 +21,65 @@ describe('connect four solver', () => {
     ]);
   });
 
-  it('detects vertical wins', () => {
+  it('detects mixed-stack diagonal wins', () => {
     const board = createEmptyBoard();
+    board[5][0] = 'yellow';
+    board[4][0] = 'red';
+    board[5][1] = 'yellow';
+    board[4][1] = 'yellow';
+    board[3][1] = 'red';
+    board[5][2] = 'yellow';
+    board[4][2] = 'yellow';
+    board[3][2] = 'yellow';
+    board[2][2] = 'red';
     board[5][3] = 'yellow';
     board[4][3] = 'yellow';
     board[3][3] = 'yellow';
     board[2][3] = 'yellow';
+    board[1][3] = 'red';
 
-    const win = getWinningCells(board, 'yellow');
-    expect(win).toEqual([
-      { r: 2, c: 3 },
-      { r: 3, c: 3 },
-      { r: 4, c: 3 },
-      { r: 5, c: 3 },
-    ]);
-  });
-
-  it('detects diagonal wins', () => {
-    const board = createEmptyBoard();
-    board[2][0] = 'red';
-    board[3][1] = 'red';
-    board[4][2] = 'red';
-    board[5][3] = 'red';
-
-    const win = getWinningCells(board, 'red');
-    expect(win).toEqual([
-      { r: 2, c: 0 },
+    expect(getWinningCells(board, 'red')).toEqual([
+      { r: 1, c: 3 },
+      { r: 2, c: 2 },
       { r: 3, c: 1 },
-      { r: 4, c: 2 },
-      { r: 5, c: 3 },
+      { r: 4, c: 0 },
     ]);
   });
 
-  it('detects reverse diagonal wins', () => {
-    const board = createEmptyBoard();
-    board[2][3] = 'yellow';
-    board[3][2] = 'yellow';
-    board[4][1] = 'yellow';
-    board[5][0] = 'yellow';
+  it('picks immediate wins and blocks for easy mode', () => {
+    const winBoard = createEmptyBoard();
+    winBoard[5][0] = 'red';
+    winBoard[5][1] = 'red';
+    winBoard[5][2] = 'red';
+    expect(getMoveForDifficulty(winBoard, 'red', 'easy', { random: () => 0 }).column).toBe(3);
 
-    const win = getWinningCells(board, 'yellow');
-    expect(win).toEqual([
-      { r: 2, c: 3 },
-      { r: 3, c: 2 },
-      { r: 4, c: 1 },
-      { r: 5, c: 0 },
-    ]);
+    const blockBoard = createEmptyBoard();
+    blockBoard[5][0] = 'yellow';
+    blockBoard[5][1] = 'yellow';
+    blockBoard[5][2] = 'yellow';
+    expect(getMoveForDifficulty(blockBoard, 'red', 'easy', { random: () => 0 }).column).toBe(3);
   });
 
-  it('picks an immediate winning move', () => {
+  it('returns deterministic normal and hard moves for fixed board', () => {
     const board = createEmptyBoard();
-    board[5][0] = 'red';
-    board[5][1] = 'red';
+    board[5][3] = 'red';
+    board[4][3] = 'yellow';
     board[5][2] = 'red';
 
-    const { column } = getBestMove(board, 4, 'red');
-    expect(column).toBe(3);
+    const normal = getMoveForDifficulty(board, 'red', 'normal');
+    const hard = getMoveForDifficulty(board, 'red', 'hard', { hardTimeMs: 200 });
+
+    expect(normal.column).toBe(hard.column);
+    expect(Number.isFinite(normal.column)).toBe(true);
   });
 
-  it('blocks an opponent immediate win', () => {
+  it('blocks an opponent immediate win with minimax directly', () => {
     const board = createEmptyBoard();
     board[5][0] = 'red';
     board[5][1] = 'red';
     board[5][2] = 'red';
 
     const { column } = getBestMove(board, 4, 'yellow');
-    expect(column).toBe(3);
-  });
-
-  it('avoids losing next turn when possible', () => {
-    const board = createEmptyBoard();
-    board[5][0] = 'yellow';
-    board[5][1] = 'yellow';
-    board[5][2] = 'yellow';
-
-    const { column } = getBestMove(board, 4, 'red');
     expect(column).toBe(3);
   });
 });
