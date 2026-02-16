@@ -2,95 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import GameLayout from "../../components/apps/GameLayout";
+import useGameLoop from "../../components/apps/Games/common/useGameLoop";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
-import { ENEMY_TYPES, Tower } from "../games/tower-defense";
 import {
-  createTowerDefenseEngine,
+  ENEMY_TYPES,
+  getTowerDPS,
   getUpgradeCost,
+  TOWER_TYPES,
+  TowerTypeKey,
   Vec,
-} from "../games/tower-defense/engine";
+} from "../games/tower-defense";
+import { createTowerDefenseEngine } from "../games/tower-defense/engine";
 import { createTowerDefenseRenderer } from "../games/tower-defense/renderer";
-import useGameLoop from "../../components/apps/Games/common/useGameLoop";
-
-const clamp = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
-
-const buildPath = (points: Vec[]): Vec[] => {
-  if (!points.length) return [];
-  const cells: Vec[] = [{ ...points[0] }];
-  for (let i = 1; i < points.length; i += 1) {
-    const prev = points[i - 1];
-    const next = points[i];
-    const dx = Math.sign(next.x - prev.x);
-    const dy = Math.sign(next.y - prev.y);
-    let cursor = { ...prev };
-    while (cursor.x !== next.x || cursor.y !== next.y) {
-      cursor = { x: cursor.x + dx, y: cursor.y + dy };
-      cells.push({ ...cursor });
-    }
-  }
-  return cells;
-};
-
-const QUICK_PLAY_PRESETS = [
-  {
-    id: "straight",
-    name: "Straight Shot",
-    summary: "Short lane with fast scouting waves.",
-    pathCells: buildPath([
-      { x: 0, y: 4 },
-      { x: 9, y: 4 },
-    ]),
-    waveConfig: [
-      ["fast", "fast", "fast", "tank"],
-      ["fast", "tank", "fast", "fast", "tank"],
-      ["tank", "tank", "fast", "fast", "fast", "tank"],
-    ] as (keyof typeof ENEMY_TYPES)[][],
-    spawnInterval: 0.8,
-    startingGold: 35,
-    startingLives: 12,
-  },
-  {
-    id: "corner",
-    name: "Corner Crawl",
-    summary: "Longer path that favors patient builds.",
-    pathCells: buildPath([
-      { x: 0, y: 1 },
-      { x: 9, y: 1 },
-      { x: 9, y: 8 },
-    ]),
-    waveConfig: [
-      ["fast", "fast", "tank"],
-      ["tank", "fast", "tank", "fast", "fast"],
-      ["tank", "tank", "tank"],
-    ] as (keyof typeof ENEMY_TYPES)[][],
-    spawnInterval: 1.1,
-    startingGold: 40,
-    startingLives: 14,
-  },
-  {
-    id: "zigzag",
-    name: "Zigzag Drift",
-    summary: "Bends and turns with mixed pressure.",
-    pathCells: buildPath([
-      { x: 0, y: 2 },
-      { x: 6, y: 2 },
-      { x: 6, y: 6 },
-      { x: 2, y: 6 },
-      { x: 2, y: 9 },
-      { x: 9, y: 9 },
-    ]),
-    waveConfig: [
-      ["fast", "fast", "fast", "fast"],
-      ["tank", "fast", "tank", "fast"],
-      ["fast", "tank", "tank", "fast", "fast"],
-    ] as (keyof typeof ENEMY_TYPES)[][],
-    spawnInterval: 0.9,
-    startingGold: 38,
-    startingLives: 13,
-  },
-];
 
 interface TowerDefenseProps {
   windowMeta?: {
@@ -100,770 +24,282 @@ interface TowerDefenseProps {
 
 const TowerDefense = ({ windowMeta }: TowerDefenseProps = {}) => {
   const isFocused = windowMeta?.isFocused ?? true;
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const engineRef = useRef(createTowerDefenseEngine());
   const rendererRef = useRef(createTowerDefenseRenderer());
-  const engineRef = useRef(createTowerDefenseEngine({}));
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   const [uiState, setUiState] = useState(engineRef.current.getUiState());
+  const [toast, setToast] = useState<string | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<Vec | null>(null);
+  const [manualPause, setManualPause] = useState(false);
 
-  const [selected, setSelected] = useState<number | null>(null);
-  const selectedRef = useRef<number | null>(selected);
-  const hoveredRef = useRef<number | null>(null);
-  const cursorRef = useRef<Vec>({ x: 0, y: 0 });
-  const canvasFocusedRef = useRef(false);
-
-  const [manualPaused, setManualPaused] = useState(false);
-  const [layoutPaused, setLayoutPaused] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pausedRef = useRef(false);
 
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const [waveJson, setWaveJson] = useState("");
-  const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
-  const presetSelectRef = useRef<HTMLSelectElement>(null);
-
-  const uiUpdateRef = useRef(0);
-
   useEffect(() => {
-    selectedRef.current = selected;
-  }, [selected]);
+    pausedRef.current = manualPause || !isFocused;
+  }, [manualPause, isFocused]);
 
-  useEffect(() => {
-    pausedRef.current = manualPaused || layoutPaused;
-  }, [manualPaused, layoutPaused]);
-
-  useEffect(() => {
-    setWaveJson(JSON.stringify(uiState.waveConfig, null, 2));
-  }, [uiState.waveConfig]);
-
-  useEffect(() => {
-    return () => {
-      if (toastTimeoutRef.current) {
-        clearTimeout(toastTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const syncUiState = useCallback(() => {
-    const snapshot = engineRef.current.getUiState();
-    setUiState(snapshot);
-  }, []);
-
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current);
-    }
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast(null);
-    }, 2400);
-  }, []);
-
-  const applyPreset = useCallback(
-    (index: number) => {
-      const preset = QUICK_PLAY_PRESETS[index];
-      if (!preset) return;
-      const result = engineRef.current.dispatch({
-        type: "apply-preset",
-        pathCells: preset.pathCells,
-        waveConfig: preset.waveConfig,
-        spawnInterval: preset.spawnInterval,
-        startingGold: preset.startingGold,
-        startingLives: preset.startingLives,
-        editing: false,
-      });
-      if (!result.ok && result.toast) showToast(result.toast);
-      setManualPaused(false);
-      setSelected(null);
-      setSelectedPresetIndex(index);
-      syncUiState();
+  useEffect(
+    () => () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     },
-    [showToast, syncUiState],
+    [],
   );
 
-  useEffect(() => {
-    applyPreset(0);
-  }, [applyPreset]);
+  const syncUi = useCallback(() => {
+    setUiState(engineRef.current.getUiState());
+  }, []);
 
-  const getCanvasCell = (clientX: number, clientY: number) => {
+  const showToast = useCallback((message?: string) => {
+    if (!message) return;
+    setToast(message);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(() => setToast(null), 1800);
+  }, []);
+
+  const dispatch = useCallback(
+    (action: Parameters<typeof engineRef.current.dispatch>[0]) => {
+      const result = engineRef.current.dispatch(action);
+      if (!result.ok) showToast(result.toast);
+      syncUi();
+      return result;
+    },
+    [showToast, syncUi],
+  );
+
+  const getCellFromPointer = (clientX: number, clientY: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return null;
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const x = Math.floor(
-      ((clientX - rect.left) * scaleX) / uiState.cellSize,
-    );
-    const y = Math.floor(
-      ((clientY - rect.top) * scaleY) / uiState.cellSize,
-    );
-    if (Number.isNaN(x) || Number.isNaN(y)) return null;
-    if (x < 0 || y < 0 || x >= uiState.gridSize || y >= uiState.gridSize) {
-      return null;
-    }
+    if (!rect.width || !rect.height) return null;
+    const gridPx = uiState.gridSize * uiState.cellSize;
+    const x = Math.floor(((clientX - rect.left) / rect.width) * gridPx / uiState.cellSize);
+    const y = Math.floor(((clientY - rect.top) / rect.height) * gridPx / uiState.cellSize);
+    if (x < 0 || y < 0 || x >= uiState.gridSize || y >= uiState.gridSize) return null;
     return { x, y };
   };
 
-  const handlePlacement = (cell: Vec) => {
-    const result = engineRef.current.dispatch({ type: "place-tower", cell });
-    if (!result.ok) {
-      if (result.toast) showToast(result.toast);
-      return;
-    }
-    syncUiState();
-    setSelected(engineRef.current.getState().towers.length - 1);
-  };
-
-  const handleCanvasClick = (e: React.MouseEvent) => {
-    const coords = getCanvasCell(e.clientX, e.clientY);
-    if (!coords) return;
-    cursorRef.current = coords;
-    const state = engineRef.current.getState();
-    if (state.editing) {
-      const result = engineRef.current.dispatch({
-        type: "add-path-cell",
-        cell: coords,
-      });
-      if (!result.ok && result.toast) showToast(result.toast);
-      syncUiState();
-      return;
-    }
-    const existing = state.towers.findIndex(
-      (tower) => tower.x === coords.x && tower.y === coords.y,
-    );
-    if (existing >= 0) {
-      setSelected(existing);
-      return;
-    }
-    handlePlacement(coords);
-  };
-
-  const handleCanvasMove = (e: React.MouseEvent) => {
-    const coords = getCanvasCell(e.clientX, e.clientY);
-    if (!coords) {
-      hoveredRef.current = null;
-      return;
-    }
-    const idx = engineRef.current
-      .getState()
-      .towers.findIndex((t) => t.x === coords.x && t.y === coords.y);
-    hoveredRef.current = idx >= 0 ? idx : null;
-  };
-
-  const handleCanvasLeave = () => {
-    hoveredRef.current = null;
-  };
-
-  const sellTower = (index: number) => {
-    const result = engineRef.current.dispatch({ type: "sell-tower", index });
-    if (!result.ok && result.toast) showToast(result.toast);
-    setSelected(null);
-    syncUiState();
-  };
-
-  const handleCanvasContext = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const coords = getCanvasCell(e.clientX, e.clientY);
-    if (!coords) return;
-    const idx = engineRef.current
-      .getState()
-      .towers.findIndex(
-        (tower) => tower.x === coords.x && tower.y === coords.y,
-      );
-    if (idx < 0) return;
-    sellTower(idx);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLCanvasElement>) => {
-    if (e.key.startsWith("Arrow")) {
-      e.preventDefault();
-      const current = cursorRef.current;
-      const next = { ...current };
-      if (e.key === "ArrowUp")
-        next.y = clamp(current.y - 1, 0, uiState.gridSize - 1);
-      if (e.key === "ArrowDown")
-        next.y = clamp(current.y + 1, 0, uiState.gridSize - 1);
-      if (e.key === "ArrowLeft")
-        next.x = clamp(current.x - 1, 0, uiState.gridSize - 1);
-      if (e.key === "ArrowRight")
-        next.x = clamp(current.x + 1, 0, uiState.gridSize - 1);
-      cursorRef.current = next;
-      return;
-    }
-
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      const current = cursorRef.current;
-      if (uiState.editing) {
-        const result = engineRef.current.dispatch({
-          type: "add-path-cell",
-          cell: current,
-        });
-        if (!result.ok && result.toast) showToast(result.toast);
-        syncUiState();
-      } else {
-        const existing = engineRef.current
-          .getState()
-          .towers.findIndex(
-            (tower) => tower.x === current.x && tower.y === current.y,
-          );
-        if (existing >= 0) {
-          setSelected(existing);
-        } else {
-          handlePlacement(current);
-        }
-      }
-      return;
-    }
-
-    if (e.key === "Delete" || e.key === "Backspace") {
-      e.preventDefault();
-      if (uiState.editing) {
-        const result = engineRef.current.dispatch({ type: "undo-path-cell" });
-        if (!result.ok && result.toast) showToast(result.toast);
-        syncUiState();
-      } else if (selectedRef.current !== null) {
-        sellTower(selectedRef.current);
-      }
-      return;
-    }
-
-    if (e.key === "Escape") {
-      e.preventDefault();
-      setSelected(null);
-      return;
-    }
-
-    if (e.key.toLowerCase() === "p") {
-      e.preventDefault();
-      setManualPaused((p) => !p);
-    }
-  };
-
-  const addWave = () => {
-    const waves = [...uiState.waveConfig, []];
-    engineRef.current.dispatch({ type: "set-wave-config", waves });
-    syncUiState();
-  };
-
-  const addEnemyToWave = (
-    index: number,
-    type: keyof typeof ENEMY_TYPES,
-  ) => {
-    const waves = uiState.waveConfig.map((wave) => [...wave]);
-    waves[index].push(type);
-    engineRef.current.dispatch({ type: "set-wave-config", waves });
-    syncUiState();
-  };
-
-  const importWaves = () => {
-    try {
-      const data = JSON.parse(waveJson) as (keyof typeof ENEMY_TYPES)[][];
-      if (Array.isArray(data)) {
-        engineRef.current.dispatch({ type: "set-wave-config", waves: data });
-        syncUiState();
-      }
-    } catch {
-      showToast("Invalid wave JSON.");
-    }
-  };
-
-  const exportWaves = () => {
-    const json = JSON.stringify(uiState.waveConfig, null, 2);
-    setWaveJson(json);
-    navigator.clipboard?.writeText(json).catch(() => {});
-    showToast("Wave JSON copied to clipboard.");
-  };
-
-  const resetRun = () => {
-    engineRef.current.dispatch({ type: "reset-run" });
-    setManualPaused(false);
-    setSelected(null);
-    syncUiState();
-  };
-
-  const startRun = () => {
-    const { route, routeError } = engineRef.current.getState();
-    if (routeError || route.length < 2) {
-      showToast("Finish a valid route before launching waves.");
-      return;
-    }
-    engineRef.current.dispatch({ type: "set-editing", editing: false });
-    engineRef.current.dispatch({ type: "reset-run" });
-    const result = engineRef.current.dispatch({ type: "start-run" });
-    if (!result.ok && result.toast) {
-      showToast(result.toast);
-      engineRef.current.dispatch({ type: "set-editing", editing: true });
-    }
-    setManualPaused(false);
-    syncUiState();
-  };
-
-  const returnToBuild = () => {
-    engineRef.current.dispatch({ type: "reset-run" });
-    engineRef.current.dispatch({ type: "set-editing", editing: true });
-    setManualPaused(false);
-    setSelected(null);
-    syncUiState();
-  };
-
-  const clearRoute = () => {
-    engineRef.current.dispatch({ type: "reset-run" });
-    engineRef.current.dispatch({ type: "clear-path-cells" });
-    engineRef.current.dispatch({ type: "set-editing", editing: true });
-    setManualPaused(false);
-    setSelected(null);
-    syncUiState();
-  };
-
-  const clearTowers = () => {
-    engineRef.current.dispatch({ type: "clear-towers" });
-    setSelected(null);
-    syncUiState();
-  };
-
-  const undoRoute = () => {
-    const result = engineRef.current.dispatch({ type: "undo-path-cell" });
-    if (!result.ok && result.toast) showToast(result.toast);
-    syncUiState();
-  };
-
-  const upgrade = (type: "range" | "damage") => {
-    if (selectedRef.current === null) return;
-    const result = engineRef.current.dispatch({
-      type: "upgrade-tower",
-      index: selectedRef.current,
-      upgrade: type,
-    });
-    if (!result.ok && result.toast) showToast(result.toast);
-    syncUiState();
-  };
-
   useGameLoop((delta) => {
-    const dt = clamp(delta, 0, 0.05);
+    const dt = Math.max(0, Math.min(0.05, delta));
     if (!pausedRef.current) {
       engineRef.current.tick(dt);
     }
 
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
-    if (canvas && ctx) {
-      rendererRef.current.render(ctx, engineRef.current.getState(), {
-        hoveredIndex: hoveredRef.current,
-        selectedIndex: selectedRef.current,
-        cursor: cursorRef.current,
-        showCursor: canvasFocusedRef.current,
+    if (ctx) {
+      const selectedTower = uiState.towers.find((tower) => tower.id === uiState.selectedTowerId);
+      const canBuildAtHover = Boolean(
+        hoveredCell &&
+          !uiState.path.some((cell) => cell.x === hoveredCell.x && cell.y === hoveredCell.y) &&
+          !uiState.towers.some((tower) => tower.x === hoveredCell.x && tower.y === hoveredCell.y),
+      );
+
+      rendererRef.current.render(ctx, engineRef.current.getUiState(), {
+        selectedTowerId: selectedTower?.id ?? null,
+        hoveredCell,
+        showCursor: true,
+        canBuildAtHover,
       });
     }
 
-    uiUpdateRef.current += delta;
-    if (uiUpdateRef.current >= 0.25) {
-      uiUpdateRef.current = 0;
-      syncUiState();
-    }
+    syncUi();
   });
 
   const selectedTower = useMemo(
-    () => (selected !== null ? uiState.towers[selected] : null),
-    [selected, uiState.towers],
+    () => uiState.towers.find((tower) => tower.id === uiState.selectedTowerId) ?? null,
+    [uiState.selectedTowerId, uiState.towers],
   );
 
-  const getTowerSellValue = (tower: Tower) => {
-    let total = uiState.baseTowerCost;
-    for (let lvl = 1; lvl < tower.level; lvl += 1) {
-      total += getUpgradeCost(lvl);
-    }
-    return Math.max(1, Math.floor(total * 0.6));
-  };
+  const selectedTowerCost = selectedTower
+    ? getUpgradeCost(selectedTower.type, selectedTower.level)
+    : 0;
 
-  const modeLabel = uiState.editing
-    ? "Path Editing"
-    : uiState.runStatus === "running"
-    ? "Defense Active"
-    : uiState.runStatus === "countdown"
-    ? "Wave Countdown"
-    : "Planning";
-
-  const waveStatus = uiState.runStatus === "victory"
-    ? "All waves cleared"
-    : uiState.runStatus === "defeat"
-    ? "Base overrun"
-    : uiState.countdown !== null
-    ? `Next wave in ${Math.ceil(uiState.countdown)}s`
-    : uiState.runStatus === "running"
-    ? `${uiState.enemies.length} enemies active`
-    : `${uiState.waveConfig.length} wave${
-        uiState.waveConfig.length === 1 ? "" : "s"
-      } queued`;
-
-  const instructions = uiState.editing
-    ? "Click or press Enter/Space to paint route cells in order. Start is first; goal is last."
-    : "Place or select towers to defend the exact painted route. Right-click or Delete to sell.";
-
-  const routeValid = uiState.route.length >= 2 && !uiState.routeError;
-
-  const showOverlay =
-    uiState.runStatus === "victory" || uiState.runStatus === "defeat";
+  const waveInfo = uiState.wavePreview[uiState.waveIndex];
 
   return (
-    <GameLayout
-      gameId="tower-defense"
-      onPauseChange={(paused) => setLayoutPaused(paused)}
-      isFocused={isFocused}
-    >
+    <GameLayout gameId="tower-defense" isFocused={isFocused} onPauseChange={(paused) => setManualPause(paused)}>
       <div className="p-3 text-[color:var(--kali-text)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-          <div className="flex flex-1 flex-col items-center gap-3">
-            <div className="relative w-full max-w-[420px]">
-              <canvas
-                ref={canvasRef}
-                className="h-auto w-full rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-inner focus:outline-none focus:ring-2 focus:ring-[color:var(--color-primary)]"
-                aria-label="Tower defense map canvas"
-                style={{ imageRendering: "pixelated" }}
-                onClick={handleCanvasClick}
-                onContextMenu={handleCanvasContext}
-                onMouseMove={handleCanvasMove}
-                onMouseLeave={handleCanvasLeave}
-                onKeyDown={handleKeyDown}
-                onFocus={() => {
-                  canvasFocusedRef.current = true;
-                }}
-                onBlur={() => {
-                  canvasFocusedRef.current = false;
-                }}
-                tabIndex={0}
-              />
-              <div className="pointer-events-none absolute inset-0 flex flex-col justify-between p-2 text-[0.7rem] sm:text-xs">
-                <div className="flex justify-between gap-2">
-                  <div
-                    className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 font-medium uppercase tracking-wide text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur"
-                    data-testid="tower-defense-wave"
-                  >
-                    <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-80 sm:text-xs">
-                      Wave {uiState.waveNumber}
-                    </p>
-                    <p className="font-normal normal-case text-[color:var(--kali-text)] opacity-90">
-                      {waveStatus}
-                    </p>
-                  </div>
-                  <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 text-right font-medium uppercase tracking-wide text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur">
-                    <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-80 sm:text-xs">
-                      Status
-                    </p>
-                    <p className="font-normal normal-case text-[color:var(--kali-text)] opacity-90">
-                      {modeLabel}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-end justify-between gap-2">
-                  <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur">
-                    <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-80">
-                      Lives / Gold
-                    </p>
-                    <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-90 sm:text-xs">
-                      {uiState.lives} lives · {uiState.gold} gold
-                    </p>
-                  </div>
-                  {selectedTower && (
-                    <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur">
-                      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-80">
-                        Tower
-                      </p>
-                      <p className="text-[0.65rem] text-[color:var(--kali-text)] opacity-90 sm:text-xs">
-                        Range {selectedTower.range.toFixed(1)} · Damage {selectedTower.damage.toFixed(1)} · Lv {selectedTower.level}
-                      </p>
-                    </div>
-                  )}
-                </div>
+        <div className="flex flex-col gap-4 lg:flex-row">
+          <section className="relative flex-1 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-2">
+            <canvas
+              ref={canvasRef}
+              aria-label="Tower defense game board"
+              className="h-auto w-full rounded-md border border-[color:var(--kali-border)] bg-black/20"
+              style={{ imageRendering: "pixelated" }}
+              onMouseMove={(event) => setHoveredCell(getCellFromPointer(event.clientX, event.clientY))}
+              onMouseLeave={() => setHoveredCell(null)}
+              onClick={(event) => {
+                const cell = getCellFromPointer(event.clientX, event.clientY);
+                if (!cell) return;
+                const tower = uiState.towers.find((entry) => entry.x === cell.x && entry.y === cell.y);
+                if (tower) {
+                  dispatch({ type: "select-tower", towerId: tower.id });
+                } else {
+                  dispatch({ type: "place-tower", cell });
+                }
+              }}
+            />
+            <div className="pointer-events-none absolute inset-x-5 top-4 flex justify-between text-[0.7rem]">
+              <div className="rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1">
+                Wave {Math.min(uiState.waveIndex + 1, uiState.waveCount)} / {uiState.waveCount}
               </div>
-              {toast && (
-                <div
-                  className="absolute left-1/2 top-3 -translate-x-1/2 rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)] shadow-kali-panel"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {toast}
-                </div>
-              )}
-              {showOverlay && (
-                <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/70 p-4 text-center text-[color:var(--kali-text)]">
-                  <div className="w-full max-w-sm space-y-3 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 p-4 shadow-kali-panel">
-                    <h3 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--kali-text)]">
-                      {uiState.runStatus === "victory" ? "Victory" : "Game Over"}
-                    </h3>
-                    <p className="text-[0.7rem] text-[color:var(--kali-text)] opacity-80">
-                      {uiState.runStatus === "victory"
-                        ? "All waves cleared. Review your run stats below."
-                        : "Lives depleted. Adjust your build or route and try again."}
-                    </p>
-                    <div className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/80 p-3 text-[0.65rem] text-[color:var(--kali-text)]">
-                      <p>Waves cleared: {uiState.stats.wavesCleared}</p>
-                      <p>Enemies defeated: {uiState.stats.enemiesDefeated}</p>
-                      <p>Enemies leaked: {uiState.stats.enemiesLeaked}</p>
-                      <p>
-                        Time: {(uiState.stats.elapsedMs / 1000).toFixed(1)}s
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap justify-center gap-2 text-[0.7rem]">
-                      <button
-                        type="button"
-                        className="rounded-md border border-[color:var(--kali-border)] bg-kali-control px-3 py-1 font-semibold text-black transition hover:brightness-110"
-                        onClick={startRun}
-                      >
-                        Restart
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-semibold text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                        onClick={returnToBuild}
-                      >
-                        Return to Build
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-semibold text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                        onClick={() => presetSelectRef.current?.focus()}
-                      >
-                        Change Preset
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <div className="rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1">
+                {uiState.status.toUpperCase()}
+              </div>
             </div>
-            <p className="w-full max-w-[420px] text-center text-[0.65rem] text-[color:var(--kali-text)] opacity-80">
-              {instructions}
-            </p>
-            {uiState.routeError && (
-              <p className="w-full max-w-[420px] rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/80 px-2 py-1 text-center text-[0.65rem] text-kali-severity-high">
-                {uiState.routeError}
+            <div className="pointer-events-none absolute bottom-4 left-5 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/95 px-2 py-1 text-[0.7rem]">
+              Gold {uiState.gold} · Lives {uiState.lives} · Kills {uiState.kills}
+            </div>
+
+            {toast && (
+              <p className="absolute left-1/2 top-4 -translate-x-1/2 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] px-3 py-1 text-[0.65rem]">
+                {toast}
               </p>
             )}
-            <div className="flex w-full max-w-[420px] flex-wrap items-center justify-center gap-2 text-xs sm:text-sm">
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)] disabled:cursor-not-allowed disabled:opacity-40"
-                onClick={() => {
-                  engineRef.current.dispatch({
-                    type: "set-editing",
-                    editing: !uiState.editing,
-                  });
-                  syncUiState();
-                }}
-                disabled={uiState.runStatus === "running" || uiState.countdown !== null}
-              >
-                {uiState.editing ? "Finish Editing" : "Edit Route"}
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-kali-severity-high px-3 py-1 font-semibold text-white transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                onClick={startRun}
-                disabled={!routeValid || uiState.runStatus === "running" || uiState.countdown !== null}
-              >
-                Start Waves
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={() => setManualPaused((p) => !p)}
-              >
-                {manualPaused || layoutPaused ? "Resume" : "Pause"}
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={resetRun}
-              >
-                Reset Run
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={undoRoute}
-                disabled={!uiState.pathCells.length}
-              >
-                Undo Route
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={clearRoute}
-              >
-                Clear Route
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={clearTowers}
-              >
-                Clear Towers
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={exportWaves}
-              >
-                Export Waves
-              </button>
-              <button
-                type="button"
-                className="rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] px-3 py-1 font-medium text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-                onClick={importWaves}
-              >
-                Import Waves
-              </button>
-            </div>
-          </div>
-          <aside className="w-full rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/90 p-3 text-[color:var(--kali-text)] shadow-kali-panel backdrop-blur lg:max-w-xs">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-90">
-              Quick Play
-            </h2>
-            <p className="mt-1 text-[0.7rem] text-[color:var(--kali-text)] opacity-80">
-              Pick a preset route and wave mix, then start immediately.
-            </p>
-            <label
-              className="mt-3 block text-[0.65rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-70"
-              htmlFor="preset-select"
-            >
-              Preset
-            </label>
-            <select
-              id="preset-select"
-              ref={presetSelectRef}
-              value={QUICK_PLAY_PRESETS[selectedPresetIndex]?.id}
-              onChange={(e) => {
-                const index = QUICK_PLAY_PRESETS.findIndex(
-                  (preset) => preset.id === e.target.value,
-                );
-                if (index >= 0) setSelectedPresetIndex(index);
-              }}
-              className="mt-2 w-full rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] px-2 py-2 text-xs text-[color:var(--kali-text)]"
-            >
-              {QUICK_PLAY_PRESETS.map((preset) => (
-                <option key={preset.id} value={preset.id}>
-                  {preset.name}
-                </option>
-              ))}
-            </select>
-            <p className="mt-2 text-[0.65rem] text-[color:var(--kali-text)] opacity-70">
-              {QUICK_PLAY_PRESETS[selectedPresetIndex]?.summary}
-            </p>
-            <button
-              type="button"
-              className="mt-3 w-full rounded-md border border-[color:var(--kali-border)] bg-kali-control px-3 py-2 text-xs font-semibold uppercase tracking-wide text-black transition hover:brightness-110"
-              onClick={() => applyPreset(selectedPresetIndex)}
-            >
-              Apply Preset
-            </button>
-            <h2 className="mt-5 text-sm font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-90">
-              Wave Designer
-            </h2>
-            <p className="mt-1 text-[0.7rem] text-[color:var(--kali-text)] opacity-80">
-              Queue enemy types for each wave. Empty waves advance automatically, and spawn pacing is adjustable below.
-            </p>
-            <div className="mt-3 max-h-56 space-y-2 overflow-y-auto pr-1">
-              {uiState.waveConfig.map((wave, i) => (
-                <div
-                  key={i}
-                  className="rounded border border-[color:var(--kali-border)]/70 bg-[color:var(--kali-panel)]/70 p-2"
-                >
-                  <div className="flex items-center justify-between gap-2 text-[0.7rem] font-medium uppercase tracking-wide text-[color:var(--kali-text)] opacity-80">
-                    <span>Wave {i + 1}</span>
-                    <span className="font-normal normal-case text-[color:var(--kali-text)] opacity-70">
-                      {wave.length ? wave.join(", ") : "empty"}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-1 text-[0.65rem]">
-                    {(Object.keys(ENEMY_TYPES) as (keyof typeof ENEMY_TYPES)[]).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        className="rounded border border-[color:var(--kali-border)]/60 bg-[color:var(--kali-panel-highlight)] px-2 py-1 font-semibold uppercase tracking-wide text-[color:var(--color-primary)] transition hover:bg-[color:color-mix(in_srgb,var(--color-primary)_25%,var(--kali-panel))]"
-                        onClick={() => addEnemyToWave(i, t)}
-                      >
-                        +{t}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="mt-3 w-full rounded-md border border-dashed border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/80 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] transition hover:bg-[color:var(--kali-panel)]"
-              onClick={addWave}
-            >
-              Add Wave
-            </button>
-            <label
-              className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-70"
-              htmlFor="spawn-interval"
-            >
-              Spawn Interval ({uiState.spawnInterval.toFixed(1)}s)
-            </label>
-            <input
-              id="spawn-interval"
-              type="range"
-              min={0.4}
-              max={1.8}
-              step={0.1}
-              value={uiState.spawnInterval}
-              onChange={(e) => {
-                engineRef.current.dispatch({
-                  type: "set-spawn-interval",
-                  value: Number(e.target.value),
-                });
-                syncUiState();
-              }}
-              className="mt-2 w-full accent-[color:var(--color-primary)]"
-            />
-            <label
-              className="mt-4 block text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-70"
-              htmlFor="wave-json-editor"
-            >
-              Wave JSON
-            </label>
-            <textarea
-              id="wave-json-editor"
-              aria-label="Wave configuration JSON"
-              className="mt-2 h-28 w-full rounded-md border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/90 p-2 font-mono text-[0.65rem] text-[color:var(--kali-text)] focus:border-[color:var(--color-primary)] focus:outline-none"
-              value={waveJson}
-              onChange={(e) => setWaveJson(e.target.value)}
-            />
-            {selectedTower && (
-              <div className="mt-4 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/80 p-3">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-90">
-                  Tower Upgrades
-                </h3>
-                <div className="mt-2 flex flex-col items-center gap-2">
-                  <RangeUpgradeTree tower={selectedTower} />
-                  <div className="flex w-full flex-wrap justify-center gap-2 text-[0.65rem]">
-                    <button
-                      type="button"
-                      className="rounded-md border border-[color:var(--kali-border)] bg-kali-control px-3 py-1 font-medium text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={() => upgrade("range")}
-                      disabled={uiState.gold < getUpgradeCost(selectedTower.level)}
-                    >
-                      Increase Range ({getUpgradeCost(selectedTower.level)}g)
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-md border border-[color:var(--kali-border)] bg-kali-control px-3 py-1 font-medium text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-                      onClick={() => upgrade("damage")}
-                      disabled={uiState.gold < getUpgradeCost(selectedTower.level)}
-                    >
-                      Increase Damage ({getUpgradeCost(selectedTower.level)}g)
-                    </button>
-                  </div>
-                  <p className="text-[0.6rem] text-[color:var(--kali-text)] opacity-70">
-                    Sell value: {getTowerSellValue(selectedTower)}g (Right-click/Delete)
+
+            {(uiState.status === "start" || uiState.status === "victory" || uiState.status === "defeat" || uiState.status === "error") && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/65 p-4">
+                <div className="w-full max-w-sm rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 text-center">
+                  <h3 className="text-sm font-semibold uppercase">
+                    {uiState.status === "start" && "Tower Defense"}
+                    {uiState.status === "victory" && "Victory"}
+                    {uiState.status === "defeat" && "Defeat"}
+                    {uiState.status === "error" && "Map Error"}
+                  </h3>
+                  <p className="mt-2 text-xs opacity-85">
+                    {uiState.status === "start" && "Build towers and survive every wave."}
+                    {uiState.status === "victory" && `Final score: ${uiState.score}`}
+                    {uiState.status === "defeat" && "Your base was overrun. Try a different build order."}
+                    {uiState.status === "error" && (uiState.error ?? "Invalid path configuration.")}
                   </p>
+                  <button
+                    type="button"
+                    className="mt-3 rounded border border-[color:var(--kali-border)] bg-kali-control px-3 py-1 text-xs text-black"
+                    onClick={() => {
+                      if (uiState.status === "start") dispatch({ type: "start-game" });
+                      else {
+                        dispatch({ type: "restart" });
+                        dispatch({ type: "start-game" });
+                      }
+                    }}
+                  >
+                    {uiState.status === "start" ? "Start" : "Restart"}
+                  </button>
                 </div>
               </div>
             )}
+          </section>
+
+          <aside className="w-full space-y-3 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]/90 p-3 text-xs lg:w-[330px]">
+            <div>
+              <h2 className="font-semibold uppercase tracking-wide">Build Menu</h2>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {(Object.keys(TOWER_TYPES) as TowerTypeKey[]).map((towerType) => {
+                  const spec = TOWER_TYPES[towerType];
+                  const active = uiState.selectedBuildType === towerType;
+                  return (
+                    <button
+                      key={towerType}
+                      type="button"
+                      className={`rounded border px-2 py-2 text-left ${active ? "border-[color:var(--color-primary)] bg-[color:var(--kali-panel-highlight)]" : "border-[color:var(--kali-border)] bg-[color:var(--kali-panel)]"}`}
+                      onClick={() => dispatch({ type: "set-build-type", towerType })}
+                    >
+                      <p className="font-semibold">{spec.label}</p>
+                      <p className="opacity-80">{spec.cost}g · {getTowerDPS(towerType, 1).toFixed(1)} DPS</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="rounded border border-[color:var(--kali-border)] p-2">
+              <h3 className="font-semibold uppercase">Wave Control</h3>
+              <p className="mt-1 opacity-80">
+                {waveInfo
+                  ? `Next: ${waveInfo.totalEnemies} enemies · +${waveInfo.rewardBonus}g on clear`
+                  : "All waves cleared"}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="rounded border border-[color:var(--kali-border)] bg-kali-control px-2 py-1 text-black disabled:opacity-40"
+                  onClick={() => dispatch({ type: "send-wave" })}
+                  disabled={!uiState.canSendWave}
+                >
+                  Send Wave
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-[color:var(--kali-border)] px-2 py-1"
+                  onClick={() => dispatch({ type: "toggle-auto-start" })}
+                >
+                  Auto: {uiState.autoStartWaves ? "On" : "Off"}
+                </button>
+                <button
+                  type="button"
+                  className="rounded border border-[color:var(--kali-border)] px-2 py-1"
+                  onClick={() => dispatch({ type: "set-time-scale", value: uiState.timeScale === 1 ? 2 : 1 })}
+                >
+                  Speed {uiState.timeScale}x
+                </button>
+              </div>
+              {waveInfo && (
+                <ul className="mt-2 list-disc pl-4 opacity-80">
+                  {waveInfo.composition.map((entry) => (
+                    <li key={`${entry.type}-${entry.count}`}>{ENEMY_TYPES[entry.type].label}: {entry.count}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {selectedTower && (
+              <div className="rounded border border-[color:var(--kali-border)] p-2">
+                <h3 className="font-semibold uppercase">Selected Tower</h3>
+                <p className="mt-1 opacity-85">
+                  {TOWER_TYPES[selectedTower.type].label} · Lv {selectedTower.level} · {selectedTower.targetingMode}
+                </p>
+                <p className="opacity-80">
+                  DMG {selectedTower.damage.toFixed(1)} · RNG {selectedTower.range.toFixed(1)} · FR {selectedTower.fireRate.toFixed(2)}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    className="rounded border border-[color:var(--kali-border)] bg-kali-control px-2 py-1 text-black disabled:opacity-40"
+                    disabled={selectedTower.level >= 3 || uiState.gold < selectedTowerCost}
+                    onClick={() => dispatch({ type: "upgrade-tower", towerId: selectedTower.id })}
+                  >
+                    Upgrade ({selectedTowerCost}g)
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-[color:var(--kali-border)] px-2 py-1"
+                    onClick={() => dispatch({ type: "cycle-targeting", towerId: selectedTower.id })}
+                  >
+                    Target: {selectedTower.targetingMode}
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded border border-[color:var(--kali-border)] px-2 py-1"
+                    onClick={() => dispatch({ type: "sell-tower", towerId: selectedTower.id })}
+                  >
+                    Sell
+                  </button>
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <RangeUpgradeTree tower={selectedTower} />
+                  <p className="text-[0.65rem] opacity-80">Upgrade to level 3 for max stats.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded border border-[color:var(--kali-border)] p-2">
+              <h3 className="font-semibold uppercase">DPS by Tower Type</h3>
+              <DpsCharts towers={uiState.towers} />
+            </div>
           </aside>
         </div>
-        {!uiState.editing && <DpsCharts towers={uiState.towers} />}
       </div>
     </GameLayout>
   );
