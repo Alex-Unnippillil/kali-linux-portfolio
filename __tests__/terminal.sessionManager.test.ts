@@ -47,12 +47,12 @@ describe('sessionManager', () => {
     expect(writes.join('')).toContain('h');
   });
 
-
-  it('autocompletes command names on tab input', () => {
+  it('triggers autocomplete candidates when tab is pressed for command token', () => {
     const ctx = buildContext();
     const writes: string[] = [];
     const registry: Record<string, CommandDefinition> = {
       help: { name: 'help', description: 'Help', handler: jest.fn() },
+      hello: { name: 'hello', description: 'Hello', handler: jest.fn() },
       clear: { name: 'clear', description: 'Clear', handler: jest.fn() },
     };
     const manager = createSessionManager({
@@ -63,6 +63,21 @@ describe('sessionManager', () => {
       writeLine: (text) => writes.push(text + '\n'),
     });
 
+    manager.setBuffer('h');
+    manager.handleInput('\t');
+
+    expect(writes.join('')).toContain('help');
+    expect(writes.join('')).toContain('hello');
+    expect(writes.join('')).toContain('[prompt]');
+    expect(writes.join('')).toContain('h');
+  });
+
+  it('does not trigger autocomplete when tab is pressed in args', () => {
+    const ctx = buildContext();
+    const writes: string[] = [];
+    const registry: Record<string, CommandDefinition> = {
+      help: { name: 'help', description: 'Help', handler: jest.fn() },
+      hello: { name: 'hello', description: 'Hello', handler: jest.fn() },
     manager.handleInput('he	');
 
     expect(manager.getBuffer()).toBe('help');
@@ -85,6 +100,11 @@ describe('sessionManager', () => {
       writeLine: (text) => writes.push(text + '\n'),
     });
 
+    manager.setBuffer('cat R');
+    manager.handleInput('\t');
+
+    expect(writes.join('')).not.toContain('help');
+    expect(writes.join('')).not.toContain('hello');
     manager.handleInput('cat R	');
 
     expect(manager.getBuffer()).toBe('cat R');
