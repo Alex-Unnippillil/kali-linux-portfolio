@@ -91,4 +91,35 @@ describe('Hangman app', () => {
     expect(timer.textContent).toBe(beforePause);
     jest.useRealTimers();
   });
+
+  test('daily challenge is deterministic per day', async () => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2024-02-03T12:00:00Z'));
+    window.localStorage.clear();
+    const writeText = jest.fn().mockResolvedValue(true);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    render(<Hangman />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Daily' }));
+    const firstPhrase = screen.getByTestId('hangman-phrase').textContent;
+
+    fireEvent.click(screen.getByRole('button', { name: 'Daily' }));
+    const secondPhrase = screen.getByTestId('hangman-phrase').textContent;
+
+    expect(firstPhrase).toBe(secondPhrase);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Options' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy challenge link' }));
+    });
+
+    expect(writeText).toHaveBeenCalled();
+    const copiedUrl = new URL(writeText.mock.calls[0][0]);
+    const copiedSeed = decodeURIComponent(copiedUrl.searchParams.get('seed') || '');
+    expect(copiedSeed).toContain('daily:2024-02-03:');
+    expect(copiedUrl.searchParams.get('word')).toBe(null);
+
+    jest.useRealTimers();
+  });
 });
