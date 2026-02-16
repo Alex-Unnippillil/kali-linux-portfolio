@@ -1,4 +1,4 @@
-import { ENEMY_TYPES } from '.';
+import { ENEMY_TYPES, TargetingMode } from '.';
 import type {
   TowerDefenseState,
   Vec,
@@ -12,6 +12,15 @@ export type TowerDefenseRenderView = {
   selectedIndex: number | null;
   cursor: Vec;
   showCursor: boolean;
+};
+
+
+const TARGETING_SYMBOLS: Record<TargetingMode, string> = {
+  first: 'F',
+  last: 'L',
+  strong: 'S',
+  weak: 'W',
+  closest: 'C',
 };
 
 const drawGrid = (ctx: CanvasRenderingContext2D, gridSize: number, cellSize: number) => {
@@ -88,6 +97,17 @@ const drawTowers = (
       state.cellSize - 16,
       state.cellSize - 16,
     );
+    const targetingSymbol = TARGETING_SYMBOLS[tower.targeting];
+    ctx.fillStyle = '#00141a';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(
+      targetingSymbol,
+      tower.x * state.cellSize + state.cellSize / 2,
+      tower.y * state.cellSize + state.cellSize / 2,
+    );
+
     if (view.selectedIndex === i || view.hoveredIndex === i) {
       ctx.strokeStyle = 'rgba(255,255,0,0.9)';
       ctx.beginPath();
