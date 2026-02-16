@@ -339,7 +339,7 @@ function Timeline({ events, onSelect }) {
   );
 }
 
-function Autopsy({ initialArtifacts = null }) {
+function Autopsy({ initialArtifacts } = {}) {
   const [caseName, setCaseName] = useState('');
   const [currentCase, setCurrentCase] = useState(null);
   const [analysis, setAnalysis] = useState('');
