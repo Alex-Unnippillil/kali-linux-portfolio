@@ -34,7 +34,9 @@ const DEFAULT_KEY_MAP = {
   restart: 'r',
 };
 
-const ACTION_ALIASES: Record<keyof typeof DEFAULT_KEY_MAP, string[]> = {
+type ControlAction = keyof typeof DEFAULT_KEY_MAP;
+
+const ACTION_ALIASES: Record<ControlAction, string[]> = {
   left: ['a'],
   right: ['d'],
   fire: ['Enter'],
@@ -227,7 +229,8 @@ const SpaceInvaders: React.FC = () => {
   const [initials, setInitials] = useState('');
   const [showInitialsPrompt, setShowInitialsPrompt] = useState(false);
   const [ariaMessage, setAriaMessage] = useState('');
-  const [mapping] = useInputMapping('space-invaders', DEFAULT_KEY_MAP);
+  const [rawMapping] = useInputMapping('space-invaders', DEFAULT_KEY_MAP);
+  const mapping = rawMapping as Partial<Record<ControlAction, string>>;
   const prefersReducedMotion = usePrefersReducedMotion();
   const gamepadState = useGamepad();
   const { scores: localScores, addScore } = useLeaderboard('space-invaders', 5);
@@ -244,7 +247,7 @@ const SpaceInvaders: React.FC = () => {
   });
 
   const actionKeySets = useMemo(() => {
-    const entries = (Object.keys(DEFAULT_KEY_MAP) as Array<keyof typeof DEFAULT_KEY_MAP>).map(
+    const entries = (Object.keys(DEFAULT_KEY_MAP) as Array<ControlAction>).map(
       (action) => {
         const set = new Set<string>();
         [...splitMappedKeys(DEFAULT_KEY_MAP[action]), ...splitMappedKeys(mapping[action]), ...ACTION_ALIASES[action]].forEach(
@@ -255,11 +258,11 @@ const SpaceInvaders: React.FC = () => {
         return [action, set] as const;
       },
     );
-    return Object.fromEntries(entries) as Record<keyof typeof DEFAULT_KEY_MAP, Set<string>>;
+    return Object.fromEntries(entries) as Record<ControlAction, Set<string>>;
   }, [mapping]);
 
   const matchesAction = useCallback(
-    (action: keyof typeof DEFAULT_KEY_MAP, key: string) => {
+    (action: ControlAction, key: string) => {
       return actionKeySets[action].has(comparableKey(key));
     },
     [actionKeySets],
@@ -267,7 +270,7 @@ const SpaceInvaders: React.FC = () => {
 
   const isGameControlKey = useCallback(
     (key: string) => {
-      return (Object.keys(actionKeySets) as Array<keyof typeof DEFAULT_KEY_MAP>).some((action) =>
+      return (Object.keys(actionKeySets) as Array<ControlAction>).some((action) =>
         matchesAction(action, key),
       );
     },
