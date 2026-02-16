@@ -439,6 +439,48 @@
   gap: 10px;
 }
 
+.queueControls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+@media (min-width: 640px) {
+  .queueControls {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+.select {
+  border-radius: 12px;
+  border: 1px solid var(--kali-panel-border);
+  background: var(--color-surface-muted);
+  color: var(--color-text);
+  font-size: 13px;
+  padding: 10px 12px;
+}
+
+.select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.queueMetaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.inlineActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .videoButton {
   width: 100%;
   display: flex;
