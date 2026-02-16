@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TILE_SIZE, cameraDefaults, parseLevel, step } from '../../games/platformer/logic';
+import { loadPlatformerPBs, savePlatformerPBs, updatePB } from '../../games/platformer/bestTimes';
 import useIsTouchDevice from '../../hooks/useIsTouchDevice';
 import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 
@@ -88,6 +89,10 @@ function formatTime(seconds) {
   return `${mins}:${secs}.${ms}`;
 }
 
+function formatMs(ms) {
+  return formatTime(ms / 1000);
+}
+
 export default function PlatformerApp({ windowMeta } = {}) {
   const isFocused = windowMeta?.isFocused ?? true;
   const isTouch = useIsTouchDevice();
@@ -100,7 +105,9 @@ export default function PlatformerApp({ windowMeta } = {}) {
   const reduceMotionRef = useRef(false);
   const inputRef = useRef({ left: false, right: false, jumpHeld: false, jumpPressed: false, jumpReleased: false });
   const prevSnapshotRef = useRef(null);
+  const lastStatusRef = useRef('running');
   const uiUpdateRef = useRef(0);
+  const levelIndexRef = useRef(0);
   const [ui, setUi] = useState({
     level: LEVELS[0].name,
     time: 0,
@@ -109,6 +116,9 @@ export default function PlatformerApp({ windowMeta } = {}) {
     status: 'running',
     paused: false,
   });
+  const [pbForLevel, setPbForLevel] = useState(null);
+  const [lastRunSummary, setLastRunSummary] = useState(null);
+  const [isNewPB, setIsNewPB] = useState(false);
 
   const sessionRef = useRef(createInitialState(0));
 
@@ -139,92 +149,6 @@ export default function PlatformerApp({ windowMeta } = {}) {
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);
   }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return undefined;
-    resizeCanvas();
-
-    const handleResize = () => resizeCanvas();
-    window.addEventListener('resize', handleResize);
-
-    const handleKeyDown = (e) => {
-      if (!shouldHandleGameKey(e, { isFocused })) return;
-      if (e.repeat) return;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = true;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = true;
-      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
-        consumeGameKey(e);
-        if (!inputRef.current.jumpHeld) inputRef.current.jumpPressed = true;
-        inputRef.current.jumpHeld = true;
-      }
-      if (e.code === 'KeyR') {
-        consumeGameKey(e);
-        restartLevel();
-      }
-      if (e.code === 'KeyP' || e.code === 'Escape') {
-        consumeGameKey(e);
-        togglePause();
-      }
-    };
-
-    const handleKeyUp = (e) => {
-      if (!shouldHandleGameKey(e, { isFocused })) return;
-      if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = false;
-      if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = false;
-      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
-        if (inputRef.current.jumpHeld) inputRef.current.jumpReleased = true;
-        inputRef.current.jumpHeld = false;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    // Fixed-step simulation with an accumulator keeps physics identical across refresh rates.
-    // Rendering interpolates between the previous and current snapshot for smooth movement without extra React renders.
-    const frame = (time) => {
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      if (pausedRef.current) {
-        lastTimeRef.current = time;
-        draw(ctx, 1);
-        requestRef.current = requestAnimationFrame(frame);
-        return;
-      }
-
-      if (!lastTimeRef.current) lastTimeRef.current = time;
-      let delta = (time - lastTimeRef.current) / 1000;
-      lastTimeRef.current = time;
-      delta = Math.min(delta, 0.25);
-      accumulatorRef.current += delta;
-
-      const fixedInput = inputRef.current;
-      const followLerp = reduceMotionRef.current ? 0.06 : 0.12;
-      cameraDefaults.followLerp = followLerp;
-
-      while (accumulatorRef.current >= FIXED_DT) {
-        prevSnapshotRef.current = snapshot(sessionRef.current.state);
-        sessionRef.current.state = step(sessionRef.current.state, fixedInput, FIXED_DT);
-        accumulatorRef.current -= FIXED_DT;
-        fixedInput.jumpPressed = false;
-        fixedInput.jumpReleased = false;
-      }
-
-      draw(ctx, accumulatorRef.current / FIXED_DT);
-      syncUi(time);
-      requestRef.current = requestAnimationFrame(frame);
-    };
-
-    requestRef.current = requestAnimationFrame(frame);
-
-    return () => {
-      if (requestRef.current) cancelAnimationFrame(requestRef.current);
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [draw, isFocused, resizeCanvas, restartLevel, snapshot, syncUi, togglePause]);
 
   const snapshot = useCallback((state) => ({
     player: { ...state.player },
@@ -346,31 +270,161 @@ export default function PlatformerApp({ windowMeta } = {}) {
     uiUpdateRef.current = timeMs;
   }, []);
 
+  const syncCompletion = useCallback((state) => {
+    if (lastStatusRef.current === 'complete' || state.status !== 'complete') {
+      lastStatusRef.current = state.status;
+      return;
+    }
+
+    const runStats = {
+      timeMs: Math.round(state.time * 1000),
+      deaths: state.deaths,
+      coins: state.coinsCollected,
+    };
+    const { bestForLevel, isNewPB: newPB } = updatePB(levelIndexRef.current, runStats);
+    setLastRunSummary(runStats);
+    setPbForLevel(bestForLevel);
+    setIsNewPB(newPB);
+    lastStatusRef.current = state.status;
+  }, []);
+
   const restartLevel = useCallback(() => {
     const currentLevel = sessionRef.current.levelIndex;
     const fresh = createInitialState(currentLevel);
     fresh.state.deaths = sessionRef.current.state.deaths;
     sessionRef.current = fresh;
+    levelIndexRef.current = currentLevel;
+    lastStatusRef.current = fresh.state.status;
+    setLastRunSummary(null);
+    setIsNewPB(false);
     accumulatorRef.current = 0;
     lastTimeRef.current = 0;
     resizeCanvas();
   }, [resizeCanvas]);
 
-  const nextLevel = () => {
+  const nextLevel = useCallback(() => {
     const nextIndex = Math.min(sessionRef.current.levelIndex + 1, LEVELS.length - 1);
     const fresh = createInitialState(nextIndex);
     fresh.state.deaths = sessionRef.current.state.deaths;
     sessionRef.current = fresh;
+    levelIndexRef.current = nextIndex;
+    lastStatusRef.current = fresh.state.status;
+    setLastRunSummary(null);
+    setIsNewPB(false);
+    const allPBs = loadPlatformerPBs();
+    setPbForLevel(allPBs[String(nextIndex)] || null);
     accumulatorRef.current = 0;
     lastTimeRef.current = 0;
     pausedRef.current = false;
     resizeCanvas();
-  };
+  }, [resizeCanvas]);
 
   const togglePause = useCallback(() => {
     pausedRef.current = !pausedRef.current;
     setUi((prev) => ({ ...prev, paused: pausedRef.current }));
   }, []);
+
+  const resetPbForLevel = useCallback(() => {
+    const allPBs = loadPlatformerPBs();
+    delete allPBs[String(levelIndexRef.current)];
+    savePlatformerPBs(allPBs);
+    setPbForLevel(null);
+    setIsNewPB(false);
+  }, []);
+
+  useEffect(() => {
+    const allPBs = loadPlatformerPBs();
+    const currentLevel = sessionRef.current.levelIndex;
+    levelIndexRef.current = currentLevel;
+    setPbForLevel(allPBs[String(currentLevel)] || null);
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return undefined;
+    resizeCanvas();
+
+    const handleResize = () => resizeCanvas();
+    window.addEventListener('resize', handleResize);
+
+    const handleKeyDown = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
+      if (e.repeat) return;
+      if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = true;
+      if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = true;
+      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+        consumeGameKey(e);
+        if (!inputRef.current.jumpHeld) inputRef.current.jumpPressed = true;
+        inputRef.current.jumpHeld = true;
+      }
+      if (e.code === 'KeyR') {
+        consumeGameKey(e);
+        restartLevel();
+      }
+      if (e.code === 'KeyP' || e.code === 'Escape') {
+        consumeGameKey(e);
+        togglePause();
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused })) return;
+      if (['KeyA', 'ArrowLeft'].includes(e.code)) inputRef.current.left = false;
+      if (['KeyD', 'ArrowRight'].includes(e.code)) inputRef.current.right = false;
+      if (['Space', 'KeyW', 'ArrowUp'].includes(e.code)) {
+        if (inputRef.current.jumpHeld) inputRef.current.jumpReleased = true;
+        inputRef.current.jumpHeld = false;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    // Fixed-step simulation with an accumulator keeps physics identical across refresh rates.
+    // Rendering interpolates between the previous and current snapshot for smooth movement without extra React renders.
+    const frame = (time) => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      if (pausedRef.current) {
+        lastTimeRef.current = time;
+        draw(ctx, 1);
+        requestRef.current = requestAnimationFrame(frame);
+        return;
+      }
+
+      if (!lastTimeRef.current) lastTimeRef.current = time;
+      let delta = (time - lastTimeRef.current) / 1000;
+      lastTimeRef.current = time;
+      delta = Math.min(delta, 0.25);
+      accumulatorRef.current += delta;
+
+      const fixedInput = inputRef.current;
+      const followLerp = reduceMotionRef.current ? 0.06 : 0.12;
+      cameraDefaults.followLerp = followLerp;
+
+      while (accumulatorRef.current >= FIXED_DT) {
+        prevSnapshotRef.current = snapshot(sessionRef.current.state);
+        sessionRef.current.state = step(sessionRef.current.state, fixedInput, FIXED_DT);
+        syncCompletion(sessionRef.current.state);
+        accumulatorRef.current -= FIXED_DT;
+        fixedInput.jumpPressed = false;
+        fixedInput.jumpReleased = false;
+      }
+
+      draw(ctx, accumulatorRef.current / FIXED_DT);
+      syncUi(time);
+      requestRef.current = requestAnimationFrame(frame);
+    };
+
+    requestRef.current = requestAnimationFrame(frame);
+
+    return () => {
+      if (requestRef.current) cancelAnimationFrame(requestRef.current);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [draw, isFocused, resizeCanvas, restartLevel, snapshot, syncCompletion, syncUi, togglePause]);
 
   useEffect(() => {
     if (!isFocused && !pausedRef.current) {
@@ -406,6 +460,7 @@ export default function PlatformerApp({ windowMeta } = {}) {
           Coins: {ui.coins.collected}/{ui.coins.total}
         </div>
         <div>Deaths: {ui.deaths}</div>
+        <div>PB: {pbForLevel ? formatMs(pbForLevel.bestTimeMs) : '--:--.---'}</div>
         <div>Status: {ui.status === 'complete' ? 'Complete' : ui.paused ? 'Paused' : 'Running'}</div>
         <div className="ml-auto flex gap-2">
           <button
@@ -451,6 +506,53 @@ export default function PlatformerApp({ windowMeta } = {}) {
           <div className="absolute bottom-2 left-2 text-[10px] text-slate-300 bg-slate-900/70 px-2 py-1 rounded">
             Controls: ←/A + →/D to move • Space/W/↑ to jump • R restart • P/Esc pause
           </div>
+          {ui.status === 'complete' && lastRunSummary && (
+            <div className="absolute inset-0 grid place-items-center bg-slate-950/70 p-3">
+              <div className="w-full max-w-sm rounded border border-slate-700 bg-slate-900/95 p-4 text-xs text-slate-100 shadow-xl">
+                <div className="text-base font-semibold">Level Complete</div>
+                {isNewPB && (
+                  <div className="mt-2 inline-block rounded bg-emerald-900/80 px-2 py-1 text-[11px] font-semibold text-emerald-200">
+                    New Personal Best
+                  </div>
+                )}
+                <div className="mt-3">
+                  <div className="font-semibold text-slate-300">This Run</div>
+                  <div className="mt-1">Time: {formatMs(lastRunSummary.timeMs)}</div>
+                  <div>Deaths: {lastRunSummary.deaths}</div>
+                  <div>Coins: {lastRunSummary.coins}</div>
+                </div>
+                <div className="mt-3">
+                  <div className="font-semibold text-slate-300">Personal Best</div>
+                  <div className="mt-1">Time: {pbForLevel ? formatMs(pbForLevel.bestTimeMs) : '--:--.---'}</div>
+                  <div>Deaths: {pbForLevel ? pbForLevel.bestDeaths : '--'}</div>
+                  <div>Coins: {pbForLevel ? pbForLevel.bestCoins : '--'}</div>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={nextLevel}
+                    className="rounded bg-emerald-700 px-2 py-1 hover:bg-emerald-600"
+                  >
+                    Next Level
+                  </button>
+                  <button
+                    type="button"
+                    onClick={restartLevel}
+                    className="rounded bg-slate-700 px-2 py-1 hover:bg-slate-600"
+                  >
+                    Replay Level
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetPbForLevel}
+                    className="rounded bg-rose-800/90 px-2 py-1 hover:bg-rose-700"
+                  >
+                    Reset PB
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       {isTouch && (
