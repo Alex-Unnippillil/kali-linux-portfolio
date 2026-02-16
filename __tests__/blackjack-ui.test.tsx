@@ -35,4 +35,10 @@ describe('Blackjack UI', () => {
     expect(screen.getByText('Count hidden until you submit.')).toBeInTheDocument();
     expect(screen.queryByText(/RC:/)).toBeNull();
   });
+
+  test('show count reveals true count indicator', () => {
+    render(<Blackjack windowMeta={{ isFocused: true }} />);
+    fireEvent.click(screen.getByText('Show Count'));
+    expect(screen.getByText(/TC:/)).toBeInTheDocument();
+  });
 });

@@ -277,6 +277,43 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
   const totalBankroll = bankroll + inPlay;
   const maxBet = Math.floor(bankroll);
 
+  const formatSigned = useCallback((value, digits = 1) => {
+    if (!Number.isFinite(value)) return '0.0';
+    const prefix = value > 0 ? '+' : '';
+    return `${prefix}${value.toFixed(digits)}`;
+  }, []);
+
+  const totalCardsRemaining = useMemo(
+    () => Object.values(shoeComposition).reduce((sum, count) => sum + count, 0),
+    [shoeComposition],
+  );
+
+  const decksRemaining = useMemo(() => {
+    if (totalCardsRemaining <= 0) return 0;
+    return totalCardsRemaining / 52;
+  }, [totalCardsRemaining]);
+
+  const trueCountRaw = useMemo(() => {
+    if (decksRemaining <= 0) return 0;
+    return runningCount / decksRemaining;
+  }, [decksRemaining, runningCount]);
+
+  const trueCountInt = useMemo(() => Math.trunc(trueCountRaw), [trueCountRaw]);
+
+  const betMultiplier = useMemo(() => {
+    if (trueCountInt <= 0) return 1;
+    if (trueCountInt === 1) return 2;
+    if (trueCountInt === 2) return 4;
+    if (trueCountInt === 3) return 8;
+    return 12;
+  }, [trueCountInt]);
+
+  const suggestedBet = useMemo(() => {
+    if (maxBet <= 0) return 0;
+    const unclamped = minBet * betMultiplier;
+    return Math.min(maxBet, Math.max(minBet, unclamped));
+  }, [betMultiplier, maxBet]);
+
   const update = useCallback(() => {
     setDealerHand([...gameRef.current.dealerHand]);
     setPlayerHands(gameRef.current.playerHands.map((h) => ({ ...h, cards: [...h.cards] })));
@@ -837,9 +874,17 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
               aria-hidden="true"
             ></div>
             {showCount && (
-              <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
-                RC: {runningCount}
-              </div>
+              <>
+                <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
+                  RC: {runningCount}
+                </div>
+                <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
+                  TC: {formatSigned(trueCountRaw)}
+                </div>
+                <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
+                  Decks: {decksRemaining.toFixed(1)}
+                </div>
+              </>
             )}
           </div>
           <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-3 py-1 text-center text-xs text-kali-muted">
@@ -908,6 +953,33 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                 <BetChips amount={bet} />
               </div>
               <div className="text-xs text-kali-muted">Table min: {minBet} · Max: {maxBet}</div>
+              {showCount && (
+                <div className="w-full rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-3 py-2 text-center text-xs text-kali-text">
+                  <div>
+                    Count: RC {formatSigned(runningCount, 0)} | TC {formatSigned(trueCountRaw)} (int {formatSigned(trueCountInt, 0)}) | Decks{' '}
+                    {decksRemaining.toFixed(1)}
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+                    <span>Suggested bet: {suggestedBet}</span>
+                    <button
+                      type="button"
+                      className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50`}
+                      onClick={() => {
+                        setBet(suggestedBet);
+                        logEvent({
+                          category: 'Blackjack',
+                          action: 'use_suggested_bet',
+                          value: suggestedBet,
+                          label: `tc:${trueCountInt}`,
+                        });
+                      }}
+                      disabled={suggestedBet <= 0}
+                    >
+                      Use Suggested
+                    </button>
+                  </div>
+                </div>
+              )}
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {CHIP_VALUES.map((v) => (
                   <button
