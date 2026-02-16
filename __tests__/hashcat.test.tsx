@@ -124,6 +124,36 @@ describe('HashcatApp', () => {
     ).toBeInTheDocument();
   });
 
+
+  it('renders estimator details and updates speed source after benchmark', async () => {
+    const { getByText, getByLabelText } = render(<HashcatApp />);
+    expect(getByText(/Estimated keyspace:/)).toBeInTheDocument();
+    expect(getByText(/Effective speed:/).textContent).toMatch(/simulated|fallback/);
+
+    fireEvent.change(getByLabelText('Wordlist:'), { target: { value: 'rockyou' } });
+    expect(getByText(/Estimated keyspace:/).textContent).toContain('14,000,000');
+
+    fireEvent.click(getByText('Run Benchmark'));
+    await waitFor(() => {
+      expect(getByText(/Effective speed:/).textContent).toContain('(benchmark)');
+    });
+  });
+
+  it('shows temporary copied feedback on the demo command copy button', () => {
+    jest.useFakeTimers();
+    Object.assign(navigator, {
+      clipboard: { writeText: jest.fn() },
+    });
+    const { getByText } = render(<HashcatApp />);
+    fireEvent.click(getByText('Copy'));
+    expect(getByText('Copied!')).toBeInTheDocument();
+    act(() => {
+      jest.advanceTimersByTime(1200);
+    });
+    expect(getByText('Copy')).toBeInTheDocument();
+    jest.useRealTimers();
+  });
+
   it('renders static sample output', () => {
     const { getByText } = render(<HashcatApp />);
     expect(

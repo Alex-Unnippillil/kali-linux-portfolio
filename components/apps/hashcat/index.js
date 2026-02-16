@@ -2,6 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import progressInfo from './progress.json';
 import StatsChart from '../../StatsChart';
 
+const WORDLIST_SIZES = {
+  rockyou: 14_000_000,
+  top100: 100,
+};
+
 export const hashTypes = [
   {
     id: '0',
@@ -126,6 +131,46 @@ maskTokenSets['?a'] = [
   ...maskTokenSets['?s'],
 ];
 
+const parseHashRateToHps = (text) => {
+  if (!text || typeof text !== 'string') return null;
+  const match = text.match(/(\d+(?:\.\d+)?)\s*([kmg])?\s*h\s*\/\s*s/i);
+  if (!match) return null;
+  const value = Number.parseFloat(match[1]);
+  if (Number.isNaN(value)) return null;
+  const unit = (match[2] || '').toLowerCase();
+  const multiplier = {
+    '': 1,
+    k: 1_000,
+    m: 1_000_000,
+    g: 1_000_000_000,
+  }[unit];
+  return value * multiplier;
+};
+
+const formatHashRate = (hps) => {
+  if (!Number.isFinite(hps) || hps <= 0) return '0 H/s';
+  if (hps >= 1_000_000_000) return `${(hps / 1_000_000_000).toFixed(2)} GH/s`;
+  if (hps >= 1_000_000) return `${(hps / 1_000_000).toFixed(2)} MH/s`;
+  if (hps >= 1_000) return `${Math.round(hps / 1_000)} kH/s`;
+  return `${Math.round(hps)} H/s`;
+};
+
+const computeMaskKeyspace = (mask) => {
+  if (!mask) return 0;
+  const sets = { '?l': 26, '?u': 26, '?d': 10, '?s': 33, '?a': 95 };
+  let total = 1;
+  for (let i = 0; i < mask.length; i++) {
+    if (mask[i] === '?' && i < mask.length - 1) {
+      const token = mask.slice(i, i + 2);
+      if (sets[token]) {
+        total *= sets[token];
+        i += 1;
+      }
+    }
+  }
+  return total;
+};
+
 export const generateWordlist = (pattern) => {
   const mask = pattern || '';
   if (!mask.length) {
@@ -246,6 +291,8 @@ function HashcatApp() {
   const [mask, setMask] = useState('');
   const appendMask = (token) => setMask((m) => m + token);
   const [maskStats, setMaskStats] = useState({ count: 0, time: 0 });
+  const [benchmarkRateHps, setBenchmarkRateHps] = useState(null);
+  const [copied, setCopied] = useState(false);
   const showMask = ['3', '6', '7'].includes(attackMode);
   const [ruleSet, setRuleSet] = useState('none');
   const rulePreview = (ruleSets[ruleSet] || []).slice(0, 10).join('\n');
@@ -254,6 +301,7 @@ function HashcatApp() {
   const [showHelp, setShowHelp] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const startRef = useRef(0);
+  const copyFeedbackRef = useRef(null);
 
   const formatTime = (seconds) => {
     if (seconds < 60) return `${seconds.toFixed(2)}s`;
@@ -266,24 +314,12 @@ function HashcatApp() {
   };
 
   useEffect(() => {
-    if (!mask) {
+    const keyspace = computeMaskKeyspace(mask);
+    if (!keyspace) {
       setMaskStats({ count: 0, time: 0 });
       return;
     }
-    const sets = { '?l': 26, '?u': 26, '?d': 10, '?s': 33, '?a': 95 };
-    let total = 1;
-    for (let i = 0; i < mask.length; i++) {
-      if (mask[i] === '?' && i < mask.length - 1) {
-        const token = mask.slice(i, i + 2);
-        if (sets[token]) {
-          total *= sets[token];
-          i++;
-          continue;
-        }
-      }
-      total *= 1;
-    }
-    setMaskStats({ count: total, time: total / 1_000_000 });
+    setMaskStats({ count: keyspace, time: keyspace / 1_000_000 });
   }, [mask]);
 
   useEffect(() => {
@@ -378,6 +414,14 @@ function HashcatApp() {
     return () => cancelCracking();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (copyFeedbackRef.current) {
+        clearTimeout(copyFeedbackRef.current);
+      }
+    };
+  }, []);
+
   const selected = hashTypes.find((h) => h.id === hashType) || hashTypes[0];
   const filteredHashTypes = hashTypes.filter(
     (h) =>
@@ -389,6 +433,35 @@ function HashcatApp() {
     attackModes.find((m) => m.value === attackMode)?.label ||
     attackModes[0].label;
   const info = { ...progressInfo, mode: selectedMode };
+  const simulatedRateHps = (Array.isArray(progressInfo.hashRate)
+    ? progressInfo.hashRate
+    : [progressInfo.hashRate]
+  ).reduce((max, rateText) => {
+    const parsed = parseHashRateToHps(rateText);
+    if (!parsed) return max;
+    return Math.max(max, parsed);
+  }, 0);
+  const effectiveRateHps = benchmarkRateHps ?? simulatedRateHps ?? 1_000_000;
+  const effectiveRateSource = benchmarkRateHps
+    ? 'benchmark'
+    : simulatedRateHps
+      ? 'simulated'
+      : 'fallback';
+  const wordlistSize = WORDLIST_SIZES[wordlist] || 0;
+  const maskKeyspace = maskStats.count;
+  const estimatorKeyspace = (() => {
+    if (attackMode === '0') {
+      return wordlistSize || null;
+    }
+    if (attackMode === '3') {
+      return mask ? maskKeyspace : null;
+    }
+    if (attackMode === '6' || attackMode === '7') {
+      if (!wordlistSize || !mask) return null;
+      return wordlistSize * maskKeyspace;
+    }
+    return null;
+  })();
 
   const handleHashChange = (e) => {
     const value = e.target.value.trim();
@@ -400,9 +473,17 @@ function HashcatApp() {
     setBenchmark('Running benchmark...');
     setTimeout(() => {
       const speed = (4000 + Math.random() * 1000).toFixed(0);
-      setBenchmark(`GPU0: ${speed} MH/s`);
+      const benchmarkLine = `GPU0: ${speed} MH/s`;
+      setBenchmark(benchmarkLine);
+      setBenchmarkRateHps(parseHashRateToHps(benchmarkLine));
     }, 500);
   };
+
+  const demoCommand = `hashcat -m ${hashType} -a ${attackMode} ${
+    hashInput || 'hash.txt'
+  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
+    showMask && mask ? ` ${mask}` : ''
+  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`;
 
   const createWordlist = () => {
     const list = generateWordlist(pattern);
@@ -637,29 +718,44 @@ function HashcatApp() {
             className="bg-black px-2 py-1 text-xs"
             data-testid="demo-command"
           >
-            {`hashcat -m ${hashType} -a ${attackMode} ${
-              hashInput || 'hash.txt'
-            } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-              showMask && mask ? ` ${mask}` : ''
-            }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`}
+            {demoCommand}
           </code>
           <button
             className="ml-2"
             type="button"
             onClick={() => {
               if (navigator?.clipboard?.writeText) {
-                navigator.clipboard.writeText(
-                  `hashcat -m ${hashType} -a ${attackMode} ${
-                    hashInput || 'hash.txt'
-                  } ${wordlist ? `${wordlist}.txt` : 'wordlist.txt'}${
-                    showMask && mask ? ` ${mask}` : ''
-                  }${ruleSet !== 'none' ? ` -r ${ruleSet}.rule` : ''}`
-                );
+                navigator.clipboard.writeText(demoCommand);
               }
+              setCopied(true);
+              if (copyFeedbackRef.current) {
+                clearTimeout(copyFeedbackRef.current);
+              }
+              copyFeedbackRef.current = setTimeout(() => {
+                setCopied(false);
+              }, 1200);
             }}
           >
-            Copy
+            {copied ? 'Copied!' : 'Copy'}
           </button>
+        </div>
+        <div className="mt-2 rounded border border-white/10 bg-ub-grey/60 px-3 py-2 text-xs">
+          <div>
+            Estimated keyspace:{' '}
+            {estimatorKeyspace
+              ? estimatorKeyspace.toLocaleString()
+              : 'unknown'}
+          </div>
+          <div>
+            Effective speed: {formatHashRate(effectiveRateHps)} ({effectiveRateSource})
+          </div>
+          {estimatorKeyspace ? (
+            <div>
+              Estimated time: {formatTime(estimatorKeyspace / effectiveRateHps)}
+            </div>
+          ) : (
+            <div>Add a mask or select a wordlist to estimate runtime.</div>
+          )}
         </div>
       </div>
       <div className="mt-4 w-full max-w-md">
