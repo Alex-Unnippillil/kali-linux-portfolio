@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import seedrandom from "seedrandom";
 import useOPFS from "../../hooks/useOPFS.js";
+import { copyToClipboard } from "../../utils/clipboard";
 
 // Approximate pixel size of each grid cell for SVG overlay calculations
 const CELL_SIZE = 32;
@@ -63,6 +64,79 @@ const DIFFICULTIES = {
   easy: { size: 10, count: 5 },
   medium: { size: 12, count: 8 },
   hard: { size: 15, count: 10 },
+};
+
+const MIN_TIME_LIMIT = 30;
+const MAX_TIME_LIMIT = 600;
+
+const parseBooleanParam = (value) => {
+  if (value === null) return undefined;
+  const normalized = String(value).toLowerCase();
+  if (normalized === "1" || normalized === "true") return true;
+  if (normalized === "0" || normalized === "false") return false;
+  return undefined;
+};
+
+const cleanWordToken = (word, alphabet) => {
+  if (!word) return "";
+  const allowed = new Set(alphabet.split(""));
+  const upper = word.trim().toUpperCase();
+  return upper
+    .split("")
+    .filter((ch) => allowed.has(ch))
+    .join("");
+};
+
+export const parseWordSearchPermalink = (urlOrQuery) => {
+  const raw = String(urlOrQuery || "");
+  const query = raw.includes("?") ? raw.split("?")[1] : raw;
+  const params = new URLSearchParams(query);
+  const parsed = {};
+
+  const seed = params.get("seed")?.trim();
+  if (seed) parsed.seed = seed;
+
+  const difficulty = params.get("difficulty");
+  if (difficulty && DIFFICULTIES[difficulty]) {
+    parsed.difficulty = difficulty;
+  }
+
+  const language = params.get("lang");
+  if (language && ALPHABETS[language]) {
+    parsed.language = language;
+  }
+
+  const diagonals = parseBooleanParam(params.get("diagonals"));
+  if (diagonals !== undefined) parsed.diagonals = diagonals;
+
+  const challenge = parseBooleanParam(params.get("challenge"));
+  if (challenge !== undefined) parsed.challenge = challenge;
+
+  const rawLimit = Number(params.get("limit"));
+  if (
+    Number.isFinite(rawLimit) &&
+    rawLimit >= MIN_TIME_LIMIT &&
+    rawLimit <= MAX_TIME_LIMIT
+  ) {
+    parsed.timeLimit = rawLimit;
+  }
+
+  const listName = params.get("list")?.trim();
+  if (listName) parsed.listName = listName;
+
+  const alphabet = ALPHABETS[parsed.language || "en"];
+  const rawWords = params.get("words");
+  if (rawWords !== null) {
+    const words = rawWords
+      .split(",")
+      .map((word) => cleanWordToken(word, alphabet))
+      .filter(Boolean);
+    if (words.length) {
+      parsed.wordsOverride = words;
+    }
+  }
+
+  return parsed;
 };
 
 const usePersistentState = (key, initial) => {
@@ -219,8 +293,7 @@ const WordSearch = () => {
     {},
   );
   const allLists = { ...DEFAULT_LISTS, ...customLists };
-  const alphabet = ALPHABETS[language] || ALPHABETS.en;
-  const { size: SIZE, count: WORD_COUNT } = DIFFICULTIES[difficulty];
+  const { size: SIZE } = DIFFICULTIES[difficulty];
   const [bestTimes, setBestTimes] = usePersistentState(
     "wordsearch-best-times",
     {},
@@ -259,8 +332,10 @@ const WordSearch = () => {
   const polyRefs = useRef([]);
   const prefersReducedMotion = useRef(false);
   const [announcement, setAnnouncement] = useState("");
+  const [shareFallbackUrl, setShareFallbackUrl] = useState("");
   const timerRef = useRef(null);
   const gridRef = useRef(null);
+  const skipNextAutoResetRef = useRef(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -272,16 +347,12 @@ const WordSearch = () => {
 
   useEffect(() => {
     if (!listsReady) return;
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlSeed = params.get("seed");
-      if (urlSeed) {
-        setSeed(urlSeed);
-        reset(true, urlSeed);
-        return;
-      }
-    }
-    reset(true, seed);
+    const parsed =
+      typeof window !== "undefined"
+        ? parseWordSearchPermalink(window.location.search)
+        : {};
+    skipNextAutoResetRef.current = true;
+    reset({ failed: true, ...parsed, seed: parsed.seed || seed });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listsReady]);
 
@@ -319,7 +390,7 @@ const WordSearch = () => {
   useEffect(() => {
     if (challenge && time <= 0) {
       setStreak(0);
-      reset(true);
+      reset({ failed: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [challenge, time]);
@@ -335,7 +406,7 @@ const WordSearch = () => {
         return bt;
       });
       setStreak((s) => s + 1);
-      setTimeout(() => reset(false), 500);
+      setTimeout(() => reset({ failed: false }), 500);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [foundWords, words, time, difficulty, setBestTimes]);
@@ -365,7 +436,12 @@ const WordSearch = () => {
   }, [lassos]);
 
   useEffect(() => {
-    if (listsReady) reset(true);
+    if (!listsReady) return;
+    if (skipNextAutoResetRef.current) {
+      skipNextAutoResetRef.current = false;
+      return;
+    }
+    reset({ failed: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [difficulty, listName, challenge, timeLimit, language, listsReady]);
 
@@ -463,33 +539,108 @@ const WordSearch = () => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     url.searchParams.set("seed", seed);
+    url.searchParams.set("difficulty", difficulty);
+    url.searchParams.set("diagonals", diagonals ? "1" : "0");
+    url.searchParams.set("challenge", challenge ? "1" : "0");
+    url.searchParams.set("limit", String(timeLimit));
     url.searchParams.set("list", listName);
     url.searchParams.set("lang", language);
-    navigator.clipboard?.writeText(url.toString());
+    if (words.length) {
+      url.searchParams.set("words", words.join(","));
+    } else {
+      url.searchParams.delete("words");
+    }
+    const permalink = url.toString();
+    copyToClipboard(permalink).then((copied) => {
+      if (copied) {
+        setShareFallbackUrl("");
+        setAnnouncement("Link copied to clipboard");
+        return;
+      }
+      setShareFallbackUrl(permalink);
+      setAnnouncement("Unable to copy link");
+    });
   };
 
-  function reset(failed = true, newSeed, diag = diagonals) {
-    const s = newSeed || Math.random().toString(36).slice(2, 10);
+  function reset(options = {}) {
+    const {
+      failed = true,
+      seed: seedOverride,
+      diagonals: diagonalsOverride,
+      difficulty: difficultyOverride,
+      language: languageOverride,
+      challenge: challengeOverride,
+      timeLimit: timeLimitOverride,
+      listName: listNameOverride,
+      wordsOverride,
+    } = options;
+
+    const effectiveDifficulty =
+      difficultyOverride && DIFFICULTIES[difficultyOverride]
+        ? difficultyOverride
+        : difficulty;
+    const effectiveLanguage =
+      languageOverride && ALPHABETS[languageOverride] ? languageOverride : language;
+    const effectiveChallenge =
+      challengeOverride !== undefined ? challengeOverride : challenge;
+    const effectiveTimeLimit =
+      timeLimitOverride !== undefined ? timeLimitOverride : timeLimit;
+    const effectiveDiagonals =
+      diagonalsOverride !== undefined ? diagonalsOverride : diagonals;
+    const requestedListName =
+      listNameOverride !== undefined ? listNameOverride : listName;
+    const effectiveListName =
+      requestedListName === "random" || allLists[requestedListName]
+        ? requestedListName
+        : "random";
+    const { size: effectiveSize, count: effectiveWordCount } =
+      DIFFICULTIES[effectiveDifficulty] || DIFFICULTIES.easy;
+
+    const s = seedOverride || Math.random().toString(36).slice(2, 10);
     setSeed(s);
+    if (difficultyOverride && difficultyOverride !== difficulty) {
+      setDifficulty(effectiveDifficulty);
+    }
+    if (languageOverride && effectiveLanguage !== language) {
+      setLanguage(effectiveLanguage);
+    }
+    if (challengeOverride !== undefined && effectiveChallenge !== challenge) {
+      setChallenge(effectiveChallenge);
+    }
+    if (timeLimitOverride !== undefined && effectiveTimeLimit !== timeLimit) {
+      setTimeLimit(effectiveTimeLimit);
+    }
+    if (diagonalsOverride !== undefined && effectiveDiagonals !== diagonals) {
+      setDiagonals(effectiveDiagonals);
+    }
+    if (listNameOverride !== undefined && effectiveListName !== listName) {
+      setListName(effectiveListName);
+    }
+
     const rng = seedrandom(s);
+    const chosenWords =
+      wordsOverride && wordsOverride.length
+        ? wordsOverride
+        : pickWords(
+            effectiveWordCount,
+            effectiveListName === "random" ? undefined : effectiveListName,
+            rng,
+            allLists,
+            effectiveLanguage,
+          );
+
     setPuzzle(
       generatePuzzle(
-        SIZE,
-        pickWords(
-          WORD_COUNT,
-          listName === "random" ? undefined : listName,
-          rng,
-          allLists,
-          language,
-        ),
+        effectiveSize,
+        chosenWords,
         rng,
-        alphabet,
-        diag,
+        ALPHABETS[effectiveLanguage] || ALPHABETS.en,
+        effectiveDiagonals,
       ),
     );
     setFoundWords([]);
     setFoundCells([]);
-    setTime(challenge ? timeLimit : 0);
+    setTime(effectiveChallenge ? effectiveTimeLimit : 0);
     setHintCells([]);
     setStart(null);
     setEnd(null);
@@ -612,7 +763,7 @@ const WordSearch = () => {
             </button>
             <button
               className="px-4 py-1 bg-gray-700 hover:bg-gray-600"
-              onClick={() => reset(true)}
+              onClick={() => reset({ failed: true })}
             >
               New Puzzle
             </button>
@@ -632,10 +783,11 @@ const WordSearch = () => {
               <input
                 type="checkbox"
                 checked={diagonals}
+                aria-label="Allow diagonals"
                 onChange={(e) => {
                   const checked = e.target.checked;
                   setDiagonals(checked);
-                  reset(true, undefined, checked);
+                  reset({ failed: true, diagonals: checked });
                 }}
               />
               <span>Allow Diagonals</span>
@@ -644,6 +796,7 @@ const WordSearch = () => {
               <input
                 type="checkbox"
                 checked={challenge}
+                aria-label="Timed mode"
                 onChange={(e) => setChallenge(e.target.checked)}
               />
               <span>Timed Mode</span>
@@ -663,15 +816,24 @@ const WordSearch = () => {
               <input
                 className="px-2 py-1 text-black flex-1"
                 value={seed}
+                aria-label="Puzzle seed"
                 onChange={(e) => setSeed(e.target.value)}
               />
               <button
                 className="px-2 py-1 bg-gray-700 hover:bg-gray-600"
-                onClick={() => reset(true, seed)}
+                onClick={() => reset({ failed: true, seed })}
               >
                 Load
               </button>
             </div>
+            {shareFallbackUrl && (
+              <input
+                className="px-2 py-1 text-black"
+                value={shareFallbackUrl}
+                readOnly
+                aria-label="Share link"
+              />
+            )}
             <div className="flex gap-1">
               <button
                 className="flex-1 px-4 py-1 bg-gray-700 hover:bg-gray-600"
@@ -728,6 +890,7 @@ const WordSearch = () => {
                 className="px-1 text-black"
                 placeholder="List name"
                 value={newListName}
+                aria-label="Custom list name"
                 onChange={(e) => setNewListName(e.target.value)}
               />
               <select
@@ -744,6 +907,7 @@ const WordSearch = () => {
                 className="px-1 text-black"
                 placeholder="Comma separated words"
                 value={newListWords}
+                aria-label="Custom list words"
                 onChange={(e) => setNewListWords(e.target.value)}
               />
               <button
