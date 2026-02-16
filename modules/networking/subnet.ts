@@ -3,6 +3,8 @@ export interface HostRange {
   lastHost: string | null;
 }
 
+export type AddressClass = 'A' | 'B' | 'C' | 'D' | 'E';
+
 const IPV4_OCTET_COUNT = 4;
 const IPV4_BIT_LENGTH = 32;
 
@@ -40,6 +42,11 @@ const validateCidr = (cidr: number): number => {
 
 const toIPv4 = (value: number): string =>
   [24, 16, 8, 0].map((shift) => ((value >>> shift) & 0xff).toString()).join('.');
+
+const toIPv4Binary = (value: number): string =>
+  [24, 16, 8, 0]
+    .map((shift) => (((value >>> shift) & 0xff).toString(2).padStart(8, '0')))
+    .join('.');
 
 const getMask = (cidr: number): number => {
   if (cidr === 0) {
@@ -93,18 +100,76 @@ export const getUsableHostCount = (cidr: number): number => {
   return totalHosts - 2;
 };
 
+export const getSubnetMask = (cidr: number): string => {
+  const prefix = validateCidr(cidr);
+  return toIPv4(getMask(prefix));
+};
+
+export const getWildcardMask = (cidr: number): string => {
+  const prefix = validateCidr(cidr);
+  const mask = getMask(prefix);
+  return toIPv4((~mask) >>> 0);
+};
+
+export const getBinaryIPv4 = (ip: string): string => toIPv4Binary(parseIPv4(ip));
+
+export const getAddressClass = (ip: string): AddressClass => {
+  const address = parseIPv4(ip);
+  const firstOctet = (address >>> 24) & 0xff;
+
+  if (firstOctet <= 127) {
+    return 'A';
+  }
+  if (firstOctet <= 191) {
+    return 'B';
+  }
+  if (firstOctet <= 223) {
+    return 'C';
+  }
+  if (firstOctet <= 239) {
+    return 'D';
+  }
+  return 'E';
+};
+
+export const isPrivateIPv4 = (ip: string): boolean => {
+  const address = parseIPv4(ip);
+  const firstOctet = (address >>> 24) & 0xff;
+  const secondOctet = (address >>> 16) & 0xff;
+
+  if (firstOctet === 10) {
+    return true;
+  }
+
+  if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) {
+    return true;
+  }
+
+  return firstOctet === 192 && secondOctet === 168;
+};
+
 export const calculateSubnetInfo = (ip: string, cidr: number) => {
   const prefix = validateCidr(cidr);
   const network = getNetworkAddress(ip, prefix);
   const broadcast = getBroadcastAddress(ip, prefix);
   const hostRange = getHostRange(ip, prefix);
   const usableHosts = getUsableHostCount(prefix);
+  const subnetMask = getSubnetMask(prefix);
+  const wildcardMask = getWildcardMask(prefix);
+  const binaryIp = getBinaryIPv4(ip);
+  const addressClass = getAddressClass(ip);
+  const privateAddress = isPrivateIPv4(ip);
 
   return {
     network,
     broadcast,
     hostRange,
     usableHosts,
+    subnetMask,
+    wildcardMask,
+    binaryIp,
+    addressClass,
+    privateAddress,
     cidr: prefix,
   };
 };
