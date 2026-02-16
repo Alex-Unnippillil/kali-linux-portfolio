@@ -32,6 +32,8 @@ import { buildPinnedAppsPayload } from '../../utils/taskbarPayload';
 import { DESKTOP_TOP_PADDING, WINDOW_TOP_INSET, WINDOW_TOP_MARGIN } from '../../utils/uiConstants';
 import { useSnapSetting, useSnapGridSetting } from '../../hooks/usePersistentState';
 import { useSettings } from '../../hooks/useSettings';
+import { KEYMAP_STORAGE_KEY, getDefaultShortcutForDescription } from '../../apps/settings/keymapRegistry';
+import { formatShortcutEvent, isTypingTarget } from '../../utils/shortcuts';
 import {
     clampWindowPositionWithinViewport,
     clampWindowTopPosition,
@@ -42,6 +44,7 @@ import {
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
+const OPEN_SETTINGS_SHORTCUT_DESCRIPTION = 'Open settings';
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -4223,8 +4226,51 @@ export class Desktop extends Component {
         document.removeEventListener('keydown', this.handleContextKey);
     }
 
+    getStoredShortcutMap = () => {
+        const storage = resolveStorage();
+        if (!storage) return {};
+
+        try {
+            const rawMap = storage.getItem(KEYMAP_STORAGE_KEY);
+            const parsed = rawMap ? JSON.parse(rawMap) : {};
+            if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                return {};
+            }
+
+            return Object.entries(parsed).reduce((acc, [description, shortcut]) => {
+                if (typeof shortcut === 'string') {
+                    acc[description] = shortcut;
+                }
+                return acc;
+            }, {});
+        } catch (error) {
+            return {};
+        }
+    }
+
+    getShortcutBinding = (description) => {
+        const storedMap = this.getStoredShortcutMap();
+        if (typeof storedMap[description] === 'string') {
+            return storedMap[description];
+        }
+
+        return getDefaultShortcutForDescription(description);
+    }
+
+    shouldOpenSettingsFromShortcut = (event) => {
+        if (isTypingTarget(event.target)) return false;
+
+        const expectedShortcut = this.getShortcutBinding(OPEN_SETTINGS_SHORTCUT_DESCRIPTION);
+        if (!expectedShortcut) return false;
+
+        return formatShortcutEvent(event) === expectedShortcut;
+    }
+
     handleGlobalShortcut = (e) => {
-        if (e.altKey && e.key === 'Tab') {
+        if (this.shouldOpenSettingsFromShortcut(e)) {
+            e.preventDefault();
+            this.openApp('settings');
+        } else if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
                 this.openWindowSwitcher();
