@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import useOPFS from '../../hooks/useOPFS';
 
 // Inline SVGs for controls
 const RecordIcon = () => (
@@ -45,20 +46,44 @@ const MicIcon = ({ enabled }: { enabled: boolean }) => (
 );
 
 function ScreenRecorder() {
+    type SavedRecording = {
+        id: string;
+        name: string;
+        url: string;
+        createdAt: string;
+        sizeBytes: number;
+        persisted: boolean;
+    };
+
     const [status, setStatus] = useState<'idle' | 'recording' | 'paused' | 'finished'>('idle');
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [timer, setTimer] = useState(0);
     const [micEnabled, setMicEnabled] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [supportedMimeType, setSupportedMimeType] = useState<string>('video/webm');
+    const [savedRecordings, setSavedRecordings] = useState<SavedRecording[]>([]);
+    const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+    const [savedInFilesPath, setSavedInFilesPath] = useState<string | null>(null);
 
     const recorderRef = useRef<MediaRecorder | null>(null);
     const chunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const sessionUrlRef = useRef<string | null>(null);
+    const persistedUrlRef = useRef<string[]>([]);
+
+    const hasMediaRecorder = typeof window !== 'undefined' && typeof window.MediaRecorder !== 'undefined';
+    const hasDisplayMedia = typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia;
+    const canRecord = hasMediaRecorder && hasDisplayMedia;
+
+    const { supported: opfsSupported, getDir, listFiles, writeFile, deleteFile } = useOPFS();
 
     // Check for MP4 support on mount
     useEffect(() => {
+        if (!hasMediaRecorder) {
+            setSupportedMimeType('video/webm');
+            return;
+        }
         const types = [
             'video/mp4',
             'video/webm;codecs=h264',
@@ -71,7 +96,54 @@ function ScreenRecorder() {
                 break;
             }
         }
-    }, []);
+    }, [hasMediaRecorder]);
+
+    const formatDateStamp = (date: Date) => {
+        const pad = (value: number) => String(value).padStart(2, '0');
+        return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+    };
+
+    const formatSize = (sizeBytes: number) => {
+        if (sizeBytes >= 1024 * 1024) return `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`;
+        return `${(sizeBytes / 1024).toFixed(1)} KB`;
+    };
+
+    const buildRecordingName = () => {
+        const ext = supportedMimeType.includes('mp4') ? 'mp4' : 'webm';
+        const stamp = formatDateStamp(new Date());
+        return `screen-recording-${stamp}.${ext}`;
+    };
+
+    const loadSavedRecordings = React.useCallback(async () => {
+        if (!opfsSupported) {
+            setSavedRecordings([]);
+            return;
+        }
+
+        const dir = await getDir('Media/Screen Recorder', { create: true });
+        if (!dir) return;
+
+        persistedUrlRef.current.forEach((url) => URL.revokeObjectURL(url));
+        persistedUrlRef.current = [];
+
+        const handles = await listFiles(dir);
+        const files = await Promise.all(handles.map(async (handle) => {
+            const file = await handle.getFile();
+            const url = URL.createObjectURL(file);
+            persistedUrlRef.current.push(url);
+            return {
+                id: `persisted-${file.name}`,
+                name: file.name,
+                url,
+                createdAt: new Date(file.lastModified).toISOString(),
+                sizeBytes: file.size,
+                persisted: true,
+            };
+        }));
+
+        files.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+        setSavedRecordings(files);
+    }, [getDir, listFiles, opfsSupported]);
 
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -92,8 +164,17 @@ function ScreenRecorder() {
         };
     }, [status]);
 
+    useEffect(() => {
+        void loadSavedRecordings();
+    }, [loadSavedRecordings]);
+
     const startRecording = async () => {
+        if (!canRecord) {
+            setError('Screen recording is not supported in this browser.');
+            return;
+        }
         setError(null);
+        setSavedInFilesPath(null);
         try {
             const displayStream = await navigator.mediaDevices.getDisplayMedia({
                 video: { mediaSource: 'screen' } as any,
@@ -137,7 +218,12 @@ function ScreenRecorder() {
 
             recorder.onstop = () => {
                 const blob = new Blob(chunksRef.current, { type: supportedMimeType });
+                setRecordingBlob(blob);
+                if (sessionUrlRef.current) {
+                    URL.revokeObjectURL(sessionUrlRef.current);
+                }
                 const url = URL.createObjectURL(blob);
+                sessionUrlRef.current = url;
                 setVideoUrl(url);
                 combinedStream.getTracks().forEach((t) => t.stop());
                 setStatus('finished');
@@ -177,60 +263,182 @@ function ScreenRecorder() {
         }
     };
 
-    const saveRecording = async () => {
-        if (!videoUrl || chunksRef.current.length === 0) return;
-
-        const blob = new Blob(chunksRef.current, { type: supportedMimeType });
-        // Determine extension
-        const isMp4 = supportedMimeType.includes('mp4');
-        const ext = isMp4 ? 'mp4' : 'webm';
-        const filename = `screen-recording-${new Date().toISOString().slice(0, 10)}.${ext}`;
-
+    const saveBlobExternally = async (blob: Blob, filename: string, fallbackUrl?: string | null) => {
+        const isMp4 = filename.toLowerCase().endsWith('.mp4');
+        const mimeRoot = isMp4 ? 'video/mp4' : 'video/webm';
         try {
             if ('showSaveFilePicker' in window) {
                 const handle = await (window as any).showSaveFilePicker({
                     suggestedName: filename,
                     types: [{
                         description: isMp4 ? 'MP4 Video' : 'WebM Video',
-                        accept: { [supportedMimeType.split(';')[0]]: ['.' + ext] },
+                        accept: { [mimeRoot]: ['.' + (isMp4 ? 'mp4' : 'webm')] },
                     }],
                 });
                 const writable = await handle.createWritable();
                 await writable.write(blob);
                 await writable.close();
-            } else {
-                throw new Error("File System Access API not supported");
-            }
-        } catch (err: any) {
-            // If user cancelled the dialog, we might want to respect that?
-            // But to be safe and ensure "User can save", we fallback unless it's an explicit AbortError
-            if (err.name === 'AbortError') {
-                console.log("Save cancelled by user.");
                 return;
             }
-
-            console.warn("Save failed with File System Access API, falling back to download link.", err);
-
-            // Robust Fallback
+            throw new Error('File System Access API not supported');
+        } catch (err: any) {
+            if (err.name === 'AbortError') {
+                return;
+            }
+            const downloadUrl = fallbackUrl || URL.createObjectURL(blob);
+            const shouldRevoke = !fallbackUrl;
             const a = document.createElement('a');
             a.style.display = 'none';
-            a.href = videoUrl;
+            a.href = downloadUrl;
             a.download = filename;
             document.body.appendChild(a);
             a.click();
             setTimeout(() => {
                 document.body.removeChild(a);
+                if (shouldRevoke) URL.revokeObjectURL(downloadUrl);
             }, 100);
         }
     };
 
+    const saveRecording = async () => {
+        if (!recordingBlob) return;
+        setSavedInFilesPath(null);
+        setError(null);
+
+        const filename = buildRecordingName();
+
+        if (!opfsSupported) {
+            await saveBlobExternally(recordingBlob, filename, sessionUrlRef.current);
+            return;
+        }
+
+        try {
+            const dir = await getDir('Media/Screen Recorder', { create: true });
+            if (!dir) throw new Error('Could not access Files directory.');
+            const wrote = await writeFile(filename, recordingBlob, dir);
+            if (!wrote) throw new Error('Could not write recording to Files.');
+
+            const savedPath = `Media/Screen Recorder/${filename}`;
+            setSavedInFilesPath(savedPath);
+            window.dispatchEvent(new CustomEvent('system-notification', {
+                detail: {
+                    appId: 'screen-recorder',
+                    title: 'Recording saved',
+                    body: `Saved to Files: ${savedPath}`,
+                    priority: 'normal',
+                },
+            }));
+            await loadSavedRecordings();
+            return;
+        } catch (err) {
+            console.warn('OPFS save failed, falling back to external save.', err);
+            setError('Save to Files failed. Downloading externally instead.');
+            await saveBlobExternally(recordingBlob, filename, sessionUrlRef.current);
+        }
+    };
+
+    const openInFiles = () => {
+        window.dispatchEvent(new CustomEvent('open-app', { detail: { id: 'files', path: 'Media/Screen Recorder' } }));
+    };
+
+    const playSavedRecording = (recording: SavedRecording) => {
+        setVideoUrl(recording.url);
+        setStatus('finished');
+        setSavedInFilesPath(`Media/Screen Recorder/${recording.name}`);
+        setRecordingBlob(null);
+    };
+
+    const downloadSavedRecording = (recording: SavedRecording) => {
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = recording.url;
+        a.download = recording.name;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 100);
+    };
+
+    const deleteSavedRecording = async (recording: SavedRecording) => {
+        if (!opfsSupported) return;
+        const dir = await getDir('Media/Screen Recorder', { create: true });
+        if (!dir) return;
+        await deleteFile(recording.name, dir);
+        if (savedInFilesPath?.endsWith(recording.name)) {
+            setSavedInFilesPath(null);
+        }
+        await loadSavedRecordings();
+    };
+
+    const renderRecentRecordings = () => {
+        if (!opfsSupported) return null;
+        return (
+            <div className="w-full max-w-3xl rounded-xl border border-white/10 bg-black/30 p-4">
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-gray-200">Recent Recordings</h3>
+                    <button
+                        onClick={openInFiles}
+                        className="text-xs text-blue-300 hover:text-blue-200 transition-colors"
+                    >
+                        Open in Files
+                    </button>
+                </div>
+                {savedRecordings.length === 0 ? (
+                    <p className="text-xs text-gray-400">No saved recordings yet. Use Save to Files after recording.</p>
+                ) : (
+                    <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                        {savedRecordings.map((recording) => (
+                            <div key={recording.id} className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-black/30 px-3 py-2">
+                                <div className="min-w-0">
+                                    <p className="text-sm text-gray-100 truncate">{recording.name}</p>
+                                    <p className="text-xs text-gray-400">
+                                        {new Date(recording.createdAt).toLocaleString()} · {formatSize(recording.sizeBytes)}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button aria-label={`Play ${recording.name}`} onClick={() => playSavedRecording(recording)} className="px-2 py-1 text-xs rounded-md bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30">Play</button>
+                                    <button aria-label={`Download ${recording.name}`} onClick={() => downloadSavedRecording(recording)} className="px-2 py-1 text-xs rounded-md bg-blue-600/20 text-blue-300 hover:bg-blue-600/30">Download</button>
+                                    <button aria-label={`Delete ${recording.name}`} onClick={() => void deleteSavedRecording(recording)} className="px-2 py-1 text-xs rounded-md bg-red-600/20 text-red-300 hover:bg-red-600/30">Delete</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
     const reset = () => {
+        if (sessionUrlRef.current && videoUrl === sessionUrlRef.current) {
+            URL.revokeObjectURL(sessionUrlRef.current);
+            sessionUrlRef.current = null;
+        }
         setVideoUrl(null);
         setTimer(0);
         setStatus('idle');
         setError(null);
+        setRecordingBlob(null);
+        setSavedInFilesPath(null);
         chunksRef.current = [];
     };
+
+    useEffect(() => {
+        return () => {
+            if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+            if (recorderRef.current && recorderRef.current.state !== 'inactive') {
+                recorderRef.current.stop();
+            }
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((track) => track.stop());
+                streamRef.current = null;
+            }
+            if (sessionUrlRef.current) {
+                URL.revokeObjectURL(sessionUrlRef.current);
+                sessionUrlRef.current = null;
+            }
+            persistedUrlRef.current.forEach((url) => URL.revokeObjectURL(url));
+            persistedUrlRef.current = [];
+        };
+    }, []);
 
     return (
         <div className="h-full w-full flex flex-col font-sans bg-gray-900 text-white overflow-hidden relative select-none">
@@ -281,6 +489,7 @@ function ScreenRecorder() {
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                                 onClick={startRecording}
+                                disabled={!canRecord}
                                 className="group relative flex items-center gap-3 px-8 py-4 bg-red-600 hover:bg-red-500 text-white rounded-full font-medium shadow-lg shadow-red-900/20 transition-all"
                             >
                                 <RecordIcon />
@@ -288,7 +497,11 @@ function ScreenRecorder() {
                                 <div className="absolute inset-0 rounded-full border border-white/20" />
                             </motion.button>
 
+                            {!canRecord && <p className="text-yellow-400 text-xs max-w-xs text-center">Screen Recorder is unavailable in this browser (missing MediaRecorder or getDisplayMedia).</p>}
+
                             {error && <p className="text-red-400 text-xs mt-2">{error}</p>}
+
+                            {renderRecentRecordings()}
                         </motion.div>
                     )}
 
@@ -356,7 +569,7 @@ function ScreenRecorder() {
                             className="w-full h-full flex flex-col items-center gap-4 overflow-hidden"
                         >
                             <div className="flex-1 w-full min-h-0 bg-black rounded-xl overflow-hidden border border-white/20 shadow-2xl flex items-center justify-center">
-                                <video src={videoUrl} controls playsInline className="w-full h-full object-contain" />
+                                <video src={videoUrl} controls playsInline aria-label="Recorded screen preview" className="w-full h-full object-contain" />
                             </div>
 
                             <div className="flex items-center gap-4 py-2 shrink-0">
@@ -376,9 +589,22 @@ function ScreenRecorder() {
                                     className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium shadow-lg shadow-blue-900/20"
                                 >
                                     <DownloadIcon />
-                                    Save as {supportedMimeType.includes('mp4') ? 'MP4' : 'WebM'}
+                                    {opfsSupported ? 'Save to Files' : `Save as ${supportedMimeType.includes('mp4') ? 'MP4' : 'WebM'}`}
                                 </motion.button>
+
+                                {savedInFilesPath && (
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={openInFiles}
+                                        className="px-6 py-3 rounded-lg text-blue-300 hover:text-white hover:bg-white/5 transition-colors"
+                                    >
+                                        Open in Files
+                                    </motion.button>
+                                )}
                             </div>
+
+                            {renderRecentRecordings()}
                         </motion.div>
                     )}
                 </AnimatePresence>
