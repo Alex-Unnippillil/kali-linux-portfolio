@@ -102,4 +102,21 @@ describe('Wordle', () => {
     ]);
     expect(mosaic).toBe('🟩🟨⬛\n⬛🟩🟨');
   });
+
+  test('solver panel autofills input from suggestions', () => {
+    render(<Wordle />);
+
+    fireEvent.click(screen.getByLabelText('Solver'));
+    expect(screen.getByText(/Remaining solutions:/)).toBeInTheDocument();
+
+    const suggestionButtons = screen.getAllByRole('button', {
+      name: /Use suggestion /,
+    });
+    const firstSuggestionLabel = suggestionButtons[0].textContent || '';
+    const suggestedWord = firstSuggestionLabel.split(' ')[0];
+
+    fireEvent.click(suggestionButtons[0]);
+
+    expect(screen.getByPlaceholderText('Guess')).toHaveValue(suggestedWord);
+  });
 });

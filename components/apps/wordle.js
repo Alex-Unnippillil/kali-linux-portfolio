@@ -206,6 +206,11 @@ const Wordle = () => {
     false,
     normalizeBoolean
   );
+  const [solverEnabled, setSolverEnabled] = usePersistentState(
+    'wordle-solver',
+    false,
+    normalizeBoolean
+  );
 
   const isSolved = guesses.some((g) => g.guess === solution);
   const isGameOver = isSolved || guesses.length === 6;
@@ -255,14 +260,15 @@ const Wordle = () => {
     return map;
   }, [guesses]);
 
-
-  const getPossibleWords = () =>
-    wordList.filter((word) =>
+  const remainingWords = useMemo(() => {
+    if (!wordList.length) return [];
+    if (!guesses.length) return wordList;
+    return wordList.filter((word) =>
       guesses.every(
-        (g) =>
-          evaluateGuess(g.guess, word).join('') === g.result.join('')
+        (g) => evaluateGuess(g.guess, word).join('') === g.result.join('')
       )
     );
+  }, [wordList, guesses]);
 
   const calculateEntropy = (g, remaining) => {
     if (!remaining.length) return 0;
@@ -276,6 +282,22 @@ const Wordle = () => {
       return sum - p * Math.log2(p);
     }, 0);
   };
+
+  const solverSuggestions = useMemo(() => {
+    if (!solverEnabled || isGameOver || !wordList.length || !remainingWords.length) {
+      return [];
+    }
+    return wordList
+      .map((word) => ({
+        word,
+        entropy: calculateEntropy(word, remainingWords),
+      }))
+      .sort((a, b) => {
+        if (b.entropy !== a.entropy) return b.entropy - a.entropy;
+        return a.word.localeCompare(b.word);
+      })
+      .slice(0, 5);
+  }, [solverEnabled, isGameOver, wordList, remainingWords]);
 
   const updateStreaks = (hist) => {
     const dates = Object.keys(hist).sort();
@@ -311,12 +333,18 @@ const Wordle = () => {
       setAnalysis('Word not in dictionary.');
       return;
     }
-    const remaining = getPossibleWords();
+    const remaining = remainingWords;
     const entropy = calculateEntropy(upper, remaining);
     setAnalysis(
       `${remaining.length} words remaining; entropy ${entropy.toFixed(2)} bits`
     );
   };
+
+  const handleUseSuggestion = useCallback((word) => {
+    setGuess(word);
+    setMessage('');
+    setAnalysis('');
+  }, []);
 
   const submitGuess = useCallback(
     (rawGuess) => {
@@ -704,6 +732,14 @@ const Wordle = () => {
           <span>Hard Mode</span>
         </label>
         <label className="flex items-center space-x-1 text-sm">
+          <input
+            type="checkbox"
+            checked={solverEnabled}
+            onChange={() => setSolverEnabled(!solverEnabled)}
+          />
+          <span>Solver</span>
+        </label>
+        <label className="flex items-center space-x-1 text-sm">
           <span>Word Pack</span>
           <select
             className="text-black text-sm"
@@ -754,38 +790,75 @@ const Wordle = () => {
       </div>
 
       {!isGameOver && (
-        <form onSubmit={handleSubmit} className="flex space-x-2">
-          <input
-            type="text"
-            maxLength={5}
-            value={guess}
-            onChange={(e) => setGuess(sanitizeGuessText(e.target.value))}
-            className="w-32 p-2 text-black text-center uppercase"
-            placeholder="Guess"
-            aria-label="Guess"
-          />
-          <button
-            type="submit"
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Submit
-          </button>
-          <button
-            type="button"
-            onClick={handleAnalyze}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-          >
-            Analyze
-          </button>
-          <button
-            type="button"
-            onClick={resetToday}
-            className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
-            aria-label="Reset today's board"
-          >
-            Reset Today
-          </button>
-        </form>
+        <>
+          <form onSubmit={handleSubmit} className="flex space-x-2">
+            <input
+              type="text"
+              maxLength={5}
+              value={guess}
+              onChange={(e) => setGuess(sanitizeGuessText(e.target.value))}
+              className="w-32 p-2 text-black text-center uppercase"
+              placeholder="Guess"
+              aria-label="Guess"
+            />
+            <button
+              type="submit"
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Submit
+            </button>
+            <button
+              type="button"
+              onClick={handleAnalyze}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Analyze
+            </button>
+            <button
+              type="button"
+              onClick={resetToday}
+              className="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded"
+              aria-label="Reset today's board"
+            >
+              Reset Today
+            </button>
+          </form>
+
+          {solverEnabled && (
+            <div
+              className="w-full max-w-xl rounded border border-gray-700 bg-black/20 p-3 space-y-2"
+              aria-label="Solver panel"
+            >
+              {!wordList.length ? (
+                <p className="text-sm">Dictionary unavailable.</p>
+              ) : (
+                <>
+                  <p className="text-sm">Remaining solutions: {remainingWords.length}</p>
+                  {remainingWords.length === 0 ? (
+                    <p className="text-sm">No solutions match the current constraints.</p>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-sm">Top suggestions:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {solverSuggestions.map((suggestion) => (
+                          <button
+                            key={suggestion.word}
+                            type="button"
+                            onClick={() => handleUseSuggestion(suggestion.word)}
+                            className="px-2 py-1 rounded bg-gray-700 hover:bg-gray-600 text-xs"
+                            aria-label={`Use suggestion ${suggestion.word}`}
+                          >
+                            {suggestion.word} ({suggestion.entropy.toFixed(2)})
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </>
       )}
 
       {isGameOver && (
