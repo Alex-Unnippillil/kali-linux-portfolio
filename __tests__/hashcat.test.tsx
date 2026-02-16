@@ -24,7 +24,10 @@ describe('HashcatApp', () => {
     const { getByText, getByTestId } = render(<HashcatApp />);
     fireEvent.click(getByText('Run Benchmark'));
     await waitFor(() => {
-      expect(getByTestId('benchmark-output').textContent).toMatch(/GPU0/);
+      // The benchmark now reports full hashcat-style output (e.g. "GPU0: 4500 MH/s")
+      // instead of merely containing the device label. Verify the numeric speed and
+      // units to ensure the component renders the complete result.
+      expect(getByTestId('benchmark-output').textContent).toMatch(/GPU0: \d+ MH\/s/);
     });
   });
 
