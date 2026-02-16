@@ -18,10 +18,39 @@ const MAX_RETRIES = 3;
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+export const filterServices = (
+  services: ServiceData[],
+  query: string
+): ServiceData[] => {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return services;
+
+  return services
+    .map((service) => {
+      const serviceMatches = service.uuid.toLowerCase().includes(normalized);
+      if (serviceMatches) return service;
+
+      const matchingCharacteristics = service.characteristics.filter(
+        (char) =>
+          char.uuid.toLowerCase().includes(normalized) ||
+          char.value.toLowerCase().includes(normalized)
+      );
+
+      if (!matchingCharacteristics.length) return null;
+      return {
+        ...service,
+        characteristics: matchingCharacteristics,
+      };
+    })
+    .filter((service): service is ServiceData => service !== null);
+};
+
 const BleSensor: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'bluetooth' in navigator;
   const [deviceName, setDeviceName] = useState('');
   const [services, setServices] = useState<ServiceData[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeDeviceId, setActiveDeviceId] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [profiles, setProfiles] = useState<SavedProfile[]>([]);
@@ -78,6 +107,7 @@ const BleSensor: React.FC = () => {
 
       const saved = await loadProfile(device.id);
       if (saved) {
+        setActiveDeviceId(saved.deviceId);
         setDeviceName(saved.name);
         setServices(saved.services);
         return;
@@ -110,6 +140,7 @@ const BleSensor: React.FC = () => {
         serviceData.push({ uuid: service.uuid, characteristics: charData });
       }
       setServices(serviceData);
+      setActiveDeviceId(device.id);
       await saveProfile(device.id, {
         name: device.name || 'Unknown device',
         services: serviceData,
@@ -130,6 +161,32 @@ const BleSensor: React.FC = () => {
     }
   };
 
+  const filteredServices = filterServices(services, searchQuery);
+  const characteristicCount = filteredServices.reduce(
+    (sum, service) => sum + service.characteristics.length,
+    0
+  );
+
+  const downloadActiveProfile = () => {
+    if (!activeDeviceId) return;
+
+    const payload = {
+      deviceId: activeDeviceId,
+      name: deviceName || 'Unknown device',
+      exportedAt: new Date().toISOString(),
+      services,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `ble-profile-${activeDeviceId}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="h-full w-full bg-black p-4 text-white">
       {!supported && (
@@ -146,6 +203,19 @@ const BleSensor: React.FC = () => {
         Scan for Devices
       </button>
 
+      <div className="mb-4 rounded border border-gray-700 bg-gray-900/70 p-3 text-xs text-gray-200">
+        <p>
+          <span className="font-semibold text-white">Quick Stats:</span>{' '}
+          {filteredServices.length} service
+          {filteredServices.length === 1 ? '' : 's'} · {characteristicCount}{' '}
+          characteristic{characteristicCount === 1 ? '' : 's'}
+        </p>
+        <p className="mt-1 text-gray-400">
+          Tip: filter by UUID or characteristic value to quickly inspect large
+          BLE profiles.
+        </p>
+      </div>
+
       {error && <FormError className="mt-0 mb-4">{error}</FormError>}
 
       {profiles.length > 0 && (
@@ -154,7 +224,19 @@ const BleSensor: React.FC = () => {
           <ul className="space-y-1">
             {profiles.map((p) => (
               <li key={p.deviceId} className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setActiveDeviceId(p.deviceId);
+                    setDeviceName(p.name);
+                    setServices(p.services);
+                    setError('');
+                  }}
+                  className="rounded border border-gray-600 px-2 py-0.5 text-xs text-blue-300 hover:bg-gray-800"
+                >
+                  Load
+                </button>
                 <input
+                  aria-label={`Rename profile ${p.name}`}
                   defaultValue={p.name}
                   onBlur={async (e) => {
                     await renameProfile(p.deviceId, e.target.value);
@@ -181,8 +263,25 @@ const BleSensor: React.FC = () => {
 
       {deviceName && <p className="mb-2">Connected to: {deviceName}</p>}
 
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <input
+          aria-label="Filter Bluetooth services and characteristics"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Filter services/characteristics…"
+          className="w-full max-w-md rounded border border-gray-700 bg-gray-900 px-2 py-1 text-sm text-white placeholder:text-gray-500"
+        />
+        <button
+          onClick={downloadActiveProfile}
+          disabled={!services.length || !activeDeviceId}
+          className="rounded border border-gray-600 px-3 py-1 text-sm text-cyan-200 disabled:opacity-40"
+        >
+          Export JSON
+        </button>
+      </div>
+
       <ul className="space-y-2 overflow-auto">
-        {services.map((service) => (
+        {filteredServices.map((service) => (
           <li key={service.uuid} className="border-b border-gray-700 pb-2">
             <p className="font-bold">Service: {service.uuid}</p>
             <ul className="ml-4 list-disc">
@@ -195,10 +294,15 @@ const BleSensor: React.FC = () => {
           </li>
         ))}
       </ul>
+
+      {!filteredServices.length && services.length > 0 && (
+        <p className="mt-3 text-sm text-gray-400">
+          No services matched your filter.
+        </p>
+      )}
     </div>
   );
 };
 
 export default BleSensor;
 export const displayBleSensor = () => <BleSensor />;
-
