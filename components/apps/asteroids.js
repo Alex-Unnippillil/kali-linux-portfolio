@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameLoop from './Games/common/loop/GameLoop';
-import { getMapping } from './Games/common/input-remap/useInputMapping';
+import InputRemap from './Games/common/input-remap/InputRemap';
+import useInputMapping, { getMapping } from './Games/common/input-remap/useInputMapping';
 import GameLayout from './GameLayout';
 import { createGame, resize as resizeGame, tick } from './asteroids-engine';
 import { POWER_UPS } from './asteroids-utils';
@@ -27,6 +28,14 @@ const DIFFICULTIES = [
   { level: 4, name: 'Commander' },
   { level: 5, name: 'Ace' },
 ];
+
+const CONTROL_ACTIONS = {
+  thrust: 'Thrust',
+  left: 'Turn left',
+  right: 'Turn right',
+  fire: 'Fire',
+  hyperspace: 'Hyperspace',
+};
 
 const drawCircle = (ctx, x, y, r, color, fill = false) => {
   ctx.beginPath();
@@ -280,6 +289,7 @@ const renderGame = (ctx, game, alpha, worldW, worldH, { stars, particles, shake 
 
 const Asteroids = () => {
   const canvasRef = useRef(null);
+  const [mapping, setKey] = useInputMapping('asteroids', DEFAULT_MAP);
   const controlsRef = useRef(useGameControls(canvasRef, 'asteroids'));
   const { muted, toggleMute, screenShake, setScreenShake } = useGameSettings('asteroids');
   const [particlesEnabled, setParticlesEnabled] = usePersistedState('game:asteroids:particles', true);
@@ -712,9 +722,13 @@ const Asteroids = () => {
             {muted ? 'Muted' : 'On'}
           </button>
         </div>
+        <div className="pt-2 border-t border-slate-700/70">
+          <div className="mb-2 text-xs font-semibold tracking-wide text-slate-300 uppercase">Controls</div>
+          <InputRemap mapping={mapping} setKey={setKey} actions={CONTROL_ACTIONS} />
+        </div>
       </div>
     ),
-    [muted, particlesEnabled, screenShake, setParticlesEnabled, setScreenShake, toggleMute],
+    [mapping, muted, particlesEnabled, screenShake, setKey, setParticlesEnabled, setScreenShake, toggleMute],
   );
 
   return (
