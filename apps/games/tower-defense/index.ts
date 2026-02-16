@@ -131,6 +131,13 @@ export const TOWER_TYPES = {
 
 export type TowerType = keyof typeof TOWER_TYPES;
 
+export type TargetingMode =
+  | 'first'
+  | 'last'
+  | 'strong'
+  | 'weak'
+  | 'closest';
+
 export const getTowerDPS = (type: TowerType, level: number) => {
   const stats = TOWER_TYPES[type]?.[level - 1];
   if (!stats) return 0;
@@ -148,6 +155,7 @@ export type Tower = {
   range: number;
   damage: number;
   level: number;
+  targeting: TargetingMode;
   type?: TowerType;
 };
 

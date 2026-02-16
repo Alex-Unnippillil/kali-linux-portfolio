@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import GameLayout from "../../components/apps/GameLayout";
 import DpsCharts from "../games/tower-defense/components/DpsCharts";
 import RangeUpgradeTree from "../games/tower-defense/components/RangeUpgradeTree";
-import { ENEMY_TYPES, Tower } from "../games/tower-defense";
+import { ENEMY_TYPES, TargetingMode, Tower } from "../games/tower-defense";
 import {
   createTowerDefenseEngine,
   getUpgradeCost,
@@ -91,6 +91,29 @@ const QUICK_PLAY_PRESETS = [
     startingLives: 13,
   },
 ];
+
+
+const TARGETING_MODES: TargetingMode[] = [
+  "first",
+  "last",
+  "strong",
+  "weak",
+  "closest",
+];
+
+const TARGETING_LABELS: Record<TargetingMode, string> = {
+  first: "First",
+  last: "Last",
+  strong: "Strong",
+  weak: "Weak",
+  closest: "Closest",
+};
+
+const getNextTargetingMode = (current: TargetingMode): TargetingMode => {
+  const index = TARGETING_MODES.indexOf(current);
+  if (index < 0) return TARGETING_MODES[0];
+  return TARGETING_MODES[(index + 1) % TARGETING_MODES.length];
+};
 
 interface TowerDefenseProps {
   windowMeta?: {
@@ -331,6 +354,21 @@ const TowerDefense = ({ windowMeta }: TowerDefenseProps = {}) => {
     if (e.key === "Escape") {
       e.preventDefault();
       setSelected(null);
+      return;
+    }
+
+    if (e.key.toLowerCase() === "t" && selectedRef.current !== null) {
+      e.preventDefault();
+      const tower = engineRef.current.getState().towers[selectedRef.current];
+      if (!tower) return;
+      const targeting = getNextTargetingMode(tower.targeting);
+      engineRef.current.dispatch({
+        type: "set-tower-targeting",
+        index: selectedRef.current,
+        targeting,
+      });
+      syncUiState();
+      showToast(`Targeting: ${TARGETING_LABELS[targeting].toUpperCase()}`);
       return;
     }
 
@@ -803,6 +841,7 @@ const TowerDefense = ({ windowMeta }: TowerDefenseProps = {}) => {
             </label>
             <input
               id="spawn-interval"
+              aria-label="Spawn interval"
               type="range"
               min={0.4}
               max={1.8}
@@ -837,6 +876,35 @@ const TowerDefense = ({ windowMeta }: TowerDefenseProps = {}) => {
                 </h3>
                 <div className="mt-2 flex flex-col items-center gap-2">
                   <RangeUpgradeTree tower={selectedTower} />
+                  <div className="w-full text-[0.65rem]">
+                    <p className="text-center text-[0.6rem] font-semibold uppercase tracking-wide text-[color:var(--kali-text)] opacity-75">
+                      Targeting (T to cycle)
+                    </p>
+                    <div className="mt-1 flex flex-wrap justify-center gap-1">
+                      {TARGETING_MODES.map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          className={`rounded border px-2 py-1 font-semibold uppercase tracking-wide transition ${
+                            selectedTower.targeting === mode
+                              ? "border-[color:var(--color-primary)] bg-[color:color-mix(in_srgb,var(--color-primary)_25%,var(--kali-panel))] text-[color:var(--color-primary)]"
+                              : "border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] text-[color:var(--kali-text)] hover:bg-[color:var(--kali-panel)]"
+                          }`}
+                          onClick={() => {
+                            if (selectedRef.current === null) return;
+                            engineRef.current.dispatch({
+                              type: "set-tower-targeting",
+                              index: selectedRef.current,
+                              targeting: mode,
+                            });
+                            syncUiState();
+                          }}
+                        >
+                          {TARGETING_LABELS[mode]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <div className="flex w-full flex-wrap justify-center gap-2 text-[0.65rem]">
                     <button
                       type="button"

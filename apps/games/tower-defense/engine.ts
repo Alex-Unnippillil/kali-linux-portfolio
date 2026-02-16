@@ -1,6 +1,7 @@
 import {
   ENEMY_TYPES,
   Tower,
+  TargetingMode,
   upgradeTower,
   Enemy,
   createEnemyPool,
@@ -95,6 +96,7 @@ export type EngineDispatchAction =
   | { type: 'clear-towers' }
   | { type: 'sell-tower'; index: number }
   | { type: 'upgrade-tower'; index: number; upgrade: 'range' | 'damage' }
+  | { type: 'set-tower-targeting'; index: number; targeting: TargetingMode }
   | { type: 'reset-run' }
   | { type: 'start-run'; skipCountdown?: boolean }
   | { type: 'set-wave-config'; waves: (keyof typeof ENEMY_TYPES)[][] }
@@ -148,6 +150,39 @@ export const validateRouteCells = (
 };
 
 const cloneVecs = (cells: Vec[]) => cells.map((cell) => ({ ...cell }));
+
+
+const getProgressScore = (enemy: EnemyInstance) => enemy.pathIndex + enemy.progress;
+
+const isBetterTarget = (
+  mode: TargetingMode,
+  candidate: EnemyInstance,
+  best: EnemyInstance,
+  candidateDist: number,
+  bestDist: number,
+) => {
+  if (mode === 'closest') {
+    return candidateDist < bestDist;
+  }
+
+  if (mode === 'strong') {
+    return candidate.health > best.health;
+  }
+
+  if (mode === 'weak') {
+    return candidate.health < best.health;
+  }
+
+  const candidateProgress = getProgressScore(candidate);
+  const bestProgress = getProgressScore(best);
+
+  if (mode === 'last') {
+    return candidateProgress < bestProgress;
+  }
+
+  return candidateProgress > bestProgress;
+};
+
 
 const createStats = (): RunStats => ({
   enemiesDefeated: 0,
@@ -341,12 +376,32 @@ export const createTowerDefenseEngine = (config: TowerDefenseConfig = {}) => {
 
       const towerCenterX = tower.x + 0.5;
       const towerCenterY = tower.y + 0.5;
-      const target = enemies.find((enemy) =>
-        Math.hypot(
+      let target: EnemyInstance | null = null;
+      let bestDistance = Infinity;
+
+      for (const enemy of enemies) {
+        const distance = Math.hypot(
           enemy.x + 0.5 - towerCenterX,
           enemy.y + 0.5 - towerCenterY,
-        ) <= tower.range,
-      );
+        );
+
+        if (distance > tower.range) continue;
+
+        if (
+          !target ||
+          isBetterTarget(
+            tower.targeting,
+            enemy,
+            target,
+            distance,
+            bestDistance,
+          )
+        ) {
+          target = enemy;
+          bestDistance = distance;
+        }
+      }
+
       if (!target) return;
 
       target.health -= tower.damage;
@@ -543,6 +598,7 @@ export const createTowerDefenseEngine = (config: TowerDefenseConfig = {}) => {
           range: 1.5,
           damage: 2,
           level: 1,
+          targeting: 'first',
         });
         state.gold -= baseTowerCost;
         return { ok: true };
@@ -574,6 +630,16 @@ export const createTowerDefenseEngine = (config: TowerDefenseConfig = {}) => {
         const updated = { ...tower };
         upgradeTower(updated, action.upgrade);
         state.towers = state.towers.map((t, i) => (i === action.index ? updated : t));
+        return { ok: true };
+      }
+      case 'set-tower-targeting': {
+        const tower = state.towers[action.index];
+        if (!tower) return { ok: false };
+        state.towers = state.towers.map((currentTower, index) =>
+          index === action.index
+            ? { ...currentTower, targeting: action.targeting }
+            : currentTower,
+        );
         return { ok: true };
       }
       case 'reset-run': {
