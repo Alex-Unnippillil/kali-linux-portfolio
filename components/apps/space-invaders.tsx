@@ -2,10 +2,14 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GameLayout, { useInputRecorder } from './GameLayout';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
+import {
+  BEST_SCORE_STORAGE_KEY,
+  readBestScore,
+  writeBestScore,
+} from './space-invaders/storage';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { useGameLoop, useGamepad, useLeaderboard, VirtualPad } from './Games/common';
 import {
-  HIGH_SCORE_KEY,
   GameState,
   InputState,
   StepEvent,
@@ -153,11 +157,8 @@ const SpaceInvaders: React.FC = () => {
   const [stage, setStage] = useState(1);
   const [lives, setLives] = useState(3);
   const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = usePersistentState(
-    HIGH_SCORE_KEY,
-    0,
-    (value): value is number => typeof value === 'number',
-  );
+  const [bestScore, setBestScore] = useState(0);
+  const bestScoreRef = useRef(0);
   const [difficulty, setDifficulty] = usePersistentState(
     'space-invaders-difficulty',
     1,
@@ -201,7 +202,7 @@ const SpaceInvaders: React.FC = () => {
     stage: 1,
     lives: 3,
     score: 0,
-    highScore,
+    bestScore,
   });
 
   const resetInput = useCallback(() => {
@@ -220,7 +221,7 @@ const SpaceInvaders: React.FC = () => {
       stateRef.current = createGame({
         width: BASE_WIDTH,
         height: BASE_HEIGHT,
-        highScore,
+        highScore: bestScoreRef.current,
       });
       setStage(1);
       setLives(3);
@@ -237,7 +238,7 @@ const SpaceInvaders: React.FC = () => {
         beginCountdown();
       }
     },
-    [beginCountdown, highScore, resetInput],
+    [beginCountdown, resetInput],
   );
 
   const handleAudio = useCallback((frequency: number, duration = 0.08, preset?: Partial<TonePreset>) => {
@@ -320,14 +321,18 @@ const SpaceInvaders: React.FC = () => {
       lastHudRef.current.score = state.score;
       setScore(state.score);
     }
-    if (state.highScore !== lastHudRef.current.highScore) {
-      if (state.highScore > lastHudRef.current.highScore) {
-        announce('New high score!');
+    if (state.highScore !== lastHudRef.current.bestScore) {
+      if (state.highScore > lastHudRef.current.bestScore) {
+        announce('New best score!');
       }
-      lastHudRef.current.highScore = state.highScore;
-      setHighScore(state.highScore);
+      lastHudRef.current.bestScore = state.highScore;
+      if (state.highScore > bestScoreRef.current) {
+        bestScoreRef.current = state.highScore;
+        setBestScore(state.highScore);
+        writeBestScore(state.highScore);
+      }
     }
-  }, [announce, setHighScore]);
+  }, [announce]);
 
   const recordInputChange = useCallback(
     (next: InputState) => {
@@ -595,8 +600,26 @@ const SpaceInvaders: React.FC = () => {
   }, [canvasRef, prefersReducedMotion, shakeEnabled]);
 
   useEffect(() => {
-    lastHudRef.current.highScore = highScore;
-  }, [highScore]);
+    const storedBest = readBestScore();
+    bestScoreRef.current = storedBest;
+    lastHudRef.current.bestScore = storedBest;
+    setBestScore(storedBest);
+    stateRef.current.highScore = Math.max(stateRef.current.highScore, storedBest);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== BEST_SCORE_STORAGE_KEY) return;
+      const nextBest = readBestScore();
+      bestScoreRef.current = nextBest;
+      lastHudRef.current.bestScore = nextBest;
+      setBestScore(nextBest);
+      stateRef.current.highScore = Math.max(stateRef.current.highScore, nextBest);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   useEffect(() => {
     if (status !== 'countdown') return undefined;
@@ -879,7 +902,8 @@ const SpaceInvaders: React.FC = () => {
       stage={stage}
       lives={lives}
       score={score}
-      highScore={highScore}
+      highScore={bestScore}
+      highScoreLabel="Best"
       onPauseChange={setPaused}
       onRestart={startGame}
       pauseHotkeys={["p", "escape"]}
