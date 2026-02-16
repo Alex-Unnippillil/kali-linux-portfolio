@@ -233,7 +233,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     0,
     (v) => typeof v === 'number' && v >= 0,
   );
-  const [handCount, setHandCount] = useState(1);
+  const minBet = 1;
   const [message, setMessage] = useState('');
   const [dealerHand, setDealerHand] = useState([]);
   const [playerHands, setPlayerHands] = useState([]);
@@ -272,10 +272,10 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
   const inPlay = playerHands.length
     ? playerHands.reduce((sum, hand) => sum + hand.bet, 0)
     : 0;
-  const reservedBet = playerHands.length === 0 ? bet * handCount : 0;
+  const reservedBet = playerHands.length === 0 ? bet : 0;
   const availableBankroll = Math.max(0, bankroll - reservedBet);
   const totalBankroll = bankroll + inPlay;
-  const maxBet = Math.floor(bankroll / handCount);
+  const maxBet = Math.floor(bankroll);
 
   const update = useCallback(() => {
     setDealerHand([...gameRef.current.dealerHand]);
@@ -303,7 +303,6 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       hitSoft17: nextHitSoft17,
     });
     setBet(0);
-    setHandCount(1);
     setMessage('');
     setDealerHand([]);
     setPlayerHands([]);
@@ -365,16 +364,16 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     (delta) => {
       setBet((prev) => {
         const next = Math.max(0, prev + delta);
-        const max = bankroll / handCount;
+        const max = bankroll;
         return Math.min(next, max);
       });
     },
-    [bankroll, handCount],
+    [bankroll],
   );
 
   useEffect(() => {
-    setBet((prev) => Math.min(prev, bankroll / handCount));
-  }, [bankroll, handCount]);
+    setBet((prev) => Math.min(prev, bankroll));
+  }, [bankroll]);
 
   const start = useCallback(() => {
     if (paused) return;
@@ -386,9 +385,9 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       shuffleTimeoutRef.current = window.setTimeout(() => setShuffling(false), 500);
       const preset = presetDeckRef.current;
       presetDeckRef.current = null;
-      gameRef.current.startRound(bet, preset, handCount);
+      gameRef.current.startRound(bet, preset, 1);
       setLastBet(bet);
-      logEvent({ category: 'Blackjack', action: 'hand_start', value: bet * handCount });
+      logEvent({ category: 'Blackjack', action: 'hand_start', value: bet });
       setMessage('');
       setShowInsurance(gameRef.current.dealerHand[0].value === 'A');
       update();
@@ -404,7 +403,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
     } catch (e) {
       setMessage(e.message);
     }
-  }, [bet, handCount, paused, playSound, setLastBet, triggerHaptics, update]);
+  }, [bet, paused, playSound, setLastBet, triggerHaptics, update]);
 
   const recommended = useCallback(() => {
     const hand = playerHands[current];
@@ -769,10 +768,10 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       if (playerHands.length === 0) {
         if (x > 0) adjustBet(1);
         if (x < 0) adjustBet(-1);
-        if (y > 0 && handCount > 1) setHandCount((c) => Math.max(1, c - 1));
+        if (y > 0) adjustBet(-5);
         if (y < 0) {
           if (bet > 0) start();
-          else if (handCount < 4) setHandCount((c) => Math.min(4, c + 1));
+          else adjustBet(5);
         }
         return;
       }
@@ -781,7 +780,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       else if (currentActions?.double && x > 0) act('double');
       else if (currentActions?.surrender && x < 0) act('surrender');
     },
-    [act, adjustBet, bet, currentActions, handCount, paused, playerHands.length, practice, start],
+    [act, adjustBet, bet, currentActions, paused, playerHands.length, practice, start],
   );
 
   const handlePadButton = useCallback(
@@ -815,7 +814,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
       {practice ? (
         practiceView
       ) : (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-[color:color-mix(in_srgb,var(--color-surface)_65%,transparent)] p-4 text-kali-text select-none">
+        <div className="flex h-full w-full flex-col items-center justify-start gap-4 overflow-y-auto bg-[color:color-mix(in_srgb,var(--color-surface)_65%,transparent)] p-3 pb-24 pt-4 text-kali-text select-none sm:p-4 sm:pb-6">
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm sm:text-base">
             <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_82%,transparent)] px-3 py-1 text-kali-text">
               Bankroll: {totalBankroll}
@@ -844,7 +843,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
             )}
           </div>
           <div className="rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-3 py-1 text-center text-xs text-kali-muted">
-            Rules: {deckCount} decks · Dealer {hitSoft17 ? 'hits' : 'stands'} soft 17 · Blackjack pays 3:2
+            Single-player table · {deckCount} decks · Dealer {hitSoft17 ? 'hits' : 'stands'} soft 17 · Blackjack pays 3:2
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2 text-sm sm:text-base">
             <button
@@ -904,11 +903,11 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
             <div className="flex w-full max-w-xl flex-col items-center gap-3">
               <div className="flex flex-wrap items-center justify-center gap-3" aria-live="polite" role="status">
                 <span>
-                  Bet: {bet} per hand · Total: {bet * handCount}
+                  Bet: {bet}
                 </span>
                 <BetChips amount={bet} />
               </div>
-              <div className="text-xs text-kali-muted">Max per hand: {maxBet}</div>
+              <div className="text-xs text-kali-muted">Table min: {minBet} · Max: {maxBet}</div>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {CHIP_VALUES.map((v) => (
                   <button
@@ -938,7 +937,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                   onClick={() => setBet(maxBet)}
                   disabled={maxBet === 0}
                 >
-                  Max
+                  All in
                 </button>
                 {lastBet > 0 && (
                   <button
@@ -950,30 +949,19 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                     Repeat {lastBet}
                   </button>
                 )}
-                <label
-                  htmlFor="hand-count"
-                  className="flex items-center gap-2 rounded border border-white/10 bg-[color:color-mix(in_srgb,var(--color-surface)_78%,transparent)] px-2 py-1 text-xs sm:text-sm text-kali-text"
+                <button
+                  type="button"
+                  className={`${CONTROL_BUTTON_BASE} px-2 py-1 text-sm font-medium`}
+                  onClick={() => setBet(Math.min(maxBet, Math.max(minBet, Math.floor(bankroll * 0.1))))}
+                  disabled={maxBet < minBet}
                 >
-                  <span className="text-sm">Hands</span>
-                  <input
-                    id="hand-count"
-                    type="number"
-                    min="1"
-                    max="4"
-                    value={handCount}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value, 10);
-                      if (!Number.isNaN(val)) setHandCount(val);
-                    }}
-                    className="w-12 rounded border border-[color:var(--kali-border)] bg-[var(--kali-surface)] px-1 text-kali-text transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-                    aria-label="Hand count"
-                  />
-                </label>
+                  Quick Bet 10%
+                </button>
                 <button
                   type="button"
                   className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-kali-muted disabled:hover:text-kali-text`}
                   onClick={start}
-                  disabled={bet === 0}
+                  disabled={bet < minBet}
                 >
                   Deal
                 </button>
@@ -1038,7 +1026,7 @@ const Blackjack = ({ windowMeta, testDeck } = {}) => {
                         <button
                           key={type}
                           type="button"
-                          className={`${CONTROL_BUTTON_BASE} px-3 py-1 text-sm sm:text-base font-medium disabled:cursor-not-allowed disabled:opacity-50 ${isRecommended
+                          className={`${CONTROL_BUTTON_BASE} min-w-[5.5rem] px-3 py-2 text-sm sm:text-base font-medium disabled:cursor-not-allowed disabled:opacity-50 ${isRecommended
                               ? 'bg-kali-primary text-kali-inverse shadow-[0_0_18px_rgba(15,148,210,0.45)] hover:bg-[color:color-mix(in_srgb,var(--color-primary)_85%,transparent)]'
                               : ''
                             }`}

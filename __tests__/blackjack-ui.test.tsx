@@ -7,10 +7,10 @@ const card = (value: string) => ({ suit: '\u2660', value });
 describe('Blackjack UI', () => {
   test('keyboard shortcuts do not fire while typing in inputs', () => {
     render(<Blackjack windowMeta={{ isFocused: true }} />);
-    const handCountInput = screen.getByLabelText('Hand count');
-    handCountInput.focus();
-    fireEvent.keyDown(handCountInput, { key: '1' });
-    expect(screen.getByText(/Bet: 0 per hand/)).toBeInTheDocument();
+    const penetrationInput = screen.getByLabelText('Penetration');
+    penetrationInput.focus();
+    fireEvent.keyDown(penetrationInput, { key: '1' });
+    expect(screen.getByText(/Bet: 0/)).toBeInTheDocument();
   });
 
   test('insurance button only appears when dealer shows an ace', () => {
