@@ -20,6 +20,8 @@ import styles from './youtube.module.css';
 const YOUTUBE_CLIENT_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 const DEFAULT_CHANNEL_ID = 'UCxPIJ3hw6AOwomUWh5B7SfQ';
 const ALL_PLAYLIST_ID = 'all-videos';
+const VIDEO_SORT_OPTIONS = ['newest', 'oldest', 'title'] as const;
+type VideoSortMode = (typeof VIDEO_SORT_OPTIONS)[number];
 
 export type PlaylistListing = {
   sectionId: string;
@@ -100,6 +102,23 @@ function sortVideosNewestFirst(videos: YouTubePlaylistVideo[]) {
   });
 }
 
+export function sortPlaylistVideos(videos: YouTubePlaylistVideo[], mode: VideoSortMode) {
+  if (mode === 'newest') return sortVideosNewestFirst(videos);
+  if (mode === 'oldest') return sortVideosNewestFirst(videos).reverse();
+
+  return [...videos].sort((a, b) => a.title.localeCompare(b.title));
+}
+
+export function filterPlaylistVideos(videos: YouTubePlaylistVideo[], filter: string) {
+  const term = filter.trim().toLowerCase();
+  if (!term) return videos;
+
+  return videos.filter((video) => {
+    const haystack = `${video.title} ${video.description ?? ''}`.toLowerCase();
+    return haystack.includes(term);
+  });
+}
+
 export default function YouTubeApp({ channelId }: Props) {
   const { allowNetwork, setAllowNetwork } = useSettings();
   const parsedChannelId = useMemo(() => {
@@ -128,6 +147,8 @@ export default function YouTubeApp({ channelId }: Props) {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [filter, setFilter] = useState('');
+  const [videoFilter, setVideoFilter] = useState('');
+  const [videoSortMode, setVideoSortMode] = useState<VideoSortMode>('newest');
 
   const [loadingDirectory, setLoadingDirectory] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -473,13 +494,23 @@ export default function YouTubeApp({ channelId }: Props) {
   const selectedPlaylistVideos = useMemo(() => {
     if (!selectedPlaylistId) return [];
     const videos = playlistItems[selectedPlaylistId]?.items ?? [];
-    return sortVideosNewestFirst(videos);
-  }, [playlistItems, selectedPlaylistId]);
+    return sortPlaylistVideos(videos, videoSortMode);
+  }, [playlistItems, selectedPlaylistId, videoSortMode]);
+
+  const visiblePlaylistVideos = useMemo(
+    () => filterPlaylistVideos(selectedPlaylistVideos, videoFilter),
+    [selectedPlaylistVideos, videoFilter],
+  );
 
   const selectedVideo = useMemo(() => {
     if (!selectedVideoId) return null;
     return selectedPlaylistVideos.find((v) => v.videoId === selectedVideoId) ?? null;
   }, [selectedPlaylistVideos, selectedVideoId]);
+
+  const activeVideoIndex = useMemo(
+    () => visiblePlaylistVideos.findIndex((video) => video.videoId === selectedVideoId),
+    [visiblePlaylistVideos, selectedVideoId],
+  );
 
   const playlistState = selectedPlaylistId ? playlistItems[selectedPlaylistId] : undefined;
   const playlistCount = filteredDirectory.reduce(
@@ -487,6 +518,22 @@ export default function YouTubeApp({ channelId }: Props) {
     0,
   );
   const hasSearchTerm = Boolean(filter.trim().length);
+  const hasVideoSearchTerm = Boolean(videoFilter.trim().length);
+
+  const selectVisibleVideoByOffset = (offset: number) => {
+    if (!visiblePlaylistVideos.length) return;
+
+    if (activeVideoIndex < 0) {
+      setSelectedVideoId(visiblePlaylistVideos[0].videoId);
+      return;
+    }
+
+    const nextIndex = Math.min(
+      Math.max(activeVideoIndex + offset, 0),
+      visiblePlaylistVideos.length - 1,
+    );
+    setSelectedVideoId(visiblePlaylistVideos[nextIndex].videoId);
+  };
 
   return (
     <div className={styles.container}>
@@ -766,6 +813,64 @@ export default function YouTubeApp({ channelId }: Props) {
                 {playlistState?.loading && <span className={styles.loading}>Loading…</span>}
               </div>
 
+              <div className={styles.queueControls}>
+                <label className="sr-only" htmlFor="youtube-video-filter">
+                  Search current playlist videos
+                </label>
+                <input
+                  id="youtube-video-filter"
+                  type="search"
+                  aria-label="Search videos in the selected playlist"
+                  value={videoFilter}
+                  onChange={(event) => setVideoFilter(event.target.value)}
+                  placeholder="Search this playlist"
+                  className={styles.input}
+                />
+
+                <label className="sr-only" htmlFor="youtube-video-sort">
+                  Sort videos
+                </label>
+                <select
+                  id="youtube-video-sort"
+                  className={styles.select}
+                  value={videoSortMode}
+                  onChange={(event) => setVideoSortMode(event.target.value as VideoSortMode)}
+                  aria-label="Sort videos"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title">Title A-Z</option>
+                </select>
+              </div>
+
+              {!!visiblePlaylistVideos.length && (
+                <div className={styles.queueMetaRow}>
+                  <p className={styles.metaText}>
+                    {activeVideoIndex >= 0
+                      ? `Video ${activeVideoIndex + 1} of ${visiblePlaylistVideos.length}`
+                      : `${visiblePlaylistVideos.length} videos in queue`}
+                  </p>
+                  <div className={styles.inlineActions}>
+                    <button
+                      type="button"
+                      className={`${styles.button} ${styles.smallButton} ${styles.ghostButton}`}
+                      onClick={() => selectVisibleVideoByOffset(-1)}
+                      disabled={activeVideoIndex <= 0}
+                    >
+                      Previous
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.button} ${styles.smallButton} ${styles.ghostButton}`}
+                      onClick={() => selectVisibleVideoByOffset(1)}
+                      disabled={activeVideoIndex < 0 || activeVideoIndex >= visiblePlaylistVideos.length - 1}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {!selectedPlaylistId ? (
                 <p className={styles.placeholderText}>Select a playlist to see videos.</p>
               ) : playlistState?.error ? (
@@ -779,10 +884,10 @@ export default function YouTubeApp({ channelId }: Props) {
                     Retry
                   </button>
                 </div>
-              ) : selectedPlaylistVideos.length ? (
+              ) : visiblePlaylistVideos.length ? (
                 <>
                   <ul className={styles.videoList} aria-label="Playlist videos">
-                    {selectedPlaylistVideos.map((video) => {
+                    {visiblePlaylistVideos.map((video) => {
                       const active = video.videoId === selectedVideoId;
                       return (
                         <li key={video.videoId}>
@@ -820,7 +925,11 @@ export default function YouTubeApp({ channelId }: Props) {
                 </>
               ) : (
                 <p className={styles.placeholderText}>
-                  {playlistState?.loading ? 'Loading videos…' : 'No videos found.'}
+                  {playlistState?.loading
+                    ? 'Loading videos…'
+                    : hasVideoSearchTerm
+                      ? 'No videos match this playlist search.'
+                      : 'No videos found.'}
                 </p>
               )}
             </div>
