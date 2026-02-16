@@ -27,6 +27,8 @@ export interface SnakeOptions {
   random?: () => number;
   randomFood?: typeof randomFood;
   randomObstacle?: typeof randomObstacle | null;
+  ensureReachableFood?: boolean;
+  obstaclePlacementSafety?: 'off' | 'basic';
 }
 
 const NO_CELL: Point = { x: -1, y: -1 };
@@ -46,6 +48,106 @@ const listFreeCells = (occupied: Set<string>, gridSize: number): Point[] => {
 
 const pickRandom = (cells: Point[], rand: () => number = Math.random): Point =>
   cells[Math.floor(rand() * cells.length)] ?? { ...NO_CELL };
+
+const canReachCell = (
+  start: Point,
+  target: Point,
+  blocked: Set<string>,
+  gridSize: number,
+): boolean => {
+  if (isNoCell(target)) return false;
+  if (start.x === target.x && start.y === target.y) return true;
+
+  const visited = new Set<string>();
+  const queue: Point[] = [start];
+  visited.add(key(start));
+
+  while (queue.length) {
+    const current = queue.shift()!;
+    const neighbors = [
+      { x: current.x + 1, y: current.y },
+      { x: current.x - 1, y: current.y },
+      { x: current.x, y: current.y + 1 },
+      { x: current.x, y: current.y - 1 },
+    ];
+
+    for (const next of neighbors) {
+      if (next.x < 0 || next.y < 0 || next.x >= gridSize || next.y >= gridSize) {
+        continue;
+      }
+      const nextKey = key(next);
+      if (visited.has(nextKey) || blocked.has(nextKey)) continue;
+      if (next.x === target.x && next.y === target.y) return true;
+      visited.add(nextKey);
+      queue.push(next);
+    }
+  }
+
+  return false;
+};
+
+const pickReachableFood = (
+  snake: Point[],
+  obstacles: Point[],
+  gridSize: number,
+  rand: () => number,
+  attempts = 20,
+): Point => {
+  const occupied = new Set<string>();
+  for (const segment of snake) occupied.add(key(segment));
+  for (const obstacle of obstacles) occupied.add(key(obstacle));
+  const free = listFreeCells(occupied, gridSize);
+  if (!free.length) return { ...NO_CELL };
+
+  const head = snake[0];
+  const blocked = new Set<string>();
+  for (const obstacle of obstacles) blocked.add(key(obstacle));
+
+  const candidates = [...free];
+  for (let i = candidates.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+  }
+
+  for (let i = 0; i < Math.min(attempts, candidates.length); i += 1) {
+    const candidate = candidates[i];
+    if (canReachCell(head, candidate, blocked, gridSize)) {
+      return candidate;
+    }
+  }
+
+  return pickRandom(free, rand);
+};
+
+const isSafeObstacleCandidate = (
+  candidate: Point,
+  snake: Point[],
+  food: Point,
+  obstacles: Point[],
+  gridSize: number,
+): boolean => {
+  const head = snake[0];
+  const blocked = new Set<string>();
+  for (const obstacle of obstacles) blocked.add(key(obstacle));
+  blocked.add(key(candidate));
+  if (!isNoCell(food)) blocked.add(key(food));
+
+  const neighbors = [
+    { x: head.x + 1, y: head.y },
+    { x: head.x - 1, y: head.y },
+    { x: head.x, y: head.y + 1 },
+    { x: head.x, y: head.y - 1 },
+  ];
+
+  return neighbors.some((next) => {
+    if (next.x < 0 || next.y < 0 || next.x >= gridSize || next.y >= gridSize) {
+      return false;
+    }
+    if (blocked.has(key(next))) return false;
+    const reachable = canReachCell(head, next, blocked, gridSize);
+    return reachable;
+  });
+};
 
 export const randomFood = (
   snake: Point[],
@@ -83,6 +185,7 @@ const generateObstacles = (params: {
   gridSize: number;
   generator: typeof randomObstacle;
   random?: () => number;
+  obstaclePlacementSafety?: 'off' | 'basic';
 }): Point[] => {
   const obstacles: Point[] = [];
 
@@ -92,16 +195,40 @@ const generateObstacles = (params: {
     });
   }
 
+  const rand = params.random ?? Math.random;
+  const maxTries = 25;
+
   for (let i = obstacles.length; i < params.count; i += 1) {
-    const next = params.generator(
-      params.snake,
-      params.food,
-      obstacles,
-      params.gridSize,
-      params.random,
-    );
-    if (isNoCell(next)) break;
-    obstacles.push(next);
+    let next: Point = { ...NO_CELL };
+    let placed = false;
+
+    for (let attempt = 0; attempt < maxTries; attempt += 1) {
+      next = params.generator(
+        params.snake,
+        params.food,
+        obstacles,
+        params.gridSize,
+        rand,
+      );
+      if (isNoCell(next)) break;
+      if (
+        params.obstaclePlacementSafety === 'basic' &&
+        !isSafeObstacleCandidate(
+          next,
+          params.snake,
+          params.food,
+          obstacles,
+          params.gridSize,
+        )
+      ) {
+        continue;
+      }
+      obstacles.push(next);
+      placed = true;
+      break;
+    }
+
+    if (!placed && isNoCell(next)) break;
   }
 
   return obstacles;
@@ -116,6 +243,8 @@ export const createInitialState = (params?: {
   random?: () => number;
   randomFood?: typeof randomFood;
   randomObstacle?: typeof randomObstacle;
+  ensureReachableFood?: boolean;
+  obstaclePlacementSafety?: 'off' | 'basic';
 }): SnakeState => {
   const gridSize = params?.gridSize ?? GRID_SIZE;
 
@@ -126,16 +255,16 @@ export const createInitialState = (params?: {
       { x: 0, y: 2 },
     ];
 
+  const randomFn = params?.random ?? Math.random;
+  const obstacleInput = params?.obstacles ?? [];
+
   const food =
     params?.food ??
-    (params?.randomFood
-      ? params.randomFood(
-        snake,
-        params?.obstacles ?? [],
-        gridSize,
-        params?.random,
-      )
-      : randomFood(snake, params?.obstacles ?? [], gridSize, params?.random));
+    (params?.ensureReachableFood
+      ? pickReachableFood(snake, obstacleInput, gridSize, randomFn)
+      : params?.randomFood
+        ? params.randomFood(snake, obstacleInput, gridSize, randomFn)
+        : randomFood(snake, obstacleInput, gridSize, randomFn));
 
   const obstacleCount =
     params?.obstacleCount ??
@@ -149,7 +278,8 @@ export const createInitialState = (params?: {
     count: obstacleCount,
     gridSize,
     generator: obstacleGenerator,
-    random: params?.random,
+    random: randomFn,
+    obstaclePlacementSafety: params?.obstaclePlacementSafety ?? 'off',
   });
 
   return { snake, food, obstacles };
@@ -162,14 +292,12 @@ export const stepSnake = (
 ): StepResult => {
   const gridSize = options.gridSize;
 
-  // If no food can exist, treat as win.
   if (isNoCell(state.food)) {
     return { state, grew: false, collision: 'none', won: true };
   }
 
   const snake = state.snake.map((p) => ({ ...p }));
   const obstacles = state.obstacles.map((o) => ({ ...o }));
-  const obstacleSnapshot = obstacles.map((o) => ({ ...o }));
   const food = { ...state.food };
 
   const head = snake[0];
@@ -181,33 +309,28 @@ export const stepSnake = (
     if (newHeadX >= gridSize) newHeadX = 0;
     if (newHeadY < 0) newHeadY = gridSize - 1;
     if (newHeadY >= gridSize) newHeadY = 0;
-  } else {
-    if (
-      newHeadX < 0 ||
-      newHeadX >= gridSize ||
-      newHeadY < 0 ||
-      newHeadY >= gridSize
-    ) {
-      return { state, grew: false, collision: 'wall', won: false };
-    }
+  } else if (newHeadX < 0 || newHeadX >= gridSize || newHeadY < 0 || newHeadY >= gridSize) {
+    return { state, grew: false, collision: 'wall', won: false };
   }
 
   const grew = newHeadX === food.x && newHeadY === food.y;
+  const newHeadKey = `${newHeadX},${newHeadY}`;
 
-  const collisionSegments = grew ? snake : snake.slice(0, -1);
-  for (let i = 0; i < collisionSegments.length; i += 1) {
-    if (
-      collisionSegments[i].x === newHeadX &&
-      collisionSegments[i].y === newHeadY
-    ) {
-      return { state, grew: false, collision: 'self', won: false };
-    }
+  const occupied = new Set<string>();
+  for (const obstacle of obstacles) occupied.add(key(obstacle));
+  for (let i = 0; i < snake.length; i += 1) {
+    if (!grew && i === snake.length - 1) continue;
+    occupied.add(key(snake[i]));
   }
 
-  for (let i = 0; i < obstacles.length; i += 1) {
-    if (obstacles[i].x === newHeadX && obstacles[i].y === newHeadY) {
-      return { state, grew: false, collision: 'obstacle', won: false };
-    }
+  if (occupied.has(newHeadKey)) {
+    const obstacleHit = obstacles.some((o) => o.x === newHeadX && o.y === newHeadY);
+    return {
+      state,
+      grew: false,
+      collision: obstacleHit ? 'obstacle' : 'self',
+      won: false,
+    };
   }
 
   const newSnake: Point[] = [{ x: newHeadX, y: newHeadY }, ...snake];
@@ -216,7 +339,9 @@ export const stepSnake = (
   const randomFoodFn = options.randomFood ?? randomFood;
   const randomFn = options.random ?? Math.random;
   const nextFood = grew
-    ? randomFoodFn(newSnake, obstacleSnapshot, gridSize, randomFn)
+    ? options.ensureReachableFood
+      ? pickReachableFood(newSnake, obstacles, gridSize, randomFn)
+      : randomFoodFn(newSnake, obstacles, gridSize, randomFn)
     : food;
 
   let won = false;
@@ -227,14 +352,31 @@ export const stepSnake = (
       won = true;
     } else if (options.randomObstacle) {
       const generator = options.randomObstacle;
-      const nextObs = generator(
-        newSnake,
-        nextFood,
-        obstacleSnapshot,
-        gridSize,
-        randomFn,
-      );
-      if (!isNoCell(nextObs)) nextObstacles.push(nextObs);
+      const maxTries = options.obstaclePlacementSafety === 'basic' ? 20 : 1;
+      for (let attempt = 0; attempt < maxTries; attempt += 1) {
+        const nextObs = generator(
+          newSnake,
+          nextFood,
+          nextObstacles,
+          gridSize,
+          randomFn,
+        );
+        if (isNoCell(nextObs)) break;
+        if (
+          options.obstaclePlacementSafety === 'basic' &&
+          !isSafeObstacleCandidate(
+            nextObs,
+            newSnake,
+            nextFood,
+            nextObstacles,
+            gridSize,
+          )
+        ) {
+          continue;
+        }
+        nextObstacles.push(nextObs);
+        break;
+      }
     }
   }
 
