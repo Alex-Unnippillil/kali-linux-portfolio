@@ -320,6 +320,13 @@ export function createSessionManager({
         i += 1;
         continue;
       }
+      if (ch === '\t') {
+        if (!/\s/.test(buffer)) {
+          autocomplete();
+        }
+        i += 1;
+        continue;
+      }
       if (ch >= ' ') {
         buffer += ch;
         currentConfig.write(ch);
