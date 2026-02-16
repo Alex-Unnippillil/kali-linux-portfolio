@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { logEvent } from '../../../utils/analytics';
 import { pointerHandlers } from '../../../utils/pointer';
-import { Move, serializePosition } from './engine';
+import { Move, parsePosition, serializePosition } from './engine';
 import {
   GameState,
   RuleMode,
   applyStep,
   chooseMove,
   createGameState,
+  createGameStateFromPosition,
   getForcedFromSquares,
   getLegalMoves,
 } from '../../../games/checkers/logic';
@@ -23,19 +24,34 @@ const Checkers = () => {
   const [lastMove, setLastMove] = useState<[number, number][]>([]);
   const [showLegal, setShowLegal] = useState(false);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [importValue, setImportValue] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
   const pathRef = useRef<[number, number][]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const skipRuleResetRef = useRef(false);
 
-  useEffect(() => {
-    const next = createGameState(rule);
-    setGame(next);
+  const clearUiState = () => {
     setWinner(null);
     setDraw(false);
     setSelected(null);
     setMoves([]);
+    setHint(null);
     setLastMove([]);
     pathRef.current = [];
+  };
+
+  useEffect(() => {
+    if (skipRuleResetRef.current) {
+      skipRuleResetRef.current = false;
+      return;
+    }
+    const next = createGameState(rule);
+    setGame(next);
+    clearUiState();
+    setAriaMessage('');
+    setImportError(null);
   }, [rule]);
 
   useEffect(() => {
@@ -114,14 +130,53 @@ const Checkers = () => {
   const reset = () => {
     const next = createGameState(rule);
     setGame(next);
-    setWinner(null);
-    setDraw(false);
-    setSelected(null);
-    setMoves([]);
-    setHint(null);
-    setLastMove([]);
-    pathRef.current = [];
+    clearUiState();
     setAriaMessage('');
+    setImportError(null);
+  };
+
+  const importState = (rawKey: string) => {
+    const key = rawKey.trim();
+    if (!key) {
+      setImportError('Please paste or upload a saved state first.');
+      setAriaMessage('Import failed.');
+      return;
+    }
+
+    try {
+      const parsed = parsePosition(key);
+      const imported = createGameStateFromPosition(parsed);
+      skipRuleResetRef.current = true;
+      setRule(parsed.mode);
+      setGame(imported);
+      clearUiState();
+      setImportError(null);
+      setAriaMessage('Game state loaded.');
+      focusBoard();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not parse saved state';
+      setImportError(message);
+      setAriaMessage('Import failed.');
+    }
+  };
+
+  const handleImportClick = () => {
+    importState(importValue);
+  };
+
+  const handleImportFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    try {
+      const content = await file.text();
+      setImportValue(content.trim());
+      importState(content);
+    } catch {
+      setImportError('Unable to read the selected file.');
+      setAriaMessage('Import failed.');
+    } finally {
+      event.target.value = '';
+    }
   };
 
   useEffect(() => {
@@ -248,55 +303,97 @@ const Checkers = () => {
           }),
         )}
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
-        {winner || draw ? (
+      <div className="mt-4 flex w-full max-w-3xl flex-col gap-3 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {winner || draw ? (
+            <button
+              className="rounded border border-kali-border/60 bg-kali-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-kali-error/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              onClick={reset}
+            >
+              Reset
+            </button>
+          ) : (
+            <>
+              <span className="mr-2 font-semibold text-kali-control">Turn: {game.turnState.turn}</span>
+              <label className="flex items-center gap-1 font-medium">
+                Rules:
+                <select
+                  className="ml-1 rounded border border-kali-border/60 bg-kali-panel-dark px-2 py-1 text-sm text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus focus:ring-offset-2 focus:ring-offset-kali-dark"
+                  value={rule}
+                  onChange={(e) => setRule(e.target.value as RuleMode)}
+                >
+                  <option value="forced">Forced Capture</option>
+                  <option value="relaxed">Capture Optional</option>
+                </select>
+              </label>
+              <button
+                className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                onClick={hintMove}
+              >
+                Hint
+              </button>
+              <button
+                className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                onClick={() => setShowLegal((s) => !s)}
+                aria-pressed={showLegal}
+              >
+                {showLegal ? 'Hide Moves' : 'Show Moves'}
+              </button>
+            </>
+          )}
           <button
-            className="rounded border border-kali-border/60 bg-kali-error px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-kali-error/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            onClick={exportState}
+          >
+            Export State
+          </button>
+          <button
+            className="rounded border border-kali-border/60 bg-kali-error/80 px-2 py-1 font-medium text-white transition-colors hover:bg-kali-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             onClick={reset}
           >
             Reset
           </button>
-        ) : (
-          <>
-            <span className="mr-2 font-semibold text-kali-control">Turn: {game.turnState.turn}</span>
-            <label className="flex items-center gap-1 font-medium">
-              Rules:
-              <select
-                className="ml-1 rounded border border-kali-border/60 bg-kali-panel-dark px-2 py-1 text-sm text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus focus:ring-offset-2 focus:ring-offset-kali-dark"
-                value={rule}
-                onChange={(e) => setRule(e.target.value as RuleMode)}
-              >
-                <option value="forced">Forced Capture</option>
-                <option value="relaxed">Capture Optional</option>
-              </select>
-            </label>
+        </div>
+        <div className="rounded border border-kali-border/60 bg-kali-panel p-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-kali-text/70">Import State</h3>
+          <label className="mt-2 block text-xs font-medium text-kali-text/80" htmlFor="checkers-import-state">
+            Paste exported state key
+          </label>
+          <textarea
+            id="checkers-import-state"
+            aria-label="Checkers saved state"
+            className="mt-1 min-h-[72px] w-full rounded border border-kali-border/60 bg-kali-panel-dark px-2 py-1 font-mono text-xs text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus"
+            value={importValue}
+            onChange={(e) => {
+              setImportValue(e.target.value);
+              if (importError) setImportError(null);
+            }}
+            placeholder="redHex-blackHex-kingsHex-turn-pending-mode"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <button
               className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-              onClick={hintMove}
+              onClick={handleImportClick}
             >
-              Hint
+              Import
             </button>
             <button
-              className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-              onClick={() => setShowLegal((s) => !s)}
-              aria-pressed={showLegal}
+              className="rounded border border-kali-border/60 bg-kali-panel-dark px-2 py-1 font-medium text-kali-text transition-colors hover:bg-kali-panel-light focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+              onClick={() => fileInputRef.current?.click()}
             >
-              {showLegal ? 'Hide Moves' : 'Show Moves'}
+              Upload .txt
             </button>
-          </>
-        )}
-        <button
-          className="rounded border border-kali-border/60 bg-kali-accent/90 px-2 py-1 font-medium text-kali-dark transition-colors hover:bg-kali-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-          onClick={exportState}
-        >
-          Export State
-        </button>
-        <button
-          className="rounded border border-kali-border/60 bg-kali-error/80 px-2 py-1 font-medium text-white transition-colors hover:bg-kali-error focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
-          onClick={reset}
-        >
-          Reset
-        </button>
+            <input
+              ref={fileInputRef}
+              aria-label="Upload checkers saved state file"
+              type="file"
+              accept=".txt,text/plain"
+              className="hidden"
+              onChange={handleImportFile}
+            />
+          </div>
+          {importError && <p className="mt-2 text-xs text-kali-error">{importError}</p>}
+        </div>
       </div>
     </div>
   );

@@ -191,3 +191,92 @@ export const serializePosition = (
   `${serializeBoard(board)}-${turn}-${
     pendingCaptureFrom ? pendingCaptureFrom.join(',') : 'none'
   }-${mode}`;
+
+const parseHexBitboard = (value: string, name: string): bigint => {
+  if (!/^[0-9a-fA-F]+$/.test(value)) {
+    throw new Error(`Invalid ${name} bitboard`);
+  }
+  return BigInt(`0x${value}`);
+};
+
+export const bitboardsToBoard = (red: bigint, black: bigint, kings: bigint): Board => {
+  if (red < 0n || black < 0n || kings < 0n) {
+    throw new Error('Bitboards must be non-negative');
+  }
+  if ((red & black) !== 0n) {
+    throw new Error('Invalid position: red and black pieces overlap');
+  }
+  if ((kings & ~(red | black)) !== 0n) {
+    throw new Error('Invalid position: kings bitboard contains empty squares');
+  }
+
+  const board: Board = Array(8)
+    .fill(null)
+    .map(() => Array(8).fill(null));
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const bit = 1n << BigInt((7 - r) * 8 + c);
+      if ((red & bit) !== 0n) {
+        board[r][c] = { color: 'red', king: (kings & bit) !== 0n };
+      } else if ((black & bit) !== 0n) {
+        board[r][c] = { color: 'black', king: (kings & bit) !== 0n };
+      }
+    }
+  }
+
+  return board;
+};
+
+export type ParsedPosition = {
+  board: Board;
+  turn: Color;
+  pendingCaptureFrom: [number, number] | null;
+  mode: 'forced' | 'relaxed';
+};
+
+export const parsePosition = (key: string): ParsedPosition => {
+  const parts = key.trim().split('-');
+  if (parts.length !== 6) {
+    throw new Error('Invalid format: expected 6 segments');
+  }
+
+  const [redHex, blackHex, kingsHex, turnRaw, pendingRaw, modeRaw] = parts;
+  const red = parseHexBitboard(redHex, 'red');
+  const black = parseHexBitboard(blackHex, 'black');
+  const kings = parseHexBitboard(kingsHex, 'kings');
+  const board = bitboardsToBoard(red, black, kings);
+
+  if (turnRaw !== 'red' && turnRaw !== 'black') {
+    throw new Error('Invalid turn: expected red or black');
+  }
+
+  if (modeRaw !== 'forced' && modeRaw !== 'relaxed') {
+    throw new Error('Invalid mode: expected forced or relaxed');
+  }
+
+  let pendingCaptureFrom: [number, number] | null = null;
+  if (pendingRaw !== 'none') {
+    const pendingParts = pendingRaw.split(',');
+    if (pendingParts.length !== 2) {
+      throw new Error('Invalid pending capture square');
+    }
+    const [rRaw, cRaw] = pendingParts;
+    if (!/^-?\d+$/.test(rRaw) || !/^-?\d+$/.test(cRaw)) {
+      throw new Error('Invalid pending capture coordinates');
+    }
+    const r = Number.parseInt(rRaw, 10);
+    const c = Number.parseInt(cRaw, 10);
+    if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || r > 7 || c < 0 || c > 7) {
+      throw new Error('Pending capture coordinates out of range');
+    }
+    pendingCaptureFrom = [r, c];
+  }
+
+  return {
+    board,
+    turn: turnRaw,
+    pendingCaptureFrom,
+    mode: modeRaw,
+  };
+};
