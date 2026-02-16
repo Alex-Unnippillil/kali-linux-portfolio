@@ -234,6 +234,18 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
+// Extract TCP payload from Ethernet frame
+const tcpPayload = (data: Uint8Array): Uint8Array => {
+  if (data.length < 54) return new Uint8Array();
+  const ihl = (data[14] & 0x0f) * 4;
+  const ipHeaderEnd = 14 + ihl;
+  if (data.length < ipHeaderEnd + 20) return new Uint8Array();
+  const dataOffset = ((data[ipHeaderEnd + 12] >> 4) & 0x0f) * 4;
+  const payloadOffset = ipHeaderEnd + dataOffset;
+  if (payloadOffset > data.length) return new Uint8Array();
+  return data.slice(payloadOffset);
+};
+
 const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   const [packets, setPackets] = useState<Packet[]>([]);
   const [filter, setFilter] = useState('');
@@ -246,6 +258,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [streamText, setStreamText] = useState<string | null>(null);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -287,6 +300,31 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     const pkts = await parseWithWasm(buf);
     setPackets(pkts);
     setSelected(null);
+  };
+
+  const handleFollowStream = () => {
+    if (selected === null) return;
+    const pkt = filtered[selected];
+    if (!pkt || pkt.protocol !== 6 || pkt.sport === undefined || pkt.dport === undefined) {
+      return;
+    }
+    const related = packets.filter(
+      (p) =>
+        p.protocol === 6 &&
+        ((p.src === pkt.src &&
+          p.dest === pkt.dest &&
+          p.sport === pkt.sport &&
+          p.dport === pkt.dport) ||
+          (p.src === pkt.dest &&
+            p.dest === pkt.src &&
+            p.sport === pkt.dport &&
+            p.dport === pkt.sport))
+    );
+    const decoder = new TextDecoder();
+    const text = related
+      .map((p) => decoder.decode(tcpPayload(p.data)))
+      .join('');
+    setStreamText(text);
   };
 
   const filtered = packets.filter((p) => {
@@ -344,6 +382,15 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             >
               Copy
             </button>
+            {selected !== null && filtered[selected]?.protocol === 6 && (
+              <button
+                onClick={handleFollowStream}
+                className="px-2 py-1 bg-gray-700 rounded text-xs"
+                type="button"
+              >
+                Follow TCP Stream
+              </button>
+            )}
           </div>
           <div className="flex space-x-1">
             {presets.map(({ label, expression }) => (
@@ -453,6 +500,40 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             </div>
           </div>
         </>
+      )}
+      {streamText !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-4 max-w-2xl w-full space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-bold">TCP Stream</span>
+              <div className="space-x-2">
+                <button
+                  onClick={() => {
+                    const blob = new Blob([streamText], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'stream.txt';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="px-2 py-1 bg-gray-700 rounded text-xs"
+                  type="button"
+                >
+                  Export
+                </button>
+                <button
+                  onClick={() => setStreamText(null)}
+                  className="px-2 py-1 bg-gray-700 rounded text-xs"
+                  type="button"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+            <pre className="whitespace-pre-wrap overflow-auto max-h-96">{streamText}</pre>
+          </div>
+        </div>
       )}
     </div>
   );
