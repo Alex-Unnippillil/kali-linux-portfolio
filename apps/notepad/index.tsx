@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import useOPFS from '../../hooks/useOPFS';
+import { filterNotes, getNoteStats, type Note } from './utils';
 
 const STORAGE_KEY = 'kali-notepad-notes';
 const ACTIVE_KEY = 'kali-notepad-active-note';
@@ -62,9 +63,10 @@ const loadActiveId = (notes: Array<{ id: string }>) => {
 };
 
 export default function Notepad() {
-  const [notes, setNotes] = useState(() => [DEFAULT_NOTE]);
+  const [notes, setNotes] = useState<Note[]>(() => [DEFAULT_NOTE]);
   const [activeId, setActiveId] = useState(DEFAULT_NOTE.id);
   const [status, setStatus] = useState('Saved locally');
+  const [search, setSearch] = useState('');
   const initialized = useRef(false);
   const { supported: opfsSupported, getDir, writeFile } = useOPFS();
 
@@ -87,6 +89,20 @@ export default function Notepad() {
     [notes, activeId],
   );
 
+  const visibleNotes = useMemo(() => filterNotes(notes, search), [notes, search]);
+  const noteStats = useMemo(
+    () => getNoteStats(activeNote?.content ?? ''),
+    [activeNote?.content],
+  );
+
+  useEffect(() => {
+    if (!activeNote) return;
+    if (visibleNotes.some((note) => note.id === activeNote.id)) return;
+    if (visibleNotes.length > 0) {
+      setActiveId(visibleNotes[0].id);
+    }
+  }, [activeNote, visibleNotes]);
+
   const updateNote = (id: string, updates: Partial<typeof DEFAULT_NOTE>) => {
     setNotes((prev) =>
       prev.map((note) =>
@@ -97,7 +113,7 @@ export default function Notepad() {
     );
   };
 
-  const createNote = () => {
+  const createNote = useCallback(() => {
     const id = buildNoteId();
     const newNote = {
       id,
@@ -108,7 +124,7 @@ export default function Notepad() {
     };
     setNotes((prev) => [...prev, newNote]);
     setActiveId(id);
-  };
+  }, []);
 
   const deleteNote = () => {
     if (!activeNote) return;
@@ -132,7 +148,7 @@ export default function Notepad() {
     });
   };
 
-  const saveToFiles = async () => {
+  const saveToFiles = useCallback(async () => {
     if (!activeNote) return;
     if (!opfsSupported) {
       setStatus('Files integration is unavailable in this browser.');
@@ -148,7 +164,28 @@ export default function Notepad() {
     setStatus(
       ok ? `Saved to Files/notes/${filename}` : 'Failed to save to Files.',
     );
-  };
+  }, [activeNote, opfsSupported, getDir, writeFile]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isMeta = event.metaKey || event.ctrlKey;
+      if (!isMeta) return;
+
+      if (event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        createNote();
+        setStatus('Created a new note');
+      }
+
+      if (event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void saveToFiles();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [createNote, saveToFiles]);
 
   return (
     <div className="w-full h-full flex bg-ub-gedit-dark text-white">
@@ -163,11 +200,28 @@ export default function Notepad() {
             New
           </button>
         </div>
+        <div className="px-3 py-2 border-b border-ubt-gedit-blue/60">
+          <label htmlFor="note-search" className="sr-only">
+            Search notes
+          </label>
+          <input
+            id="note-search"
+            aria-label="Search notes"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search notes..."
+            className="w-full px-2 py-1 text-xs rounded bg-black/20 border border-white/20 focus:outline-none focus:border-white/60"
+          />
+        </div>
         <div className="flex-1 overflow-y-auto">
-          {notes.map((note) => (
+          {visibleNotes.length === 0 ? (
+            <div className="px-3 py-4 text-xs text-white/60">No matching notes</div>
+          ) : null}
+          {visibleNotes.map((note) => (
             <button
               key={note.id}
               type="button"
+              aria-label={`Open note ${note.title}`}
               className={`w-full text-left px-3 py-2 border-b border-white/5 hover:bg-white/5 ${
                 note.id === activeId ? 'bg-white/10' : ''
               }`}
@@ -191,6 +245,7 @@ export default function Notepad() {
             </label>
             <input
               id="note-title"
+              aria-label="Note title"
               value={activeNote?.title ?? ''}
               onChange={(event) =>
                 updateNote(activeNote.id, { title: event.target.value })
@@ -222,6 +277,7 @@ export default function Notepad() {
           </label>
           <textarea
             id="note-content"
+            aria-label="Note content"
             value={activeNote?.content ?? ''}
             onChange={(event) =>
               updateNote(activeNote.id, { content: event.target.value })
@@ -231,9 +287,14 @@ export default function Notepad() {
           />
         </div>
         <footer className="px-4 py-2 border-t border-ubt-gedit-blue/60 text-xs text-white/70">
-          <span role="status" aria-live="polite">
-            {status}
-          </span>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span role="status" aria-live="polite">
+              {status}
+            </span>
+            <span className="text-white/60">
+              {noteStats.words} words • {noteStats.chars} chars
+            </span>
+          </div>
         </footer>
       </section>
     </div>

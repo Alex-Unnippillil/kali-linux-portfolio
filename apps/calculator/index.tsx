@@ -8,6 +8,11 @@ import Tape from './components/Tape';
 
 export default function Calculator() {
   const HISTORY_LIMIT = 10;
+  const [showShortcuts, setShowShortcuts] = usePersistentState<boolean>(
+    'calc-show-shortcuts',
+    () => true,
+    (v): v is boolean => typeof v === 'boolean',
+  );
   const [history, setHistory] = usePersistentState<
     { expr: string; result: string }[]
   >(
@@ -373,6 +378,11 @@ export default function Calculator() {
       });
 
       const keyHandler = (e: KeyboardEvent) => {
+        if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+          e.preventDefault();
+          setShowShortcuts((prev) => !prev);
+          return;
+        }
         if (e.key === 'Enter' || e.key === '=') {
           e.preventDefault();
           (document.querySelector('.btn[data-action="equals"]') as HTMLButtonElement)?.click();
@@ -476,7 +486,19 @@ export default function Calculator() {
       disposed = true;
       cleanup();
     };
-  }, [applyMode, setHistory, setMode]);
+  }, [applyMode, setHistory, setMode, setShowShortcuts]);
+
+  const loadHistoryExpression = useCallback(
+    (expr: string) => {
+      const display = document.getElementById('display') as HTMLInputElement | null;
+      if (!display) return;
+      display.value = expr;
+      display.dispatchEvent(new Event('input', { bubbles: true }));
+      display.focus();
+      setStatusMessage(`Loaded "${expr}" from tape.`);
+    },
+    [setStatusMessage],
+  );
 
   const activePanels = useMemo(() => {
     const panels: string[] = [];
@@ -624,6 +646,39 @@ export default function Calculator() {
         >
           Programmer
         </button>
+      </div>
+
+      <div className="rounded-2xl border border-[color:color-mix(in_srgb,var(--kali-border)_55%,transparent)] bg-[var(--kali-overlay)] p-3 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_82%,rgba(148,163,184,0.35))]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="uppercase tracking-[0.3em] text-[color:color-mix(in_srgb,var(--kali-text)_55%,rgba(148,163,184,0.65))]">
+            Keyboard shortcuts
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowShortcuts((prev) => !prev)}
+            className="rounded-full border border-[color:color-mix(in_srgb,var(--kali-border)_65%,transparent)] px-3 py-1 font-semibold uppercase tracking-wide transition hover:border-[color:var(--color-focus-ring)] hover:text-[color:var(--kali-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
+            aria-expanded={showShortcuts}
+            aria-controls="calculator-shortcuts"
+          >
+            {showShortcuts ? 'Hide' : 'Show'}
+          </button>
+        </div>
+        {showShortcuts && (
+          <div id="calculator-shortcuts" className="mt-3 grid gap-2 sm:grid-cols-2">
+            <p>
+              <span className="font-semibold text-[color:var(--kali-text)]">Enter / =</span> Evaluate expression
+            </p>
+            <p>
+              <span className="font-semibold text-[color:var(--kali-text)]">Backspace</span> Delete previous character
+            </p>
+            <p>
+              <span className="font-semibold text-[color:var(--kali-text)]">Esc / C</span> Clear display
+            </p>
+            <p>
+              <span className="font-semibold text-[color:var(--kali-text)]">?</span> Toggle this panel
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-start gap-3">
@@ -794,10 +849,16 @@ export default function Calculator() {
               </p>
             )}
             {history.map(({ expr, result }, i) => (
-              <div key={i} className="history-entry flex items-center justify-between gap-2 rounded-xl bg-[color:color-mix(in_srgb,var(--kali-bg)_35%,transparent)] px-3 py-2">
+              <button
+                key={i}
+                type="button"
+                className="history-entry flex w-full items-center justify-between gap-2 rounded-xl bg-[color:color-mix(in_srgb,var(--kali-bg)_35%,transparent)] px-3 py-2 text-left transition hover:bg-[color:color-mix(in_srgb,var(--kali-bg)_55%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-bg)]"
+                onClick={() => loadHistoryExpression(expr)}
+                aria-label={`load ${expr} from history`}
+              >
                 <span className="font-mono text-sm text-[color:color-mix(in_srgb,var(--kali-text)_92%,rgba(148,163,184,0.15))]">{expr}</span>
                 <span className="font-semibold text-kali-accent">{result}</span>
-              </div>
+              </button>
             ))}
           </div>
           <Tape entries={history} />

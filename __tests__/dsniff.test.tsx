@@ -38,5 +38,31 @@ describe('Dsniff component', () => {
     fireEvent.click(showBtn);
     expect(await screen.findByText('demo123')).toBeInTheDocument();
   });
-});
 
+  it('shows triage metrics and supports high-risk-only domain filtering', async () => {
+    render(<Dsniff />);
+
+    expect(await screen.findByText('Threat triage dashboard')).toBeInTheDocument();
+    expect(screen.getByText('Captured events')).toBeInTheDocument();
+    expect(screen.getByText('Credentials exposed')).toBeInTheDocument();
+
+    const domainSummarySection = screen.getByTestId('domain-summary');
+    fireEvent.click(screen.getByRole('button', { name: 'High-risk only' }));
+    expect(within(domainSummarySection).queryByText('test.com')).not.toBeInTheDocument();
+    expect(within(domainSummarySection).getByText('example.com')).toBeInTheDocument();
+  });
+
+  it('clears all filters with one action', async () => {
+    render(<Dsniff />);
+    const logArea = screen.getByRole('log');
+    await within(logArea).findByText('example.com');
+
+    fireEvent.change(screen.getByPlaceholderText('Filter captured lines'), {
+      target: { value: 'example.com' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^HTTP$/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all filters' }));
+
+    expect((within(logArea).getAllByText(/test.com/).length)).toBeGreaterThan(0);
+  });
+});

@@ -456,6 +456,11 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
       term.onData(handleTerminalInput);
 
       term.attachCustomKeyEventHandler((event: KeyboardEvent) => {
+        if (event.key === 'Tab') {
+          event.preventDefault();
+          sessionRef.current?.autocomplete();
+          return false;
+        }
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
           event.preventDefault();
           setSearchOpen(true);

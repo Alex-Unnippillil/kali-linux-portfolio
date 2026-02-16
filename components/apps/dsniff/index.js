@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
@@ -248,6 +248,8 @@ const Dsniff = () => {
   const [domainSummary, setDomainSummary] = useState([]);
   const [timeline, setTimeline] = useState([]);
   const [protocolFilter, setProtocolFilter] = useState([]);
+  const [domainSort, setDomainSort] = useState('risk');
+  const [highRiskOnly, setHighRiskOnly] = useState(false);
 
   const { summary: pcapSummary, remediation } = pcapFixture;
 
@@ -360,6 +362,12 @@ const Dsniff = () => {
     }
   };
 
+  const clearAllFilters = () => {
+    setSearch('');
+    setFilters([]);
+    setProtocolFilter([]);
+  };
+
   const logs = activeTab === 'urlsnarf' ? urlsnarfLogs : arpspoofLogs;
   const filteredLogs = logs.filter((log) => {
     const searchMatch = log.raw
@@ -372,6 +380,64 @@ const Dsniff = () => {
       protocolFilter.length === 0 || protocolFilter.includes(log.protocol);
     return searchMatch && filterMatch && protocolMatch;
   });
+
+  const filteredDomainSummary = useMemo(() => {
+    const riskWeight = { High: 3, Medium: 2, Low: 1 };
+    const data = highRiskOnly
+      ? domainSummary.filter((domain) => domain.risk === 'High')
+      : domainSummary;
+
+    return [...data].sort((a, b) => {
+      if (domainSort === 'domain') {
+        return a.domain.localeCompare(b.domain);
+      }
+
+      if (domainSort === 'credentials') {
+        return b.credentials.length - a.credentials.length;
+      }
+
+      if (domainSort === 'urls') {
+        return b.urls.length - a.urls.length;
+      }
+
+      const riskDiff = (riskWeight[b.risk] || 0) - (riskWeight[a.risk] || 0);
+      if (riskDiff !== 0) return riskDiff;
+      return b.credentials.length - a.credentials.length;
+    });
+  }, [domainSort, domainSummary, highRiskOnly]);
+
+  const dashboardMetrics = useMemo(() => {
+    const totalPackets = pcapSummary.length + urlsnarfLogs.length + arpspoofLogs.length;
+    const highRiskDomains = domainSummary.filter((domain) => domain.risk === 'High').length;
+    const credentialsLeaked = domainSummary.reduce(
+      (sum, domain) => sum + domain.credentials.length,
+      0,
+    );
+    const activeFiltersCount = filters.length + protocolFilter.length + (search ? 1 : 0);
+
+    return [
+      {
+        label: 'Captured events',
+        value: totalPackets,
+        hint: 'Combined urlsnarf, arpspoof, and pcap fixture entries',
+      },
+      {
+        label: 'High-risk domains',
+        value: highRiskDomains,
+        hint: 'Domains with cleartext traffic or credential leakage',
+      },
+      {
+        label: 'Credentials exposed',
+        value: credentialsLeaked,
+        hint: 'Usernames/passwords parsed from packet info',
+      },
+      {
+        label: 'Active filters',
+        value: activeFiltersCount,
+        hint: 'Search + protocol + advanced field filters',
+      },
+    ];
+  }, [arpspoofLogs.length, domainSummary, filters.length, pcapSummary.length, protocolFilter.length, search, urlsnarfLogs.length]);
 
   return (
     <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
@@ -444,6 +510,26 @@ const Dsniff = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <section className="space-y-3" data-testid="triage-dashboard">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Threat triage dashboard
+          </h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {dashboardMetrics.map((metric) => (
+              <article
+                key={metric.label}
+                className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-3 shadow-sm"
+              >
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                  {metric.label}
+                </p>
+                <p className="mt-2 text-2xl font-semibold text-emerald-300">{metric.value}</p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-300">{metric.hint}</p>
+              </article>
+            ))}
           </div>
         </section>
 
@@ -568,9 +654,38 @@ const Dsniff = () => {
         </section>
 
         <section className="space-y-3" data-testid="domain-summary">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            Parsed credentials/URLs by domain
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Parsed credentials/URLs by domain
+            </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <label htmlFor="dsniff-domain-sort" className="text-[11px] uppercase tracking-wide text-slate-400">
+                Sort by
+              </label>
+              <select
+                id="dsniff-domain-sort"
+                value={domainSort}
+                onChange={(e) => setDomainSort(e.target.value)}
+                className="rounded-md border border-slate-700 bg-slate-950/70 px-2 py-1 text-xs text-white focus:border-emerald-400 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              >
+                <option value="risk">risk priority</option>
+                <option value="credentials">credentials count</option>
+                <option value="urls">url count</option>
+                <option value="domain">domain name</option>
+              </select>
+              <button
+                onClick={() => setHighRiskOnly((prev) => !prev)}
+                aria-pressed={highRiskOnly}
+                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                  highRiskOnly
+                    ? 'border-rose-400/70 bg-rose-500/20 text-rose-100'
+                    : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500'
+                }`}
+              >
+                High-risk only
+              </button>
+            </div>
+          </div>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
@@ -582,7 +697,7 @@ const Dsniff = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/70">
-                {domainSummary.map((d) => (
+                {filteredDomainSummary.map((d) => (
                   <tr key={d.domain} className="transition hover:bg-slate-900/40">
                     <td className="px-4 py-3 text-slate-100">{d.domain}</td>
                     <td className="px-4 py-3 text-emerald-300">
@@ -612,6 +727,11 @@ const Dsniff = () => {
                 ))}
               </tbody>
             </table>
+            {!filteredDomainSummary.length && (
+              <div className="border-t border-slate-800/80 px-4 py-6 text-center text-xs text-slate-400">
+                No domains match the current risk filter.
+              </div>
+            )}
           </div>
         </section>
 
@@ -668,6 +788,12 @@ const Dsniff = () => {
               </button>
             ))}
           </div>
+          <button
+            className="rounded-md border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:border-slate-500 hover:text-white"
+            onClick={clearAllFilters}
+          >
+            Clear all filters
+          </button>
         </div>
 
         <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">

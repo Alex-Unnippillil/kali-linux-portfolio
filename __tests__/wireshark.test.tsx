@@ -109,6 +109,27 @@ describe('WiresharkApp', () => {
     );
   });
 
+  it('shows traffic insights and allows focusing on a top host', async () => {
+    const packets = [
+      { timestamp: '1', src: '10.0.0.2', dest: '8.8.8.8', protocol: 17, info: 'dns query' },
+      { timestamp: '2', src: '10.0.0.2', dest: '8.8.8.8', protocol: 17, info: 'dns response' },
+      { timestamp: '3', src: '10.0.0.5', dest: '10.0.0.2', protocol: 6, info: 'tcp packet' },
+    ];
+
+    const user = userEvent.setup();
+    render(<WiresharkApp initialPackets={packets} />);
+
+    expect(screen.getByText(/traffic insights/i)).toBeInTheDocument();
+    expect(screen.getByText(/unique hosts: 3/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /focus host 8.8.8.8/i }));
+
+    expect(screen.getByPlaceholderText(/quick search/i)).toHaveValue('ip.addr == 8.8.8.8');
+    expect(window.localStorage.getItem('wireshark-filter')).toBe('ip.addr == 8.8.8.8');
+    expect(screen.queryByText('tcp packet')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear host focus/i })).toBeInTheDocument();
+  });
+
   it('imports and exports color rules via JSON', async () => {
     const packets = [
       { timestamp: '1', src: '1.1.1.1', dest: '2.2.2.2', protocol: 6, info: 'tcp packet' },
@@ -144,4 +165,3 @@ describe('WiresharkApp', () => {
     );
   });
 });
-

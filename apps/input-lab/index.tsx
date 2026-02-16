@@ -4,6 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { z } from 'zod';
 
 const SAVE_KEY = 'input-lab:text';
+const MAX_LOG_ENTRIES = 250;
+
+type EventEntry = {
+  time: string;
+  type: string;
+  [key: string]: unknown;
+};
 
 const schema = z.object({
   text: z.string().min(1, 'Text is required'),
@@ -13,19 +20,32 @@ export default function InputLab() {
   const [text, setText] = useState('');
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
-  const [eventLog, setEventLog] = useState<
-    { time: string; type: string; [key: string]: unknown }[]
-  >([]);
+  const [eventLog, setEventLog] = useState<EventEntry[]>([]);
+  const [isLoggingPaused, setIsLoggingPaused] = useState(false);
+  const [eventFilter, setEventFilter] = useState('all');
 
   const hasTyped = text.length > 0;
   const derivedStatus =
     status || (hasTyped ? 'Validating…' : 'Waiting for input to validate.');
   const isUnsafeStatus = derivedStatus.startsWith('Error');
   const isSafeStatus = derivedStatus === 'Saved';
+  const eventTypes = Array.from(new Set(eventLog.map((event) => event.type)));
+  const visibleEvents =
+    eventFilter === 'all'
+      ? eventLog
+      : eventLog.filter((event) => event.type === eventFilter);
+  const compositionEvents = eventLog.filter((event) =>
+    event.type.startsWith('composition'),
+  ).length;
+  const caretEvents = eventLog.filter((event) => event.type === 'caret').length;
+  const keyboardEvents = eventLog.filter((event) => event.type === 'keydown').length;
+  const latestEvent = eventLog[eventLog.length - 1];
 
   const logEvent = (type: string, details: Record<string, unknown> = {}) => {
+    if (isLoggingPaused) return;
+
     setEventLog((prev) => [
-      ...prev,
+      ...prev.slice(-(MAX_LOG_ENTRIES - 1)),
       { time: new Date().toISOString(), type, ...details },
     ]);
   };
@@ -75,7 +95,7 @@ export default function InputLab() {
     return () => clearTimeout(handle);
   }, [text]);
 
-  const isExportDisabled = eventLog.length === 0;
+  const isExportDisabled = visibleEvents.length === 0;
 
   const statusTone = isUnsafeStatus
     ? 'border-[color:color-mix(in_srgb,var(--kali-blue),#ff4d6d_55%)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(255,77,109,0.22))] text-[color:var(--kali-text)]'
@@ -150,6 +170,15 @@ export default function InputLab() {
                   logEvent('compositionend', { data: e.data })
                 }
                 onSelect={handleCaret}
+                onKeyDown={(e) =>
+                  logEvent('keydown', {
+                    key: e.key,
+                    ctrl: e.ctrlKey,
+                    alt: e.altKey,
+                    shift: e.shiftKey,
+                    meta: e.metaKey,
+                  })
+                }
                 onKeyUp={(e) => {
                   if (
                     [
@@ -243,24 +272,76 @@ export default function InputLab() {
               <h2 className="text-sm font-semibold uppercase tracking-wide">
                 Rendered preview
               </h2>
-              <button
-                type="button"
-                onClick={() => {
-                  if (!isExportDisabled) {
-                    exportLog();
-                  }
-                }}
-                className="rounded-lg border border-white/10 bg-kali-control px-3 py-1 text-sm font-medium text-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={isExportDisabled}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLoggingPaused((prev) => !prev)}
+                  className="rounded-lg border border-white/10 bg-kali-panel px-3 py-1 text-sm font-medium text-[color:var(--kali-text)] transition hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+                  aria-pressed={isLoggingPaused}
+                >
+                  {isLoggingPaused ? 'Resume logging' : 'Pause logging'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventLog([]);
+                    setEventFilter('all');
+                  }}
+                  className="rounded-lg border border-white/10 bg-kali-panel px-3 py-1 text-sm font-medium text-[color:var(--kali-text)] transition hover:border-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={eventLog.length === 0}
+                >
+                  Clear log
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isExportDisabled) {
+                      exportLog();
+                    }
+                  }}
+                  className="rounded-lg border border-white/10 bg-kali-control px-3 py-1 text-sm font-medium text-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-control/60 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isExportDisabled}
+                >
+                  Export JSON
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-2 text-xs text-[color:color-mix(in_srgb,var(--kali-text)_88%,transparent)] sm:grid-cols-2">
+              <div className="rounded-lg border border-white/10 bg-kali-surface/70 px-3 py-2">
+                Total events: <span className="font-semibold text-kali-control">{eventLog.length}</span>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-kali-surface/70 px-3 py-2">
+                Composition / Caret / Keydown: <span className="font-semibold text-kali-control">{compositionEvents} / {caretEvents} / {keyboardEvents}</span>
+              </div>
+              <div className="rounded-lg border border-white/10 bg-kali-surface/70 px-3 py-2 sm:col-span-2">
+                Last event: <span className="font-semibold text-kali-control">{latestEvent ? `${latestEvent.type} @ ${new Date(latestEvent.time).toLocaleTimeString()}` : 'No events yet'}</span>
+              </div>
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <label htmlFor="input-lab-event-filter" className="font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_82%,transparent)]">
+                Filter events
+              </label>
+              <select
+                id="input-lab-event-filter"
+                value={eventFilter}
+                onChange={(event) => setEventFilter(event.target.value)}
+                className="rounded-lg border border-white/10 bg-kali-panel px-2 py-1 text-sm text-[color:var(--kali-text)] focus:border-kali-control focus:outline-none focus:ring-2 focus:ring-kali-control/40"
               >
-                Export JSON
-              </button>
+                <option value="all">All events</option>
+                {eventTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
             <pre className="mt-4 max-h-64 flex-1 overflow-y-auto rounded-lg border border-[color:color-mix(in_srgb,var(--kali-terminal-green),transparent_80%)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,var(--kali-terminal-green)_12%)] p-4 text-xs text-[color:var(--kali-terminal-text)] shadow-inner shadow-black/40">
               <code className="block whitespace-pre-wrap font-mono text-[color:var(--kali-terminal-green)]">
                 {isExportDisabled
                   ? 'Interact with the input field to begin logging events.'
-                  : JSON.stringify(eventLog, null, 2)}
+                  : JSON.stringify(visibleEvents, null, 2)}
               </code>
             </pre>
           </section>
@@ -269,4 +350,3 @@ export default function InputLab() {
     </div>
   );
 }
-

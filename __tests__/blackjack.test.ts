@@ -1,4 +1,4 @@
-import { Shoe, BlackjackGame, basicStrategy, calculateBustProbability } from '../components/apps/blackjack/engine';
+import { Shoe, BlackjackGame, basicStrategy, calculateBustProbability, isSoft } from '../components/apps/blackjack/engine';
 
 const card = (v: string) => ({ suit: '\u2660', value: v });
 
@@ -103,6 +103,21 @@ describe('Game actions', () => {
     expect(game.dealerHand.length).toBe(2);
     expect(game.bankroll).toBe(1000);
     expect(game.playerHands[0].result).toBe('push');
+  });
+});
+
+
+describe('Soft hand detection', () => {
+  test('ace-ten is not soft', () => {
+    expect(isSoft([card('A'), card('10')])).toBe(false);
+  });
+
+  test('ace-six is soft', () => {
+    expect(isSoft([card('A'), card('6')])).toBe(true);
+  });
+
+  test('multiple aces can remain soft after adjustment', () => {
+    expect(isSoft([card('A'), card('A'), card('5')])).toBe(true);
   });
 });
 

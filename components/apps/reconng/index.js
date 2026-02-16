@@ -133,6 +133,60 @@ const createWorkspace = (index) => ({
   },
 });
 
+const defaultStoredWorkspace = () => ({
+  name: 'Workspace 1',
+  graph: [],
+  entities: {
+    domain: [],
+    ip: [],
+    entity: [],
+  },
+});
+
+const isValidStoredWorkspace = (workspace) => {
+  if (!workspace || typeof workspace !== 'object') return false;
+  if (workspace.name != null && typeof workspace.name !== 'string') return false;
+  if (workspace.graph != null && !Array.isArray(workspace.graph)) return false;
+  if (workspace.entities != null && typeof workspace.entities !== 'object') return false;
+  const entities = workspace.entities || {};
+  return ['domain', 'ip', 'entity'].every(
+    (type) => entities[type] == null || Array.isArray(entities[type]),
+  );
+};
+
+const isValidStoredWorkspaces = (value) =>
+  Array.isArray(value) && value.length > 0 && value.every(isValidStoredWorkspace);
+
+const isFiniteNonNegativeInt = (value) => Number.isInteger(value) && value >= 0;
+
+const serializeWorkspaces = (workspaceList) =>
+  workspaceList.map((workspace, index) => ({
+    name: typeof workspace.name === 'string' ? workspace.name : `Workspace ${index + 1}`,
+    graph: Array.isArray(workspace.graph) ? workspace.graph : [],
+    entities: {
+      domain: Array.from(workspace.entities?.domain || []),
+      ip: Array.from(workspace.entities?.ip || []),
+      entity: Array.from(workspace.entities?.entity || []),
+    },
+  }));
+
+const deserializeWorkspaces = (storedWorkspaces = []) => {
+  const hydrated = storedWorkspaces.map((workspace, index) => {
+    const fallback = createWorkspace(index);
+    return {
+      name: typeof workspace?.name === 'string' ? workspace.name : fallback.name,
+      graph: Array.isArray(workspace?.graph) ? workspace.graph : [],
+      entities: {
+        domain: new Set(Array.isArray(workspace?.entities?.domain) ? workspace.entities.domain : []),
+        ip: new Set(Array.isArray(workspace?.entities?.ip) ? workspace.entities.ip : []),
+        entity: new Set(Array.isArray(workspace?.entities?.entity) ? workspace.entities.entity : []),
+      },
+    };
+  });
+
+  return hydrated.length > 0 ? hydrated : [createWorkspace(0)];
+};
+
 const ReconNG = () => {
   const { allowNetwork } = useSettings();
   const [selectedModule, setSelectedModule] = useState(modules[0]);
@@ -145,15 +199,31 @@ const ReconNG = () => {
   const [tagInputs, setTagInputs] = useState({});
   const [apiKeys, setApiKeys] = usePersistentState('reconng-api-keys', {});
   const [showApiKeys, setShowApiKeys] = useState({});
-  const [workspaces, setWorkspaces] = useState([createWorkspace(0)]);
-  const [activeWs, setActiveWs] = useState(0);
+  const [storedWorkspaces, setStoredWorkspaces, , clearStoredWorkspaces] = usePersistentState(
+    'reconng-workspaces-v1',
+    [defaultStoredWorkspace()],
+    isValidStoredWorkspaces,
+  );
+  const [activeWs, setActiveWs, , clearActiveWs] = usePersistentState(
+    'reconng-active-ws-v1',
+    0,
+    isFiniteNonNegativeInt,
+  );
   const [ariaMessage, setAriaMessage] = useState('');
   const [focusedNodeIndex, setFocusedNodeIndex] = useState(0);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [chainData, setChainData] = useState(null);
   const cyRef = useRef(null);
 
-  const currentWorkspace = workspaces[activeWs];
+  const workspaces = useMemo(() => deserializeWorkspaces(storedWorkspaces), [storedWorkspaces]);
+  const safeActiveWs = Math.min(activeWs, Math.max(workspaces.length - 1, 0));
+  const currentWorkspace = workspaces[safeActiveWs] || createWorkspace(0);
+
+  useEffect(() => {
+    if (activeWs !== safeActiveWs) {
+      setActiveWs(safeActiveWs);
+    }
+  }, [activeWs, safeActiveWs, setActiveWs]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -273,10 +343,11 @@ const ReconNG = () => {
   );
 
   const updateWorkspace = (updater) => {
-    setWorkspaces((ws) => {
-      const copy = [...ws];
-      copy[activeWs] = updater(copy[activeWs]);
-      return copy;
+    setStoredWorkspaces((stored) => {
+      const runtime = deserializeWorkspaces(stored);
+      const index = Math.min(safeActiveWs, Math.max(runtime.length - 1, 0));
+      runtime[index] = updater(runtime[index]);
+      return serializeWorkspaces(runtime);
     });
   };
 
@@ -405,8 +476,21 @@ const ReconNG = () => {
   };
 
   const addWorkspace = () => {
-    setWorkspaces((ws) => [...ws, createWorkspace(ws.length)]);
-    setActiveWs(workspaces.length);
+    let nextIndex = 0;
+    setStoredWorkspaces((stored) => {
+      const runtime = deserializeWorkspaces(stored);
+      nextIndex = runtime.length;
+      runtime.push(createWorkspace(nextIndex));
+      return serializeWorkspaces(runtime);
+    });
+    setActiveWs(nextIndex);
+  };
+
+  const resetSession = () => {
+    if (!window.confirm('Reset Recon-ng session? This clears saved workspaces and results.')) return;
+    clearStoredWorkspaces();
+    clearActiveWs();
+    setOutput('');
   };
 
   const exportJSON = () => {
@@ -447,13 +531,20 @@ const ReconNG = () => {
             key={ws.name}
             type="button"
             onClick={() => setActiveWs(i)}
-            className={`px-2 py-1 ${i === activeWs ? 'bg-blue-600' : 'bg-gray-800'}`}
+            className={`px-2 py-1 ${i === safeActiveWs ? 'bg-blue-600' : 'bg-gray-800'}`}
           >
             {ws.name}
           </button>
         ))}
         <button type="button" onClick={addWorkspace} className="px-2 py-1 bg-green-700">
           +
+        </button>
+        <button
+          type="button"
+          onClick={resetSession}
+          className="px-2 py-1 bg-red-700 hover:bg-red-600"
+        >
+          Reset Session
         </button>
       </div>
       <div className="flex gap-2 mb-4">
@@ -674,4 +765,3 @@ const ReconNG = () => {
 export default ReconNG;
 
 export const displayReconNG = () => <ReconNG />;
-
