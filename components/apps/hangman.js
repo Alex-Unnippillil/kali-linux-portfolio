@@ -37,6 +37,11 @@ const safeClipboardWriteText = async (text) => {
   return false;
 };
 
+const getUtcDateKey = () => new Date().toISOString().slice(0, 10);
+
+const buildDailySeed = (category, difficulty) =>
+  `daily:${getUtcDateKey()}:${category}:${difficulty}`;
+
 const isStringArray = (value) =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
 
@@ -621,6 +626,16 @@ const Hangman = ({ windowMeta } = {}) => {
     setAnnouncement('Custom list imported. Ready to play.');
   }, [customDraft, setCustomWords, setDict]);
 
+  const startDailyGame = useCallback(() => {
+    const dateKey = getUtcDateKey();
+    startNewGame({
+      category: dict,
+      difficulty,
+      seed: buildDailySeed(dict, difficulty),
+    });
+    setAnnouncement(`Daily challenge started for ${dateKey} (UTC).`);
+  }, [dict, difficulty, startNewGame]);
+
   const clearCustom = useCallback(() => {
     setCustomWords([]);
     setCustomDraft('');
@@ -714,6 +729,8 @@ const Hangman = ({ windowMeta } = {}) => {
   const isCustom = dict === 'custom';
   const startLabel = game.word ? 'New game' : 'Start';
   const isPlaying = game.status === 'playing';
+  const isDailySeed = typeof seed === 'string' && seed.startsWith('daily:');
+  const dailyDate = isDailySeed ? seed.split(':')[1] || '' : '';
 
   return (
     <div className="h-full w-full flex flex-col bg-[var(--kali-bg)] text-[var(--kali-text)]">
@@ -775,6 +792,17 @@ const Hangman = ({ windowMeta } = {}) => {
 
         <button
           className="rounded bg-[var(--kali-overlay)] px-3 py-1 text-sm hover:bg-[var(--kali-control-overlay)] focus:outline-none focus:ring focus:ring-[color:var(--kali-control)] disabled:opacity-50"
+          onClick={startDailyGame}
+          type="button"
+          disabled={!topics.length || isCustom}
+          title="Daily challenge (UTC). Same puzzle for everyone today."
+          aria-label="Daily"
+        >
+          Daily
+        </button>
+
+        <button
+          className="rounded bg-[var(--kali-overlay)] px-3 py-1 text-sm hover:bg-[var(--kali-control-overlay)] focus:outline-none focus:ring focus:ring-[color:var(--kali-control)] disabled:opacity-50"
           onClick={handleHint}
           type="button"
           disabled={!game.word || paused || won || lost || game.hintsRemaining <= 0}
@@ -805,6 +833,11 @@ const Hangman = ({ windowMeta } = {}) => {
         <span className="mr-3">
           Wrong: <span className="text-[var(--kali-text)]">{game.wrong}/{maxWrong}</span>
         </span>
+        {isDailySeed && dailyDate && (
+          <span className="mr-3">
+            Daily: <span className="text-[var(--kali-text)]">{dailyDate} (UTC)</span>
+          </span>
+        )}
       </div>
 
       {showOptions && (
