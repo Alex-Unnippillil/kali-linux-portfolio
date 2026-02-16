@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import HostBubbleChart from './HostBubbleChart';
 import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
@@ -26,19 +26,53 @@ export const saveJobDefinition = (job) => {
 export const loadFalsePositives = () => {
   if (typeof window === 'undefined') return [];
   try {
-    return JSON.parse(localStorage.getItem('nessusFalsePositives') || '[]');
+    const parsed = JSON.parse(localStorage.getItem('nessusFalsePositives') || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((item) => item && typeof item === 'object')
+      .map((item) => ({
+        findingKey:
+          typeof item.findingKey === 'string' && item.findingKey.length > 0
+            ? item.findingKey
+            : undefined,
+        findingId:
+          typeof item.findingId === 'string' && item.findingId.length > 0
+            ? item.findingId
+            : undefined,
+        reason: typeof item.reason === 'string' ? item.reason : '',
+      }))
+      .filter((item) => item.findingKey || item.findingId);
   } catch {
     return [];
   }
 };
 
-export const recordFalsePositive = (findingId, reason) => {
+export const upsertFalsePositive = (findingKey, findingId, reason) => {
   if (typeof window === 'undefined') return [];
   const fps = loadFalsePositives();
-  const updated = [...fps, { findingId, reason }];
+  const index = fps.findIndex((fp) => fp.findingKey === findingKey);
+  const value = { findingKey, findingId, reason };
+  const updated = [...fps];
+  if (index >= 0) {
+    updated[index] = value;
+  } else {
+    updated.push(value);
+  }
   localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));
   return updated;
 };
+
+export const removeFalsePositive = (findingKey) => {
+  if (typeof window === 'undefined') return [];
+  const updated = loadFalsePositives().filter((fp) => fp.findingKey !== findingKey);
+  localStorage.setItem('nessusFalsePositives', JSON.stringify(updated));
+  return updated;
+};
+
+export const recordFalsePositive = (findingId, reason) =>
+  upsertFalsePositive(findingId, findingId, reason);
+
+const findingKeyFor = (finding) => `${finding.host}::${finding.id}`;
 
 const Nessus = () => {
   const [url, setUrl] = useState('https://localhost:8834');
@@ -49,13 +83,19 @@ const Nessus = () => {
   const [error, setError] = useState('');
   const [jobs, setJobs] = useState([]);
   const [newJob, setNewJob] = useState({ scanId: '', schedule: '' });
-  const [feedbackId, setFeedbackId] = useState(null);
+  const [feedbackKey, setFeedbackKey] = useState(null);
   const [feedbackText, setFeedbackText] = useState('');
   const [falsePositives, setFalsePositives] = useState([]);
   const [findings, setFindings] = useState([]);
   const [parseError, setParseError] = useState('');
   const [selected, setSelected] = useState(null);
+  const [query, setQuery] = useState('');
+  const [severity, setSeverity] = useState('All');
+  const [host, setHost] = useState('All');
+  const [hideFalsePositives, setHideFalsePositives] = useState(false);
+  const [sortBy, setSortBy] = useState('cvss');
   const parserWorkerRef = useRef(null);
+  const deferredQuery = useDeferredValue(query);
 
   const hostData = useMemo(
     () =>
@@ -75,7 +115,7 @@ const Nessus = () => {
     parserWorkerRef.current = new Worker(
       new URL('../../../workers/nessus-parser.ts', import.meta.url)
     );
-      parserWorkerRef.current.onmessage = (e) => {
+    parserWorkerRef.current.onmessage = (e) => {
       const { findings: parsed = [], error: err } = e.data || {};
       if (err) {
         setParseError(err);
@@ -87,6 +127,61 @@ const Nessus = () => {
     };
     return () => parserWorkerRef.current?.terminate();
   }, []);
+
+  const falsePositivesByKey = useMemo(
+    () => new Map(falsePositives.map((fp) => [fp.findingKey ?? fp.findingId, fp])),
+    [falsePositives]
+  );
+
+  const falsePositivesByFindingId = useMemo(
+    () => new Map(falsePositives.map((fp) => [fp.findingId, fp]).filter(([id]) => id)),
+    [falsePositives]
+  );
+
+  const getFalsePositive = (finding) => {
+    const findingKey = findingKeyFor(finding);
+    return falsePositivesByKey.get(findingKey) || falsePositivesByFindingId.get(finding.id);
+  };
+
+  const hostOptions = useMemo(
+    () => ['All', ...Array.from(new Set(findings.map((finding) => finding.host))).sort()],
+    [findings]
+  );
+
+  const filteredFindings = useMemo(() => {
+    const normalizedQuery = deferredQuery.trim().toLowerCase();
+    return findings
+      .filter((finding) => {
+        if (!normalizedQuery) return true;
+        return [finding.host, finding.name, finding.id]
+          .some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
+      })
+      .filter((finding) => severity === 'All' || finding.severity === severity)
+      .filter((finding) => host === 'All' || finding.host === host)
+      .filter((finding) => {
+        if (!hideFalsePositives) return true;
+        const findingKey = findingKeyFor(finding);
+        return !(falsePositivesByKey.get(findingKey) || falsePositivesByFindingId.get(finding.id));
+      })
+      .sort((a, b) => {
+        if (sortBy === 'name') return a.name.localeCompare(b.name);
+        if (sortBy === 'host') return a.host.localeCompare(b.host);
+        return Number(b.cvss || 0) - Number(a.cvss || 0);
+      });
+  }, [deferredQuery, findings, severity, host, hideFalsePositives, sortBy, falsePositivesByFindingId, falsePositivesByKey]);
+
+  const filteredSeverityCounts = useMemo(
+    () =>
+      filteredFindings.reduce(
+        (acc, finding) => {
+          const level = finding.severity || 'Unknown';
+          acc[level] = (acc[level] || 0) + 1;
+          return acc;
+        },
+        { Critical: 0, High: 0, Medium: 0, Low: 0, Unknown: 0 }
+      ),
+    [filteredFindings]
+  );
 
   const handleFile = async (e) => {
     const file = e.target.files?.[0];
@@ -100,13 +195,14 @@ const Nessus = () => {
   };
 
   const exportCSV = () => {
-    const header = ['Host', 'ID', 'Finding', 'CVSS', 'Severity'];
-    const rows = findings.map((f) => [
+    const header = ['Host', 'ID', 'Finding', 'CVSS', 'Severity', 'FalsePositiveReason'];
+    const rows = filteredFindings.map((f) => [
       f.host,
       f.id,
       f.name,
       f.cvss,
       f.severity,
+      getFalsePositive(f)?.reason || '',
     ]);
     const csv = [header, ...rows]
       .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
@@ -167,10 +263,24 @@ const Nessus = () => {
 
   const submitFeedback = (e) => {
     e.preventDefault();
-    recordFalsePositive(feedbackId, feedbackText);
-    setFalsePositives(loadFalsePositives());
-    setFeedbackId(null);
+    if (!feedbackKey) return;
+    const [findingHost = '', findingId = ''] = feedbackKey.split('::');
+    const updated = upsertFalsePositive(feedbackKey, findingId, feedbackText);
+    setFalsePositives(updated);
+    if (selected?.host === findingHost && selected?.id === findingId) {
+      setSelected({ ...selected });
+    }
+    setFeedbackKey(null);
     setFeedbackText('');
+  };
+
+  const handleUnmark = (findingKey) => {
+    const updated = removeFalsePositive(findingKey);
+    setFalsePositives(updated);
+    if (feedbackKey === findingKey) {
+      setFeedbackKey(null);
+      setFeedbackText('');
+    }
   };
 
   const logout = () => {
@@ -258,6 +368,68 @@ const Nessus = () => {
         {parseError && <FormError>{parseError}</FormError>}
         {findings.length > 0 && (
           <div className="mt-2">
+            <div className="mb-3 rounded border border-gray-700 bg-kali-surface p-2">
+              <div className="mb-2 grid gap-2 md:grid-cols-5">
+                <input
+                  className="rounded border border-gray-700 bg-kali-surface-muted p-2 text-sm text-kali-text"
+                  placeholder="Search host, plugin name, plugin ID"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search findings"
+                />
+                <select
+                  className="rounded border border-gray-700 bg-kali-surface-muted p-2 text-sm text-kali-text"
+                  value={severity}
+                  onChange={(e) => setSeverity(e.target.value)}
+                  aria-label="Filter by severity"
+                >
+                  {['All', 'Critical', 'High', 'Medium', 'Low', 'Unknown'].map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded border border-gray-700 bg-kali-surface-muted p-2 text-sm text-kali-text"
+                  value={host}
+                  onChange={(e) => setHost(e.target.value)}
+                  aria-label="Filter by host"
+                >
+                  {hostOptions.map((hostName) => (
+                    <option key={hostName} value={hostName}>
+                      {hostName}
+                    </option>
+                  ))}
+                </select>
+                <label className="flex items-center gap-2 rounded border border-gray-700 bg-kali-surface-muted p-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={hideFalsePositives}
+                    onChange={(e) => setHideFalsePositives(e.target.checked)}
+                    aria-label="Hide false positives"
+                  />
+                  Hide false positives
+                </label>
+                <select
+                  className="rounded border border-gray-700 bg-kali-surface-muted p-2 text-sm text-kali-text"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  aria-label="Sort findings"
+                >
+                  <option value="cvss">CVSS (desc)</option>
+                  <option value="name">Name</option>
+                  <option value="host">Host</option>
+                </select>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs" aria-live="polite">
+                <span>Showing {filteredFindings.length} of {findings.length} findings</span>
+                {['Critical', 'High', 'Medium', 'Low', 'Unknown'].map((level) => (
+                  <span key={level} className="rounded bg-kali-surface-muted px-2 py-1">
+                    {level}: {filteredSeverityCounts[level] || 0}
+                  </span>
+                ))}
+              </div>
+            </div>
             <button
               onClick={exportCSV}
               className="mb-2 rounded bg-kali-success px-2 py-1 text-sm font-medium text-kali-inverse transition hover:bg-kali-success/90"
@@ -276,9 +448,13 @@ const Nessus = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {findings.map((f, i) => (
-                    <tr
-                      key={i}
+                  {filteredFindings.map((f) => {
+                    const findingKey = findingKeyFor(f);
+                    const falsePositive = getFalsePositive(f);
+                    const isEditing = feedbackKey === findingKey;
+                    return (
+                      <tr
+                      key={findingKey}
                       className="border-t border-gray-700 cursor-pointer"
                       onClick={() => setSelected(f)}
                     >
@@ -287,10 +463,26 @@ const Nessus = () => {
                       <td className="p-1">{f.cvss}</td>
                       <td className="p-1">{f.severity}</td>
                       <td className="p-1">
-                        {falsePositives.some((fp) => fp.findingId === f.id) ? (
-                          <span className="text-xs text-kali-success">Marked</span>
-                        ) : feedbackId === f.id ? (
-                          <form onSubmit={submitFeedback} className="space-y-1">
+                        {falsePositive ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-kali-success">Marked</span>
+                            <button
+                              type="button"
+                              className="rounded bg-kali-error px-2 py-1 text-xs font-medium text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleUnmark(findingKey);
+                              }}
+                            >
+                              Unmark
+                            </button>
+                          </div>
+                        ) : isEditing ? (
+                          <form
+                            onSubmit={submitFeedback}
+                            className="space-y-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <input
                               className="w-full p-1 rounded text-black"
                               value={feedbackText}
@@ -308,7 +500,10 @@ const Nessus = () => {
                               <button
                                 type="button"
                                 className="rounded bg-kali-surface-muted px-2 py-1 text-xs text-kali-text/80 transition hover:bg-kali-surface"
-                                onClick={() => setFeedbackId(null)}
+                                onClick={() => {
+                                  setFeedbackKey(null);
+                                  setFeedbackText('');
+                                }}
                               >
                                 Cancel
                               </button>
@@ -317,14 +512,19 @@ const Nessus = () => {
                         ) : (
                           <button
                             className="text-xs font-medium text-kali-inverse transition hover:brightness-105 rounded bg-kali-severity-medium px-2 py-1"
-                            onClick={() => setFeedbackId(f.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFeedbackKey(findingKey);
+                              setFeedbackText('');
+                            }}
                           >
                             False Positive
                           </button>
                         )}
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -377,39 +577,7 @@ const Nessus = () => {
               <span>
                 {scan.name} - {scan.status}
               </span>
-              <button
-                className="text-xs font-medium text-kali-inverse transition hover:brightness-105 rounded bg-kali-severity-medium px-2 py-1"
-                onClick={() => setFeedbackId(scan.id)}
-              >
-                False Positive
-              </button>
             </div>
-            {feedbackId === scan.id && (
-              <form onSubmit={submitFeedback} className="mt-2 space-y-1">
-                <input
-                  className="w-full p-1 rounded text-black"
-                  value={feedbackText}
-                  onChange={(e) => setFeedbackText(e.target.value)}
-                  placeholder="Reason"
-                  aria-label="False positive reason"
-                />
-                <div className="flex space-x-2">
-                  <button
-                    type="submit"
-                    className="rounded bg-kali-success px-2 py-1 text-xs font-medium text-kali-inverse transition hover:bg-kali-success/90"
-                  >
-                    Submit
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded bg-kali-surface-muted px-2 py-1 text-xs text-kali-text/80 transition hover:bg-kali-surface"
-                    onClick={() => setFeedbackId(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            )}
           </li>
         ))}
       </ul>
@@ -431,6 +599,21 @@ const Nessus = () => {
               <span className="font-bold">CVSS:</span> {selected.cvss} ({selected.severity})
             </p>
             <p className="mb-2 whitespace-pre-wrap text-sm">{selected.description}</p>
+            {getFalsePositive(selected) && (
+              <div className="mb-2 rounded border border-kali-success/40 bg-kali-success/10 p-2 text-sm">
+                <p className="font-medium text-kali-success">Marked false positive</p>
+                <p className="mt-1 text-kali-text/90">
+                  Reason: {getFalsePositive(selected)?.reason || 'No reason provided.'}
+                </p>
+                <button
+                  type="button"
+                  className="mt-2 rounded bg-kali-error px-2 py-1 text-xs font-medium text-white transition hover:bg-kali-error/90"
+                  onClick={() => handleUnmark(findingKeyFor(selected))}
+                >
+                  Unmark
+                </button>
+              </div>
+            )}
             <p className="text-sm text-kali-success">
               {selected.solution || 'No solution provided.'}
             </p>
@@ -446,4 +629,3 @@ export default Nessus;
 export const displayNessus = () => {
   return <Nessus />;
 };
-

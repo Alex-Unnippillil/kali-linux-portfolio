@@ -3,6 +3,7 @@ import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
+import demoReport from './fixtures/demo-report.json';
 
 const templates = { PCI: pciProfile, HIPAA: hipaaProfile };
 
@@ -205,6 +206,12 @@ const clearSession = () => {
   localStorage.removeItem('openvas/session');
 };
 
+export const normalizeFinding = (finding = {}) => ({
+  ...finding,
+  ...(typeof finding.cvss === 'number' ? { cvss: finding.cvss } : {}),
+  ...(typeof finding.epss === 'number' ? { epss: finding.epss } : {}),
+});
+
 const OpenVASApp = () => {
   const [target, setTarget] = useState('');
   const [group, setGroup] = useState('');
@@ -224,6 +231,11 @@ const OpenVASApp = () => {
   const sessionRef = useRef({});
 
   useEffect(() => {
+    if (!summaryUrl || typeof URL.revokeObjectURL !== 'function') return undefined;
+    return () => URL.revokeObjectURL(summaryUrl);
+  }, [summaryUrl]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const media = window.matchMedia('(prefers-reduced-motion: reduce)');
       reduceMotion.current = media.matches;
@@ -236,7 +248,11 @@ const OpenVASApp = () => {
             saveSession({ ...sessionRef.current, progress: data });
           }
           if (type === 'result')
-            setFindings(data.map((f) => ({ ...f, remediation: remediationMap[f.severity] })));
+            setFindings(
+              data.map((f) =>
+                normalizeFinding({ ...f, remediation: remediationMap[f.severity] })
+              )
+            );
         };
       }
 
@@ -257,10 +273,51 @@ const OpenVASApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const generateSummary = (data) => {
-    const summary = `# OpenVAS Scan Summary\n\n- Target: ${target}\n- Group: ${group}\n- Profile: ${profile}\n\n## Output\n\n${data}`;
+  const generateSummary = (data, metadata = {}) => {
+    const scanTarget = metadata.target ?? target;
+    const scanGroup = metadata.group ?? group;
+    const scanProfile = metadata.profile ?? profile;
+    const summary = `# OpenVAS Scan Summary\n\n- Target: ${scanTarget}\n- Group: ${scanGroup}\n- Profile: ${scanProfile}\n\n## Output\n\n${data}`;
     const blob = new Blob([summary], { type: 'text/markdown' });
     setSummaryUrl(URL.createObjectURL(blob));
+  };
+
+  const parseReportText = (text, metadata = {}) => {
+    setLoading(false);
+    setProgress(0);
+    setSelected(null);
+    setActiveHost(null);
+    setOutput(text);
+    workerRef.current?.postMessage({ text });
+    generateSummary(text, metadata);
+  };
+
+  const handleLoadDemoReport = () => {
+    const { target: demoTarget, group: demoGroup, profile: demoProfile, reportText } = demoReport;
+    setTarget(demoTarget);
+    setGroup(demoGroup);
+    setProfile(demoProfile);
+    parseReportText(reportText, {
+      target: demoTarget,
+      group: demoGroup,
+      profile: demoProfile,
+    });
+  };
+
+  const handleImportReport = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    const text = await file.text();
+    if (!text.trim()) {
+      setOutput('Unable to import report: file is empty.');
+      setSelected(null);
+      setActiveHost(null);
+      setLoading(false);
+      setProgress(0);
+      return;
+    }
+    parseReportText(text);
   };
 
   const runScan = async (
@@ -436,6 +493,23 @@ const OpenVASApp = () => {
         >
           {loading ? 'Scanning...' : 'Scan'}
         </button>
+        <button
+          type="button"
+          onClick={handleLoadDemoReport}
+          className="rounded-lg bg-kali-surface-raised px-4 py-2 text-sm font-semibold text-white transition hover:bg-kali-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+        >
+          Load demo report
+        </button>
+        <label className="cursor-pointer rounded-lg bg-kali-surface-raised px-4 py-2 text-sm font-semibold text-white transition hover:bg-kali-surface-muted focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-kali-focus">
+          Import report
+          <input
+            type="file"
+            accept=".txt,.log"
+            aria-label="Import OpenVAS report"
+            onChange={handleImportReport}
+            className="sr-only"
+          />
+        </label>
       </div>
       {loading && (
         <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-kali-surface-muted">
@@ -541,7 +615,7 @@ const OpenVASApp = () => {
         <ul className="mb-4 space-y-2">
           {displayFindings.map((f, idx) => (
             <li
-              key={idx}
+              key={f.id ?? idx}
               role="listitem"
               className={`rounded-lg p-2 shadow-sm ${
                 severityStyles[f.severity]?.surface ?? ''
@@ -558,12 +632,16 @@ const OpenVASApp = () => {
                     dangerouslySetInnerHTML={{ __html: escapeHtml(f.description) }}
                   />
                   <div className="ml-2 flex gap-1">
-                    <span className="rounded bg-kali-severity-critical px-1 py-0.5 text-xs font-semibold text-white">
-                      CVSS {f.cvss}
-                    </span>
-                    <span className="rounded bg-kali-info px-1 py-0.5 text-xs font-semibold text-kali-inverse">
-                      EPSS {(f.epss * 100).toFixed(1)}%
-                    </span>
+                    {typeof f.cvss === 'number' && (
+                      <span className="rounded bg-kali-severity-critical px-1 py-0.5 text-xs font-semibold text-white">
+                        CVSS {f.cvss}
+                      </span>
+                    )}
+                    {typeof f.epss === 'number' && (
+                      <span className="rounded bg-kali-info px-1 py-0.5 text-xs font-semibold text-kali-inverse">
+                        EPSS {(f.epss * 100).toFixed(1)}%
+                      </span>
+                    )}
                   </div>
                 </div>
               </button>
@@ -704,4 +782,3 @@ const OpenVASApp = () => {
 export default OpenVASApp;
 
 export const displayOpenVAS = () => <OpenVASApp />;
-

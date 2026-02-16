@@ -110,5 +110,39 @@ describe('ResultViewer', () => {
       spies.restore();
     }
   });
+
+  it('starts in parsed mode when defaultTab is parsed', () => {
+    const data = [{ foo: 'alpha' }];
+
+    render(<ResultViewer data={data} defaultTab="parsed" />);
+
+    expect(screen.getByRole('columnheader', { name: 'foo' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'alpha' })).toBeInTheDocument();
+  });
+
+  it('preloads filter from defaultFilter and narrows visible rows', () => {
+    const data = [
+      { foo: 'match-me' },
+      { foo: 'other' },
+    ];
+
+    render(<ResultViewer data={data} defaultTab="parsed" defaultFilter="match" />);
+
+    const filterInput = screen.getByRole('textbox', { name: /filter rows/i });
+    expect(filterInput).toHaveValue('match');
+
+    expect(screen.getByRole('cell', { name: 'match-me' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'other' })).not.toBeInTheDocument();
+  });
+
+  it('renders object values as JSON strings in parsed mode', () => {
+    const data = [{ details: { severity: 'high' } }];
+
+    render(<ResultViewer data={data} defaultTab="parsed" />);
+
+    expect(screen.getByRole('cell', { name: '{"severity":"high"}' })).toBeInTheDocument();
+    expect(screen.queryByText('[object Object]')).not.toBeInTheDocument();
+  });
+
 });
 

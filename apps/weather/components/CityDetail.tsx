@@ -46,6 +46,7 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
 
   const offline =
     typeof navigator !== 'undefined' ? !navigator.onLine : false;
+  const isDemoOfflineState = city.isDemo && (!allowNetwork || offline);
 
   const temps = useMemo(() => {
     if (!hourly) return [];
@@ -143,6 +144,12 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
   }, [city.hourly, city.id]);
 
   useEffect(() => {
+    if (isDemoOfflineState) {
+      setStatus('idle');
+      setError(null);
+      return;
+    }
+
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -263,7 +270,16 @@ export default function CityDetail({ city, onClose, onUpdateCity }: Props) {
     return () => {
       controller.abort();
     };
-  }, [allowNetwork, city.id, city.lat, city.lon, city.timezone, offline, onUpdateCity]);
+  }, [
+    allowNetwork,
+    city.id,
+    city.lat,
+    city.lon,
+    city.timezone,
+    isDemoOfflineState,
+    offline,
+    onUpdateCity,
+  ]);
 
   const onOverlayClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === overlayRef.current) {

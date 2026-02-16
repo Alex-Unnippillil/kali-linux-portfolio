@@ -4,12 +4,14 @@ import { useState, useMemo, useEffect } from 'react';
 
 interface ViewerProps {
   data: any[];
+  defaultTab?: 'raw' | 'parsed' | 'chart';
+  defaultFilter?: string;
 }
 
-export default function ResultViewer({ data }: ViewerProps) {
-  const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>('raw');
+export default function ResultViewer({ data, defaultTab = 'raw', defaultFilter = '' }: ViewerProps) {
+  const [tab, setTab] = useState<'raw' | 'parsed' | 'chart'>(defaultTab);
   const [sortKey, setSortKey] = useState('');
-  const [filter, setFilter] = useState('');
+  const [filter, setFilter] = useState(defaultFilter);
 
   useEffect(() => {
     try {
@@ -140,9 +142,15 @@ export default function ResultViewer({ data }: ViewerProps) {
                   <tr key={i}>
                     {keys.map((k) => {
                       const value = row?.[k];
+                      const renderedValue =
+                        value == null
+                          ? ''
+                          : typeof value === 'object'
+                            ? JSON.stringify(value)
+                            : String(value);
                       return (
                         <td key={k} className="border px-1">
-                          {value == null ? '' : String(value)}
+                          {renderedValue}
                         </td>
                       );
                     })}
@@ -175,4 +183,3 @@ export default function ResultViewer({ data }: ViewerProps) {
     </div>
   );
 }
-

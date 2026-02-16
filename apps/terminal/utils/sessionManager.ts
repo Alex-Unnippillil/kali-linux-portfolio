@@ -122,6 +122,9 @@ export function createSessionManager({
   };
 
   const autocomplete = () => {
+    if (/\s/.test(buffer)) {
+      return;
+    }
     const registry = currentConfig.getRegistry();
     const entries = Object.values(registry);
     const matches = entries.filter((c) => c.name.startsWith(buffer));
@@ -302,6 +305,11 @@ export function createSessionManager({
         i += 1;
         continue;
       }
+      if (ch === '\t') {
+        autocomplete();
+        i += 1;
+        continue;
+      }
       if (ch === '\r') {
         currentConfig.write('\r\n'); // Echo newline
         const command = buffer;
@@ -316,6 +324,13 @@ export function createSessionManager({
         if (buffer.length > 0) {
           currentConfig.write('\b \b');
           buffer = buffer.slice(0, -1);
+        }
+        i += 1;
+        continue;
+      }
+      if (ch === '\t') {
+        if (!/\s/.test(buffer)) {
+          autocomplete();
         }
         i += 1;
         continue;

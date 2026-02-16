@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
-import OpenVASApp from '../components/apps/openvas';
+import OpenVASApp, { normalizeFinding } from '../components/apps/openvas';
 
 describe('OpenVASApp', () => {
   beforeEach(() => {
@@ -18,6 +18,8 @@ describe('OpenVASApp', () => {
 
     // @ts-ignore
     global.URL.createObjectURL = jest.fn(() => 'blob:summary');
+    // @ts-ignore
+    global.URL.revokeObjectURL = jest.fn();
     localStorage.clear();
   });
 
@@ -132,6 +134,40 @@ describe('OpenVASApp', () => {
 
     await act(async () => {
       resolvers.forEach((r) => r());
+    });
+  });
+
+  it('shows the load demo report control and loads fixture output', () => {
+    render(<OpenVASApp />);
+    fireEvent.click(screen.getByRole('button', { name: 'Load demo report' }));
+    expect(screen.getByText('Title: Apache 2.4.49 Path Traversal')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('192.168.56.10')).toBeInTheDocument();
+  });
+
+  it('normalizes findings without cvss and epss safely', () => {
+    expect(() =>
+      normalizeFinding({
+        id: 'f-1',
+        severity: 'high',
+        impact: 'high',
+        likelihood: 'medium',
+        description: 'No scoring data',
+      })
+    ).not.toThrow();
+    expect(
+      normalizeFinding({
+        id: 'f-1',
+        severity: 'high',
+        impact: 'high',
+        likelihood: 'medium',
+        description: 'No scoring data',
+      })
+    ).toEqual({
+      id: 'f-1',
+      severity: 'high',
+      impact: 'high',
+      likelihood: 'medium',
+      description: 'No scoring data',
     });
   });
 });
