@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Overlay, useGameLoop } from "../../components/apps/Games/common";
 import { useGamePersistence } from "../../components/apps/useGameControls";
+import { consumeGameKey, shouldHandleGameKey } from "../../utils/gameInput";
 import { createPinballWorld, constants, type PinballWorld } from "./physics";
 import { useTiltSensor } from "./tilt";
 
@@ -36,7 +37,12 @@ const tonePalette = {
   },
 } as const;
 
-export default function Pinball() {
+export type PinballProps = {
+  windowMeta?: { isFocused?: boolean };
+};
+
+export default function Pinball({ windowMeta }: PinballProps) {
+  const isFocused = windowMeta?.isFocused ?? true;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const worldRef = useRef<PinballWorld | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -215,24 +221,39 @@ export default function Pinball() {
   }, [ballLocked, ballsRemaining, paused, tilt, gameOver, launchPower]);
 
   useEffect(() => {
+    if (isFocused) return;
+    setPaused(true);
+    worldRef.current?.resetFlippers();
+  }, [isFocused]);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!shouldHandleGameKey(event, { isFocused })) return;
+
       if (tilt) return;
       if (event.code === "ArrowLeft") {
+        consumeGameKey(event);
         worldRef.current?.setLeftFlipper((-Math.PI / 4) * flipperPower);
       } else if (event.code === "ArrowRight") {
+        consumeGameKey(event);
         worldRef.current?.setRightFlipper((Math.PI / 4) * flipperPower);
       } else if (event.code === "KeyN") {
+        consumeGameKey(event);
         tryNudge();
       } else if (event.code === "Space") {
-        event.preventDefault();
+        consumeGameKey(event);
         handleLaunch();
       }
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
+      if (!shouldHandleGameKey(event, { isFocused })) return;
+
       if (event.code === "ArrowLeft") {
+        consumeGameKey(event);
         worldRef.current?.setLeftFlipper(constants.DEFAULT_LEFT_ANGLE);
       } else if (event.code === "ArrowRight") {
+        consumeGameKey(event);
         worldRef.current?.setRightFlipper(constants.DEFAULT_RIGHT_ANGLE);
       }
     };
@@ -243,12 +264,18 @@ export default function Pinball() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [flipperPower, tilt, tryNudge, handleLaunch]);
+  }, [flipperPower, tilt, tryNudge, handleLaunch, isFocused]);
 
   useEffect(() => {
     let frame = 0;
     let lastPressed = false;
     const poll = () => {
+      if (!isFocused || paused || tilt || gameOver) {
+        lastPressed = false;
+        frame = requestAnimationFrame(poll);
+        return;
+      }
+
       const gp = navigator.getGamepads ? navigator.getGamepads()[0] : null;
       if (gp) {
         const pressed = gp.buttons[5]?.pressed || gp.axes[1] < -0.8;
@@ -261,13 +288,13 @@ export default function Pinball() {
     };
     frame = requestAnimationFrame(poll);
     return () => cancelAnimationFrame(frame);
-  }, [tryNudge]);
+  }, [gameOver, isFocused, paused, tilt, tryNudge]);
 
   useGameLoop(
     (delta) => {
       worldRef.current?.step(delta);
     },
-    ready && !paused && !gameOver,
+    ready && !paused && !gameOver && isFocused,
   );
 
   const resetGame = useCallback(() => {
@@ -508,6 +535,7 @@ export default function Pinball() {
           {!gameOver && !tilt && (
             <div className="mt-2 rounded bg-[color-mix(in_srgb,var(--kali-overlay)_78%,transparent)] px-2 py-1 text-xs uppercase tracking-wide text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
               Space to launch • N / RB to nudge
+              {!isFocused && ready ? " • Click the Pinball window to control it." : ""}
             </div>
           )}
         </div>
