@@ -34,6 +34,33 @@ type PlayerState = {
   lastShots: number[];
 };
 
+type SerializedPlayerState = {
+  board: Array<'ship' | 'hit' | 'miss' | null>;
+  ships: Array<{ id: number; name: string; x: number; y: number; dir: Direction; len: number; cells: number[] }>;
+  sunkIds: number[];
+  lastShots: number[];
+};
+
+type BattleshipSession = {
+  v: 1;
+  savedAt: number;
+  phase: 'placement' | 'battle';
+  mode: BattleMode;
+  difficulty: 'easy' | 'medium' | 'hard';
+  noTouch: boolean;
+  salvo: boolean;
+  fog: boolean;
+  colorblind: boolean;
+  showGuessHeat: boolean;
+  showAiHeat: boolean;
+  players: [SerializedPlayerState, SerializedPlayerState];
+  activePlayer: number;
+  placementPlayer: number;
+  turnCount: number;
+  cursor: number;
+  placementCursor: number;
+};
+
 const SHIP_DEFS = [
   { id: 0, name: 'Carrier', len: 5 },
   { id: 1, name: 'Battleship', len: 4 },
@@ -118,6 +145,80 @@ const getDefaultStats = () => ({
   player2Wins: 0,
 });
 
+const isBoardCell = (cell: unknown): cell is 'ship' | 'hit' | 'miss' | null =>
+  cell === 'ship' || cell === 'hit' || cell === 'miss' || cell === null;
+
+const isValidIndex = (idx: unknown) =>
+  typeof idx === 'number' && Number.isInteger(idx) && idx >= 0 && idx < BOARD_SIZE * BOARD_SIZE;
+
+const isValidSerializedPlayer = (player: unknown): player is SerializedPlayerState => {
+  if (!player || typeof player !== 'object') return false;
+  const candidate = player as SerializedPlayerState;
+  if (!Array.isArray(candidate.board) || candidate.board.length !== BOARD_SIZE * BOARD_SIZE) return false;
+  if (!candidate.board.every(isBoardCell)) return false;
+  if (!Array.isArray(candidate.ships)) return false;
+  if (!Array.isArray(candidate.sunkIds) || !candidate.sunkIds.every((id) => typeof id === 'number')) return false;
+  if (!Array.isArray(candidate.lastShots) || !candidate.lastShots.every(isValidIndex)) return false;
+
+  return candidate.ships.every((ship) =>
+    typeof ship?.id === 'number'
+      && typeof ship?.name === 'string'
+      && typeof ship?.x === 'number'
+      && typeof ship?.y === 'number'
+      && (ship?.dir === 0 || ship?.dir === 1)
+      && typeof ship?.len === 'number'
+      && Array.isArray(ship?.cells)
+      && ship.cells.every(isValidIndex),
+  );
+};
+
+const isValidSession = (value: unknown): value is BattleshipSession => {
+  if (!value || typeof value !== 'object') return false;
+  const session = value as BattleshipSession;
+  return session.v === 1
+    && typeof session.savedAt === 'number'
+    && (session.phase === 'placement' || session.phase === 'battle')
+    && (session.mode === 'ai' || session.mode === 'hotseat')
+    && ['easy', 'medium', 'hard'].includes(session.difficulty)
+    && typeof session.noTouch === 'boolean'
+    && typeof session.salvo === 'boolean'
+    && typeof session.fog === 'boolean'
+    && typeof session.colorblind === 'boolean'
+    && typeof session.showGuessHeat === 'boolean'
+    && typeof session.showAiHeat === 'boolean'
+    && Array.isArray(session.players)
+    && session.players.length === 2
+    && session.players.every(isValidSerializedPlayer)
+    && (session.activePlayer === 0 || session.activePlayer === 1)
+    && (session.placementPlayer === 0 || session.placementPlayer === 1)
+    && Number.isInteger(session.turnCount)
+    && session.turnCount >= 0
+    && isValidIndex(session.cursor)
+    && isValidIndex(session.placementCursor);
+};
+
+const serializePlayer = (player: PlayerState): SerializedPlayerState => ({
+  board: player.board.slice(),
+  ships: player.ships.map((ship) => ({
+    id: ship.id,
+    name: ship.name,
+    x: ship.x,
+    y: ship.y,
+    dir: ship.dir,
+    len: ship.len,
+    cells: (ship.cells || []).slice(),
+  })),
+  sunkIds: Array.from(player.sunkIds),
+  lastShots: player.lastShots.slice(),
+});
+
+const deserializePlayer = (player: SerializedPlayerState): PlayerState => ({
+  board: player.board.slice(),
+  ships: player.ships.map((ship) => ({ ...ship, cells: ship.cells.slice() })),
+  sunkIds: new Set(player.sunkIds),
+  lastShots: player.lastShots.slice(),
+});
+
 export const useBattleshipGame = () => {
   const [difficulty, setDifficulty] = usePersistentState('battleship-difficulty', 'easy');
   const [noTouch, setNoTouch] = usePersistentState('battleship-no-touch', true);
@@ -135,6 +236,13 @@ export const useBattleshipGame = () => {
     lastResult: null,
     lastPlayed: null,
   });
+  const [, setSession] = usePersistentState<BattleshipSession | null>(
+    'battleship-session',
+    null,
+    (value): value is BattleshipSession | null => value === null || isValidSession(value),
+  );
+  const [savedSessionCandidate, setSavedSessionCandidate] = useState<BattleshipSession | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const { toast, message, announce, dismiss } = useBattleAnnouncements();
 
@@ -165,6 +273,7 @@ export const useBattleshipGame = () => {
   const shotIdRef = useRef(0);
   const shotTimers = useRef(new Map<number, number>());
   const aiTurnTimer = useRef<number | null>(null);
+  const hasBootstrapped = useRef(false);
 
   const enemyShipSet = useMemo(() => {
     const enemy = players[activePlayer === 0 ? 1 : 0];
@@ -304,12 +413,58 @@ export const useBattleshipGame = () => {
     setStats(getDefaultStats());
   }, [setStats]);
 
+  const configureAiFromBoards = useCallback(
+    (
+      modeValue: BattleMode,
+      diff: 'easy' | 'medium' | 'hard',
+      playerBoard: PlayerState['board'],
+      enemyBoard: PlayerState['board'],
+      seed: number,
+    ) => {
+      if (modeValue !== 'ai') {
+        aiRef.current = null;
+        playerAiRef.current = null;
+        setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+        setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+        return;
+      }
+
+      let aiInstance;
+      if (diff === 'hard') aiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 2) });
+      else if (diff === 'medium') aiInstance = new RandomSalvoAI({ rng: createRng(seed + 2) });
+      else aiInstance = new RandomAI({ rng: createRng(seed + 2) });
+
+      aiRef.current = aiInstance;
+      playerBoard.forEach((cell, idx) => {
+        if (cell === 'hit' || cell === 'miss') aiInstance.record(idx, cell === 'hit');
+      });
+      const aiHeatmap = readHeatmap(aiInstance);
+      if (aiHeatmap) {
+        aiInstance.nextMove();
+        setAiHeat(readHeatmap(aiInstance)?.slice() ?? Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+      } else {
+        setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+      }
+
+      const playerAiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 3) });
+      enemyBoard.forEach((cell, idx) => {
+        if (cell === 'hit' || cell === 'miss') playerAiInstance.record(idx, cell === 'hit');
+      });
+      playerAiInstance.nextMove();
+      playerAiRef.current = playerAiInstance;
+      setGuessHeat(playerAiInstance.getHeatmap().slice());
+    },
+    [noTouch],
+  );
+
   const restart = useCallback(
     (options?: { diff?: string; salvoMode?: boolean; modeOverride?: BattleMode }) => {
       const diff = options?.diff ?? difficulty;
       const salvoMode = options?.salvoMode ?? salvo;
-      const modeValue = options?.modeOverride ?? (mode as BattleMode);
+      const modeValue = (options?.modeOverride ?? mode) as BattleMode;
       const seed = Date.now();
+      setSavedSessionCandidate(null);
+      setSession(null);
       const playerLayout = decorateShips(randomizePlacement(noTouch, { maxAttempts: 50, seed }));
       const opponentLayout = decorateShips(
         randomizePlacement(noTouch, {
@@ -359,42 +514,125 @@ export const useBattleshipGame = () => {
         },
       ]);
 
-      if (modeValue === 'ai') {
-        let aiInstance;
-        if (diff === 'hard') aiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 2) });
-        else if (diff === 'medium') aiInstance = new RandomSalvoAI({ rng: createRng(seed + 2) });
-        else aiInstance = new RandomAI({ rng: createRng(seed + 2) });
-        aiRef.current = aiInstance;
-        const initialHeatmap = readHeatmap(aiInstance);
-        if (initialHeatmap) {
-          aiInstance.nextMove();
-          setAiHeat(readHeatmap(aiInstance)?.slice() ?? Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-        } else {
-          setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-        }
-        const playerAiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 3) });
-        playerAiInstance.nextMove();
-        playerAiRef.current = playerAiInstance;
-        setGuessHeat(playerAiInstance.getHeatmap().slice());
-      } else {
-        aiRef.current = null;
-        playerAiRef.current = null;
-        setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-        setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-      }
+      configureAiFromBoards(modeValue, diff as BattleshipSession['difficulty'], playerBoard, opponentBoard, seed);
 
       announce('info', 'Fresh deployment grid established.', 'Deployment Reset');
       setDifficulty(diff);
       setSalvo(salvoMode);
       setMode(modeValue);
     },
-    [announce, difficulty, mode, noTouch, salvo, setDifficulty, setMode, setSalvo],
+    [announce, configureAiFromBoards, difficulty, mode, noTouch, salvo, setDifficulty, setMode, setSalvo, setSession],
   );
 
-  useEffect(() => {
+  const resumeSavedSession = useCallback(() => {
+    const activeSession = savedSessionCandidate;
+    if (!activeSession) return;
+    const restoredPlayers: [PlayerState, PlayerState] = [
+      deserializePlayer(activeSession.players[0]),
+      deserializePlayer(activeSession.players[1]),
+    ];
+
+    setDifficulty(activeSession.difficulty);
+    setNoTouch(activeSession.noTouch);
+    setSalvo(activeSession.salvo);
+    setFog(activeSession.fog);
+    setColorblind(activeSession.colorblind);
+    setShowGuessHeat(activeSession.showGuessHeat);
+    setShowAiHeat(activeSession.showAiHeat);
+    setMode(activeSession.mode);
+
+    setPlayers(restoredPlayers);
+    setPhase(activeSession.phase);
+    setActivePlayer(activeSession.activePlayer);
+    setPlacementPlayer(activeSession.placementPlayer);
+    setTurnCount(activeSession.turnCount);
+    setCursor(activeSession.cursor);
+    setPlacementCursor(activeSession.placementCursor);
+    setSelectedTargets([]);
+    setModal(null);
+    setPassScreen(activeSession.mode === 'hotseat');
+    setDragHint(null);
+    setHoverPreview(null);
+    setShotEffects([]);
+
+    configureAiFromBoards(
+      activeSession.mode,
+      activeSession.difficulty,
+      restoredPlayers[0].board,
+      restoredPlayers[1].board,
+      activeSession.savedAt,
+    );
+
+    setSavedSessionCandidate(null);
+    announce('info', 'Recovered last session. Continue the engagement.', 'Session Restored');
+  }, [announce, configureAiFromBoards, savedSessionCandidate, setColorblind, setDifficulty, setFog, setMode, setNoTouch, setSalvo, setShowAiHeat, setShowGuessHeat]);
+
+  const discardSavedSessionAndRestart = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('battleship-session-skip-resume', '1');
+    }
+    setSavedSessionCandidate(null);
+    setSession(null);
     restart();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [restart, setSession]);
+
+  useEffect(() => {
+    if (hasBootstrapped.current || typeof window === 'undefined') return;
+    hasBootstrapped.current = true;
+    try {
+      const skipResume = window.localStorage.getItem('battleship-session-skip-resume') === '1';
+      if (skipResume) {
+        window.localStorage.removeItem('battleship-session-skip-resume');
+        restart();
+        setInitialized(true);
+        return;
+      }
+      const raw = window.localStorage.getItem('battleship-session');
+      if (!raw) {
+        restart();
+        setInitialized(true);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (isValidSession(parsed)) {
+        setSavedSessionCandidate(parsed);
+      } else {
+        window.localStorage.removeItem('battleship-session');
+        restart();
+      }
+    } catch {
+      restart();
+    }
+    setInitialized(true);
+  }, [restart]);
+
+  useEffect(() => {
+    if (!initialized || savedSessionCandidate) return;
+    if (phase === 'done') {
+      setSession(null);
+      return;
+    }
+    if (phase !== 'placement' && phase !== 'battle') return;
+    setSession({
+      v: 1,
+      savedAt: Date.now(),
+      phase,
+      mode: mode as BattleMode,
+      difficulty: difficulty as BattleshipSession['difficulty'],
+      noTouch,
+      salvo,
+      fog,
+      colorblind,
+      showGuessHeat,
+      showAiHeat,
+      players: [serializePlayer(players[0]), serializePlayer(players[1])],
+      activePlayer,
+      placementPlayer,
+      turnCount,
+      cursor,
+      placementCursor,
+    });
+  }, [activePlayer, colorblind, cursor, difficulty, fog, initialized, mode, noTouch, phase, placementCursor, placementPlayer, players, salvo, savedSessionCandidate, setSession, showAiHeat, showGuessHeat, turnCount]);
 
   useEffect(
     () => () => {
@@ -547,6 +785,7 @@ export const useBattleshipGame = () => {
       const isPlayerOne = winnerIndex === 0;
       const opponentIndex = winnerIndex === 0 ? 1 : 0;
       const winnerLabel = mode === 'hotseat' ? `Player ${winnerIndex + 1}` : 'Commander';
+      setSession(null);
       setPhase('done');
       setModal(isPlayerOne ? 'victory' : mode === 'hotseat' ? 'victory' : 'defeat');
 
@@ -586,7 +825,7 @@ export const useBattleshipGame = () => {
         isPlayerOne ? 'Victory' : 'Defeat',
       );
     },
-    [announce, mode, setBattleLog, setStats, turnCount, updatePlayerState],
+    [announce, mode, setBattleLog, setSession, setStats, turnCount, updatePlayerState],
   );
 
   const handleHotseatTurnEnd = useCallback(() => {
@@ -804,6 +1043,15 @@ export const useBattleshipGame = () => {
     }));
   }, [opponentState]);
 
+  const savedSessionMeta = useMemo(
+    () => (savedSessionCandidate ? {
+      savedAt: savedSessionCandidate.savedAt,
+      phase: savedSessionCandidate.phase,
+      mode: savedSessionCandidate.mode,
+    } : null),
+    [savedSessionCandidate],
+  );
+
   return {
     settings: {
       difficulty,
@@ -827,6 +1075,9 @@ export const useBattleshipGame = () => {
     setStats,
     resetStats,
     battleLog,
+    savedSessionMeta,
+    resumeSavedSession,
+    discardSavedSessionAndRestart,
     toast,
     message,
     dismissToast: dismiss,
