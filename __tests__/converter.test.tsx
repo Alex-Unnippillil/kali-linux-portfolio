@@ -1,6 +1,7 @@
 import { convertUnit } from '../components/apps/converter/units';
 import { render, fireEvent, screen } from '@testing-library/react';
 import UnitConverter from '../components/apps/converter/UnitConverter';
+import Converter from '../components/apps/converter';
 
 describe('Unit conversion', () => {
   it('converts meters to kilometers', () => {
@@ -70,5 +71,28 @@ describe('UnitConverter UI', () => {
     expect(options).toEqual(
       expect.arrayContaining(['time', 'digital', 'area', 'volume']),
     );
+  });
+});
+
+describe('Converter shell', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('includes the new temperature tool tab', () => {
+    render(<Converter />);
+
+    expect(screen.getByRole('tab', { name: 'Temperature' })).toBeInTheDocument();
+  });
+
+  it('filters converter tools by search', () => {
+    render(<Converter />);
+
+    fireEvent.change(screen.getByLabelText('Search converter tools'), {
+      target: { value: 'checksum' },
+    });
+
+    expect(screen.getByRole('tab', { name: 'Hash' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Unit' })).not.toBeInTheDocument();
   });
 });
