@@ -19,8 +19,14 @@ const SerialTerminalApp: React.FC = () => {
   const supported = typeof navigator !== 'undefined' && 'serial' in navigator;
   const [port, setPort] = useState<SerialPort | null>(null);
   const [logs, setLogs] = useState('');
+  const [baudRate, setBaudRate] = useState(9600);
+  const [bytesReceived, setBytesReceived] = useState(0);
+  const [autoScroll, setAutoScroll] = useState(true);
   const [error, setError] = useState('');
   const readerRef = useRef<ReadableStreamDefaultReader<string> | null>(null);
+  const outputRef = useRef<HTMLPreElement | null>(null);
+
+  const maxLogChars = 8000;
 
   useEffect(() => {
     if (!supported) return;
@@ -46,7 +52,16 @@ const SerialTerminalApp: React.FC = () => {
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value) setLogs((l) => l + value);
+        if (value) {
+          setLogs((currentLogs) => {
+            const nextLogs = currentLogs + value;
+            if (nextLogs.length <= maxLogChars) {
+              return nextLogs;
+            }
+            return nextLogs.slice(nextLogs.length - maxLogChars);
+          });
+          setBytesReceived((currentCount) => currentCount + value.length);
+        }
       }
     } catch {
       // ignored
@@ -61,7 +76,7 @@ const SerialTerminalApp: React.FC = () => {
     setError('');
     try {
       const p = await (navigator as NavigatorSerial).serial.requestPort();
-      await p.open({ baudRate: 9600 });
+      await p.open({ baudRate });
       setPort(p);
       readLoop(p);
     } catch (err) {
@@ -87,9 +102,20 @@ const SerialTerminalApp: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (autoScroll && outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [logs, autoScroll]);
+
+  const clearOutput = () => {
+    setLogs('');
+    setBytesReceived(0);
+  };
+
   return (
     <div className="relative h-full w-full bg-black p-4 text-green-400 font-mono">
-      <div className="mb-4 flex gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         {!port ? (
           <button
             onClick={connect}
@@ -106,6 +132,42 @@ const SerialTerminalApp: React.FC = () => {
             Disconnect
           </button>
         )}
+        <button
+          onClick={clearOutput}
+          className="rounded bg-gray-800 px-2 py-1 text-white"
+        >
+          Clear Output
+        </button>
+        <label htmlFor="baudRate" className="text-xs text-green-200">
+          Baud
+        </label>
+        <select
+          id="baudRate"
+          value={baudRate}
+          onChange={(event) => setBaudRate(Number(event.target.value))}
+          disabled={Boolean(port)}
+          className="rounded border border-green-700 bg-black px-2 py-1 text-xs text-green-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {[9600, 19200, 38400, 57600, 115200].map((rate) => (
+            <option key={rate} value={rate}>
+              {rate}
+            </option>
+          ))}
+        </select>
+        <label className="ml-1 inline-flex items-center gap-1 text-xs text-green-200">
+          <input
+            type="checkbox"
+            aria-label="Auto-scroll output"
+            checked={autoScroll}
+            onChange={(event) => setAutoScroll(event.target.checked)}
+          />
+          Auto-scroll
+        </label>
+      </div>
+      <div className="mb-2 flex flex-wrap items-center gap-3 text-xs text-green-300">
+        <span>Status: {port ? 'Connected' : 'Disconnected'}</span>
+        <span>Baud: {baudRate}</span>
+        <span>Bytes received: {bytesReceived}</span>
       </div>
       {!supported && (
         <p className="mb-2 text-sm text-yellow-400">
@@ -113,7 +175,10 @@ const SerialTerminalApp: React.FC = () => {
         </p>
       )}
       {error && <FormError className="mb-2 mt-0">{error}</FormError>}
-      <pre className="h-[calc(100%-4rem)] overflow-auto whitespace-pre-wrap break-words">
+      <pre
+        ref={outputRef}
+        className="h-[calc(100%-7rem)] overflow-auto whitespace-pre-wrap break-words rounded border border-green-900/70 bg-black/80 p-2"
+      >
         {logs || 'No data'}
       </pre>
     </div>
@@ -122,4 +187,3 @@ const SerialTerminalApp: React.FC = () => {
 
 export default SerialTerminalApp;
 export const displaySerialTerminal = () => <SerialTerminalApp />;
-
