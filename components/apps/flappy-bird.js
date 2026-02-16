@@ -6,6 +6,7 @@ import useCanvasResize from '../../hooks/useCanvasResize';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import useIsTouchDevice from '../../hooks/useIsTouchDevice';
 import useAssetLoader from '../../hooks/useAssetLoader';
+import useGameAudio from '../../hooks/useGameAudio';
 import {
   BIRD_SKINS,
   BIRD_ANIMATION_FRAMES,
@@ -38,6 +39,7 @@ const SETTINGS_DEFAULTS = {
   reducedMotion: false,
   highHz: false,
   showHitbox: false,
+  sfxEnabled: true,
 };
 
 const buildScoreEntries = (scores) =>
@@ -77,6 +79,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
     reducedMotion: readBoolean(STORAGE_KEYS.reducedMotion, prefersReducedMotion),
     highHz: readBoolean(STORAGE_KEYS.highHz, SETTINGS_DEFAULTS.highHz),
     showHitbox: readBoolean(STORAGE_KEYS.hitbox, SETTINGS_DEFAULTS.showHitbox),
+    sfxEnabled: readBoolean(STORAGE_KEYS.sfx, SETTINGS_DEFAULTS.sfxEnabled),
   }));
   const settingsRef = useRef(settings);
 
@@ -97,6 +100,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
     flap: 'Space',
     pause: 'Escape',
   });
+  const { playTone } = useGameAudio();
 
   const { loading: assetsLoading, error: assetsError } = useAssetLoader({
     images: BIRD_ANIMATION_FRAMES.flat(),
@@ -201,6 +205,10 @@ const FlappyBird = ({ windowMeta } = {}) => {
   useEffect(() => {
     writeValue(STORAGE_KEYS.hitbox, settings.showHitbox ? '1' : '0');
   }, [settings.showHitbox]);
+
+  useEffect(() => {
+    writeValue(STORAGE_KEYS.sfx, settings.sfxEnabled ? '1' : '0');
+  }, [settings.sfxEnabled]);
 
   useEffect(() => {
     migrateLegacyFlappyRecords(GRAVITY_VARIANTS.map((variant) => variant.name));
@@ -344,6 +352,62 @@ const FlappyBird = ({ windowMeta } = {}) => {
 
   const assetsBlocked = !isTestEnv && (assetsLoading || assetsError);
 
+  const playFlappySfx = useCallback(
+    (kind) => {
+      if (!settingsRef.current.sfxEnabled || !isWindowFocused || isPaused || gameState === 'menu') {
+        return;
+      }
+
+      if (kind === 'flap') {
+        setTimeout(() => {
+          playTone(880, {
+            duration: 0.04,
+            volume: 0.12,
+            type: 'triangle',
+            attack: 0.005,
+            release: 0.03,
+          });
+        }, 0);
+        return;
+      }
+
+      if (kind === 'score') {
+        playTone(1046, { duration: 0.06, volume: 0.14, type: 'sine', attack: 0.004, release: 0.04 });
+        return;
+      }
+
+      if (kind === 'crash') {
+        playTone(200, {
+          duration: 0.12,
+          volume: 0.18,
+          type: 'sawtooth',
+          attack: 0.005,
+          release: 0.07,
+        });
+        return;
+      }
+
+      if (kind === 'gameOver') {
+        playTone(440, { duration: 0.07, volume: 0.13, type: 'triangle', attack: 0.005, release: 0.05 });
+        setTimeout(() => {
+          playTone(330, {
+            duration: 0.09,
+            volume: 0.14,
+            type: 'triangle',
+            attack: 0.005,
+            release: 0.06,
+          });
+        }, 120);
+        return;
+      }
+
+      if (kind === 'milestone') {
+        playTone(1320, { duration: 0.05, volume: 0.12, type: 'sine', attack: 0.004, release: 0.03 });
+      }
+    },
+    [gameState, isPaused, isWindowFocused, playTone],
+  );
+
   const handleFlapAction = useCallback(() => {
     if (!isWindowFocused || assetsBlocked) return;
     if (gameState === 'menu') {
@@ -360,7 +424,8 @@ const FlappyBird = ({ windowMeta } = {}) => {
     }
     if (isPaused) return;
     engineRef.current?.flap();
-  }, [assetsBlocked, enterReady, gameState, isPaused, isWindowFocused, startGame]);
+    playFlappySfx('flap');
+  }, [assetsBlocked, enterReady, gameState, isPaused, isWindowFocused, playFlappySfx, startGame]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
@@ -440,6 +505,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
         const result = engine.step();
         renderer.update(settingsRef.current.reducedMotion);
         if (result?.scored) {
+          playFlappySfx('score');
           setScore(engine.state.score);
           announce(`Score: ${engine.state.score}`);
           setScoreFlash(true);
@@ -449,6 +515,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
           }, 300);
         }
         if (result?.milestone) {
+          playFlappySfx('milestone');
           const message = `Milestone! ${result.milestone} points`;
           setMilestoneMessage(message);
           if (milestoneTimeoutRef.current) {
@@ -460,9 +527,11 @@ const FlappyBird = ({ windowMeta } = {}) => {
           renderer.spawnParticles(engine.state.bird.x + 10, GAME_HEIGHT / 2, '#8ff7ff', 18, 3);
         }
         if (result?.crash) {
+          playFlappySfx('crash');
           renderer.spawnParticles(engine.state.bird.x, engine.state.bird.y, '#fbd34d', 24, 3);
         }
         if (result?.gameOver) {
+          playFlappySfx('gameOver');
           handleGameOver(result.gameOver);
           break;
         }
@@ -471,7 +540,7 @@ const FlappyBird = ({ windowMeta } = {}) => {
 
       renderer.render(ctx, engine.state, renderOptions);
     },
-    [announce, handleGameOver],
+    [announce, handleGameOver, playFlappySfx],
   );
 
   const shouldRunLoop =
@@ -645,6 +714,24 @@ const FlappyBird = ({ windowMeta } = {}) => {
               setSettings((prev) => ({
                 ...prev,
                 highHz: e.target.checked,
+              }))
+            }
+          />
+        </label>
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="font-semibold">Sound effects</span>
+            <span className="block text-xs text-white/60">Adds flap/score/crash audio cues.</span>
+          </span>
+          <input
+            type="checkbox"
+            className="h-4 w-4 rounded border-white/40 bg-white/80 text-sky-500 focus:ring-sky-400"
+            aria-label="Sound effects"
+            checked={settings.sfxEnabled}
+            onChange={(e) =>
+              setSettings((prev) => ({
+                ...prev,
+                sfxEnabled: e.target.checked,
               }))
             }
           />
