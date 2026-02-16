@@ -4,6 +4,7 @@ import useGameControls from './useGameControls';
 import usePersistentState from '../../hooks/usePersistentState';
 import { useSettings as useGlobalSettings } from '../../hooks/useSettings';
 import { SettingsProvider, useSettings as useGameSettings } from './GameSettingsContext';
+import { shouldHandleGameKey } from '../../utils/gameInput';
 import {
   createInitialState,
   DEFAULT_CONFIG,
@@ -23,13 +24,16 @@ const MAX_TRAIL = 2;
 const WIDTH = 600;
 const HEIGHT = 400;
 
-const PongInner = () => {
+const PongInner = ({ windowMeta }) => {
   const canvasRef = useCanvasResize(WIDTH, HEIGHT);
   const resetRef = useRef(null);
+  const rewindRef = useRef(null);
   const peerRef = useRef(null);
   const channelRef = useRef(null);
   const frameRef = useRef(0);
   const engineStateRef = useRef(null);
+  const stateHistoryRef = useRef([]);
+  const rallyRef = useRef(0);
 
   const [scores, setScores] = useState({ player: 0, opponent: 0 });
   const { difficulty, setDifficulty } = useGameSettings();
@@ -44,6 +48,7 @@ const PongInner = () => {
   const [paused, setPaused] = useState(false);
   const pausedRef = useRef(false);
   const [rally, setRally] = useState(0);
+  const [canRewind, setCanRewind] = useState(false);
   const { pongSpin } = useGlobalSettings();
   const [highScore, setHighScore] = usePersistentState(
     'pong_highscore',
@@ -51,7 +56,7 @@ const PongInner = () => {
     (v) => typeof v === 'number',
   );
   const [speedMultiplier, setSpeedMultiplier] = useState(1);
-  const [history, setHistory] = useState(() => {
+  const [matchHistory, setMatchHistory] = useState(() => {
     if (typeof window !== 'undefined') {
       try {
         return JSON.parse(localStorage.getItem('pongHistory')) || [];
@@ -65,6 +70,10 @@ const PongInner = () => {
   useEffect(() => {
     pausedRef.current = paused;
   }, [paused]);
+
+  useEffect(() => {
+    rallyRef.current = rally;
+  }, [rally]);
 
   useEffect(() => {
     if (rally > highScore) setHighScore(rally);
@@ -190,7 +199,10 @@ const PongInner = () => {
     setRally(0);
 
     const remoteKeys = { up: false, down: false, touchY: null };
-    const history = [];
+    const stateHistory = stateHistoryRef.current;
+    stateHistory.length = 0;
+    const rewindFrames = Math.round(2 * 60);
+    let canRewindNow = false;
     let animationId;
     let lastTime = performance.now();
     let accumulator = 0;
@@ -215,19 +227,44 @@ const PongInner = () => {
       setPaused(false);
       pausedRef.current = false;
       setRally(0);
+      rallyRef.current = 0;
+      stateHistory.length = 0;
+      setCanRewind(false);
     };
 
     const saveState = () => {
-      history[frameRef.current % 240] = {
+      stateHistory[frameRef.current % 240] = {
         frame: frameRef.current,
         state: cloneState(engineStateRef.current),
       };
     };
 
     const loadState = (frame) => {
-      const snap = history[frame % 240];
+      const snap = stateHistory[frame % 240];
       if (!snap || snap.frame !== frame) return false;
       engineStateRef.current = cloneState(snap.state);
+      return true;
+    };
+
+    const getCanRewind = (frames = rewindFrames) => {
+      const target = Math.max(0, frameRef.current - frames);
+      if (frameRef.current < frames) return false;
+      const snap = stateHistory[target % 240];
+      return Boolean(snap && snap.frame === target);
+    };
+
+    rewindRef.current = (seconds = 2) => {
+      const frames = Math.round(seconds * 60);
+      if (frameRef.current < frames) return false;
+      const target = Math.max(0, frameRef.current - frames);
+      if (!loadState(target)) return false;
+      frameRef.current = target;
+      ballTrail.length = 0;
+      setRally(engineStateRef.current.rally);
+      rallyRef.current = engineStateRef.current.rally;
+      const nextCanRewind = getCanRewind(frames);
+      canRewindNow = nextCanRewind;
+      setCanRewind(nextCanRewind);
       return true;
     };
 
@@ -291,7 +328,7 @@ const PongInner = () => {
               if (next.player >= 2 || next.opponent >= 2) {
                 const winner = playerWon ? 'Player' : 'Opponent';
                 setMatchWinner(winner);
-                setHistory((h) => {
+                setMatchHistory((h) => {
                   const newHist = [...h, { player: next.player, opponent: next.opponent, winner }];
                   try {
                     localStorage.setItem('pongHistory', JSON.stringify(newHist));
@@ -311,8 +348,9 @@ const PongInner = () => {
         }
       });
 
-      if (state.rally !== rally) {
+      if (state.rally !== rallyRef.current) {
         setRally(state.rally);
+        rallyRef.current = state.rally;
       }
     };
 
@@ -355,6 +393,11 @@ const PongInner = () => {
         while (ballTrail.length > maxTrail) ballTrail.shift();
       }
       saveState();
+      const nextCanRewind = getCanRewind();
+      if (nextCanRewind !== canRewindNow) {
+        canRewindNow = nextCanRewind;
+        setCanRewind(nextCanRewind);
+      }
       handleEvents(events);
     };
 
@@ -402,11 +445,13 @@ const PongInner = () => {
     }
 
     resetEngine(engineStateRef.current, undefined, config);
+    saveState();
     lastTime = performance.now();
     loop();
 
     return () => {
       cancelAnimationFrame(animationId);
+      rewindRef.current = null;
       if (motionQuery.removeEventListener) {
         motionQuery.removeEventListener('change', handleMotionChange);
       } else if (motionQuery.removeListener) {
@@ -423,8 +468,21 @@ const PongInner = () => {
     playSound,
     pongSpin,
     speedMultiplier,
-    rally,
   ]);
+
+  useEffect(() => {
+    if (mode !== 'practice') return undefined;
+    const handleRewind = (e) => {
+      if (!shouldHandleGameKey(e, { isFocused: windowMeta?.isFocused ?? true })) return;
+      if (e.repeat) return;
+      if (e.key.toLowerCase() !== 'r') return;
+      rewindRef.current?.(2);
+    };
+    window.addEventListener('keydown', handleRewind);
+    return () => {
+      window.removeEventListener('keydown', handleRewind);
+    };
+  }, [mode, windowMeta?.isFocused]);
 
   const reset = useCallback(() => {
     if (resetRef.current) resetRef.current();
@@ -501,6 +559,7 @@ const PongInner = () => {
       <canvas
         ref={canvasRef}
         className="bg-black w-full h-full touch-none"
+        aria-label="Pong game board"
       />
       {mode === 'practice' ? (
         <div className="mt-2 font-mono text-center" aria-live="polite" role="status">
@@ -628,11 +687,21 @@ const PongInner = () => {
         >
           Reset
         </button>
+        {mode === 'practice' && (
+          <button
+            className="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => rewindRef.current?.(2)}
+            disabled={!canRewind}
+            aria-label="Rewind 2 seconds"
+          >
+            Rewind 2s
+          </button>
+        )}
       </div>
 
-      {history.length > 0 && (
+      {matchHistory.length > 0 && (
         <div className="mt-2 max-h-24 overflow-y-auto text-sm">
-          {history.map((h, i) => (
+          {matchHistory.map((h, i) => (
             <div key={i}>
               {h.player} - {h.opponent} ({h.winner})
             </div>
@@ -643,9 +712,9 @@ const PongInner = () => {
   );
 };
 
-const Pong = () => (
+const Pong = ({ windowMeta }) => (
   <SettingsProvider>
-    <PongInner />
+    <PongInner windowMeta={windowMeta} />
   </SettingsProvider>
 );
 
