@@ -23,6 +23,9 @@ import { generateBoard } from '../../games/minesweeper/generator';
  */
 
 const BASE_CELL_SIZE = 32;
+const LONG_PRESS_MS = 350;
+const MOVE_CANCEL_PX = 10;
+
 const DIFFICULTIES = {
   beginner: { label: 'Beginner', size: 8, mines: 10 },
   intermediate: { label: 'Intermediate', size: 16, mines: 40 },
@@ -186,8 +189,33 @@ const Minesweeper = () => {
   const leftDown = useRef(false);
   const rightDown = useRef(false);
   const chorded = useRef(false);
+  const touchRef = useRef({
+    pointerId: null,
+    startClientX: 0,
+    startClientY: 0,
+    startTime: 0,
+    cellX: 0,
+    cellY: 0,
+    timerId: null,
+    longPressFired: false,
+    moved: false,
+  });
   const flagAnim = useRef({});
   const [copyToast, setCopyToast] = useState('');
+
+  const clearTouchTimer = () => {
+    if (touchRef.current.timerId) {
+      window.clearTimeout(touchRef.current.timerId);
+      touchRef.current.timerId = null;
+    }
+  };
+
+  const resetTouchState = () => {
+    clearTouchTimer();
+    touchRef.current.pointerId = null;
+    touchRef.current.longPressFired = false;
+    touchRef.current.moved = false;
+  };
 
   const clampValue = (value, min, max) =>
     Math.min(max, Math.max(min, value));
@@ -202,7 +230,10 @@ const Minesweeper = () => {
 
   useEffect(() => {
     initWorker();
-    return () => workerRef.current?.terminate();
+    return () => {
+      clearTouchTimer();
+      workerRef.current?.terminate();
+    };
   }, []);
 
   useEffect(() => {
@@ -582,7 +613,7 @@ const Minesweeper = () => {
         window.removeEventListener('resize', handleResize);
       }
     };
-  }, [board, status, paused, showRisk, cursor, cursorVisible, canvasSize, effectiveSize]);
+  }, [board, status, paused, showRisk, riskMap, cursor, cursorVisible, canvasSize, effectiveSize]);
 
   useEffect(() => {
     if (!useQuestionMarks && board) {
@@ -969,22 +1000,46 @@ const Minesweeper = () => {
     checkAndHandleWin(updated);
   };
 
-  const handleMouseDown = (e) => {
-    canvasRef.current?.focus();
-    const rect = canvasRef.current.getBoundingClientRect();
+  const getCellFromClientPoint = (clientX, clientY) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
     const cellWidth = rect.width / effectiveSize;
     const cellHeight = rect.height / effectiveSize;
     const y = Math.min(
       effectiveSize - 1,
-      Math.max(0, Math.floor((e.clientX - rect.left) / cellWidth)),
+      Math.max(0, Math.floor((clientX - rect.left) / cellWidth)),
     );
     const x = Math.min(
       effectiveSize - 1,
-      Math.max(0, Math.floor((e.clientY - rect.top) / cellHeight)),
+      Math.max(0, Math.floor((clientY - rect.top) / cellHeight)),
     );
+    return { x, y };
+  };
+
+  const handlePointerDown = (e) => {
+    const { x, y } = getCellFromClientPoint(e.clientX, e.clientY);
+    canvasRef.current?.focus();
     setCursor({ x, y });
     setCursorVisible(true);
     setFacePressed(true);
+
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      canvasRef.current?.setPointerCapture?.(e.pointerId);
+      resetTouchState();
+      touchRef.current.pointerId = e.pointerId;
+      touchRef.current.startClientX = e.clientX;
+      touchRef.current.startClientY = e.clientY;
+      touchRef.current.startTime = Date.now();
+      touchRef.current.cellX = x;
+      touchRef.current.cellY = y;
+      touchRef.current.timerId = window.setTimeout(() => {
+        touchRef.current.longPressFired = true;
+        toggleFlag(touchRef.current.cellX, touchRef.current.cellY);
+      }, LONG_PRESS_MS);
+      return;
+    }
+
     if (e.button === 0) {
       leftDown.current = true;
     } else if (e.button === 2) {
@@ -995,20 +1050,22 @@ const Minesweeper = () => {
     }
   };
 
-  const handleMouseUp = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const cellWidth = rect.width / effectiveSize;
-    const cellHeight = rect.height / effectiveSize;
-    const y = Math.min(
-      effectiveSize - 1,
-      Math.max(0, Math.floor((e.clientX - rect.left) / cellWidth)),
-    );
-    const x = Math.min(
-      effectiveSize - 1,
-      Math.max(0, Math.floor((e.clientY - rect.top) / cellHeight)),
-    );
+  const handlePointerUp = (e) => {
+    const { x, y } = getCellFromClientPoint(e.clientX, e.clientY);
     setCursor({ x, y });
     setFacePressed(false);
+
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      if (touchRef.current.pointerId !== e.pointerId) return;
+      const didLongPress = touchRef.current.longPressFired;
+      const moved = touchRef.current.moved;
+      resetTouchState();
+      if (!didLongPress && !moved) {
+        handleClick(x, y);
+      }
+      return;
+    }
+
     if (e.button === 0) {
       if (rightDown.current) {
         handleChord(x, y);
@@ -1031,27 +1088,48 @@ const Minesweeper = () => {
     if (!leftDown.current && !rightDown.current) chorded.current = false;
   };
 
-  const handleMouseMove = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const cellWidth = rect.width / effectiveSize;
-    const cellHeight = rect.height / effectiveSize;
-    const y = Math.min(
-      effectiveSize - 1,
-      Math.max(0, Math.floor((e.clientX - rect.left) / cellWidth)),
-    );
-    const x = Math.min(
-      effectiveSize - 1,
-      Math.max(0, Math.floor((e.clientY - rect.top) / cellHeight)),
-    );
+  const handlePointerMove = (e) => {
+    const { x, y } = getCellFromClientPoint(e.clientX, e.clientY);
     setCursor({ x, y });
     setCursorVisible(true);
+
+    if (
+      (e.pointerType === 'touch' || e.pointerType === 'pen') &&
+      touchRef.current.pointerId === e.pointerId &&
+      !touchRef.current.longPressFired
+    ) {
+      const dx = e.clientX - touchRef.current.startClientX;
+      const dy = e.clientY - touchRef.current.startClientY;
+      if (Math.hypot(dx, dy) > MOVE_CANCEL_PX) {
+        clearTouchTimer();
+        touchRef.current.moved = true;
+      }
+    }
   };
 
-  const handleMouseLeave = () => {
+  const handlePointerLeave = (e) => {
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      if (touchRef.current.pointerId === e.pointerId) {
+        resetTouchState();
+      }
+    }
     leftDown.current = false;
     rightDown.current = false;
     chorded.current = false;
     setCursorVisible(false);
+    setFacePressed(false);
+  };
+
+  const handlePointerCancel = (e) => {
+    if (
+      (e.pointerType === 'touch' || e.pointerType === 'pen') &&
+      touchRef.current.pointerId === e.pointerId
+    ) {
+      resetTouchState();
+    }
+    leftDown.current = false;
+    rightDown.current = false;
+    chorded.current = false;
     setFacePressed(false);
   };
 
@@ -1446,16 +1524,23 @@ const Minesweeper = () => {
                   ref={canvasRef}
                   width={canvasSize}
                   height={canvasSize}
-                  onMouseDown={handleMouseDown}
-                  onMouseUp={handleMouseUp}
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
+                  onPointerDown={handlePointerDown}
+                  onPointerUp={handlePointerUp}
+                  onPointerMove={handlePointerMove}
+                  onPointerLeave={handlePointerLeave}
+                  onPointerCancel={handlePointerCancel}
                   onContextMenu={handleContextMenu}
                   tabIndex={0}
                   onKeyDown={handleKeyDown}
                   aria-label="Minesweeper grid"
                   className="w-full max-w-[min(100%,520px)] rounded-xl bg-[color:var(--color-surface)] shadow-inner focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[color:var(--color-focus-ring)]"
-                  style={{ imageRendering: 'pixelated', aspectRatio: '1 / 1' }}
+                  style={{
+                    imageRendering: 'pixelated',
+                    aspectRatio: '1 / 1',
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    WebkitTouchCallout: 'none',
+                  }}
                 />
               </div>
               <p className="mt-4 text-center text-sm text-[color:var(--kali-text-muted)]">
@@ -1464,7 +1549,7 @@ const Minesweeper = () => {
                   : status === 'playing'
                   ? paused
                     ? 'Game paused.'
-                    : 'Sweep the field, flag suspected mines with right click or F.'
+                    : 'Sweep the field. Right click or F to flag. On touch, long press to flag.'
                   : status === 'won'
                   ? `Victory! 3BV ${bv} in ${timeDisplay}s.`
                   : `Boom! Game over. 3BV ${bv}.`}
