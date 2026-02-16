@@ -7,8 +7,10 @@ import useCanvasResize from '../../hooks/useCanvasResize';
 import BreakoutEditor from './breakoutEditor';
 import BreakoutLevels from './breakoutLevels';
 import usePersistedState from '../../hooks/usePersistedState';
+import useGameAudio from '../../hooks/useGameAudio';
 import useGameControls from './useGameControls';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import haptics from './Games/common/haptics';
 import { getMapping } from './Games/common/input-remap/useInputMapping';
 import { random, reset as resetRng } from '../../apps/games/rng';
 import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
@@ -253,6 +255,8 @@ export default function Breakout() {
   const particleRef = useRef([]);
   const flashRef = useRef(0);
   const replayInputRef = useRef(null);
+  const lastHapticAtRef = useRef(0);
+  const gameOverToneTimersRef = useRef([]);
   const recordedInputRef = useRef({
     inputX: 0,
     pointerX: null,
@@ -315,7 +319,19 @@ export default function Breakout() {
   const effectsRef = useRef(effectsEnabled);
   const prefersReducedMotion = usePrefersReducedMotion();
   const { record, registerReplay } = useInputRecorder();
+  const { playTone, muted, setMuted } = useGameAudio();
 
+  const updatePaddleWidth = useCallback(() => {
+    const stageIndex = Math.max(0, stageRef.current - 1);
+    const difficultyScale = difficultyRef.current === 'hard' ? 0.92 : 1;
+    const stageScale = 1 - Math.min(0.18, stageIndex * 0.03);
+    paddleWidthRef.current = BASE_PADDLE_WIDTH * difficultyScale * stageScale;
+    paddleRef.current.x = clamp(
+      paddleRef.current.x,
+      0,
+      WIDTH - paddleWidthRef.current,
+    );
+  }, []);
 
   useEffect(() => {
     highScoreRef.current = highScore;
@@ -366,16 +382,31 @@ export default function Breakout() {
     return BASE_SPEED * speedRef.current * getDifficultyRamp();
   }, [getDifficultyRamp]);
 
-  const updatePaddleWidth = useCallback(() => {
-    const stageIndex = Math.max(0, stageRef.current - 1);
-    const difficultyScale = difficultyRef.current === 'hard' ? 0.92 : 1;
-    const stageScale = 1 - Math.min(0.18, stageIndex * 0.03);
-    paddleWidthRef.current = BASE_PADDLE_WIDTH * difficultyScale * stageScale;
-    paddleRef.current.x = clamp(
-      paddleRef.current.x,
-      0,
-      WIDTH - paddleWidthRef.current,
-    );
+  const canVibrate = useCallback(() => {
+    const now = Date.now();
+    if (now - lastHapticAtRef.current <= 80) return false;
+    lastHapticAtRef.current = now;
+    return true;
+  }, []);
+
+  const playGameOverSequence = useCallback(() => {
+    playTone(300, { duration: 0.08, volume: 0.16, type: 'triangle' });
+    const second = window.setTimeout(() => {
+      playTone(240, { duration: 0.09, volume: 0.16, type: 'triangle' });
+    }, 110);
+    const third = window.setTimeout(() => {
+      playTone(180, { duration: 0.1, volume: 0.18, type: 'triangle' });
+    }, 240);
+    gameOverToneTimersRef.current.push(second, third);
+  }, [playTone]);
+
+  useEffect(() => {
+    return () => {
+      gameOverToneTimersRef.current.forEach((timerId) => {
+        window.clearTimeout(timerId);
+      });
+      gameOverToneTimersRef.current = [];
+    };
   }, []);
 
   const resetBalls = useCallback(() => {
@@ -433,8 +464,9 @@ export default function Breakout() {
       layout: selectionRef.current.layout,
       stageNumber: stageRef.current,
     });
+    playTone(520, { duration: 0.08, volume: 0.18, type: 'triangle' });
     announceEvent('Level cleared');
-  }, [announceEvent, startLevel]);
+  }, [announceEvent, playTone, startLevel]);
 
   const releaseBalls = useCallback(() => {
     const speed = getTargetSpeed();
@@ -449,9 +481,13 @@ export default function Breakout() {
 
   const loseLife = useCallback(() => {
     livesRef.current -= 1;
+    playTone(190, { duration: 0.1, volume: 0.18, type: 'sawtooth' });
+    haptics.danger();
     if (livesRef.current <= 0) {
       livesRef.current = 0;
       gameOverRef.current = true;
+      playGameOverSequence();
+      haptics.gameOver();
       announceEvent('Game over');
     } else {
       announceEvent('Life lost');
@@ -459,7 +495,7 @@ export default function Breakout() {
       resetBalls();
     }
     syncHud();
-  }, [announceEvent, resetBalls, syncHud]);
+  }, [announceEvent, playGameOverSequence, playTone, resetBalls, syncHud]);
 
   const handleRestart = useCallback((options = { resetRng: true }) => {
     if (options.resetRng) {
@@ -840,12 +876,30 @@ export default function Breakout() {
         announceEvent('Magnet catch');
       }
 
+      if (paddleHit) {
+        playTone(360, { duration: 0.03, volume: 0.12, type: 'square' });
+        if (canVibrate()) {
+          haptics.vibrate(10);
+        }
+      }
+
       if (hitBrickIndex !== null) {
         const brick = bricksRef.current[hitBrickIndex];
         if (brick?.alive) {
           brick.alive = false;
           bricksRemainingRef.current -= 1;
           spawnParticles(ball.x, ball.y, brick.type);
+          const brickToneByType = {
+            1: 420,
+            2: 520,
+            3: 620,
+          };
+          playTone(brickToneByType[brick.type] || 420, {
+            duration: 0.04,
+            volume: 0.14,
+            type: brick.type === 3 ? 'sawtooth' : 'triangle',
+          });
+          haptics.score();
 
           if (brick.type === 2 && ballsRef.current.length < MAX_BALLS) {
             const spawnAngle =
@@ -1011,6 +1065,8 @@ export default function Breakout() {
     prefersReducedMotion,
     record,
     showHitbox,
+    canVibrate,
+    playTone,
   ]);
 
   const settingsPanel = (
@@ -1062,6 +1118,17 @@ export default function Breakout() {
         />
         Effects
       </label>
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span>Sound</span>
+        <button
+          type="button"
+          onClick={() => setMuted(!muted)}
+          className="rounded bg-slate-700 px-2 py-1 text-white hover:bg-slate-600"
+          aria-label="Toggle sound"
+        >
+          {muted ? 'Muted' : 'On'}
+        </button>
+      </div>
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
