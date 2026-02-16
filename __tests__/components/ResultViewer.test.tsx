@@ -59,6 +59,38 @@ describe('ResultViewer', () => {
     jest.restoreAllMocks();
   });
 
+  it('starts in parsed mode when defaultTab is parsed', () => {
+    render(<ResultViewer data={[{ foo: 'alpha' }]} defaultTab="parsed" />);
+
+    expect(screen.getByRole('columnheader', { name: 'foo' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'alpha' })).toBeInTheDocument();
+  });
+
+  it('preloads defaultFilter and narrows rows', () => {
+    const data = [
+      { foo: 'keep-me' },
+      { foo: 'drop-me' },
+    ];
+
+    render(<ResultViewer data={data} defaultTab="parsed" defaultFilter="keep" />);
+
+    const filterInput = screen.getByLabelText(/filter rows/i) as HTMLInputElement;
+    expect(filterInput.value).toBe('keep');
+
+    const rows = screen.getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(1);
+    expect(within(rows[0]).getByRole('cell', { name: 'keep-me' })).toBeInTheDocument();
+  });
+
+  it('renders object values as JSON in parsed mode', () => {
+    const data = [{ foo: { nested: 'value' } }];
+
+    render(<ResultViewer data={data} defaultTab="parsed" />);
+
+    expect(screen.getByRole('cell', { name: '{"nested":"value"}' })).toBeInTheDocument();
+    expect(screen.queryByText('[object Object]')).not.toBeInTheDocument();
+  });
+
   it('renders headers and cells for keys discovered in later rows', () => {
     const data = [
       { foo: 'alpha', bar: 'beta' },
@@ -111,4 +143,3 @@ describe('ResultViewer', () => {
     }
   });
 });
-

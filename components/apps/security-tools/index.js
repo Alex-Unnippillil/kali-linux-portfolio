@@ -64,16 +64,18 @@ export default function SecurityTools() {
 
   // Global search results
   const lower = query.toLowerCase();
+  const mitreRows = mitre.tactics.flatMap((tactic) =>
+    tactic.techniques.map((technique) => ({
+      tacticId: tactic.id,
+      tacticName: tactic.name,
+      techniqueId: technique.id,
+      techniqueName: technique.name,
+    })),
+  );
   const suricataResults = lower ? suricata.filter(log => JSON.stringify(log).toLowerCase().includes(lower)) : [];
   const zeekResults = lower ? zeek.filter(log => JSON.stringify(log).toLowerCase().includes(lower)) : [];
   const sigmaResults = lower ? sigma.filter(rule => JSON.stringify(rule).toLowerCase().includes(lower)) : [];
-  const mitreResults = lower
-    ? mitre.tactics.flatMap(tac =>
-        tac.techniques
-          .filter(tech => `${tech.id} ${tech.name}`.toLowerCase().includes(lower))
-          .map(tech => ({ tactic: tac.name, ...tech }))
-      )
-    : [];
+  const mitreResults = lower ? mitreRows.filter((row) => JSON.stringify(row).toLowerCase().includes(lower)) : [];
   const yaraMatch = lower && sampleText.toLowerCase().includes(lower);
   const hasResults =
     suricataResults.length ||
@@ -142,46 +144,25 @@ export default function SecurityTools() {
               {suricataResults.length > 0 && (
                 <div className="mb-2">
                   <h3 className="text-sm font-bold">Suricata</h3>
-                  {suricataResults.map((log, i) => (
-                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1">
-                      {JSON.stringify(log, null, 2)}
-                    </pre>
-                  ))}
+                  <ResultViewer data={suricataResults} defaultTab="parsed" defaultFilter={query} />
                 </div>
               )}
               {zeekResults.length > 0 && (
                 <div className="mb-2">
                   <h3 className="text-sm font-bold">Zeek</h3>
-                  {zeekResults.map((log, i) => (
-                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1">
-                      {JSON.stringify(log, null, 2)}
-                    </pre>
-                  ))}
+                  <ResultViewer data={zeekResults} defaultTab="parsed" defaultFilter={query} />
                 </div>
               )}
               {sigmaResults.length > 0 && (
                 <div className="mb-2">
                   <h3 className="text-sm font-bold">Sigma</h3>
-                  {sigmaResults.map(rule => (
-                    <div key={rule.id} className="mb-2">
-                      <h4 className="font-bold">{rule.title}</h4>
-                      <pre className="overflow-x-auto overflow-y-hidden bg-black p-1">
-                        {JSON.stringify(rule, null, 2)}
-                      </pre>
-                    </div>
-                  ))}
+                  <ResultViewer data={sigmaResults} defaultTab="parsed" defaultFilter={query} />
                 </div>
               )}
               {mitreResults.length > 0 && (
                 <div className="mb-2">
                   <h3 className="text-sm font-bold">MITRE ATT&CK</h3>
-                  <ul className="list-disc list-inside">
-                    {mitreResults.map(tech => (
-                      <li key={tech.id}>
-                        {tech.id} - {tech.name} ({tech.tactic})
-                      </li>
-                    ))}
-                  </ul>
+                  <ResultViewer data={mitreResults} defaultTab="parsed" defaultFilter={query} />
                 </div>
               )}
               {yaraMatch && (
@@ -209,36 +190,21 @@ export default function SecurityTools() {
               {active === 'suricata' && (
                 <div>
                   <p className="text-xs mb-2">Sample Suricata alerts from local JSON fixture.</p>
-                  {suricata.map((log, i) => (
-                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
-                      {JSON.stringify(log, null, 2)}
-                    </pre>
-                  ))}
+                  <ResultViewer data={suricata} defaultTab="parsed" />
                 </div>
               )}
 
               {active === 'zeek' && (
                 <div>
                   <p className="text-xs mb-2">Sample Zeek logs from local JSON fixture.</p>
-                  {zeek.map((log, i) => (
-                    <pre key={i} className="mb-1 overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
-                      {JSON.stringify(log, null, 2)}
-                    </pre>
-                  ))}
+                  <ResultViewer data={zeek} defaultTab="parsed" />
                 </div>
               )}
 
               {active === 'sigma' && (
                 <div>
                   <p className="text-xs mb-2">Static Sigma rules loaded from fixture.</p>
-                  {sigma.map((rule) => (
-                    <div key={rule.id} className="mb-2">
-                      <h3 className="text-sm font-bold">{rule.title}</h3>
-                      <pre className="overflow-x-auto overflow-y-hidden bg-black p-1 text-xs">
-                        {JSON.stringify(rule, null, 2)}
-                      </pre>
-                    </div>
-                  ))}
+                  <ResultViewer data={sigma} defaultTab="parsed" />
                 </div>
               )}
 
@@ -266,16 +232,7 @@ export default function SecurityTools() {
               {active === 'mitre' && (
                 <div>
                   <p className="text-xs mb-2">Mini MITRE ATT&CK navigator from static data.</p>
-                  {mitre.tactics.map((tac) => (
-                    <div key={tac.id} className="mb-2">
-                      <h3 className="text-sm font-bold">{tac.name}</h3>
-                      <ul className="list-disc list-inside text-xs">
-                        {tac.techniques.map((tech) => (
-                          <li key={tech.id}>{tech.id} - {tech.name}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                  <ResultViewer data={mitreRows} defaultTab="parsed" />
                 </div>
               )}
 
