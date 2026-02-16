@@ -122,6 +122,8 @@ const SubnetCalculator = () => {
                 <Stat label="CIDR notation" value={`${ipAddress.trim()}/${result.data.cidr}`} />
                 <Stat label="Network address" value={result.data.network} />
                 <Stat label="Broadcast address" value={result.data.broadcast} />
+                <Stat label="Subnet mask" value={result.data.subnetMask} />
+                <Stat label="Wildcard mask" value={result.data.wildcardMask} />
               </dl>
             </div>
 
@@ -131,6 +133,15 @@ const SubnetCalculator = () => {
                 <Stat label="Usable host range" value={formatHostRange(result.data.hostRange)} />
                 <Stat label="Usable host count" value={result.data.usableHosts} />
                 <Stat label="Total addresses" value={result.data.totalAddresses} />
+              </dl>
+            </div>
+
+            <div className="space-y-4 md:col-span-2">
+              <h2 className="text-lg font-semibold text-kali-text">Address intelligence</h2>
+              <dl className="grid gap-4 lg:grid-cols-3">
+                <Stat label="Address class" value={result.data.addressClass} />
+                <Stat label="Address type" value={result.data.privateAddress ? 'Private RFC1918' : 'Public/other range'} />
+                <Stat label="IPv4 (binary)" value={result.data.binaryIp} />
               </dl>
             </div>
           </section>
