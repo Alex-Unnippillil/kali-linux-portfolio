@@ -18,10 +18,12 @@ import {
   findMatches,
   hasPossibleMoves,
   initialBoosters,
+  isCandyCrushSessionV1,
   isAdjacent,
   resolveBoard,
   scoreCascade,
   shuffleBoard,
+  syncCandyIdCounterFromBoard,
   swapCandies,
   useCandyCrushStats,
 } from './candy-crush-logic';
@@ -31,6 +33,7 @@ import { getAudioContext } from '../../utils/audio';
 const cellSize = 48;
 const gridGap = 8;
 const MOVES_PER_LEVEL = 24;
+const SESSION_KEY = 'candy-crush:session';
 
 const computeTargetScore = (level) => 750 + (level - 1) * 320;
 
@@ -241,6 +244,8 @@ const CandyCrush = () => {
   const [muted, setMuted] = usePersistentState('candy-crush:muted', false, isBoolean);
   const [activeIndex, setActiveIndex] = useState(0);
   const [hintMove, setHintMove] = useState(null);
+  const [sessionHydrated, setSessionHydrated] = useState(false);
+  const [sessionSavedAt, setSessionSavedAt] = useState(null);
 
   const playTone = useCallback(
     (frequency, duration = 0.35) => {
@@ -299,6 +304,94 @@ const CandyCrush = () => {
     },
     [],
   );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      setSessionHydrated(true);
+      return;
+    }
+
+    const raw = window.localStorage.getItem(SESSION_KEY);
+    if (!raw) {
+      setSessionHydrated(true);
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (isCandyCrushSessionV1(parsed)) {
+        syncCandyIdCounterFromBoard(parsed.board);
+        setBoard(parsed.board);
+        setScore(parsed.score);
+        setStreak(parsed.streak);
+        setMoves(parsed.moves);
+        setMovesLeft(parsed.movesLeft);
+        setLevel(parsed.level);
+        setTargetScore(parsed.targetScore || computeTargetScore(parsed.level));
+        setBoosters(parsed.boosters ?? { ...initialBoosters });
+        setPaused(parsed.paused);
+        setLevelComplete(parsed.levelComplete);
+        setLevelFailed(parsed.levelFailed);
+        setShowEndScreen(parsed.showEndScreen);
+        setActiveIndex(parsed.activeIndex ?? 0);
+        setSelected(null);
+        setHintMove(null);
+        setSessionSavedAt(parsed.savedAt);
+        if (hintTimeout.current) {
+          window.clearTimeout(hintTimeout.current);
+          hintTimeout.current = null;
+        }
+        started.current = parsed.started;
+        cascadeSource.current = parsed.cascadeSource;
+      }
+    } catch (error) {
+      // Ignore invalid/corrupt session payloads.
+    }
+
+    setSessionHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!sessionHydrated || typeof window === 'undefined') return;
+
+    const session = {
+      schemaVersion: 1,
+      savedAt: Date.now(),
+      board,
+      score,
+      streak,
+      moves,
+      movesLeft,
+      level,
+      targetScore,
+      boosters,
+      paused,
+      levelComplete,
+      levelFailed,
+      showEndScreen,
+      activeIndex,
+      started: started.current,
+      cascadeSource: cascadeSource.current,
+    };
+
+    window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    setSessionSavedAt(session.savedAt);
+  }, [
+    activeIndex,
+    board,
+    boosters,
+    level,
+    levelComplete,
+    levelFailed,
+    moves,
+    movesLeft,
+    paused,
+    score,
+    sessionHydrated,
+    showEndScreen,
+    streak,
+    targetScore,
+  ]);
 
   const stats = useMemo(
     () => [
@@ -841,6 +934,11 @@ const CandyCrush = () => {
                 {lastCascade.chain > 1 ? ` (x${lastCascade.chain})` : ''}.
               </p>
             )}
+            {sessionHydrated && (
+              <p className="mt-2 text-xs uppercase tracking-[0.2em] text-cyan-400/70">
+                Auto-save: ON{sessionSavedAt ? ` • ${new Date(sessionSavedAt).toLocaleTimeString()}` : ''}
+              </p>
+            )}
             <div className="mt-4 space-y-3">
               <div>
                 <div className="flex items-center justify-between text-[0.6rem] uppercase tracking-[0.3em] text-cyan-400/70">
@@ -993,7 +1091,6 @@ const CandyCrush = () => {
                           setActiveIndex(index);
                           handleCellClick(index);
                         }}
-                        aria-pressed={selected === index}
                         aria-label={`${gem.label} gem at row ${row}, column ${col}`}
                         whileHover={{ scale: isDisabled ? 1 : 1.05 }}
                         whileTap={{ scale: isDisabled ? 1 : 0.92 }}

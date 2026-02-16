@@ -11,6 +11,29 @@ export interface CandyCell {
   gem: string;
 }
 
+export interface CandyCrushSessionV1 {
+  schemaVersion: 1;
+  savedAt: number;
+  board: CandyCell[];
+  score: number;
+  streak: number;
+  moves: number;
+  movesLeft: number;
+  level: number;
+  targetScore: number;
+  boosters: {
+    shuffle: number;
+    colorBomb: number;
+  };
+  paused: boolean;
+  levelComplete: boolean;
+  levelFailed: boolean;
+  showEndScreen: boolean;
+  activeIndex: number;
+  started: boolean;
+  cascadeSource: 'auto' | 'player';
+}
+
 export interface ResolveResult {
   board: CandyCell[];
   cascades: Cascade[];
@@ -31,7 +54,63 @@ const isNonNegativeNumber = (value: unknown): value is number =>
 const isGemId = (value: unknown): value is GemId =>
   typeof value === 'string' && DEFAULT_POOL.includes(value as GemId);
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
+
+const isCandyCell = (value: unknown): value is CandyCell => {
+  if (!isObject(value)) return false;
+  return isNonEmptyString(value.id) && isGemId(value.gem);
+};
+
+export const isCandyCrushSessionV1 = (value: unknown): value is CandyCrushSessionV1 => {
+  if (!isObject(value)) return false;
+  if (value.schemaVersion !== 1) return false;
+  if (!isNonNegativeNumber(value.savedAt)) return false;
+  if (!isNonNegativeNumber(value.score)) return false;
+  if (!isNonNegativeNumber(value.streak)) return false;
+  if (!isNonNegativeNumber(value.moves)) return false;
+  if (!isNonNegativeNumber(value.movesLeft)) return false;
+  if (!isNonNegativeNumber(value.level)) return false;
+  if (!isNonNegativeNumber(value.targetScore)) return false;
+  if (!isBoolean(value.paused)) return false;
+  if (!isBoolean(value.levelComplete)) return false;
+  if (!isBoolean(value.levelFailed)) return false;
+  if (!isBoolean(value.showEndScreen)) return false;
+  if (!isNonNegativeNumber(value.activeIndex)) return false;
+  if (value.activeIndex >= BOARD_WIDTH * BOARD_WIDTH) return false;
+  if (!isBoolean(value.started)) return false;
+  if (value.cascadeSource !== 'auto' && value.cascadeSource !== 'player') return false;
+
+  if (!Array.isArray(value.board) || value.board.length !== BOARD_WIDTH * BOARD_WIDTH) {
+    return false;
+  }
+  if (!value.board.every(isCandyCell)) {
+    return false;
+  }
+
+  if (!isObject(value.boosters)) return false;
+  if (!isNonNegativeNumber(value.boosters.shuffle)) return false;
+  if (!isNonNegativeNumber(value.boosters.colorBomb)) return false;
+
+  return true;
+};
+
 let candyIdCounter = 0;
+
+export const syncCandyIdCounterFromBoard = (board: readonly CandyCell[]) => {
+  const maxSuffix = board.reduce((max, cell) => {
+    if (!isNonEmptyString(cell?.id)) return max;
+    const match = cell.id.match(/(\d+)$/);
+    if (!match) return max;
+    const parsed = Number.parseInt(match[1], 10);
+    if (!Number.isFinite(parsed)) return max;
+    return parsed > max ? parsed : max;
+  }, 0);
+
+  candyIdCounter = Math.max(candyIdCounter, maxSuffix);
+};
 
 const nextCandyId = () => {
   candyIdCounter += 1;
