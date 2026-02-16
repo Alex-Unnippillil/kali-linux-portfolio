@@ -22,6 +22,7 @@ import {
 } from './engine';
 
 const CELL = 32;
+const SWIPE_THRESHOLD = 20;
 
 const LEVEL_THUMB_CELL = 8;
 
@@ -223,6 +224,8 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
   const indexRef = useRef(index);
   const packsRef = useRef(packs);
   const warnDirRef = useRef<DirectionKey | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const suppressClickRef = useRef(false);
   const autoplayRef = useRef<{
     mode: 'walk' | 'solve';
     moves: DirectionKey[];
@@ -250,6 +253,22 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
     if (typeof window === 'undefined') return;
     prefersReducedMotion.current =
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+  }, []);
+
+  const [isTouchLike, setIsTouchLike] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const media = window.matchMedia?.('(pointer: coarse)');
+    const updateTouchLike = () => {
+      const hasTouch = (navigator?.maxTouchPoints ?? 0) > 0;
+      setIsTouchLike(Boolean(media?.matches || hasTouch));
+    };
+    updateTouchLike();
+    if (!media) return;
+    const listener = () => updateTouchLike();
+    media.addEventListener?.('change', listener);
+    return () => media.removeEventListener?.('change', listener);
   }, []);
 
   const clearAutoplay = useCallback(() => {
@@ -436,6 +455,23 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
       applyNextState(current, nextState);
     },
     [applyNextState]
+  );
+
+  const getSwipeDirection = useCallback((dx: number, dy: number): DirectionKey | null => {
+    if (Math.hypot(dx, dy) < SWIPE_THRESHOLD) return null;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx > 0 ? 'ArrowRight' : 'ArrowLeft';
+    }
+    return dy > 0 ? 'ArrowDown' : 'ArrowUp';
+  }, []);
+
+  const handleManualDirection = useCallback(
+    (dir: DirectionKey) => {
+      if (!isFocused || showLevels || showStats) return;
+      clearAutoplay();
+      handleDirectionalInput(dir);
+    },
+    [clearAutoplay, handleDirectionalInput, isFocused, showLevels, showStats]
   );
 
   const directionFromDelta = useCallback((dx: number, dy: number): DirectionKey | null => {
@@ -689,8 +725,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
       }
       if (!directionKeys.includes(e.key as DirectionKey)) return;
       consumeGameKey(e);
-      clearAutoplay();
-      handleDirectionalInput(e.key as DirectionKey);
+      handleManualDirection(e.key as DirectionKey);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -698,6 +733,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
     clearAutoplay,
     handleDirectionalInput,
     handleHint,
+    handleManualDirection,
     handlePreview,
     handleRedo,
     handleReset,
@@ -1000,11 +1036,40 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
                 height: baseBoardHeight,
                 transform: `scale(${boardScale})`,
                 transformOrigin: 'top left',
+                touchAction: 'none',
               }}
               ref={boardRef}
               tabIndex={0}
               onMouseLeave={() => setGhost(new Set())}
-              onPointerDown={() => boardRef.current?.focus()}
+              onPointerDown={(e) => {
+                boardRef.current?.focus();
+                swipeStartRef.current = {
+                  x: e.clientX,
+                  y: e.clientY,
+                  pointerId: e.pointerId,
+                };
+              }}
+              onPointerUp={(e) => {
+                if (!isFocused || showLevels || showStats) return;
+                const start = swipeStartRef.current;
+                swipeStartRef.current = null;
+                if (!start || start.pointerId !== e.pointerId) return;
+                const dir = getSwipeDirection(e.clientX - start.x, e.clientY - start.y);
+                if (!dir) return;
+                suppressClickRef.current = true;
+                handleManualDirection(dir);
+                window.setTimeout(() => {
+                  suppressClickRef.current = false;
+                }, 0);
+              }}
+              onPointerCancel={() => {
+                swipeStartRef.current = null;
+              }}
+              onClickCapture={(e) => {
+                if (!suppressClickRef.current) return;
+                e.preventDefault();
+                e.stopPropagation();
+              }}
             >
               {Array.from({ length: state.height }).map((_, y) =>
                 Array.from({ length: state.width }).map((_, x) => {
@@ -1097,6 +1162,48 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
           </div>
         </div>
       </div>
+      {isTouchLike && (
+        <div className="mx-auto flex w-full max-w-xs flex-col items-center gap-2">
+          <button
+            type="button"
+            aria-label="Move up"
+            onClick={() => handleManualDirection('ArrowUp')}
+            disabled={!isFocused || showLevels || showStats}
+            className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-4 py-2 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+          >
+            ↑
+          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              aria-label="Move left"
+              onClick={() => handleManualDirection('ArrowLeft')}
+              disabled={!isFocused || showLevels || showStats}
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-4 py-2 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+            >
+              ←
+            </button>
+            <button
+              type="button"
+              aria-label="Move down"
+              onClick={() => handleManualDirection('ArrowDown')}
+              disabled={!isFocused || showLevels || showStats}
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-4 py-2 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+            >
+              ↓
+            </button>
+            <button
+              type="button"
+              aria-label="Move right"
+              onClick={() => handleManualDirection('ArrowRight')}
+              disabled={!isFocused || showLevels || showStats}
+              className="rounded border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-control-overlay)] px-4 py-2 text-sm font-semibold text-[color:var(--kali-control)] shadow transition hover:bg-[color:var(--kali-control-surface)] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--kali-control)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-bg)]"
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap justify-center gap-3">
         <button
           type="button"
@@ -1145,6 +1252,7 @@ const Sokoban: React.FC<SokobanProps> = ({ getDailySeed, windowMeta }) => {
           <span>H: Hint</span>
           <span>P: Preview</span>
           <span>Esc: Cancel autoplay/solve</span>
+          <span>Mobile: Swipe the board or use the D-pad</span>
         </div>
       </details>
       {showStats && (
