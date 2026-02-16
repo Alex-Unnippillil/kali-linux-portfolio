@@ -227,6 +227,26 @@ const tileSymbols = {
   2048: '✦',
 };
 
+const shareTileEmojis = {
+  0: '⬛',
+  2: '🟫',
+  4: '🟧',
+  8: '🟥',
+  16: '🟪',
+  32: '🟦',
+  64: '🟩',
+  128: '🟨',
+  256: '⬜',
+  512: '⭐',
+  1024: '🌟',
+  2048: '💎',
+};
+
+const getShareEmojiForTile = (value) => {
+  if (!value) return shareTileEmojis[0];
+  return shareTileEmojis[value] || '🔥';
+};
+
 const validateBoard = (b) =>
   Array.isArray(b) &&
   b.length === SIZE &&
@@ -275,6 +295,7 @@ const Game2048 = ({ windowMeta } = {}) => {
   const [glowCells, setGlowCells] = useState(new Set());
   const [milestoneValue, setMilestoneValue] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState('');
   const focusPausedRef = useRef(false);
   const moveLock = useRef(false);
   const moveUnlockRef = useRef(null);
@@ -753,6 +774,66 @@ const Game2048 = ({ windowMeta } = {}) => {
   ]);
 
   useEffect(() => {
+    if (!shareFeedback) return;
+    const timeout = setTimeout(() => setShareFeedback(''), 1800);
+    return () => clearTimeout(timeout);
+  }, [shareFeedback]);
+
+  const copyShareText = useCallback(async (fullText) => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullText);
+        return true;
+      }
+    } catch {
+      // Ignore and try textarea fallback.
+    }
+
+    if (typeof document === 'undefined') return false;
+
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = fullText;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return copied;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const shareRun = useCallback(async () => {
+    const runSeed = seed || today;
+    const summary = `Score: ${score} | Moves: ${moves} | Best: ${highestTile}${hardMode ? ' | Hard mode' : ''}`;
+    const outcome = won ? 'Outcome: Won' : lost ? 'Outcome: Lost' : '';
+    const boardRows = board.map((row) => row.map((cell) => getShareEmojiForTile(cell)).join(''));
+    const lines = [`2048 Daily ${runSeed}`, summary];
+    if (outcome) lines.push(outcome);
+    lines.push(...boardRows);
+    const fullText = lines.join('\n');
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+
+    try {
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        await navigator.share({ text: fullText, url });
+        setShareFeedback('Shared');
+        return;
+      }
+    } catch {
+      // Fallback to clipboard.
+    }
+
+    const copied = await copyShareText(fullText);
+    if (copied) setShareFeedback('Copied');
+  }, [seed, today, score, moves, highestTile, hardMode, won, lost, board, copyShareText]);
+
+  useEffect(() => {
     const handler = (e) => {
       if (!shouldHandleGameKey(e, { isFocused })) return;
       if (e.key === 'u' || e.key === 'U' || e.key === 'Backspace') {
@@ -763,10 +844,14 @@ const Game2048 = ({ windowMeta } = {}) => {
         consumeGameKey(e);
         reset();
       }
+      if (e.key === 's' || e.key === 'S') {
+        consumeGameKey(e);
+        shareRun();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [undo, reset, isFocused]);
+  }, [undo, reset, shareRun, isFocused]);
 
   const sortedHistory = useMemo(
     () => [...scoreHistory].sort((a, b) => b.score - a.score),
@@ -812,6 +897,14 @@ const Game2048 = ({ windowMeta } = {}) => {
       </button>
       <button
         type="button"
+        onClick={shareRun}
+        aria-label="Share run"
+        className="rounded-xl bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 px-4 py-2 font-semibold text-slate-100 shadow-[0_12px_24px_rgba(15,23,42,0.45)] transition hover:from-slate-600 hover:to-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+      >
+        Share run
+      </button>
+      <button
+        type="button"
         onClick={() => setDemo((d) => !d)}
         aria-label={demo ? 'Stop autoplay demo' : 'Start autoplay demo'}
         className={`rounded-xl px-4 py-2 font-semibold shadow-[0_12px_24px_rgba(15,23,42,0.45)] transition focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${
@@ -825,6 +918,9 @@ const Game2048 = ({ windowMeta } = {}) => {
       <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-slate-800/60 px-3 py-1 text-xs uppercase tracking-wide text-slate-300 md:ml-auto">
         <span>Hint</span>
         <span className="text-base font-semibold text-slate-100">{hintLabel}</span>
+      </div>
+      <div className="min-h-[1.5rem] text-xs font-semibold text-cyan-200" aria-live="polite">
+        {shareFeedback}
       </div>
     </div>
   );
