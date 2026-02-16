@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import SimulationBanner from '../SimulationBanner';
 import SimulationReportExport from '../SimulationReportExport';
 import { recordSimulation } from '../../../utils/simulationLog';
@@ -12,6 +12,27 @@ import {
 import FormError from '../../ui/FormError';
 import StatsChart from '../../StatsChart';
 import johnPlaceholders from './placeholders';
+
+const guidedScenarios = [
+  {
+    id: 'raw-md5-success',
+    label: 'Raw-MD5 quick win',
+    hashes: [johnPlaceholders.hashedPasswords[0].hash],
+    wordlist: ['admin', 'letmein', 'password', 'welcome'],
+    ruleText: '',
+    mode: 'wordlist',
+    labResultId: 'raw-md5-success',
+  },
+  {
+    id: 'wordlist-exhausted',
+    label: 'Wordlist exhausted',
+    hashes: ['5baa61e4c9b93f3f0682250b6cf8331b7ee68fd8'],
+    wordlist: ['dragon', 'summer2024', 'passw0rd', 'welcome1'],
+    ruleText: '',
+    mode: 'wordlist',
+    labResultId: 'wordlist-exhausted',
+  },
+];
 
 // Enhanced John the Ripper interface that supports rule uploads,
 // basic hash analysis and mock distribution of cracking tasks.
@@ -38,10 +59,36 @@ const JohnApp = () => {
   const [potFilter, setPotFilter] = useState('');
   const [showHelp, setShowHelp] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [activeScenarioId, setActiveScenarioId] = useState(guidedScenarios[0].id);
+  const [toast, setToast] = useState('');
   const workerRef = useRef(null);
   const statsWorkerRef = useRef(null);
   const controllerRef = useRef(null);
   const startRef = useRef(0);
+  const outputRef = useRef(null);
+  const toastTimerRef = useRef(null);
+
+  const showToast = useCallback((message) => {
+    setToast(message);
+    if (typeof window !== 'undefined') {
+      window.clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setToast(''), 2000);
+    }
+  }, []);
+
+  const activeScenarioCard = useMemo(() => {
+    const activeScenario = guidedScenarios.find((scenario) => scenario.id === activeScenarioId);
+    if (activeScenario) {
+      return johnPlaceholders.labResults.find((entry) => entry.id === activeScenario.labResultId) || null;
+    }
+    if (output.includes('Raw-MD5')) {
+      return johnPlaceholders.labResults.find((entry) => entry.id === 'raw-md5-success') || null;
+    }
+    if (output.includes('Raw-SHA1')) {
+      return johnPlaceholders.labResults.find((entry) => entry.id === 'wordlist-exhausted') || null;
+    }
+    return null;
+  }, [activeScenarioId, output]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -67,6 +114,15 @@ const JohnApp = () => {
     () => () => {
       workerRef.current?.terminate();
       statsWorkerRef.current?.terminate();
+    },
+    []
+  );
+
+  useEffect(
+    () => () => {
+      if (typeof window !== 'undefined') {
+        window.clearTimeout(toastTimerRef.current);
+      }
     },
     []
   );
@@ -236,6 +292,95 @@ const JohnApp = () => {
     setHashTypes(arr.map((h) => identifyHashType(h)));
   };
 
+  const handleLoadScenario = () => {
+    const scenario = guidedScenarios.find((entry) => entry.id === activeScenarioId);
+    if (!scenario) return;
+    const nextRuleText = scenario.ruleText || '';
+    const parsedRules = parseRules(nextRuleText);
+    setHashes(scenario.hashes.join('\n'));
+    setHashTypes(scenario.hashes.map((h) => identifyHashType(h)));
+    setRuleText(nextRuleText);
+    setRules(parsedRules);
+    setMode('wordlist');
+    setWordlistFile(null);
+    setWordlistText(scenario.wordlist.join('\n'));
+    setEndpoints('');
+    const scenarioCard = johnPlaceholders.labResults.find((entry) => entry.id === scenario.labResultId);
+    setOutput(scenarioCard?.output || '');
+    setError('');
+    setProgress(0);
+    setPhase('wordlist');
+    setLoading(false);
+    setStats(null);
+    setCandidates([]);
+    recordSimulation({
+      tool: 'john',
+      title: 'Guided scenario loaded',
+      summary: scenario.label,
+      data: {
+        scenarioId: scenario.id,
+        hashes: scenario.hashes.length,
+        rules: parsedRules.length,
+        mode: scenario.mode,
+      },
+    });
+    showToast(`Loaded ${scenario.label}`);
+  };
+
+  const copyOutput = async () => {
+    if (!output.trim()) return;
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      showToast('Clipboard unavailable');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(output);
+      showToast('Output copied');
+    } catch (err) {
+      showToast('Copy failed');
+    }
+  };
+
+  const selectOutput = () => {
+    const el = outputRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    showToast('Output selected');
+  };
+
+  const downloadOutput = () => {
+    if (!output.trim() || typeof document === 'undefined') return;
+    const blob = new Blob([output], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'john-output.txt';
+    anchor.click();
+    URL.revokeObjectURL(url);
+    showToast('Output downloaded');
+  };
+
+  const clearOutput = () => {
+    setOutput('');
+    showToast('Output cleared');
+  };
+
+  const handleOutputKey = (e) => {
+    if (!e.ctrlKey) return;
+    if (e.key.toLowerCase() === 'a') {
+      e.preventDefault();
+      selectOutput();
+    }
+    if (e.key.toLowerCase() === 'c') {
+      e.preventDefault();
+      copyOutput();
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const hashArr = hashes.split(/\r?\n/).filter(Boolean);
@@ -326,12 +471,17 @@ const JohnApp = () => {
   );
 
   return (
-    <div className="h-full w-full flex flex-col bg-kali-surface text-kali-text">
+    <div className="relative h-full w-full flex flex-col bg-kali-surface text-kali-text">
       <SimulationBanner
         toolName="John the Ripper"
         message={johnPlaceholders.banners.desktop}
       />
       <div className="px-4 pt-4">
+        <div className="mb-4 rounded border border-kali-severity-medium/60 bg-kali-severity-medium/15 p-3">
+          <p className="text-xs font-semibold text-kali-text">
+            Educational use only. Do not attempt password cracking on accounts or systems without explicit permission.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => setShowHelp((prev) => !prev)}
@@ -358,6 +508,34 @@ const JohnApp = () => {
             </ul>
           </div>
         )}
+        <div className="mt-4 rounded border border-kali-border bg-kali-dark/60 p-3">
+          <p className="text-sm font-semibold text-kali-text">Guided scenario</p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label htmlFor="john-scenario" className="sr-only" id="john-scenario-label">
+              Select guided scenario
+            </label>
+            <select
+              id="john-scenario"
+              value={activeScenarioId}
+              onChange={(e) => setActiveScenarioId(e.target.value)}
+              className="rounded border border-kali-border bg-kali-dark px-3 py-2 text-sm text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus focus:border-transparent"
+              aria-labelledby="john-scenario-label"
+            >
+              {guidedScenarios.map((scenario) => (
+                <option key={scenario.id} value={scenario.id}>
+                  {scenario.label}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={handleLoadScenario}
+              className="rounded bg-kali-control px-3 py-2 text-sm font-medium text-black transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus"
+            >
+              Load scenario
+            </button>
+          </div>
+        </div>
       </div>
       <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-2">
         <label htmlFor="john-hashes" id="john-hashes-label" className="text-sm">
@@ -540,9 +718,58 @@ const JohnApp = () => {
         )}
         {error && <FormError id="john-error">{error}</FormError>}
       </form>
-      <pre className="flex-1 overflow-auto p-4 whitespace-pre-wrap bg-kali-dark text-kali-text border-t border-kali-border">
-        {output}
-      </pre>
+      <div className="border-t border-kali-border bg-kali-dark p-4">
+        <div className="mb-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={copyOutput}
+            className="rounded border border-kali-border/80 px-2 py-1 text-xs text-kali-text/80 hover:text-kali-text"
+          >
+            Copy output
+          </button>
+          <button
+            type="button"
+            onClick={selectOutput}
+            className="rounded border border-kali-border/80 px-2 py-1 text-xs text-kali-text/80 hover:text-kali-text"
+          >
+            Select output
+          </button>
+          <button
+            type="button"
+            onClick={downloadOutput}
+            className="rounded border border-kali-border/80 px-2 py-1 text-xs text-kali-text/80 hover:text-kali-text"
+          >
+            Download output
+          </button>
+          <button
+            type="button"
+            onClick={clearOutput}
+            className="rounded border border-kali-border/80 px-2 py-1 text-xs text-kali-text/80 hover:text-kali-text"
+          >
+            Clear output
+          </button>
+        </div>
+        <pre
+          ref={outputRef}
+          tabIndex={0}
+          onKeyDown={handleOutputKey}
+          className="max-h-60 overflow-auto whitespace-pre-wrap rounded border border-kali-border bg-kali-dark p-3 text-kali-text focus:outline-none focus:ring-2 focus:ring-kali-focus"
+          aria-label="John output"
+        >
+          {output}
+        </pre>
+        {output && activeScenarioCard && (
+          <div className="mt-3 rounded border border-kali-border bg-kali-dark p-3">
+            <p className="text-sm font-semibold text-kali-text">{activeScenarioCard.title}</p>
+            <p className="mt-1 text-xs text-kali-text/80">{activeScenarioCard.summary}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-4 text-xs text-kali-text/80">
+              {activeScenarioCard.interpretation.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
       <div className="p-4 flex flex-col gap-2 border-t border-kali-border/60 bg-kali-surface">
         <label htmlFor="john-potfile" id="john-potfile-label" className="text-sm">
           Potfile
@@ -585,6 +812,11 @@ const JohnApp = () => {
         )}
         <SimulationReportExport dense />
       </div>
+      {toast && (
+        <div className="pointer-events-none absolute bottom-4 right-4 rounded border border-kali-border bg-kali-dark/95 px-3 py-1 text-xs text-kali-text">
+          {toast}
+        </div>
+      )}
     </div>
   );
 };
