@@ -4,6 +4,7 @@ import PluginManager from '../components/apps/plugin-manager';
 describe('PluginManager', () => {
   beforeEach(() => {
     localStorage.clear();
+    window.confirm = jest.fn(() => true);
     (global as any).URL.createObjectURL = jest.fn(() => 'blob:mock');
     (global as any).URL.revokeObjectURL = jest.fn();
 
@@ -87,5 +88,39 @@ describe('PluginManager', () => {
     const exportBtn = screen.getByText('Export CSV');
     fireEvent.click(exportBtn);
     expect((global as any).URL.createObjectURL).toHaveBeenCalled();
+  });
+
+  test('uninstalls plugin, reverts actions, and clears stale last run state', async () => {
+    render(<PluginManager />);
+
+    const installBtn = await screen.findByText('Install');
+    fireEvent.click(installBtn);
+
+    const runBtn = await screen.findByRole('button', { name: 'Run demo' });
+    expect(runBtn).toBeEnabled();
+    fireEvent.click(runBtn);
+
+    await waitFor(() =>
+      expect(localStorage.getItem('lastPluginRun')).toContain('demo')
+    );
+    expect(await screen.findByText(/Last Run: demo/)).toBeInTheDocument();
+
+    const uninstallBtn = await screen.findByRole('button', {
+      name: 'Uninstall demo',
+    });
+    fireEvent.click(uninstallBtn);
+
+    expect(window.confirm).toHaveBeenCalledWith(
+      'Uninstall demo? This removes it from your installed list.'
+    );
+    await waitFor(() =>
+      expect(localStorage.getItem('installedPlugins')).not.toContain('demo')
+    );
+    expect(localStorage.getItem('lastPluginRun')).toBeNull();
+    expect(screen.queryByText(/Last Run: demo/)).not.toBeInTheDocument();
+
+    const restoredInstallBtn = await screen.findByText('Install');
+    expect(restoredInstallBtn).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Run demo \(install required\)/i })).toBeDisabled();
   });
 });

@@ -102,7 +102,37 @@ export default function PluginManager() {
     const manifest: PluginManifest = await res.json();
     const updated = { ...installed, [plugin.id]: manifest };
     setInstalled(updated);
-    localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    try {
+      localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const uninstall = (pluginId: string) => {
+    const shouldUninstall = window.confirm(
+      `Uninstall ${pluginId}? This removes it from your installed list.`
+    );
+    if (!shouldUninstall) return;
+
+    const updated = { ...installed };
+    delete updated[pluginId];
+    setInstalled(updated);
+
+    try {
+      localStorage.setItem('installedPlugins', JSON.stringify(updated));
+    } catch {
+      /* ignore */
+    }
+
+    if (lastRun?.id === pluginId) {
+      setLastRun(null);
+      try {
+        localStorage.removeItem('lastPluginRun');
+      } catch {
+        /* ignore */
+      }
+    }
   };
 
   const run = (plugin: PluginInfo) => {
@@ -297,6 +327,15 @@ export default function PluginManager() {
                   >
                     Run
                   </button>
+                  {isInstalled && (
+                    <button
+                      className="rounded-full border border-[color:color-mix(in_srgb,var(--color-error)_55%,transparent)] px-4 py-2 text-sm font-semibold text-[color:var(--color-error)] transition hover:border-[color:var(--color-error)] hover:bg-[color:color-mix(in_srgb,var(--color-error)_12%,transparent)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-error)]"
+                      onClick={() => uninstall(p.id)}
+                      aria-label={`Uninstall ${p.id}`}
+                    >
+                      Uninstall
+                    </button>
+                  )}
                 </div>
               </article>
             </li>
