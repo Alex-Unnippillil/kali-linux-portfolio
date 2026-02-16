@@ -69,6 +69,28 @@ const Nessus = () => {
     [scans]
   );
 
+  const severityLevels = ['critical', 'high', 'medium', 'low', 'info'];
+  const severityColors = {
+    critical: [220, 38, 38],
+    high: [234, 88, 12],
+    medium: [217, 119, 6],
+    low: [22, 163, 74],
+    info: [37, 99, 235],
+  };
+  const heatmapData = scans.map((scan) => ({
+    id: scan.id,
+    name: scan.name,
+    counts: severityLevels.map((lvl) => scan.severity_counts?.[lvl] || 0),
+  }));
+  const maxCount = Math.max(...heatmapData.flatMap((d) => d.counts), 1);
+  const getCellStyle = (level, count) => {
+    const [r, g, b] = severityColors[level];
+    const intensity = count / maxCount;
+    const start = `rgba(${r}, ${g}, ${b}, 0.1)`;
+    const end = `rgba(${r}, ${g}, ${b}, ${0.1 + 0.9 * intensity})`;
+    return { background: `linear-gradient(to top, ${end}, ${start})` };
+  };
+
   useEffect(() => {
     setJobs(loadJobDefinitions());
     setFalsePositives(loadFalsePositives());
@@ -368,6 +390,38 @@ const Nessus = () => {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+      {heatmapData.length > 0 && (
+        <div className="overflow-x-auto mb-4">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr>
+                <th className="px-2 py-1 text-left">Scan</th>
+                {severityLevels.map((lvl) => (
+                  <th key={lvl} className="px-2 py-1 capitalize">
+                    {lvl}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {heatmapData.map((row) => (
+                <tr key={row.id}>
+                  <td className="px-2 py-1">{row.name}</td>
+                  {severityLevels.map((lvl, idx) => (
+                    <td
+                      key={lvl}
+                      className="px-2 py-1 text-center"
+                      style={getCellStyle(lvl, row.counts[idx])}
+                    >
+                      {row.counts[idx]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       <ul className="space-y-1">
