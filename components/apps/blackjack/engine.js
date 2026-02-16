@@ -102,7 +102,11 @@ export const isSoft = (hand) => {
     total += cardValue(card);
     if (card.value === 'A') aces += 1;
   });
-  return aces > 0 && total <= 21;
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces -= 1;
+  }
+  return aces > 0 && total < 21;
 };
 
 // Basic strategy for 4-8 decks, dealer stands on soft 17, double after split allowed
