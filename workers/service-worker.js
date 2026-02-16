@@ -1,5 +1,13 @@
-const CACHE_NAME = 'periodic-cache-v1';
+const CACHE_NAME = 'app-shell-v1';
 const ASSETS = [
+  '/',
+  '/offline.html',
+  '/manifest.webmanifest',
+  '/favicon.ico',
+  '/favicon.svg',
+  '/images/logos/fevicon.png',
+  '/images/logos/logo_1024.png',
+  // Application routes and resources
   '/apps/weather.js',
   '/feeds',
   '/about',
@@ -9,8 +17,6 @@ const ASSETS = [
   '/apps/weather',
   '/apps/terminal',
   '/apps/checkers',
-  '/offline.html',
-  '/manifest.webmanifest',
 ];
 
 async function prefetchAssets() {
@@ -48,6 +54,22 @@ self.addEventListener('message', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          return response;
+        })
+        .catch(async () => {
+          const cache = await caches.open(CACHE_NAME);
+          return (await cache.match(request)) || cache.match('/offline.html');
+        }),
+    );
+    return;
+  }
 
   if (url.pathname.startsWith('/apps/')) {
     event.respondWith(
