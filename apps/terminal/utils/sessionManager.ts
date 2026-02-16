@@ -122,6 +122,9 @@ export function createSessionManager({
   };
 
   const autocomplete = () => {
+    if (/\s/.test(buffer)) {
+      return;
+    }
     const registry = currentConfig.getRegistry();
     const entries = Object.values(registry);
     const matches = entries.filter((c) => c.name.startsWith(buffer));
@@ -299,6 +302,11 @@ export function createSessionManager({
         reverseSearchBaseBuffer = buffer;
         currentConfig.write('\r\n');
         renderReverseSearch(reverseSearchQuery, reverseSearchIndex);
+        i += 1;
+        continue;
+      }
+      if (ch === '\t') {
+        autocomplete();
         i += 1;
         continue;
       }

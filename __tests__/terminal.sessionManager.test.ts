@@ -47,6 +47,50 @@ describe('sessionManager', () => {
     expect(writes.join('')).toContain('h');
   });
 
+
+  it('autocompletes command names on tab input', () => {
+    const ctx = buildContext();
+    const writes: string[] = [];
+    const registry: Record<string, CommandDefinition> = {
+      help: { name: 'help', description: 'Help', handler: jest.fn() },
+      clear: { name: 'clear', description: 'Clear', handler: jest.fn() },
+    };
+    const manager = createSessionManager({
+      getRegistry: () => registry,
+      context: ctx,
+      prompt: () => writes.push('[prompt]'),
+      write: (text) => writes.push(text),
+      writeLine: (text) => writes.push(text + '\n'),
+    });
+
+    manager.handleInput('he	');
+
+    expect(manager.getBuffer()).toBe('help');
+    expect(writes.join('')).toContain('lp');
+    expect(writes.join('')).not.toContain('	');
+  });
+
+  it('skips autocomplete when buffer contains whitespace', () => {
+    const ctx = buildContext();
+    const writes: string[] = [];
+    const registry: Record<string, CommandDefinition> = {
+      cat: { name: 'cat', description: 'Concatenate', handler: jest.fn() },
+      clear: { name: 'clear', description: 'Clear', handler: jest.fn() },
+    };
+    const manager = createSessionManager({
+      getRegistry: () => registry,
+      context: ctx,
+      prompt: () => writes.push('[prompt]'),
+      write: (text) => writes.push(text),
+      writeLine: (text) => writes.push(text + '\n'),
+    });
+
+    manager.handleInput('cat R	');
+
+    expect(manager.getBuffer()).toBe('cat R');
+    expect(writes.join('')).not.toContain('[prompt]');
+  });
+
   it('navigates history with arrow keys', () => {
     const ctx = buildContext();
     ctx.history = ['ls', 'cat README.md'];
