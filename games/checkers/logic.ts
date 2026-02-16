@@ -2,6 +2,7 @@ import {
   Board,
   Move,
   Color,
+  ParsedPosition,
   createBoard,
   getPieceMoves,
   getAllMoves,
@@ -42,6 +43,28 @@ export const createGameState = (mode: RuleMode): GameState => {
     board,
     rules: { mode, crownEndsTurn: true },
     turnState,
+    noCaptureMoves: 0,
+    positionCounts: new Map([[key, 1]]),
+  };
+};
+
+export const createGameStateFromPosition = (position: ParsedPosition): GameState => {
+  const key = serializePosition(
+    position.board,
+    position.turn,
+    position.pendingCaptureFrom,
+    position.mode,
+  );
+
+  return {
+    board: position.board,
+    rules: { mode: position.mode, crownEndsTurn: true },
+    turnState: {
+      turn: position.turn,
+      pendingCaptureFrom: position.pendingCaptureFrom,
+      turnHadCapture: false,
+      turnHadKinging: false,
+    },
     noCaptureMoves: 0,
     positionCounts: new Map([[key, 1]]),
   };
