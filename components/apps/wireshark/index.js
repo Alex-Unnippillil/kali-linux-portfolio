@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import Waterfall from './Waterfall';
 import BurstChart from './BurstChart';
@@ -239,8 +239,34 @@ const WiresharkApp = ({ initialPackets = [] }) => {
     .filter((p) => matchesDisplayFilter(p, filter))
     .filter((p) => matchesBpf(p, bpf))
     .filter((p) => !protocolFilter || protocolName(p.protocol) === protocolFilter);
+  const trafficInsights = useMemo(() => {
+    const hostCounts = new Map();
+    filteredPackets.forEach((packet) => {
+      if (packet.src) {
+        hostCounts.set(packet.src, (hostCounts.get(packet.src) || 0) + 1);
+      }
+      if (packet.dest) {
+        hostCounts.set(packet.dest, (hostCounts.get(packet.dest) || 0) + 1);
+      }
+    });
+
+    const topHosts = Array.from(hostCounts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    return {
+      uniqueHosts: hostCounts.size,
+      topHosts,
+    };
+  }, [filteredPackets]);
   const hasTlsKeys = !!tlsKeys;
   const filteredCount = filteredPackets.length;
+
+  const focusHost = (host) => {
+    const nextFilter = `ip.addr == ${host}`;
+    handleFilterChange(nextFilter);
+    setAnnouncement(`Focused display filter on host ${host}`);
+  };
 
   return (
     <div
@@ -466,6 +492,42 @@ const WiresharkApp = ({ initialPackets = [] }) => {
           </button>
         ))}
       </div>
+      <section className="mx-2 mb-2 rounded border border-white/10 bg-gray-900 p-3 text-xs text-white/80">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="font-semibold text-white">Traffic insights</p>
+          <div className="flex items-center gap-3 text-[11px] text-gray-300">
+            <span>Total: {packets.length}</span>
+            <span>Displayed: {filteredCount}</span>
+            <span>Unique hosts: {trafficInsights.uniqueHosts}</span>
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {trafficInsights.topHosts.length ? (
+            trafficInsights.topHosts.map(([host, count]) => (
+              <button
+                key={host}
+                type="button"
+                onClick={() => focusHost(host)}
+                className="rounded border border-blue-400/40 bg-blue-500/10 px-2 py-1 text-left text-[11px] text-blue-200 hover:bg-blue-500/20"
+                aria-label={`Focus host ${host}`}
+              >
+                {host} <span className="text-blue-100/80">({count})</span>
+              </button>
+            ))
+          ) : (
+            <p className="text-gray-400">Load a sample capture to explore top hosts.</p>
+          )}
+          {filter.startsWith('ip.addr == ') && (
+            <button
+              type="button"
+              onClick={() => handleFilterChange('')}
+              className="rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 hover:text-white"
+            >
+              Clear host focus
+            </button>
+          )}
+        </div>
+      </section>
       <div className="p-2 flex space-x-2 bg-gray-900">
         <button
           className={`px-2 py-1 rounded border ${view === 'packets' ? 'bg-gray-700' : 'bg-gray-800'
