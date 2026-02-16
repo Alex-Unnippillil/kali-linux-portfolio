@@ -36,6 +36,16 @@ describe('FlappyBird', () => {
     expect(screen.getByLabelText('Difficulty')).toBeInTheDocument();
     expect(screen.getByLabelText('Practice mode')).toBeInTheDocument();
     expect(screen.getByLabelText('Ghost run')).toBeInTheDocument();
+    expect(screen.getByLabelText('Sound effects')).toBeInTheDocument();
+  });
+
+  it('persists sound effects toggle in localStorage', () => {
+    render(<FlappyBird />);
+    const sfxToggle = screen.getByLabelText('Sound effects');
+    fireEvent.click(sfxToggle);
+    expect(window.localStorage.getItem('flappy-sfx-enabled')).toBe('0');
+    fireEvent.click(sfxToggle);
+    expect(window.localStorage.getItem('flappy-sfx-enabled')).toBe('1');
   });
 
   it('toggles the settings panel from the toolbar', async () => {

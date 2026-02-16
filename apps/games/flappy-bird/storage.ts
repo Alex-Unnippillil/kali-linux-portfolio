@@ -9,6 +9,7 @@ export const STORAGE_KEYS = {
   reducedMotion: 'flappy-reduced-motion',
   highHz: 'flappy-120hz',
   hitbox: 'flappy-hitbox',
+  sfx: 'flappy-sfx-enabled',
   highScore: 'flappy-bird-highscore',
 } as const;
 

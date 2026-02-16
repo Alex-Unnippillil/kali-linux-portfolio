@@ -19,6 +19,7 @@ Key bindings for Flap and Pause can be remapped from the Settings panel.
 - **Ghost run**: Displays the best recorded run as a translucent guide.
 - **Reduced motion**: Calms background animation for comfort.
 - **120 Hz mode**: Higher refresh cadence for smoother play.
+- **Sound effects**: Optional flap/score/crash/game-over cues (enabled by default).
 - **Skins**: Switch bird and pipe skins from the start screen or settings.
 
 ## Persistence
