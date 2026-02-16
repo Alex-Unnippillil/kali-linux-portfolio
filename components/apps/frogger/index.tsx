@@ -315,8 +315,15 @@ const Frogger = ({ windowMeta }: FroggerProps = {}) => {
   );
 
   const endHold = useCallback(() => {
-    if (holdRef.current) clearInterval(holdRef.current);
+    if (holdRef.current) {
+      clearInterval(holdRef.current);
+      holdRef.current = null;
+    }
   }, []);
+
+  useEffect(() => {
+    if (paused) endHold();
+  }, [paused, endHold]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -439,21 +446,24 @@ const Frogger = ({ windowMeta }: FroggerProps = {}) => {
     const loop = (time: number) => {
       const rawDt = (time - last) / 1000;
       last = time;
-      const dt = clampDelta(rawDt, 0.25) * (slowTimeRef.current ? 0.7 : 1);
+      const isPaused = pausedRef.current;
+      const dtSim = isPaused
+        ? 0
+        : clampDelta(rawDt, 0.25) * (slowTimeRef.current ? 0.7 : 1);
       const rippleSpeed = reduceMotionRef.current ? 1.6 : 4;
-      rippleRef.current += dt * rippleSpeed;
-      lightingRef.current = (lightingRef.current + dt * 0.6) % (Math.PI * 2);
+      rippleRef.current += dtSim * rippleSpeed;
+      lightingRef.current = (lightingRef.current + dtSim * 0.6) % (Math.PI * 2);
       if (frogAnimationRef.current.progress < 1) {
         const hopDuration = reduceMotionRef.current
           ? FROG_HOP_DURATION * 0.6
           : FROG_HOP_DURATION;
         frogAnimationRef.current.progress = Math.min(
           1,
-          frogAnimationRef.current.progress + dt / hopDuration,
+          frogAnimationRef.current.progress + dtSim / hopDuration,
         );
       }
-      if (!pausedRef.current) {
-        const nextTime = Math.max(0, timeRef.current - dt);
+      if (!isPaused) {
+        const nextTime = Math.max(0, timeRef.current - dtSim);
         if (nextTime !== timeRef.current) {
           timeRef.current = nextTime;
           if (Math.floor(nextTime) !== Math.floor(lastTimerBroadcastRef.current)) {
@@ -466,22 +476,22 @@ const Frogger = ({ windowMeta }: FroggerProps = {}) => {
           pendingDeathRef.current = { ...frogRef.current };
         }
       }
-      if (safeFlashRef.current > 0) safeFlashRef.current -= dt;
-      if (hitFlashRef.current > 0) hitFlashRef.current -= dt;
+      if (safeFlashRef.current > 0) safeFlashRef.current -= dtSim;
+      if (hitFlashRef.current > 0) hitFlashRef.current -= dtSim;
       splashesRef.current = splashesRef.current
-        .map((s) => ({ ...s, t: s.t + dt }))
+        .map((s) => ({ ...s, t: s.t + dtSim }))
         .filter((s) => s.t < RIPPLE_DURATION);
 
-      if (pendingDeathRef.current) {
+      if (!isPaused && pendingDeathRef.current) {
         if (hitFlashRef.current <= 0) {
           loseLife(pendingDeathRef.current);
           alignFrogToStart();
           pendingDeathRef.current = null;
         }
-      } else {
-        const carResult = updateCars(carsRef.current, frogRef.current, dt);
+      } else if (!isPaused) {
+        const carResult = updateCars(carsRef.current, frogRef.current, dtSim);
         carsRef.current = carResult.lanes;
-        const logResult = updateLogs(logsRef.current, frogRef.current, dt);
+        const logResult = updateLogs(logsRef.current, frogRef.current, dtSim);
         logsRef.current = logResult.lanes;
         frogRef.current = logResult.frog;
         if (carResult.dead) {
