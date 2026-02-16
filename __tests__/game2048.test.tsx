@@ -210,3 +210,62 @@ test('ignores key repeats while a move is in progress', async () => {
   });
   expect(getByText(/Moves: 2/)).toBeTruthy();
 });
+
+
+test('share run copies to clipboard', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const writeText = jest.fn().mockResolvedValue(undefined);
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText },
+    configurable: true,
+  });
+
+  window.localStorage.setItem('2048-seed', today);
+  window.localStorage.setItem('2048-board', JSON.stringify([
+    [2, 4, 8, 0],
+    [16, 32, 64, 128],
+    [256, 512, 1024, 2048],
+    [0, 0, 0, 4096],
+  ]));
+  window.localStorage.setItem('2048-score', '1234');
+
+  const { getByRole } = render(<Game2048 />);
+
+  await act(async () => {
+    jest.advanceTimersByTime(500);
+  });
+
+  await act(async () => {
+    fireEvent.click(getByRole('button', { name: 'Share run' }));
+  });
+
+  await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+  const copied = writeText.mock.calls[0][0];
+  expect(copied).toContain('2048 Daily');
+  expect(copied).toContain(today);
+  expect(copied).toContain('Score:');
+  expect(copied).toContain('Moves:');
+  expect(copied).toContain('Best:');
+  const lines = copied.split('\n');
+  expect(lines.length).toBeGreaterThanOrEqual(6);
+  expect(lines.slice(-4)).toHaveLength(4);
+});
+
+test('share run does not throw without clipboard', async () => {
+  Object.defineProperty(navigator, 'clipboard', {
+    value: undefined,
+    configurable: true,
+  });
+
+  const { getByRole } = render(<Game2048 />);
+
+  await act(async () => {
+    jest.advanceTimersByTime(300);
+  });
+
+  expect(() => {
+    fireEvent.click(getByRole('button', { name: 'Share run' }));
+  }).not.toThrow();
+
+  expect(getByRole('button', { name: 'Share run' })).toBeTruthy();
+});
