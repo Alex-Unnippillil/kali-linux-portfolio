@@ -24,6 +24,7 @@ interface GameLayoutProps {
   lives?: number;
   score?: number;
   highScore?: number;
+  highScoreLabel?: string;
   editor?: React.ReactNode;
   onPauseChange?: (paused: boolean) => void;
   onRestart?: () => void;
@@ -73,6 +74,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   lives,
   score,
   highScore,
+  highScoreLabel = 'High',
   editor,
   onPauseChange,
   onRestart,
@@ -420,7 +422,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
                 'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
             )}
           >
-            High: {highScore}
+            {highScoreLabel}: {highScore}
           </div>
         )}
       </div>
