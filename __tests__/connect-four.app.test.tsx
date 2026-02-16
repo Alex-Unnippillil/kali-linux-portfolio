@@ -2,6 +2,15 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ConnectFour from '../components/apps/connect-four';
 
+const moveInColumn = (column: number) => {
+  const columnButton = screen.getByRole('button', { name: new RegExp(`column ${column}`, 'i') });
+  fireEvent.click(columnButton);
+};
+
+const openSettingsPanel = () => {
+  fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+};
+
 beforeAll(() => {
   class ResizeObserverMock {
     observe() { }
@@ -101,5 +110,54 @@ describe('connect four app', () => {
       const after = document.querySelectorAll('[data-token="yellow"]');
       expect(after.length).toBeGreaterThan(0);
     }, { timeout: 5000 });
+  });
+
+  it('persists and restores game state', async () => {
+    window.localStorage.setItem('connect_four:mode', JSON.stringify('local'));
+    const firstRender = render(<ConnectFour />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/local match/i)).toBeInTheDocument();
+    });
+
+    moveInColumn(1); // red
+    moveInColumn(2); // yellow
+
+    expect(screen.getByTestId('connect-four-cell-5-0')).toHaveAttribute('data-token', 'red');
+    expect(screen.getByTestId('connect-four-cell-5-1')).toHaveAttribute('data-token', 'yellow');
+
+    firstRender.unmount();
+
+    render(<ConnectFour />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('connect-four-cell-5-0')).toHaveAttribute('data-token', 'red');
+    });
+    expect(screen.getByTestId('connect-four-cell-5-1')).toHaveAttribute('data-token', 'yellow');
+  });
+
+  it('discard saved game clears resume state', async () => {
+    window.localStorage.setItem('connect_four:mode', JSON.stringify('local'));
+    const firstRender = render(<ConnectFour />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/local match/i)).toBeInTheDocument();
+    });
+
+    moveInColumn(1);
+    moveInColumn(2);
+
+    openSettingsPanel();
+    fireEvent.click(screen.getByRole('button', { name: /discard saved game/i }));
+    firstRender.unmount();
+
+    render(<ConnectFour />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/local match/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('connect-four-cell-5-0')).toHaveAttribute('data-token', '');
+    expect(screen.getByTestId('connect-four-cell-5-1')).toHaveAttribute('data-token', '');
   });
 });
