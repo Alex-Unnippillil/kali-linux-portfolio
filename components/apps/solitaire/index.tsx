@@ -23,6 +23,7 @@ import {
 import { solve } from './solver';
 
 type Variant = 'klondike' | 'spider' | 'freecell';
+type HistoryEntry = { state: GameState; moveDelta: number };
 type Stats = {
   gamesPlayed: number;
   gamesWon: number;
@@ -171,8 +172,10 @@ const Solitaire = () => {
   const [bankroll, setBankroll] = useState(0);
   const [bankrollReady, setBankrollReady] = useState(false);
   const foundationCountRef = useRef(0);
-  const [history, setHistory] = useState<GameState[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [redoStack, setRedoStack] = useState<HistoryEntry[]>([]);
   const historyGuardRef = useRef(false);
+  const gameRef = useRef(game);
   const [isShuffling, setIsShuffling] = useState(false);
   const [confettiSeed, setConfettiSeed] = useState(0);
   const statsKey = useMemo(
@@ -219,22 +222,27 @@ const Solitaire = () => {
     [statsKey],
   );
 
+  useEffect(() => {
+    gameRef.current = game;
+  }, [game]);
+
   const applyMove = useCallback(
     (
       updater: (state: GameState) => GameState,
-      options: { countMove?: boolean; trackHistory?: boolean } = {},
+      options: { countMove?: boolean; trackHistory?: boolean; moveDelta?: number } = {},
     ) => {
-      const { countMove = true, trackHistory = true } = options;
+      const { countMove = true, trackHistory = true, moveDelta = 1 } = options;
       let changed = false;
       setGame((prev) => {
         const next = updater(prev);
         if (next !== prev) {
           changed = true;
           if (!historyGuardRef.current && trackHistory) {
-            setHistory((h) => [...h.slice(-99), prev]);
+            setHistory((h) => [...h.slice(-99), { state: prev, moveDelta }]);
+            setRedoStack([]);
           }
           if (countMove && !historyGuardRef.current) {
-            setMoves((m) => m + 1);
+            setMoves((m) => m + moveDelta);
           }
         }
         historyGuardRef.current = false;
@@ -246,7 +254,12 @@ const Solitaire = () => {
   );
 
   const recordManualMove = useCallback((snapshot: GameState, moveCount = 1) => {
-    setHistory((h) => [...h.slice(-99), snapshot]);
+    if (historyGuardRef.current) {
+      setMoves((m) => m + moveCount);
+      return;
+    }
+    setHistory((h) => [...h.slice(-99), { state: snapshot, moveDelta: moveCount }]);
+    setRedoStack([]);
     setMoves((m) => m + moveCount);
   }, []);
 
@@ -338,6 +351,7 @@ const Solitaire = () => {
       setTime(0);
       setMoves(0);
       setHistory([]);
+      setRedoStack([]);
       setHint(null);
       setAutoCompleting(false);
       setIsDaily(daily);
@@ -733,7 +747,7 @@ const Solitaire = () => {
     play(0, game);
   }, [game, flyMove]);
 
-  const dropToTableau = (pileIndex: number, payload: DragPayload | null) => {
+  const dropToTableau = useCallback((pileIndex: number, payload: DragPayload | null) => {
     if (!payload || dragHandledRef.current) return;
     dragHandledRef.current = true;
     if (!canDropOnTableau(game, payload, pileIndex)) {
@@ -754,9 +768,9 @@ const Solitaire = () => {
       setAriaMessage('Moved cards to tableau');
     }
     finishDrag();
-  };
+  }, [applyMove, finishDrag, game, triggerInvalidDrop]);
 
-  const dropToFoundation = (pileIndex: number, payload: DragPayload | null) => {
+  const dropToFoundation = useCallback((pileIndex: number, payload: DragPayload | null) => {
     if (!payload || dragHandledRef.current) return;
     dragHandledRef.current = true;
     if (!canDropOnFoundation(game, payload, pileIndex)) {
@@ -786,7 +800,7 @@ const Solitaire = () => {
       }
     }
     finishDrag();
-  };
+  }, [finishDrag, flyMove, game, recordManualMove, triggerInvalidDrop]);
 
   const handlePointerMove = useCallback(
     (event: PointerEvent) => {
@@ -889,15 +903,17 @@ const Solitaire = () => {
   };
 
   const undo = useCallback(() => {
+    const currentGame = gameRef.current;
     setHistory((h) => {
       if (!h.length) {
         setAriaMessage('Nothing to undo');
         return h;
       }
-      const prevState = h[h.length - 1];
+      const lastEntry = h[h.length - 1];
+      setRedoStack((r) => [...r.slice(-99), { state: currentGame, moveDelta: lastEntry.moveDelta }]);
       historyGuardRef.current = true;
-      setGame(prevState);
-      setMoves((m) => (m > 0 ? m - 1 : 0));
+      setGame(lastEntry.state);
+      setMoves((m) => Math.max(0, m - lastEntry.moveDelta));
       setWon(false);
       setCascade([]);
       setConfettiSeed((s) => s + 1);
@@ -906,6 +922,64 @@ const Solitaire = () => {
       return h.slice(0, -1);
     });
   }, [updateStats]);
+
+  const redo = useCallback(() => {
+    const currentGame = gameRef.current;
+    setRedoStack((r) => {
+      if (!r.length) {
+        setAriaMessage('Nothing to redo');
+        return r;
+      }
+      const lastEntry = r[r.length - 1];
+      setHistory((h) => [...h.slice(-99), { state: currentGame, moveDelta: lastEntry.moveDelta }]);
+      historyGuardRef.current = true;
+      setGame(lastEntry.state);
+      setMoves((m) => m + lastEntry.moveDelta);
+      setWon(false);
+      setCascade([]);
+      setConfettiSeed((s) => s + 1);
+      setAriaMessage('Redid last move');
+      return r.slice(0, -1);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const isTypingTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) return false;
+      return (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable
+      );
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || isTypingTarget(event.target)) return;
+      const root = rootRef.current;
+      const active = document.activeElement;
+      if (root && active && !root.contains(active)) return;
+
+      if ((event.key === 'z' || event.key === 'Z') && event.shiftKey) {
+        event.preventDefault();
+        redo();
+        return;
+      }
+      if (event.key === 'y' || event.key === 'Y') {
+        event.preventDefault();
+        redo();
+        return;
+      }
+      if (event.key === 'z' || event.key === 'Z') {
+        event.preventDefault();
+        undo();
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [undo, redo]);
 
   const handleStockKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter' || e.key === ' ') {
@@ -1243,6 +1317,15 @@ const Solitaire = () => {
               title="Undo the last move"
             >
               Undo
+            </button>
+            <button
+              type="button"
+              className={controlButtonClasses}
+              onClick={redo}
+              disabled={!redoStack.length}
+              title="Redo the last undone move"
+            >
+              Redo
             </button>
             <button
               type="button"
