@@ -21,6 +21,10 @@ import TempoSelector, {
   isValidTempo,
 } from "../../games/simon/components/TempoSelector";
 import {
+  currentDateString,
+  getDailySeed,
+} from "../../utils/dailySeed";
+import {
   handleInput,
   handleTimeout,
   initialSimonState,
@@ -186,12 +190,76 @@ const Simon = () => {
   );
   const [errorFlash, setErrorFlash] = useState(false);
   const [audioError, setAudioError] = useState(null);
+  const [copyStatus, setCopyStatus] = useState("");
+  const dailyLabel = useMemo(() => currentDateString(), []);
 
   const errorSound = useRef(null);
   const timersRef = useRef([]);
   const inputTimerRef = useRef(null);
   const roundRef = useRef(gameState.roundId);
   const lastPointerDownRef = useRef(0);
+  const didHydrateFromUrlRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+
+    const modeParam = params.get("mode");
+    if (modeParam && isSimonMode(modeParam)) setMode(modeParam);
+
+    const tempoParam = params.get("tempo");
+    if (tempoParam) {
+      const parsedTempo = Number.parseInt(tempoParam, 10);
+      if (isValidTempo(parsedTempo)) setTempo(parsedTempo);
+    }
+
+    const playParam = params.get("play");
+    if (playParam && isPlayMode(playParam)) setPlayMode(playParam);
+
+    const timingParam = params.get("timing");
+    if (timingParam && isTiming(timingParam)) setTiming(timingParam);
+
+    const seedParam = params.get("seed");
+    if (typeof seedParam === "string") setSeed(seedParam.trim());
+
+    const randomPaletteParam = params.get("rp");
+    if (randomPaletteParam !== null) {
+      if (["1", "true"].includes(randomPaletteParam.toLowerCase())) {
+        setRandomPalette(true);
+      } else if (["0", "false"].includes(randomPaletteParam.toLowerCase())) {
+        setRandomPalette(false);
+      }
+    }
+
+    didHydrateFromUrlRef.current = true;
+  }, [setMode, setPlayMode, setRandomPalette, setSeed, setTempo, setTiming]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!didHydrateFromUrlRef.current) return;
+    if (["playback", "input", "strike"].includes(gameState.phase)) return;
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("mode", mode);
+    url.searchParams.set("tempo", String(tempo));
+    url.searchParams.set("play", playMode);
+    url.searchParams.set("timing", timing);
+
+    const trimmedSeed = typeof seed === "string" ? seed.trim() : "";
+    if (trimmedSeed) {
+      url.searchParams.set("seed", trimmedSeed);
+    } else {
+      url.searchParams.delete("seed");
+    }
+
+    if (randomPalette) {
+      url.searchParams.set("rp", "1");
+    } else {
+      url.searchParams.delete("rp");
+    }
+
+    window.history.replaceState({}, "", url.toString());
+  }, [gameState.phase, mode, playMode, randomPalette, seed, tempo, timing]);
 
   useEffect(() => {
     roundRef.current = gameState.roundId;
@@ -564,6 +632,82 @@ const Simon = () => {
     dispatch({ type: "REPLAY_SEQUENCE" });
   }, [canReplay, clearTimers]);
 
+  const buildChallengeUrl = useCallback(
+    (seedValue) => {
+      if (typeof window === "undefined") return "";
+      const url = new URL(window.location.href);
+      const trimmedSeed = typeof seedValue === "string" ? seedValue.trim() : "";
+
+      url.searchParams.set("mode", mode);
+      url.searchParams.set("tempo", String(tempo));
+      url.searchParams.set("play", playMode);
+      url.searchParams.set("timing", timing);
+
+      if (trimmedSeed) {
+        url.searchParams.set("seed", trimmedSeed);
+      } else {
+        url.searchParams.delete("seed");
+      }
+
+      if (randomPalette) {
+        url.searchParams.set("rp", "1");
+      } else {
+        url.searchParams.delete("rp");
+      }
+
+      return url.toString();
+    },
+    [mode, playMode, randomPalette, tempo, timing],
+  );
+
+  const copyText = useCallback(async (text) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+    if (typeof document === "undefined") return false;
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "absolute";
+    textarea.style.left = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return copied;
+  }, []);
+
+  const handleDailyChallenge = useCallback(async () => {
+    const daily = await getDailySeed("simon");
+    setSeed(daily);
+  }, [setSeed]);
+
+  const handleCopyChallengeLink = useCallback(async () => {
+    let challengeSeed = typeof seed === "string" ? seed.trim() : "";
+    if (!challengeSeed) {
+      challengeSeed = Math.random().toString(36).slice(2, 10);
+      setSeed(challengeSeed);
+    }
+
+    const challengeUrl = buildChallengeUrl(challengeSeed);
+
+    try {
+      const copied = await copyText(challengeUrl);
+      setCopyStatus(copied ? "Challenge link copied!" : "Copy failed.");
+    } catch {
+      setCopyStatus("Copy failed.");
+    }
+  }, [buildChallengeUrl, copyText, seed, setSeed]);
+
+  useEffect(() => {
+    if (!copyStatus) return undefined;
+    const timer = setTimeout(() => setCopyStatus(""), 1500);
+    return () => clearTimeout(timer);
+  }, [copyStatus]);
+
   useEffect(() => {
     const isModalOpen = () =>
       typeof document !== "undefined" &&
@@ -702,6 +846,7 @@ const Simon = () => {
           <input
             className="px-2 py-1 w-32 bg-gray-700 hover:bg-gray-600 rounded"
             placeholder="Seed"
+            aria-label="Seed"
             value={seed}
             onChange={(event) => setSeed(event.target.value)}
           />
@@ -709,11 +854,32 @@ const Simon = () => {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              aria-label="Random palette"
               checked={randomPalette}
               onChange={(event) => setRandomPalette(event.target.checked)}
             />
             Random palette
           </label>
+
+          <button
+            type="button"
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={handleDailyChallenge}
+          >
+            Daily Challenge ({dailyLabel})
+          </button>
+
+          <button
+            type="button"
+            className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            onClick={handleCopyChallengeLink}
+          >
+            Copy Challenge Link
+          </button>
+
+          {copyStatus ? (
+            <span className="text-xs text-emerald-300">{copyStatus}</span>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -754,6 +920,7 @@ const Simon = () => {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              aria-label="Stripes"
               checked={striped}
               onChange={(event) => setStriped(event.target.checked)}
             />
@@ -763,6 +930,7 @@ const Simon = () => {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              aria-label="Thick outline"
               checked={thickOutline}
               onChange={(event) => setThickOutline(event.target.checked)}
             />
@@ -772,6 +940,7 @@ const Simon = () => {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              aria-label="Colorblind palette"
               checked={colorblindPalette}
               onChange={(event) => setColorblindPalette(event.target.checked)}
               disabled={audioOnly || activeOptions.mode === "colorblind"}
@@ -782,6 +951,7 @@ const Simon = () => {
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
+              aria-label="Audio-only visuals"
               checked={audioOnly}
               onChange={(event) => setAudioOnly(event.target.checked)}
             />
