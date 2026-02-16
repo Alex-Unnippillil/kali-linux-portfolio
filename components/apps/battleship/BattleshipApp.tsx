@@ -98,6 +98,53 @@ const ResultModal = ({
   </div>
 );
 
+const ResumeSessionModal = ({
+  savedAt,
+  phase,
+  mode,
+  onResume,
+  onStartNew,
+}: {
+  savedAt: number;
+  phase: 'placement' | 'battle';
+  mode: 'ai' | 'hotseat';
+  onResume: () => void;
+  onStartNew: () => void;
+}) => (
+  <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Resume last battle"
+      className="w-full max-w-md rounded-3xl border border-cyan-400/40 bg-slate-950/95 p-6 text-white shadow-[0_40px_80px_rgba(0,0,0,0.6)]"
+    >
+      <h2 className="text-2xl font-bold">Resume last battle?</h2>
+      <p className="mt-2 text-sm text-white/70">
+        Mode: <span className="font-semibold text-white">{mode === 'hotseat' ? 'Hotseat' : 'AI'}</span>
+        {' • '}
+        Phase: <span className="font-semibold text-white">{phase}</span>
+      </p>
+      <p className="mt-1 text-xs text-white/60">Saved {new Date(savedAt).toLocaleString()}</p>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <button
+          type="button"
+          className="rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 px-5 py-2 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition hover:from-emerald-400 hover:to-cyan-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-200"
+          onClick={onResume}
+        >
+          Resume battle
+        </button>
+        <button
+          type="button"
+          className="rounded-full border border-white/20 bg-slate-900/80 px-4 py-2 text-sm font-semibold uppercase tracking-wide text-white/80 transition hover:bg-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+          onClick={onStartNew}
+        >
+          Start new battle
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const BattleshipApp = () => {
   const prefersReduced = usePrefersReducedMotion();
   const [isFocused, setIsFocused] = useState(false);
@@ -118,6 +165,9 @@ const BattleshipApp = () => {
     dismissToast,
     phase,
     battleLog,
+    savedSessionMeta,
+    resumeSavedSession,
+    discardSavedSessionAndRestart,
     players,
     activePlayer,
     placementPlayer,
@@ -616,6 +666,16 @@ const BattleshipApp = () => {
           onRestart={() => restart()}
           stats={stats}
           reduced={prefersReduced}
+        />
+      ) : null}
+
+      {savedSessionMeta ? (
+        <ResumeSessionModal
+          savedAt={savedSessionMeta.savedAt}
+          phase={savedSessionMeta.phase}
+          mode={savedSessionMeta.mode}
+          onResume={resumeSavedSession}
+          onStartNew={discardSavedSessionAndRestart}
         />
       ) : null}
 
