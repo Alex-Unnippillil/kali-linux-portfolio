@@ -227,6 +227,11 @@ const Snake = ({ windowMeta } = {}) => {
     isTouch,
     (v) => typeof v === 'boolean',
   );
+  const [lastReplayName, setLastReplayName] = usePersistentState(
+    'snake:lastReplay',
+    '',
+    (v) => typeof v === 'string',
+  );
   const playingRef = useRef(false);
   const focusPausedRef = useRef(false);
   const replayModeRef = useRef('inputs');
@@ -238,6 +243,20 @@ const Snake = ({ windowMeta } = {}) => {
   const stepCountRef = useRef(0);
   const [milestoneFlash, setMilestoneFlash] = useState(false);
   const [reducedMotionPaused, setReducedMotionPaused] = useState(false);
+  const [lastCollision, setLastCollision] = useState(null);
+
+  const collisionMessage = useMemo(() => {
+    switch (lastCollision) {
+      case 'wall':
+        return 'You hit the wall.';
+      case 'self':
+        return 'You ran into yourself.';
+      case 'obstacle':
+        return 'You hit an obstacle.';
+      default:
+        return 'Collision.';
+    }
+  }, [lastCollision]);
 
   const skinConfig = useMemo(() => {
     const base = SKINS[skinId] || SKINS.classic;
@@ -654,6 +673,37 @@ const Snake = ({ windowMeta } = {}) => {
   }, [draw, canvasRef]);
 
   /** Advance the game state by one step. */
+  const finalizeRun = useCallback(
+    ({ collisionType = null } = {}) => {
+      if (playingRef.current) return;
+      setLastCollision(collisionType);
+      if (!(inputLogRef.current.length || stepCountRef.current > 0)) return;
+      const name = `replay-${Date.now()}`;
+      saveReplay(name, {
+        seed: seedRef.current,
+        settings: {
+          wrap,
+          obstaclesEnabled,
+          obstaclePack,
+          baseSpeed,
+          skinId,
+        },
+        inputs: inputLogRef.current,
+      });
+      setLastReplayName(name);
+      setSelectedReplay(name);
+    },
+    [
+      saveReplay,
+      wrap,
+      obstaclesEnabled,
+      obstaclePack,
+      baseSpeed,
+      skinId,
+      setLastReplayName,
+    ],
+  );
+
   const advanceGame = useCallback(() => {
     if (playingRef.current && replayModeRef.current === 'frames') {
       const frames = legacyPlaybackRef.current;
@@ -707,6 +757,7 @@ const Snake = ({ windowMeta } = {}) => {
     );
 
     if (result.collision !== 'none') {
+      finalizeRun({ collisionType: result.collision });
       haptics.danger();
       setGameOver(true);
       setWon(false);
@@ -743,6 +794,7 @@ const Snake = ({ windowMeta } = {}) => {
     stepCountRef.current += 1;
 
     if (result.won) {
+      finalizeRun();
       playingRef.current = false;
       setWon(true);
       setGameOver(false);
@@ -759,6 +811,7 @@ const Snake = ({ windowMeta } = {}) => {
     setSpeed,
     spawnParticles,
     triggerMilestoneFlash,
+    finalizeRun,
   ]);
 
   const tick = useCallback(
@@ -839,25 +892,6 @@ const Snake = ({ windowMeta } = {}) => {
     if (gameOver) haptics.gameOver();
   }, [gameOver, haptics]);
 
-  useEffect(() => {
-    if (!gameOver && !won) return;
-    if (playingRef.current) return;
-    if (inputLogRef.current.length || stepCountRef.current > 0) {
-      const name = `replay-${Date.now()}`;
-      saveReplay(name, {
-        seed: seedRef.current,
-        settings: {
-          wrap,
-          obstaclesEnabled,
-          obstaclePack,
-          baseSpeed,
-          skinId,
-        },
-        inputs: inputLogRef.current,
-      });
-    }
-  }, [gameOver, won, saveReplay, wrap, obstaclesEnabled, obstaclePack, baseSpeed, skinId]);
-
   /** Reset the game to its initial state. */
   const reset = useCallback(() => {
     const nextSeed = makeSeed();
@@ -883,6 +917,7 @@ const Snake = ({ windowMeta } = {}) => {
     scoreRef.current = 0;
     setGameOver(false);
     setWon(false);
+    setLastCollision(null);
     setRunning(shouldRun);
     setSpeed(baseSpeed);
     speedRef.current = baseSpeed;
@@ -938,6 +973,7 @@ const Snake = ({ windowMeta } = {}) => {
       runningRef.current = shouldRun;
       setGameOver(false);
       setWon(false);
+      setLastCollision(null);
       if (hasLegacyFrames) {
         const first = data.frames[0];
         snakeRef.current = first.snake.map((s) => ({ ...s }));
@@ -1206,7 +1242,27 @@ const Snake = ({ windowMeta } = {}) => {
                 Game Over
               </div>
               <div className="text-sm text-slate-200">
+                {collisionMessage}
+              </div>
+              <div className="text-xs text-slate-300">
                 Press R or Restart to try again.
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-rose-500/90 text-slate-950 font-semibold rounded shadow-sm transition hover:bg-rose-400 focus:outline-none focus:ring"
+                  onClick={reset}
+                >
+                  Restart
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-gray-700/90 text-slate-100 font-semibold rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring disabled:opacity-50"
+                  onClick={() => startReplay(lastReplayName)}
+                  disabled={!lastReplayName}
+                >
+                  Watch replay
+                </button>
               </div>
             </div>
           )}
@@ -1221,6 +1277,23 @@ const Snake = ({ windowMeta } = {}) => {
               </div>
               <div className="text-sm text-slate-200">
                 Press R or Restart to play again.
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-emerald-500/90 text-slate-950 font-semibold rounded shadow-sm transition hover:bg-emerald-400 focus:outline-none focus:ring"
+                  onClick={reset}
+                >
+                  Restart
+                </button>
+                <button
+                  type="button"
+                  className="px-3 py-1 bg-gray-700/90 text-slate-100 font-semibold rounded shadow-sm transition hover:bg-gray-600 focus:outline-none focus:ring disabled:opacity-50"
+                  onClick={() => startReplay(lastReplayName)}
+                  disabled={!lastReplayName}
+                >
+                  Watch replay
+                </button>
               </div>
             </div>
           )}

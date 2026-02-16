@@ -42,3 +42,7 @@ exercise the game across desktop, mobile, and gamepad setups.
 - **Settings** – Wrap, skin, colorblind assist, sound, base speed, and touch
   controls use `snake:*` keys (for example `snake:wrap` and `snake:baseSpeed`)
   to keep preferences consistent across sessions.
+- **Replays** – Runs auto-save when they end (win or loss). The end-of-run
+  overlay exposes a one-click **Watch replay** action so the latest replay can
+  be played immediately, and the same replay remains available from the
+  Settings replay picker.
