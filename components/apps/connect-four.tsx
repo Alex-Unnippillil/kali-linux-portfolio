@@ -29,6 +29,7 @@ import { consumeGameKey, shouldHandleGameKey } from '../../utils/gameInput';
 const GAP = 6;
 const MIN_CELL = 32;
 const MAX_CELL = 64;
+const ACTIVE_GAME_KEY = 'connect_four:active_game_v1';
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
@@ -150,6 +151,32 @@ type StatsState = {
   local: LocalStats;
 };
 
+type SettingsSignature = {
+  mode: 'cpu' | 'local';
+  humanToken: Token;
+  humanStarts: boolean;
+  matchMode: MatchMode;
+};
+
+type HistoryEntry = {
+  board: Cell[][];
+  currentPlayer: Token;
+  winner: Token | 'draw' | null;
+  winningCells: WinningCell[];
+};
+
+type SavedActiveGame = {
+  v: 1;
+  settingsSignature: SettingsSignature;
+  board: Cell[][];
+  currentPlayer: Token;
+  winner: Token | 'draw' | null;
+  winningCells: WinningCell[];
+  history: HistoryEntry[];
+  selectedCol?: number;
+  savedAt?: number;
+};
+
 const DEFAULT_MATCH_STATE: MatchState = {
   red: 0,
   yellow: 0,
@@ -201,6 +228,77 @@ const isStatsState = (v: unknown): v is StatsState =>
       (v as StatsState).cpu &&
       (v as StatsState).local,
   );
+
+const isCell = (value: unknown): value is Cell =>
+  value === null || value === 'red' || value === 'yellow';
+
+const isWinnerValue = (value: unknown): value is Token | 'draw' | null =>
+  value === null || value === 'draw' || value === 'red' || value === 'yellow';
+
+const isBoardState = (value: unknown): value is Cell[][] =>
+  Array.isArray(value) &&
+  value.length === ROWS &&
+  value.every(
+    (row) =>
+      Array.isArray(row) &&
+      row.length === COLS &&
+      row.every((cell) => isCell(cell)),
+  );
+
+const isWinningCellsState = (value: unknown): value is WinningCell[] =>
+  Array.isArray(value) &&
+  value.every(
+    (cell) =>
+      cell &&
+      typeof cell === 'object' &&
+      typeof (cell as WinningCell).r === 'number' &&
+      typeof (cell as WinningCell).c === 'number' &&
+      (cell as WinningCell).r >= 0 &&
+      (cell as WinningCell).r < ROWS &&
+      (cell as WinningCell).c >= 0 &&
+      (cell as WinningCell).c < COLS,
+  );
+
+const isHistoryEntry = (value: unknown): value is HistoryEntry =>
+  Boolean(
+    value &&
+      typeof value === 'object' &&
+      isBoardState((value as HistoryEntry).board) &&
+      isToken((value as HistoryEntry).currentPlayer) &&
+      isWinnerValue((value as HistoryEntry).winner) &&
+      isWinningCellsState((value as HistoryEntry).winningCells),
+  );
+
+const isSavedActiveGame = (value: unknown): value is SavedActiveGame => {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as SavedActiveGame;
+  if (candidate.v !== 1) return false;
+  if (!isBoardState(candidate.board)) return false;
+  if (!isToken(candidate.currentPlayer)) return false;
+  if (!isWinnerValue(candidate.winner)) return false;
+  if (!isWinningCellsState(candidate.winningCells)) return false;
+  if (!Array.isArray(candidate.history) || !candidate.history.every(isHistoryEntry))
+    return false;
+  if (
+    candidate.selectedCol != null &&
+    (typeof candidate.selectedCol !== 'number' ||
+      candidate.selectedCol < 0 ||
+      candidate.selectedCol >= COLS)
+  ) {
+    return false;
+  }
+  if (candidate.savedAt != null && typeof candidate.savedAt !== 'number') return false;
+
+  const sig = candidate.settingsSignature;
+  return Boolean(
+    sig &&
+      typeof sig === 'object' &&
+      isMode(sig.mode) &&
+      isToken(sig.humanToken) &&
+      isBool(sig.humanStarts) &&
+      isMatchMode(sig.matchMode),
+  );
+};
 
 const getHintStyle = (
   score: number | null,
@@ -277,6 +375,12 @@ function ConnectFourInner({ windowMeta }: { windowMeta?: { isFocused?: boolean }
     false,
     isBool,
   );
+  const [savedGame, setSavedGame] = usePersistentState<
+    SavedActiveGame | null
+  >(ACTIVE_GAME_KEY, null, (value): value is SavedActiveGame | null => {
+    if (value === null) return true;
+    return isSavedActiveGame(value);
+  });
 
   const aiToken = useMemo(() => opponentOf(humanToken), [humanToken]);
 
@@ -362,6 +466,13 @@ function ConnectFourInner({ windowMeta }: { windowMeta?: { isFocused?: boolean }
   const instructionsId = useId();
 
   const outcomeLoggedRef = useRef(false);
+  const didRestoreRef = useRef(false);
+  const didRunSettingsEffectRef = useRef(false);
+
+  const settingsSignature = useMemo<SettingsSignature>(
+    () => ({ mode, humanToken, humanStarts, matchMode }),
+    [humanStarts, humanToken, matchMode, mode],
+  );
 
   useEffect(() => {
     boardRef.current = board;
@@ -445,7 +556,8 @@ function ConnectFourInner({ windowMeta }: { windowMeta?: { isFocused?: boolean }
     setHoverCol(null);
     setPendingConfirm(false);
     setAiThinking(false);
-  }, [cancelAnimation, initialPlayer]);
+    setSavedGame(null);
+  }, [cancelAnimation, initialPlayer, setSavedGame]);
 
   const resetMatch = useCallback(() => {
     setMatchState(DEFAULT_MATCH_STATE);
@@ -453,6 +565,10 @@ function ConnectFourInner({ windowMeta }: { windowMeta?: { isFocused?: boolean }
   }, [hardReset, setMatchState]);
 
   useEffect(() => {
+    if (!didRunSettingsEffectRef.current) {
+      didRunSettingsEffectRef.current = true;
+      return;
+    }
     // Keep game state consistent when mode or sides are changed.
     hardReset();
   }, [mode, humanToken, humanStarts, hardReset]);
@@ -826,6 +942,77 @@ function ConnectFourInner({ windowMeta }: { windowMeta?: { isFocused?: boolean }
     }
   }, [difficulty, humanToken, matchMode, mode, setMatchState, setStats, stats, winner]);
 
+  useEffect(() => {
+    if (didRestoreRef.current) return;
+    const hasStoredState =
+      typeof window !== 'undefined' && window.localStorage.getItem(ACTIVE_GAME_KEY) !== null;
+    if (!savedGame && hasStoredState) return;
+
+    didRestoreRef.current = true;
+    if (!savedGame) return;
+
+    const signatureMatches =
+      savedGame.settingsSignature.mode === settingsSignature.mode &&
+      savedGame.settingsSignature.humanToken === settingsSignature.humanToken &&
+      savedGame.settingsSignature.humanStarts === settingsSignature.humanStarts &&
+      savedGame.settingsSignature.matchMode === settingsSignature.matchMode;
+
+    if (!signatureMatches) {
+      setSavedGame(null);
+      return;
+    }
+
+    cancelAnimation();
+    aiTaskIdRef.current += 1;
+    setAiThinking(false);
+    setBoard(cloneBoard(savedGame.board));
+    setCurrentPlayer(savedGame.currentPlayer);
+    setWinner(savedGame.winner);
+    setWinningCells(savedGame.winningCells);
+    setHistory(
+      savedGame.history.map((entry) => ({
+        board: cloneBoard(entry.board),
+        currentPlayer: entry.currentPlayer,
+        winner: entry.winner,
+        winningCells: entry.winningCells,
+      })),
+    );
+    if (typeof savedGame.selectedCol === 'number') {
+      setSelectedCol(savedGame.selectedCol);
+    }
+    setLiveMessage('Resumed saved game.');
+  }, [cancelAnimation, savedGame, setSavedGame, settingsSignature]);
+
+  useEffect(() => {
+    if (!didRestoreRef.current) return;
+    if (animDisc) return;
+
+    const nextSaved: SavedActiveGame = {
+      v: 1,
+      settingsSignature,
+      board,
+      currentPlayer,
+      winner,
+      winningCells,
+      history,
+      selectedCol,
+      savedAt: Date.now(),
+    };
+    setSavedGame(nextSaved);
+  }, [
+    animDisc,
+    board,
+    currentPlayer,
+    history,
+    matchMode,
+    mode,
+    selectedCol,
+    setSavedGame,
+    settingsSignature,
+    winner,
+    winningCells,
+  ]);
+
   const statusText = useMemo(() => {
     if (winner === 'draw') return 'Draw.';
     if (winner === 'red' || winner === 'yellow') return `${tokenNames[winner]} wins.`;
@@ -1080,6 +1267,16 @@ function ConnectFourInner({ windowMeta }: { windowMeta?: { isFocused?: boolean }
       <div className="pt-2 border-t border-gray-700 space-y-2">
         <button type="button" className="px-3 py-1 rounded border border-gray-600" onClick={hardReset}>
           New Game
+        </button>
+        <button
+          type="button"
+          className="px-3 py-1 rounded border border-gray-600"
+          onClick={() => {
+            setSavedGame(null);
+            setLiveMessage('Saved game discarded.');
+          }}
+        >
+          Discard saved game
         </button>
         {matchMode !== 'single' && (
           <button
