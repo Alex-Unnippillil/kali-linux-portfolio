@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import GameLayout, { useInputRecorder } from './GameLayout';
+import useInputMapping from './Games/common/input-remap/useInputMapping';
 import useCanvasResize from '../../hooks/useCanvasResize';
 import usePersistentState from '../../hooks/usePersistentState';
 import {
@@ -9,6 +10,7 @@ import {
 } from './space-invaders/storage';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 import { useGameLoop, useGamepad, useLeaderboard, VirtualPad } from './Games/common';
+import { consumeGameKey } from '../../utils/gameInput';
 import {
   GameState,
   InputState,
@@ -23,6 +25,41 @@ const STAR_COUNT = 48;
 const STAR_LAYERS = 3;
 const MAX_PARTICLES = 80;
 const COUNTDOWN_START = 3;
+
+const DEFAULT_KEY_MAP = {
+  left: 'ArrowLeft',
+  right: 'ArrowRight',
+  fire: ' ',
+  pause: 'p',
+  restart: 'r',
+};
+
+const ACTION_ALIASES: Record<keyof typeof DEFAULT_KEY_MAP, string[]> = {
+  left: ['a'],
+  right: ['d'],
+  fire: ['Enter'],
+  pause: ['Escape'],
+  restart: [],
+};
+
+const normalizeMappedKey = (key: string) => {
+  const trimmed = key.trim();
+  if (!trimmed) return '';
+  const lower = trimmed.toLowerCase();
+  if (lower === 'space') return ' ';
+  if (lower === 'esc') return 'Escape';
+  return trimmed;
+};
+
+const splitMappedKeys = (value?: string) => {
+  if (!value) return [];
+  return value
+    .split('/')
+    .map((token) => normalizeMappedKey(token))
+    .filter(Boolean);
+};
+
+const comparableKey = (key: string) => (key === ' ' ? ' ' : key.toLowerCase());
 
 type GameStatus = 'ready' | 'countdown' | 'playing' | 'wave' | 'gameover';
 type Particle = {
@@ -190,6 +227,7 @@ const SpaceInvaders: React.FC = () => {
   const [initials, setInitials] = useState('');
   const [showInitialsPrompt, setShowInitialsPrompt] = useState(false);
   const [ariaMessage, setAriaMessage] = useState('');
+  const [mapping] = useInputMapping('space-invaders', DEFAULT_KEY_MAP);
   const prefersReducedMotion = usePrefersReducedMotion();
   const gamepadState = useGamepad();
   const { scores: localScores, addScore } = useLeaderboard('space-invaders', 5);
@@ -204,6 +242,47 @@ const SpaceInvaders: React.FC = () => {
     score: 0,
     bestScore,
   });
+
+  const actionKeySets = useMemo(() => {
+    const entries = (Object.keys(DEFAULT_KEY_MAP) as Array<keyof typeof DEFAULT_KEY_MAP>).map(
+      (action) => {
+        const set = new Set<string>();
+        [...splitMappedKeys(DEFAULT_KEY_MAP[action]), ...splitMappedKeys(mapping[action]), ...ACTION_ALIASES[action]].forEach(
+          (key) => {
+            set.add(comparableKey(key));
+          },
+        );
+        return [action, set] as const;
+      },
+    );
+    return Object.fromEntries(entries) as Record<keyof typeof DEFAULT_KEY_MAP, Set<string>>;
+  }, [mapping]);
+
+  const matchesAction = useCallback(
+    (action: keyof typeof DEFAULT_KEY_MAP, key: string) => {
+      return actionKeySets[action].has(comparableKey(key));
+    },
+    [actionKeySets],
+  );
+
+  const isGameControlKey = useCallback(
+    (key: string) => {
+      return (Object.keys(actionKeySets) as Array<keyof typeof DEFAULT_KEY_MAP>).some((action) =>
+        matchesAction(action, key),
+      );
+    },
+    [actionKeySets, matchesAction],
+  );
+
+  const pauseHotkeys = useMemo(
+    () => Array.from(new Set([...splitMappedKeys(mapping.pause), 'p', 'escape'].map((key) => key.toLowerCase()))),
+    [mapping.pause],
+  );
+
+  const restartHotkeys = useMemo(
+    () => Array.from(new Set([...splitMappedKeys(mapping.restart), 'r'].map((key) => key.toLowerCase()))),
+    [mapping.restart],
+  );
 
   const resetInput = useCallback(() => {
     inputRef.current = { left: false, right: false, fire: false };
@@ -745,48 +824,55 @@ const SpaceInvaders: React.FC = () => {
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (isTextInput(event.target)) return;
+      const key = event.key;
+      const isControl = isGameControlKey(key);
+      if (isControl) {
+        consumeGameKey(event);
+      }
       if (!hasInteractedRef.current) hasInteractedRef.current = true;
       if (event.repeat) return;
-      if (status === 'ready' && (event.code === 'Space' || event.code === 'Enter')) {
-        event.preventDefault();
+      if (status === 'ready' && matchesAction('fire', key)) {
         startGame();
         return;
       }
-      if (
-        status === 'countdown' &&
-        (event.code === 'Space' || event.code === 'Enter')
-      ) {
-        event.preventDefault();
+      if (status === 'countdown' && matchesAction('fire', key)) {
         setCountdown(0);
         setStatus('playing');
         return;
       }
       if (status !== 'playing') return;
-      if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
+      if (matchesAction('left', key)) {
         inputRef.current.left = true;
       }
-      if (event.code === 'ArrowRight' || event.code === 'KeyD') {
+      if (matchesAction('right', key)) {
         inputRef.current.right = true;
       }
-      if (event.code === 'Space' || event.code === 'Enter') {
+      if (matchesAction('fire', key)) {
         inputRef.current.fire = true;
       }
     },
-    [startGame, status],
+    [isGameControlKey, matchesAction, startGame, status],
   );
 
-  const handleKeyUp = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (status !== 'playing') return;
-    if (event.code === 'ArrowLeft' || event.code === 'KeyA') {
-      inputRef.current.left = false;
-    }
-    if (event.code === 'ArrowRight' || event.code === 'KeyD') {
-      inputRef.current.right = false;
-    }
-    if (event.code === 'Space' || event.code === 'Enter') {
-      inputRef.current.fire = false;
-    }
-  }, [status]);
+  const handleKeyUp = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const key = event.key;
+      if (isGameControlKey(key)) {
+        consumeGameKey(event);
+      }
+      if (status !== 'playing') return;
+      if (matchesAction('left', key)) {
+        inputRef.current.left = false;
+      }
+      if (matchesAction('right', key)) {
+        inputRef.current.right = false;
+      }
+      if (matchesAction('fire', key)) {
+        inputRef.current.fire = false;
+      }
+    },
+    [isGameControlKey, matchesAction, status],
+  );
 
   const touchHandlers = useMemo(
     () => ({
@@ -906,8 +992,8 @@ const SpaceInvaders: React.FC = () => {
       highScoreLabel="Best"
       onPauseChange={setPaused}
       onRestart={startGame}
-      pauseHotkeys={["p", "escape"]}
-      restartHotkeys={["r"]}
+      pauseHotkeys={pauseHotkeys}
+      restartHotkeys={restartHotkeys}
       settingsPanel={settingsPanel}
     >
       <div

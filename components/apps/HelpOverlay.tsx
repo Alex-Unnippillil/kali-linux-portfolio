@@ -187,11 +187,11 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
     controls:
       "Arrow keys or A/D to move, Space/Enter to fire. P or Escape pauses, R restarts.",
     actions: {
-      left: "ArrowLeft / A",
-      right: "ArrowRight / D",
-      fire: "Space / Enter",
-      pause: "P / Escape",
-      restart: "R",
+      left: "ArrowLeft",
+      right: "ArrowRight",
+      fire: " ",
+      pause: "p",
+      restart: "r",
     },
   },
   sudoku: {
