@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import {
   applyPatches,
+  buildRadare2PatchScript,
   exportPatches,
   stagePatch,
   validatePatchImport,
@@ -348,6 +349,42 @@ const HexEditor = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleCopyR2Script = async () => {
+    const script = buildRadare2PatchScript(patches, baseAddress);
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(script);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = script;
+        textArea.setAttribute('readonly', '');
+        textArea.style.position = 'absolute';
+        textArea.style.left = '-9999px';
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      setLiveMessage('Copied radare2 script');
+    } catch {
+      setLiveMessage('Unable to copy script');
+    }
+  };
+
+  const handleDownloadR2Script = () => {
+    if (typeof window === 'undefined') return;
+    const script = buildRadare2PatchScript(patches, baseAddress);
+    const blob = new Blob([script], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${file || 'patches'}.r2`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setLiveMessage('Downloaded radare2 script');
+  };
+
   const handleKeyDown = (event) => {
     const key = event.key.toLowerCase();
     const meta = event.metaKey || event.ctrlKey;
@@ -478,6 +515,7 @@ const HexEditor = ({
                             )
                           }
                           onKeyDown={handleEditKeyDown}
+                          aria-label={`Edit byte ${idx}`}
                           className="w-6 bg-transparent text-center outline-none"
                           maxLength={2}
                           autoFocus
@@ -543,6 +581,30 @@ const HexEditor = ({
         </button>
         <button
           type="button"
+          onClick={handleCopyR2Script}
+          disabled={patches.length === 0}
+          className="px-3 py-1 rounded disabled:opacity-50"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
+        >
+          Copy r2 script
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadR2Script}
+          disabled={patches.length === 0}
+          className="px-3 py-1 rounded disabled:opacity-50"
+          style={{
+            backgroundColor: 'var(--r2-surface)',
+            border: '1px solid var(--r2-border)',
+          }}
+        >
+          Download r2 script
+        </button>
+        <button
+          type="button"
           onClick={handleClear}
           className="px-3 py-1 rounded"
           style={{
@@ -599,6 +661,7 @@ const HexEditor = ({
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
             rows={4}
+            aria-label="Patch import JSON"
             placeholder='[{"offset":4,"value":"90"}]'
             className="w-full rounded p-2 text-sm"
             style={{
