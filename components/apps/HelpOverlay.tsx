@@ -159,7 +159,8 @@ export const GAME_INSTRUCTIONS: Record<string, Instruction> = {
   },
   tictactoe: {
     objective: "Place three marks in a row to win.",
-    controls: "Click a square to place your mark.",
+    controls:
+      "Click a square to place a mark. Use Match Type to switch between AI and local hotseat play.",
   },
   tetris: {
     objective: "Clear lines by completing horizontal rows.",
