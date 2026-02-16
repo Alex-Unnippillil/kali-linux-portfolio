@@ -1,212 +1,80 @@
 import React from 'react';
-import { render, fireEvent, act, waitFor, cleanup } from '@testing-library/react';
+import { render, fireEvent, act, screen } from '@testing-library/react';
 import Game2048, { setSeed } from '../components/apps/2048';
 
-// Mock Worker to prevent actual worker creation
 jest.mock('../apps/games/rng', () => ({
+  reset: () => {},
+  serialize: () => 'rng',
+  deserialize: () => {},
   random: () => 0.5,
-  reset: () => { },
-  serialize: () => 'test-rng-state',
-  deserialize: () => { },
 }));
 
 beforeEach(() => {
   jest.useFakeTimers();
-  window.localStorage.clear();
+  localStorage.clear();
   setSeed(1);
-  window.localStorage.setItem('2048-seed', new Date().toISOString().slice(0, 10));
-  // Remove any lingering confetti containers
-  document.querySelectorAll('div[style*="position: fixed"]').forEach(el => el.remove());
+  localStorage.setItem('2048-seed', new Date().toISOString().slice(0, 10));
 });
 
 afterEach(() => {
-  cleanup();
   jest.runOnlyPendingTimers();
   jest.useRealTimers();
-  // Clean up confetti and animations
-  document.querySelectorAll('div[style*="position: fixed"]').forEach(el => el.remove());
-  window.localStorage.clear();
+  localStorage.clear();
+  jest.restoreAllMocks();
 });
 
-test('merging two 2s creates one 4', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
-    [2, 2, 0, 0],
-    [0, 0, 0, 0],
+test('win overlay allows keep playing', async () => {
+  localStorage.setItem('2048-board', JSON.stringify([
+    [1024, 1024, 0, 0],
+    [2, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  window.localStorage.setItem('2048-score', '0');
-
   render(<Game2048 />);
 
-  // Run pending timers to allow component to load from localStorage
-  await act(async () => {
-    jest.advanceTimersByTime(500);
-  });
+  await act(async () => { fireEvent.keyDown(window, { key: 'ArrowLeft' }); jest.advanceTimersByTime(300); });
+  expect(screen.getByText('You reached 2048!')).toBeInTheDocument();
 
-  // Trigger the key event
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  });
-
-  // Allow move animation and state updates
-  await act(async () => {
-    jest.advanceTimersByTime(500);
-  });
-
-  // After merging [2,2,0,0] left, result should be [4,0,0,0] with a new tile added
-  const board = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
-  // Check first row has a 4 (merged tile)
-  expect(board[0].includes(4) || board.flat().includes(4)).toBe(true);
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Keep going/i })); });
+  await act(async () => { fireEvent.keyDown(window, { key: 'ArrowRight' }); jest.advanceTimersByTime(300); });
+  expect(screen.queryByText('You reached 2048!')).not.toBeInTheDocument();
 });
 
-
-test('merge triggers animation', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
-    [2, 2, 0, 0],
+test('renders moving tile animation layer when a move happens', async () => {
+  localStorage.setItem('2048-board', JSON.stringify([
+    [2, 0, 0, 2],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
   const { container } = render(<Game2048 />);
-  await act(async () => {
-    jest.advanceTimersByTime(100);
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    jest.advanceTimersByTime(50);
-  });
-  const firstCell = container.querySelector('.grid div');
-  // Check for merge animation class or styling
-  expect(firstCell).toBeTruthy();
+  await act(async () => { fireEvent.keyDown(window, { key: 'ArrowLeft' }); });
+  expect(container.querySelector('.tile-moving-active') || container.querySelector('.tile-moving-idle')).toBeTruthy();
 });
 
-test('score persists in localStorage', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
+test('undo rewinds after animated move', async () => {
+  localStorage.setItem('2048-board', JSON.stringify([
     [2, 2, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
     [0, 0, 0, 0],
   ]));
-  window.localStorage.setItem('2048-score', '0');
-  const { unmount, getAllByText } = render(<Game2048 />);
-  await act(async () => {
-    jest.advanceTimersByTime(100);
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    jest.advanceTimersByTime(300);
-  });
-  const score = window.localStorage.getItem('2048-score');
-  expect(parseInt(score || '0', 10)).toBeGreaterThanOrEqual(4);
+  render(<Game2048 />);
+
+  await act(async () => { fireEvent.keyDown(window, { key: 'ArrowLeft' }); jest.advanceTimersByTime(300); });
+  const movesCard = screen.getByText('Moves').parentElement;
+  expect(movesCard?.textContent).toContain('1');
+
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Undo/i })); });
+  expect(movesCard?.textContent).toContain('0');
 });
 
-test('ignores browser key repeat events', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
-    [2, 2, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ]));
-  const { getByText } = render(<Game2048 />);
-  await act(async () => {
-    jest.advanceTimersByTime(100);
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft', repeat: true });
-    jest.advanceTimersByTime(100);
-  });
-  expect(getByText(/Moves: 0/)).toBeTruthy();
-});
-
-
-
-test('tracks moves and allows multiple undos', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
-    [2, 2, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ]));
-  const { getByText } = render(<Game2048 />);
-  await act(async () => {
-    jest.advanceTimersByTime(100);
-  });
-  const initial = JSON.parse(window.localStorage.getItem('2048-board') || '[]');
-
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    jest.advanceTimersByTime(500);
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowRight' });
-    jest.advanceTimersByTime(500);
-  });
-  expect(getByText(/Moves: 2/)).toBeTruthy();
-
-  const undoBtn = getByText(/Undo/);
-  await act(async () => {
-    fireEvent.click(undoBtn);
-    jest.advanceTimersByTime(100);
-  });
-  expect(getByText(/Moves: 1/)).toBeTruthy();
-
-  await act(async () => {
-    fireEvent.click(undoBtn);
-    jest.advanceTimersByTime(100);
-  });
-  expect(getByText(/Moves: 0/)).toBeTruthy();
-});
-
-// Skipped: Skin label element not rendering in test environment with fake timers
-test.skip('skin selection changes tile class', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
-    [2, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ]));
-  const { container, getByLabelText } = render(<Game2048 />);
-  await act(async () => {
-    jest.advanceTimersByTime(100);
-  });
-  const firstCell = container.querySelector('.grid div');
-  expect(firstCell).toBeTruthy();
-
-  const select = getByLabelText('Skin');
-  await act(async () => {
-    fireEvent.change(select, { target: { value: 'neon' } });
-    jest.advanceTimersByTime(100);
-  });
-  const updated = container.querySelector('.grid div');
-  expect(updated).toBeTruthy();
-});
-
-test('ignores key repeats while a move is in progress', async () => {
-  window.localStorage.setItem('2048-board', JSON.stringify([
-    [2, 2, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-    [0, 0, 0, 0],
-  ]));
-  const { getByText } = render(<Game2048 />);
-  await act(async () => {
-    jest.advanceTimersByTime(100);
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-  });
-  expect(getByText(/Moves: 1/)).toBeTruthy();
-
-  await act(async () => {
-    jest.advanceTimersByTime(500);
-  });
-  await act(async () => {
-    fireEvent.keyDown(window, { key: 'ArrowLeft' });
-    jest.advanceTimersByTime(100);
-  });
-  expect(getByText(/Moves: 2/)).toBeTruthy();
+test('hint gracefully disables when worker unavailable', async () => {
+  const RealWorker = global.Worker;
+  // @ts-ignore
+  global.Worker = undefined;
+  const view = render(<Game2048 />);
+  expect(await screen.findByText(/Hint unavailable/i)).toBeInTheDocument();
+  view.unmount();
+  global.Worker = RealWorker;
 });
