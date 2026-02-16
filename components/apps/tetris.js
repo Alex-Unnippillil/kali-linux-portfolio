@@ -23,7 +23,8 @@ const CONFETTI_COLORS = Object.values(TETROMINOS).map((tetromino) => tetromino.c
 
 const createBoard = () => Array.from({ length: HEIGHT }, () => Array(WIDTH).fill(0));
 
-const rotate = (matrix) => matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
+const rotateCW = (matrix) => matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
+const rotateCCW = (matrix) => matrix[0].map((_, i) => matrix.map((row) => row[row.length - 1 - i]));
 
 const hexToRgb = (hex) => {
   const normalized = hex.replace('#', '');
@@ -56,7 +57,19 @@ const isNullableNumber = (value) => value === null || isFiniteNumber(value);
 
 const validateKeyBindings = (value) => {
   if (!value || typeof value !== 'object') return false;
-  return Object.keys(defaultKeys).every(
+  const legacyRequiredKeys = [
+    'left',
+    'right',
+    'down',
+    'rotate',
+    'drop',
+    'hold',
+    'pause',
+    'reset',
+    'sound',
+    'settings',
+  ];
+  return legacyRequiredKeys.every(
     (key) => typeof value[key] === 'string' && value[key].length > 0,
   );
 };
@@ -217,7 +230,8 @@ const merge = (board, shape, x, y, type) => {
   const newBoard = board.map((row) => row.slice());
   for (let r = 0; r < shape.length; r += 1) {
     for (let c = 0; c < shape[r].length; c += 1) {
-      if (shape[r][c]) newBoard[y + r][x + c] = type;
+      if (!shape[r][c] || y + r < 0) continue;
+      newBoard[y + r][x + c] = type;
     }
   }
   return newBoard;
@@ -228,6 +242,7 @@ const defaultKeys = {
   right: 'ArrowRight',
   down: 'ArrowDown',
   rotate: 'ArrowUp',
+  rotateCCW: 'z',
   drop: 'Space',
   hold: 'Shift',
   pause: 'p',
@@ -312,6 +327,10 @@ const Tetris = ({ windowMeta } = {}) => {
   const reducedMotion = useRef(false);
   const [gameOver, setGameOver] = useState(false);
   const [bindingCapture, setBindingCapture] = useState(null);
+
+  useEffect(() => {
+    setKeyBindings((prev) => ({ ...defaultKeys, ...prev }));
+  }, [setKeyBindings]);
 
   const isInputLocked = paused || !!clearAnimation || gameOver || showSettings;
 
@@ -605,6 +624,14 @@ const Tetris = ({ windowMeta } = {}) => {
       lockRef.current = null;
     }
     const position = overridePos ?? posRef.current;
+    const hasBlocksAboveBoard = pieceRef.current.shape.some((row, r) =>
+      row.some((cell, c) => cell && position.y + r < 0 && position.x + c >= 0 && position.x + c < WIDTH),
+    );
+    if (hasBlocksAboveBoard) {
+      setGameOver(true);
+      setPaused(true);
+      return;
+    }
     const newBoard = merge(
       boardRef.current,
       pieceRef.current.shape,
@@ -744,12 +771,12 @@ const Tetris = ({ windowMeta } = {}) => {
     ctx.restore();
   }, []);
 
-  const rotatePiece = useCallback(() => {
+  const rotatePiece = useCallback((dir = 1) => {
     if (clearAnimation || gameOver || paused || showSettings) return;
     const p = pieceRef.current;
     const from = p.rotation;
-    const to = (p.rotation + 1) % 4;
-    const rotated = rotate(p.shape);
+    const to = dir === -1 ? (p.rotation + 3) % 4 : (p.rotation + 1) % 4;
+    const rotated = dir === -1 ? rotateCCW(p.shape) : rotateCW(p.shape);
     const table = p.type === 'O' ? { [to]: [[0, 0]] } : KICKS[p.type === 'I' ? 'I' : 'JLSTZ'];
     const kicks = table[from]?.[to] || [[0, 0]];
     for (const [dx, dy] of kicks) {
@@ -875,7 +902,10 @@ const Tetris = ({ windowMeta } = {}) => {
         moveDown(true);
       } else if (action === 'rotate') {
         if (isInputLocked) return;
-        rotatePiece();
+        rotatePiece(1);
+      } else if (action === 'rotateCCW') {
+        if (isInputLocked) return;
+        rotatePiece(-1);
       } else if (action === 'drop') {
         if (isInputLocked) return;
         hardDrop();
@@ -936,7 +966,12 @@ const Tetris = ({ windowMeta } = {}) => {
       }
       if (action === 'rotate') {
         if (isInputLocked) return;
-        rotatePiece();
+        rotatePiece(1);
+        return;
+      }
+      if (action === 'rotateCCW') {
+        if (isInputLocked) return;
+        rotatePiece(-1);
         return;
       }
       if (action === 'drop') {
@@ -1215,7 +1250,8 @@ const Tetris = ({ windowMeta } = {}) => {
       { label: 'Move', keys: [keyBindings.left, keyBindings.right] },
       { label: 'Soft Drop', keys: [keyBindings.down] },
       { label: 'Hard Drop', keys: [keyBindings.drop] },
-      { label: 'Rotate', keys: [keyBindings.rotate] },
+      { label: 'Rotate CW', keys: [keyBindings.rotate] },
+      { label: 'Rotate CCW', keys: [keyBindings.rotateCCW] },
       { label: 'Hold', keys: [keyBindings.hold] },
       { label: 'Pause', keys: [keyBindings.pause] },
     ],
@@ -1224,7 +1260,14 @@ const Tetris = ({ windowMeta } = {}) => {
 
   const touchControls = isTouch ? (
     <div className="mt-4 grid w-full max-w-xs grid-cols-3 gap-2 text-lg">
-      <div />
+      <button
+        type="button"
+        onPointerDown={() => handleTouchAction('rotateCCW')}
+        className="rounded-xl bg-slate-800/80 px-4 py-3 shadow transition hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"
+        aria-label="Rotate counterclockwise"
+      >
+        ⟲
+      </button>
       <button
         type="button"
         onPointerDown={() => handleTouchAction('rotate')}
