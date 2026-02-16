@@ -98,6 +98,7 @@ const Reversi = () => {
   const passTimeoutRef = useRef(null);
   const isPageVisibleRef = useRef(true);
   const gameOverRef = useRef(false);
+  const aiProgressRef = useRef(null);
 
   const [board, setBoard] = useState(() => createBoard());
   const [boardSize, setBoardSize] = useState(DEFAULT_BOARD_SIZE);
@@ -157,6 +158,10 @@ const Reversi = () => {
   useEffect(() => {
     gameOverRef.current = gameOver;
   }, [gameOver]);
+
+  useEffect(() => {
+    aiProgressRef.current = aiProgress;
+  }, [aiProgress]);
 
   // keep refs in sync
   useEffect(() => { boardRef.current = board; }, [board]);
@@ -348,9 +353,25 @@ const Reversi = () => {
     }
     const move = bestMove(boardRef.current, 'W', depth, weights, {
       randomizeTop,
-      onProgress: ({ evaluated, total }) => {
+      onProgress: ({
+        evaluated,
+        total,
+        candidate,
+        score,
+        bestMove: progressBestMove,
+        bestScore,
+        completed,
+      }) => {
         if (aiSearchIdRef.current !== id) return;
-        setAiProgress({ evaluated, total });
+        setAiProgress({
+          evaluated,
+          total,
+          candidate,
+          score,
+          bestMove: progressBestMove,
+          bestScore,
+          completed,
+        });
       },
     });
     aiThinkingRef.current = false;
@@ -379,8 +400,24 @@ const Reversi = () => {
             const { type, id } = e.data;
             if (id && id !== aiSearchIdRef.current) return;
             if (type === 'progress') {
-              const { evaluated, total } = e.data;
-              setAiProgress({ evaluated, total });
+              const {
+                evaluated,
+                total,
+                candidate,
+                score,
+                bestMove,
+                bestScore,
+                completed,
+              } = e.data;
+              setAiProgress({
+                evaluated,
+                total,
+                candidate,
+                score,
+                bestMove,
+                bestScore,
+                completed,
+              });
               return;
             }
             if (type !== 'done') return;
@@ -417,6 +454,9 @@ const Reversi = () => {
       const currentHint = hintRef.current;
       const focused = focusedCellRef.current;
       const boardFocused = boardFocusRef.current;
+      const analysisProgress = aiProgressRef.current;
+      const showAnalysis = aiThinkingRef.current && analysisProgress;
+      const now = performance.now();
       ctx.clearRect(0, 0, size, size);
 
       const boardGradient = ctx.createLinearGradient(0, 0, size, size);
@@ -471,8 +511,53 @@ const Reversi = () => {
       ctx.strokeStyle = frame;
       ctx.strokeRect(2, 2, size - 4, size - 4);
 
+      if (showAnalysis) {
+        const drawAnalysisRing = (move, type) => {
+          if (!move) return;
+          const [r, c] = move;
+          if (
+            typeof r !== 'number'
+            || typeof c !== 'number'
+            || r < 0
+            || r >= SIZE
+            || c < 0
+            || c >= SIZE
+          ) return;
+          const cx = c * cellSize + cellSize / 2;
+          const cy = r * cellSize + cellSize / 2;
+          const pulse = 0.92 + Math.sin(now / 180) * 0.08;
+          const ringRadius = (cellSize / 2 - 7) * pulse;
+          ctx.save();
+          if (type === 'best') {
+            ctx.strokeStyle = 'rgba(248, 113, 113, 0.95)';
+            ctx.lineWidth = 3;
+          } else {
+            const candidateGlow = ctx.createRadialGradient(
+              cx,
+              cy,
+              ringRadius * 0.25,
+              cx,
+              cy,
+              ringRadius * 1.3,
+            );
+            candidateGlow.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+            candidateGlow.addColorStop(1, 'rgba(56, 189, 248, 0)');
+            ctx.fillStyle = candidateGlow;
+            ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+            ctx.strokeStyle = 'rgba(125, 211, 252, 0.9)';
+            ctx.lineWidth = 2;
+          }
+          ctx.beginPath();
+          ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        };
+
+        drawAnalysisRing(analysisProgress.candidate, 'candidate');
+        drawAnalysisRing(analysisProgress.bestMove, 'best');
+      }
+
       const b = boardRef.current;
-      const now = performance.now();
       const colors = themeRef.current === 'dark'
         ? { B: '#1b263b', W: '#f8fafc' }
         : { B: '#2f3e46', W: '#e0fbfc' };
@@ -852,6 +937,12 @@ const Reversi = () => {
     setHintMove(null);
   }, [player, board]);
 
+  useEffect(() => {
+    if (paused || player !== 'W' || gameOver) {
+      setAiProgress(null);
+    }
+  }, [paused, player, gameOver]);
+
   const requestHint = useCallback(() => {
     if (player !== 'B' || paused || gameOver) return;
     const { weights } = DIFFICULTIES[difficulty] || DIFFICULTIES.medium;
@@ -936,6 +1027,13 @@ const Reversi = () => {
     const col = String.fromCharCode(65 + c);
     const row = r + 1;
     return `${index + 1}. ${entry.player === 'B' ? 'You' : 'AI'} → ${col}${row}`;
+  };
+
+  const cellLabel = (r, c) => `${String.fromCharCode(65 + c)}${r + 1}`;
+  const formatScore = (value) => {
+    if (typeof value !== 'number' || Number.isNaN(value)) return null;
+    const rounded = Math.round(value);
+    return rounded >= 0 ? `+${rounded}` : `${rounded}`;
   };
 
   const totalPieces = score.black + score.white || 1;
@@ -1064,20 +1162,32 @@ const Reversi = () => {
               </div>
             )}
             {isAiThinking && (
-              <div
-                className="flex items-center gap-2 text-xs text-slate-300"
-                role="status"
-                aria-live="polite"
-              >
-                <span
-                  aria-hidden="true"
-                  className="inline-flex h-3 w-3 animate-spin rounded-full border border-slate-400/30 border-t-transparent"
-                />
-                <span>
-                  {aiProgress && aiProgress.total
-                    ? `AI evaluating moves (${aiProgress.evaluated}/${aiProgress.total})`
-                    : 'AI evaluating moves...'}
-                </span>
+              <div className="space-y-1 text-xs text-slate-300" role="status" aria-live="polite">
+                <div className="flex items-center gap-2">
+                  <span
+                    aria-hidden="true"
+                    className="inline-flex h-3 w-3 animate-spin rounded-full border border-slate-400/30 border-t-transparent"
+                  />
+                  <span>
+                    {aiProgress && aiProgress.total
+                      ? `AI evaluating moves (${aiProgress.evaluated}/${aiProgress.total})`
+                      : 'AI evaluating moves...'}
+                  </span>
+                </div>
+                {aiProgress?.candidate && (
+                  <div>
+                    Candidate: {cellLabel(aiProgress.candidate[0], aiProgress.candidate[1])}
+                    {formatScore(aiProgress.score) ? ` (score: ${formatScore(aiProgress.score)})` : ''}
+                  </div>
+                )}
+                {aiProgress?.bestMove && (
+                  <div>
+                    Best so far: {cellLabel(aiProgress.bestMove[0], aiProgress.bestMove[1])}
+                    {formatScore(aiProgress.bestScore)
+                      ? ` (score: ${formatScore(aiProgress.bestScore)})`
+                      : ''}
+                  </div>
+                )}
               </div>
             )}
             <div className="text-xs uppercase tracking-wider text-slate-400">
