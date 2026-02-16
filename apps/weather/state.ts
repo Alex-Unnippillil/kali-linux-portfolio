@@ -35,6 +35,7 @@ export interface City {
   hourly?: HourlySnapshot;
   hourlyStale?: boolean;
   lastError?: string;
+  isDemo?: boolean;
 }
 
 export interface CityGroup {
@@ -83,7 +84,8 @@ const isCity = (v: any): v is City =>
   (v.forecast === undefined || isForecastArray(v.forecast)) &&
   (v.hourly === undefined || isHourlySnapshot(v.hourly)) &&
   (v.hourlyStale === undefined || typeof v.hourlyStale === 'boolean') &&
-  (v.lastError === undefined || typeof v.lastError === 'string');
+  (v.lastError === undefined || typeof v.lastError === 'string') &&
+  (v.isDemo === undefined || typeof v.isDemo === 'boolean');
 
 const isCityArray = (v: unknown): v is City[] => Array.isArray(v) && v.every(isCity);
 

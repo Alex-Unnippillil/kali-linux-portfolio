@@ -20,6 +20,7 @@ import useWeatherState, {
 import Forecast from './components/Forecast';
 import CityDetail from './components/CityDetail';
 import WeatherIcon from './components/WeatherIcon';
+import { buildDemoCities } from './demoData';
 import { fetchWeather, WeatherFetchError } from '../../components/apps/weather';
 import { useSettings } from '../../hooks/useSettings';
 
@@ -364,6 +365,7 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
               Name
             </span>
             <input
+              aria-label="City name"
               ref={nameRef}
               value={name}
               onChange={(event) => setName(event.target.value)}
@@ -376,6 +378,7 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
                 Latitude
               </span>
               <input
+                aria-label="Latitude"
                 value={lat}
                 onChange={(event) => setLat(event.target.value)}
                 className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,transparent)] px-2 py-1 text-[color:var(--kali-text)]"
@@ -386,6 +389,7 @@ function CityEditModal({ city, onClose, onSave }: CityEditModalProps) {
                 Longitude
               </span>
               <input
+                aria-label="Longitude"
                 value={lon}
                 onChange={(event) => setLon(event.target.value)}
                 className="w-full rounded border border-[color:var(--kali-panel-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,transparent)] px-2 py-1 text-[color:var(--kali-text)]"
@@ -454,6 +458,10 @@ export default function WeatherApp() {
     () => Object.keys(loadingIds).length > 0,
     [loadingIds],
   );
+  const demoModeActive = useMemo(
+    () => cities.some((city) => city.isDemo),
+    [cities],
+  );
 
   const citySignature = useMemo(
     () => cities.map((city) => `${city.id}:${city.lat}:${city.lon}`).join('|'),
@@ -486,9 +494,10 @@ export default function WeatherApp() {
   }, [citySignature]);
 
   useEffect(() => {
+    const controllers = controllersRef.current;
     return () => {
-      controllersRef.current.forEach((controller) => controller.abort());
-      controllersRef.current.clear();
+      controllers.forEach((controller) => controller.abort());
+      controllers.clear();
     };
   }, []);
 
@@ -509,6 +518,9 @@ export default function WeatherApp() {
 
   const fetchCityWeather = useCallback(
     async (city: City, { force = false }: { force?: boolean } = {}) => {
+      if (city.isDemo && (!allowNetwork || offline)) {
+        return;
+      }
       const now = Date.now();
       const withinTtl =
         city.lastReading && now - city.lastReading.time < WEATHER_TTL;
@@ -575,6 +587,7 @@ export default function WeatherApp() {
           forecast: forecast.length ? forecast : city.forecast,
           timezone: data?.timezone ?? city.timezone,
           lastError: undefined,
+          isDemo: false,
         });
 
         if (response?.revalidate) {
@@ -610,6 +623,7 @@ export default function WeatherApp() {
               forecast: nextForecast.length ? nextForecast : city.forecast,
               timezone: nextData?.timezone ?? city.timezone,
               lastError: undefined,
+              isDemo: false,
             });
           });
         }
@@ -657,9 +671,10 @@ export default function WeatherApp() {
     });
 
     // Cleanup on unmount
+    const controllers = controllersRef.current;
     return () => {
-      controllersRef.current.forEach((controller) => controller.abort());
-      controllersRef.current.clear();
+      controllers.forEach((controller) => controller.abort());
+      controllers.clear();
     };
   }, [cities, fetchCityWeather]);
 
@@ -672,6 +687,17 @@ export default function WeatherApp() {
     },
     [setCities],
   );
+
+  const loadDemoCities = useCallback(() => {
+    setCities((prev) => {
+      const nonDemo = prev.filter((city) => !city.isDemo);
+      return [...nonDemo, ...buildDemoCities()];
+    });
+  }, [setCities]);
+
+  const clearDemoCities = useCallback(() => {
+    setCities((prev) => prev.filter((city) => !city.isDemo));
+  }, [setCities]);
 
   const runSearch = useCallback(
     async (query: string, { immediate = false }: { immediate?: boolean } = {}) => {
@@ -923,6 +949,18 @@ export default function WeatherApp() {
             You are offline. Showing cached data when available.
           </div>
         )}
+        {demoModeActive && (!allowNetwork || offline) && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded border border-[color:color-mix(in_srgb,var(--kali-panel-border)_60%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,transparent)] p-2 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_70%,transparent)]">
+            <span>Demo mode. Enable network in Settings to refresh with live data.</span>
+            <button
+              type="button"
+              onClick={clearDemoCities}
+              className="rounded border border-[color:var(--kali-panel-border)] px-2 py-1 text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_75%,transparent)] transition hover:bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,transparent)]"
+            >
+              Clear demo
+            </button>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <input
@@ -1080,7 +1118,21 @@ export default function WeatherApp() {
       <div className="flex-1 overflow-y-auto p-4">
         {cities.length === 0 ? (
           <div className="flex h-full items-center justify-center rounded border border-dashed border-[color:var(--kali-panel-border)] p-8 text-center text-sm text-[color:color-mix(in_srgb,var(--kali-text)_65%,transparent)]">
-            Search for a city above to start building your weather desk.
+            <div className="space-y-3">
+              <div>Search for a city above to start building your weather desk.</div>
+              {(!allowNetwork || offline) && (
+                <div className="space-y-2">
+                  <p>Demo mode is available while offline or when network is disabled.</p>
+                  <button
+                    type="button"
+                    onClick={loadDemoCities}
+                    className="rounded bg-kali-control px-3 py-1 text-xs font-semibold uppercase tracking-wide text-black shadow-[0_0_12px_rgba(15,148,210,0.35)]"
+                  >
+                    Load demo cities
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -1095,7 +1147,9 @@ export default function WeatherApp() {
                   city={city}
                   loading={Boolean(loadingIds[city.id])}
                   statusLabel={
-                    !allowNetwork
+                    city.isDemo && (!allowNetwork || offline)
+                      ? 'Demo data'
+                      : !allowNetwork
                       ? 'Network disabled'
                       : offline
                         ? 'Offline'
@@ -1103,7 +1157,10 @@ export default function WeatherApp() {
                           ? 'Cached'
                           : undefined
                   }
-                  canFetch={!loadingIds[city.id]}
+                  canFetch={
+                    !loadingIds[city.id] &&
+                    !(city.isDemo && (!allowNetwork || offline))
+                  }
                   onOpen={() => setSelectedId(city.id)}
                   onRefresh={() => fetchCityWeather(city, { force: true })}
                   onEdit={() => setEditingCity(city)}
