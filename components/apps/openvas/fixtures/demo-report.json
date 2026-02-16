@@ -1,0 +1,6 @@
+{
+  "target": "192.168.56.10",
+  "group": "Lab",
+  "profile": "PCI",
+  "reportText": "--- FINDING ---\nTitle: Apache 2.4.49 Path Traversal\nSeverity: High\nImpact: High\nLikelihood: Medium\nCVSS: 9.8\nEPSS: 0.76\nDescription: Improper path normalization leads to traversal.\n--- END ---\n--- FINDING ---\nTitle: OpenSSH CBC Mode Ciphers Enabled\nSeverity: Medium\nImpact: Medium\nLikelihood: Medium\nCVSS: 5.3\nEPSS: 21%\nDescription: Legacy CBC ciphers can expose sessions to cryptographic weaknesses.\n--- END ---\n--- FINDING ---\nTitle: SMB Signing Not Required\nSeverity: Low\nImpact: Low\nLikelihood: Medium\nCVSS: 3.7\nEPSS: 0.08\nDescription: Missing SMB signing increases relay attack exposure in segmented labs.\n--- END ---\n--- FINDING ---\nTitle: Exposed Management Interface\nSeverity: Critical\nImpact: Critical\nLikelihood: High\nCVSS: 9.1\nEPSS: 76%\nDescription: Administrative interface is reachable from untrusted segments.\n--- END ---"
+}
