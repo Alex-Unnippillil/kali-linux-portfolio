@@ -5,7 +5,9 @@ export interface Shortcut {
   keys: string;
 }
 
-const DEFAULT_SHORTCUTS: Shortcut[] = [
+export const KEYMAP_STORAGE_KEY = 'keymap';
+
+export const DEFAULT_SHORTCUTS: Shortcut[] = [
   { description: 'Show keyboard shortcuts', keys: '?' },
   { description: 'Open settings', keys: 'Ctrl+,' },
 ];
@@ -30,8 +32,8 @@ export function useKeymap() {
     {}
   );
 
-  const [map, setMap] = usePersistentState<Record<string, string>>(
-    'keymap',
+  const [map, setMap, , clearKeymap] = usePersistentState<Record<string, string>>(
+    KEYMAP_STORAGE_KEY,
     initial,
     validator
   );
@@ -42,9 +44,14 @@ export function useKeymap() {
   }));
 
   const updateShortcut = (description: string, keys: string) =>
-    setMap({ ...map, [description]: keys });
+    setMap((previous) => ({ ...previous, [description]: keys }));
 
-  return { shortcuts, updateShortcut };
+  const resetKeymap = () => clearKeymap();
+
+  return { shortcuts, updateShortcut, resetKeymap };
 }
+
+export const getDefaultShortcutForDescription = (description: string): string =>
+  DEFAULT_SHORTCUTS.find((shortcut) => shortcut.description === description)?.keys || '';
 
 export default useKeymap;

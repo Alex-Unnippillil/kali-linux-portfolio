@@ -7,6 +7,8 @@ import {
     importSettings as importSettingsData,
 } from '../../utils/settingsStore';
 import { writeRecentAppIds } from '../../utils/recentStorage';
+import { useKeymap, KEYMAP_STORAGE_KEY } from '../../apps/settings/keymapRegistry';
+import { formatShortcutEvent } from '../../utils/shortcuts';
 import KaliWallpaper from '../util-components/kali-wallpaper';
 
 const THEMES = ['default', 'dark', 'neon', 'matrix'];
@@ -15,12 +17,21 @@ const WALLPAPERS = ['wall-1', 'wall-2', 'wall-3', 'wall-4', 'wall-5', 'wall-6', 
 const SECTION_KEYWORDS = {
     appearance: ['appearance', 'theme', 'accent', 'wallpaper', 'density', 'background', 'visual'],
     accessibility: ['accessibility', 'font', 'contrast', 'motion', 'hit', 'keyboard', 'focus'],
-    interaction: ['interaction', 'effects', 'pong', 'spin', 'animation'],
+    interaction: ['interaction', 'effects', 'pong', 'spin', 'animation', 'shortcut', 'key binding'],
     audio: ['audio', 'sound', 'volume', 'haptics', 'feedback'],
     privacy: ['privacy', 'network', 'requests', 'data', 'export', 'import', 'reset', 'launcher'],
 };
 
 const normalizeText = (value = '') => value.toString().toLowerCase();
+
+const isKeymapRecord = (value) => {
+    return (
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        Object.values(value).every((entry) => typeof entry === 'string')
+    );
+};
 
 export function Settings() {
     const {
@@ -54,6 +65,8 @@ export function Settings() {
     const [contrast, setContrast] = useState(0);
     const [query, setQuery] = useState('');
     const [statusMessage, setStatusMessage] = useState('');
+    const [recordingShortcut, setRecordingShortcut] = useState('');
+    const { shortcuts, updateShortcut, resetKeymap } = useKeymap();
     const liveRegion = useRef(null);
     const fileInput = useRef(null);
     const statusTimeout = useRef(null);
@@ -115,6 +128,17 @@ export function Settings() {
     const showPrivacy = matchesQuery(...SECTION_KEYWORDS.privacy);
     const hasResults = showAppearance || showAccessibility || showInteraction || showAudio || showPrivacy;
 
+    const keyCounts = shortcuts.reduce((map, shortcut) => {
+        if (!shortcut.keys) return map;
+        map.set(shortcut.keys, (map.get(shortcut.keys) || 0) + 1);
+        return map;
+    }, new Map());
+    const conflicts = new Set(
+        Array.from(keyCounts.entries())
+            .filter(([, count]) => count > 1)
+            .map(([shortcut]) => shortcut)
+    );
+
     useEffect(() => {
         let raf = requestAnimationFrame(() => {
             let ratio = contrastRatio(accent, accentText());
@@ -126,6 +150,40 @@ export function Settings() {
         });
         return () => cancelAnimationFrame(raf);
     }, [accent, accentText, contrastRatio]);
+
+    useEffect(() => {
+        if (!recordingShortcut) return undefined;
+
+        const handleRecordShortcut = (event) => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                setRecordingShortcut('');
+                return;
+            }
+
+            if (event.key === 'Backspace' || event.key === 'Delete') {
+                event.preventDefault();
+                event.stopPropagation();
+                updateShortcut(recordingShortcut, '');
+                setRecordingShortcut('');
+                return;
+            }
+
+            const formatted = formatShortcutEvent(event);
+            if (!formatted) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            updateShortcut(recordingShortcut, formatted);
+            setRecordingShortcut('');
+        };
+
+        window.addEventListener('keydown', handleRecordShortcut, true);
+        return () => window.removeEventListener('keydown', handleRecordShortcut, true);
+    }, [recordingShortcut, updateShortcut]);
 
     useEffect(() => {
         return () => {
@@ -165,7 +223,31 @@ export function Settings() {
                     <div className="flex flex-wrap items-center gap-3">
                         <button
                             onClick={async () => {
-                                const data = await exportSettingsData();
+                                const settingsData = await exportSettingsData();
+                                let parsedSettings = {};
+                                try {
+                                    parsedSettings = JSON.parse(settingsData);
+                                } catch (error) {
+                                    parsedSettings = {};
+                                }
+
+                                let parsedKeymap = {};
+                                try {
+                                    const storedKeymap = window.localStorage.getItem(KEYMAP_STORAGE_KEY);
+                                    const candidate = storedKeymap ? JSON.parse(storedKeymap) : {};
+                                    parsedKeymap = isKeymapRecord(candidate) ? candidate : {};
+                                } catch (error) {
+                                    parsedKeymap = {};
+                                }
+
+                                const data = JSON.stringify(
+                                    {
+                                        ...parsedSettings,
+                                        keymap: parsedKeymap,
+                                    },
+                                    null,
+                                    2
+                                );
                                 const blob = new Blob([data], { type: 'application/json' });
                                 const url = URL.createObjectURL(blob);
                                 const a = document.createElement('a');
@@ -189,6 +271,7 @@ export function Settings() {
                             onClick={async () => {
                                 if (!window.confirm('Reset desktop personalization and settings?')) return;
                                 await resetSettings();
+                                resetKeymap();
                                 setAccent(defaults.accent);
                                 setWallpaper(defaults.wallpaper);
                                 setUseKaliWallpaper(defaults.useKaliWallpaper);
@@ -499,6 +582,80 @@ export function Settings() {
                                 </span>
                             </label>
                         </div>
+
+                        <div className="rounded-2xl border border-kali-border/60 bg-kali-surface-raised p-5">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-medium text-kali-text">Keyboard shortcuts</p>
+                                    <p className="mt-1 text-xs text-kali-text/60">View and customize desktop key bindings.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        resetKeymap();
+                                        setRecordingShortcut('');
+                                    }}
+                                    className="rounded-lg border border-kali-border/60 bg-kali-surface-muted px-3 py-1.5 text-xs font-medium text-kali-text/80 transition-colors hover:border-kali-focus/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                >
+                                    Reset shortcuts
+                                </button>
+                            </div>
+                            <ul className="mt-4 space-y-2" aria-label="Shortcut bindings">
+                                {shortcuts.map((shortcut) => {
+                                    const isRecording = recordingShortcut === shortcut.description;
+                                    const hasConflict = shortcut.keys && conflicts.has(shortcut.keys);
+
+                                    return (
+                                        <li
+                                            key={shortcut.description}
+                                            data-conflict={hasConflict ? 'true' : 'false'}
+                                            className="rounded-lg border border-kali-border/50 bg-kali-surface-muted px-3 py-3"
+                                        >
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="min-w-[220px] flex-1">
+                                                    <p className="text-sm font-medium text-kali-text">{shortcut.description}</p>
+                                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                        <span className="rounded bg-black/30 px-2 py-0.5 font-mono text-xs text-kali-text/90">
+                                                            {shortcut.keys || 'Unassigned'}
+                                                        </span>
+                                                        {hasConflict && (
+                                                            <span className="rounded-full bg-red-500/20 px-2 py-0.5 text-[11px] font-medium text-red-200">
+                                                                Conflict
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    {isRecording && (
+                                                        <p className="mt-2 text-xs text-kali-text/70">Press keys… Esc to cancel.</p>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setRecordingShortcut(isRecording ? '' : shortcut.description)}
+                                                        className="rounded-lg bg-kali-primary px-3 py-1.5 text-xs font-medium text-kali-inverse transition-colors hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                                    >
+                                                        {isRecording ? 'Cancel' : 'Record'}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            updateShortcut(shortcut.description, '');
+                                                            if (isRecording) {
+                                                                setRecordingShortcut('');
+                                                            }
+                                                        }}
+                                                        className="rounded-lg border border-kali-border/60 bg-kali-surface-muted px-3 py-1.5 text-xs font-medium text-kali-text/80 transition-colors hover:border-kali-focus/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+                                                    >
+                                                        Clear
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                            <p className="mt-3 text-xs text-kali-text/60">Shortcuts do not fire while typing in inputs.</p>
+                        </div>
                     </section>
                 )}
 
@@ -601,6 +758,12 @@ export function Settings() {
                         if (parsed.volume !== undefined) setVolume(parsed.volume);
                         if (parsed.theme !== undefined) {
                             setTheme(parsed.theme);
+                        }
+                        if (isKeymapRecord(parsed.keymap)) {
+                            resetKeymap();
+                            Object.entries(parsed.keymap).forEach(([description, keys]) => {
+                                updateShortcut(description, keys);
+                            });
                         }
                         reportStatus('Settings imported successfully');
                     } catch (err) {
