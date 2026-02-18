@@ -24,7 +24,6 @@ import AppMenu from '../context-menus/app-menu';
 import TaskbarMenu from '../context-menus/taskbar-menu';
 import { MinimizedWindowShelf, ClosedWindowShelf } from '../desktop/WindowStateShelf';
 import { logEvent, logPageView } from '../../utils/analytics';
-import { toPng } from 'html-to-image';
 import { buildWindowPreviewFallbackDataUrl, createWindowPreviewFilter } from '../../utils/windowPreview';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { addRecentApp } from '../../utils/recentStorage';
@@ -42,6 +41,14 @@ import {
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
+
+let toPngImporter = null;
+const resolveToPng = async () => {
+    if (!toPngImporter) {
+        toPngImporter = import('html-to-image').then((module) => module.toPng);
+    }
+    return toPngImporter;
+};
 
 const sanitizeFolderItem = (item) => {
     if (!item) return null;
@@ -4595,6 +4602,7 @@ export class Desktop extends Component {
         const node = document.getElementById(id);
         if (!node) return null;
         try {
+            const toPng = await resolveToPng();
             return await toPng(node, {
                 cacheBust: true,
                 pixelRatio: 1,

@@ -5,6 +5,7 @@ import KaliWallpaper from './kali-wallpaper';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
 
 const FALLBACK_OVERLAY = 'linear-gradient(180deg, rgba(6, 12, 20, 0.65) 0%, rgba(3, 8, 16, 0.88) 92%)';
+const LUMINANCE_SAMPLE_SIZE = 64;
 
 const hexToRgba = (hex, alpha = 1) => {
     if (typeof hex !== 'string') return `rgba(0,0,0,${alpha})`;
@@ -42,44 +43,55 @@ export default function BackgroundImage({ theme }) {
             return;
         }
         let cancelled = false;
+        let idleId = null;
         const img = new Image();
+        img.decoding = 'async';
         img.src = effectiveUrl;
         img.onload = () => {
-            if (cancelled) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                setNeedsOverlay(false);
-                return;
-            }
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-            let r = 0;
-            let g = 0;
-            let b = 0;
-            let count = 0;
-            for (let i = 0; i < data.length; i += 40) {
-                r += data[i];
-                g += data[i + 1];
-                b += data[i + 2];
-                count++;
-            }
-            if (!count) {
-                setNeedsOverlay(false);
-                return;
-            }
-            const avgR = r / count;
-            const avgG = g / count;
-            const avgB = b / count;
-            const toLinear = (channel) => {
-                const value = channel / 255;
-                return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+            const run = () => {
+                if (cancelled) return;
+                const canvas = document.createElement('canvas');
+                canvas.width = LUMINANCE_SAMPLE_SIZE;
+                canvas.height = LUMINANCE_SAMPLE_SIZE;
+                const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                if (!ctx) {
+                    setNeedsOverlay(false);
+                    return;
+                }
+                ctx.drawImage(img, 0, 0, LUMINANCE_SAMPLE_SIZE, LUMINANCE_SAMPLE_SIZE);
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                let r = 0;
+                let g = 0;
+                let b = 0;
+                let count = 0;
+                for (let i = 0; i < data.length; i += 20) {
+                    r += data[i];
+                    g += data[i + 1];
+                    b += data[i + 2];
+                    count++;
+                }
+                if (!count) {
+                    setNeedsOverlay(false);
+                    return;
+                }
+                const avgR = r / count;
+                const avgG = g / count;
+                const avgB = b / count;
+                const toLinear = (channel) => {
+                    const value = channel / 255;
+                    return value <= 0.03928 ? value / 12.92 : Math.pow((value + 0.055) / 1.055, 2.4);
+                };
+                const luminance = 0.2126 * toLinear(avgR) + 0.7152 * toLinear(avgG) + 0.0722 * toLinear(avgB);
+                const contrast = 1.05 / (luminance + 0.05);
+                setNeedsOverlay(contrast < 4.5);
             };
-            const luminance = 0.2126 * toLinear(avgR) + 0.7152 * toLinear(avgG) + 0.0722 * toLinear(avgB);
-            const contrast = 1.05 / (luminance + 0.05);
-            setNeedsOverlay(contrast < 4.5);
+
+            if (typeof window.requestIdleCallback === 'function') {
+                idleId = window.requestIdleCallback(run, { timeout: 250 });
+                return;
+            }
+
+            idleId = window.setTimeout(run, 0);
         };
         img.onerror = () => {
             if (!cancelled) {
@@ -88,6 +100,13 @@ export default function BackgroundImage({ theme }) {
         };
         return () => {
             cancelled = true;
+            if (idleId !== null) {
+                if (typeof window.cancelIdleCallback === 'function') {
+                    window.cancelIdleCallback(idleId);
+                } else {
+                    window.clearTimeout(idleId);
+                }
+            }
         };
     }, [effectiveUrl, theme?.useKaliWallpaper, theme?.overlay]);
 
@@ -152,6 +171,8 @@ export default function BackgroundImage({ theme }) {
                     src={effectiveUrl}
                     alt=""
                     className="h-full w-full object-cover"
+                    decoding="async"
+                    fetchPriority="high"
                     style={{
                         transform: 'scale(1.05)',
                     }}

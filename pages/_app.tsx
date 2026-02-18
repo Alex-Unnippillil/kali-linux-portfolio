@@ -84,6 +84,16 @@ const isSpeedInsightsEnabled =
   process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
   (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
 
+const scheduleWhenIdle = (cb: () => void, timeout = 1200): (() => void) => {
+  if (typeof window === 'undefined') return () => undefined;
+  if (typeof window.requestIdleCallback === 'function') {
+    const id = window.requestIdleCallback(cb, { timeout });
+    return () => window.cancelIdleCallback?.(id);
+  }
+  const id = window.setTimeout(cb, 0);
+  return () => window.clearTimeout(id);
+};
+
 function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
   useEffect(() => {
     // In dev, a previously-registered service worker (e.g. from a production run on localhost)
@@ -168,9 +178,27 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
         }
       };
 
-      void register().catch((err) => {
-        console.error('Service worker setup failed', err);
-      });
+      const runRegistration = (): void => {
+        void register().catch((err) => {
+          console.error('Service worker setup failed', err);
+        });
+      };
+
+      let cleanupIdleTask: (() => void) | null = null;
+      const scheduleRegistration = () => {
+        cleanupIdleTask = scheduleWhenIdle(runRegistration);
+      };
+
+      if (document.readyState === 'complete') {
+        scheduleRegistration();
+      } else {
+        window.addEventListener('load', scheduleRegistration, { once: true });
+      }
+
+      return () => {
+        cleanupIdleTask?.();
+        window.removeEventListener('load', scheduleRegistration);
+      };
     }
 
   }, []);

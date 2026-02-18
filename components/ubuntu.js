@@ -18,7 +18,8 @@ export default class Ubuntu extends Component {
                         screen_locked: false,
                         bg_image_name: 'wall-2',
                         booting_screen: true,
-                        shutDownScreen: false
+                        shutDownScreen: false,
+                        desktopMounted: false,
                 };
                 this.bootScreenLoadHandler = null;
                 this.bootScreenLoadEvent = null;
@@ -53,7 +54,7 @@ export default class Ubuntu extends Component {
         };
 
         hideBootScreen = () => {
-                this.setState({ booting_screen: false });
+                this.setState({ booting_screen: false, desktopMounted: true });
         };
 
         waitForBootSequence = () => {
@@ -146,7 +147,7 @@ export default class Ubuntu extends Component {
                 let booting_screen = safeLocalStorage?.getItem('booting_screen');
                 if (booting_screen !== null && booting_screen !== undefined) {
                         // user has visited site before
-                        this.setState({ booting_screen: false });
+                        this.setState({ booting_screen: false, desktopMounted: true });
                 } else {
                         // user is visiting site for the first time
                         safeLocalStorage?.setItem('booting_screen', false);
@@ -219,7 +220,7 @@ export default class Ubuntu extends Component {
         turnOn = () => {
                 logPageView('/desktop', 'Custom Title');
 
-                this.setState({ shutDownScreen: false, booting_screen: true }, this.waitForBootSequence);
+                this.setState({ shutDownScreen: false, booting_screen: true, desktopMounted: true }, this.waitForBootSequence);
                 safeLocalStorage?.setItem('shut-down', false);
         };
 
@@ -240,7 +241,9 @@ export default class Ubuntu extends Component {
                                                 disableMessageSequence={typeof jest !== 'undefined'}
                                         />
                                         <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
-                                        <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                        {this.state.desktopMounted ? (
+                                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                        ) : null}
                                 </NotificationCenter>
                         </Layout>
                 );
