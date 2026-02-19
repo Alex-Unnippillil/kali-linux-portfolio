@@ -1,4 +1,6 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest } from 'next/server';
+
+import { updateSession } from '@/utils/supabase/middleware';
 
 function nonce() {
   const arr = new Uint8Array(16);
@@ -6,7 +8,7 @@ function nonce() {
   return Buffer.from(arr).toString('base64');
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const n = nonce();
   const scriptSrc = [
     "'self'",
@@ -41,7 +43,7 @@ export function middleware(req: NextRequest) {
     "form-action 'self'"
   ].join('; ');
 
-  const res = NextResponse.next();
+  const res = await updateSession(req);
   res.headers.set('x-csp-nonce', n);
   res.headers.set('Content-Security-Policy', csp);
   return res;
