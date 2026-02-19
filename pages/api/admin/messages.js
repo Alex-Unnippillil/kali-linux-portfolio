@@ -1,6 +1,5 @@
 import { getServiceClient } from '../../../lib/service-client';
 import { createLogger } from '../../../lib/logger';
-import { requireApiAuth } from '../../../lib/api-auth';
 
 export default async function handler(
   req,
@@ -13,8 +12,10 @@ export default async function handler(
     return;
   }
 
-  if (!requireApiAuth(req, res)) {
+  const key = req.headers['x-admin-key'];
+  if (key !== process.env.ADMIN_READ_KEY) {
     logger.warn('unauthorized admin access attempt');
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
