@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { requireApiAuth } from "../../lib/api-auth";
 
 export default async function handler(
   req,
@@ -6,6 +7,10 @@ export default async function handler(
 ) {
   if (req.method !== "POST") {
     res.status(405).json({ ok: false });
+    return;
+  }
+
+  if (!requireApiAuth(req, res)) {
     return;
   }
 
