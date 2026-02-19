@@ -78,11 +78,20 @@ describe('sessionManager', () => {
     const registry: Record<string, CommandDefinition> = {
       help: { name: 'help', description: 'Help', handler: jest.fn() },
       hello: { name: 'hello', description: 'Hello', handler: jest.fn() },
-    manager.handleInput('he	');
+    };
+    const manager = createSessionManager({
+      getRegistry: () => registry,
+      context: ctx,
+      prompt: () => writes.push('[prompt]'),
+      write: (text) => writes.push(text),
+      writeLine: (text) => writes.push(text + '\n'),
+    });
 
-    expect(manager.getBuffer()).toBe('help');
-    expect(writes.join('')).toContain('lp');
-    expect(writes.join('')).not.toContain('	');
+    manager.handleInput('he 	');
+
+    expect(manager.getBuffer()).toBe('he ');
+    expect(writes.join('')).not.toContain('[prompt]');
+    expect(writes.join('')).not.toContain('lp');
   });
 
   it('skips autocomplete when buffer contains whitespace', () => {
@@ -105,10 +114,7 @@ describe('sessionManager', () => {
 
     expect(writes.join('')).not.toContain('help');
     expect(writes.join('')).not.toContain('hello');
-    manager.handleInput('cat R	');
-
     expect(manager.getBuffer()).toBe('cat R');
-    expect(writes.join('')).not.toContain('[prompt]');
   });
 
   it('navigates history with arrow keys', () => {

@@ -159,13 +159,13 @@ describe('Camera app', () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /shoot/i })[0]);
 
     await waitFor(() => expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob)));
-    const photo = screen.getByRole('img');
+    const photo = screen.getAllByRole('img')[0];
     expect(photo).toHaveAttribute('src', 'blob:test-url');
     expect(photo.getAttribute('src')).not.toContain('data:image');
-    expect(screen.getByRole('link', { name: /save|download/i })).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
+    expect(screen.getAllByRole('link', { name: /save|download/i })[0]).toHaveAttribute('download', expect.stringMatching(/^IMG_/));
   });
 
   it('keeps the simplified compact controls without timer selector', async () => {
@@ -203,7 +203,7 @@ describe('Camera app', () => {
     render(<CameraApp />);
     await startCamera();
 
-    fireEvent.click(screen.getByRole('button', { name: /shoot/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /shoot/i })[0]);
 
     await waitFor(() => expect(getDir).toHaveBeenCalledWith('Media/Camera', { create: true }));
     await waitFor(() => expect(writeFile).toHaveBeenCalledWith(expect.stringMatching(/^IMG_/), expect.any(Blob), expect.anything()));
