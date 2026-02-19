@@ -58,3 +58,9 @@ tsconfig.tsbuildinfo
 .env*.local
 
 .env.local.bak
+
+# lockfiles for package managers not used in this repo
+pnpm-lock.yaml
+
+# accidental binary artifacts
+supabase.exe
