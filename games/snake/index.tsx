@@ -15,87 +15,134 @@ const Snake = () => {
     "snake:gridSize",
     DEFAULT_GRID_SIZE,
   );
-  const [state, setState] = useState<GameState>(() =>
-    createState(wrap, gridSize),
-  );
   const [score, setScore] = useState(0);
-  const [foodAnim, setFoodAnim] = useState(1);
+  const [gameOver, setGameOver] = useState(false);
+  const stateRef = useRef<GameState>(createState(wrap, gridSize));
+  const dirRef = useRef(stateRef.current.dir);
   const runningRef = useRef(true);
+  const gameOverRef = useRef(false);
+  const speedRef = useRef(speed);
+  const lastTimeRef = useRef<number | null>(null);
+  const accumulatorRef = useRef(0);
+  const foodAnimRef = useRef(1);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    speedRef.current = speed;
+  }, [speed]);
 
   // reset when wrap or grid size changes
   useEffect(() => {
-    setState(createState(wrap, gridSize));
+    stateRef.current = createState(wrap, gridSize);
+    dirRef.current = stateRef.current.dir;
     setScore(0);
+    setGameOver(false);
+    gameOverRef.current = false;
     runningRef.current = true;
+    foodAnimRef.current = 1;
+    accumulatorRef.current = 0;
+    lastTimeRef.current = null;
   }, [wrap, gridSize]);
 
-  // game loop
   useEffect(() => {
-    const id = setInterval(() => {
-      setState((s) => {
-        if (!runningRef.current) return s;
-        const result = step(s);
-        if (result.gameOver) {
-          runningRef.current = false;
-        }
-        if (result.ate) {
-          setScore((sc) => sc + 1);
-          setFoodAnim(0);
-        }
-        return result.state;
-      });
-    }, speed);
-    return () => clearInterval(id);
-  }, [speed]);
-
-  // food spawn animation
-  useEffect(() => {
-    if (foodAnim < 1) {
-      const id = requestAnimationFrame(() =>
-        setFoodAnim((f) => Math.min(f + 0.1, 1)),
-      );
-      return () => cancelAnimationFrame(id);
-    }
-  }, [foodAnim]);
-
-  // draw
-  useEffect(() => {
-    const ctx = canvasRef.current?.getContext("2d");
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
     if (!ctx) return;
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(0, 0, state.gridSize * CELL_SIZE, state.gridSize * CELL_SIZE);
-    const foodX = state.food.x * CELL_SIZE;
-    const foodY = state.food.y * CELL_SIZE;
-    const size = CELL_SIZE * foodAnim;
-    ctx.fillStyle = "#facc15";
-    ctx.fillRect(
-      foodX + (CELL_SIZE - size) / 2,
-      foodY + (CELL_SIZE - size) / 2,
-      size,
-      size,
-    );
-    ctx.fillStyle = "#3b82f6";
-    state.snake.forEach((seg) => {
-      ctx.fillRect(seg.x * CELL_SIZE, seg.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-    });
-  }, [state, foodAnim]);
+
+    const draw = (state: GameState, foodAnim: number) => {
+      ctx.fillStyle = "#111827";
+      ctx.fillRect(
+        0,
+        0,
+        state.gridSize * CELL_SIZE,
+        state.gridSize * CELL_SIZE,
+      );
+      const foodX = state.food.x * CELL_SIZE;
+      const foodY = state.food.y * CELL_SIZE;
+      const size = CELL_SIZE * foodAnim;
+      ctx.fillStyle = "#facc15";
+      ctx.fillRect(
+        foodX + (CELL_SIZE - size) / 2,
+        foodY + (CELL_SIZE - size) / 2,
+        size,
+        size,
+      );
+      ctx.fillStyle = "#3b82f6";
+      state.snake.forEach((seg) => {
+        ctx.fillRect(seg.x * CELL_SIZE, seg.y * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+      });
+    };
+
+    const loop = (time: number) => {
+      if (lastTimeRef.current === null) {
+        lastTimeRef.current = time;
+      }
+      const delta = time - lastTimeRef.current;
+      lastTimeRef.current = time;
+
+      if (runningRef.current) {
+        accumulatorRef.current += delta;
+        const stepInterval = speedRef.current;
+
+        while (accumulatorRef.current >= stepInterval) {
+          const result = step(stateRef.current);
+          stateRef.current = result.state;
+
+          if (result.ate) {
+            setScore((sc) => sc + 1);
+            foodAnimRef.current = 0;
+          }
+
+          if (result.gameOver) {
+            runningRef.current = false;
+            gameOverRef.current = true;
+            setGameOver(true);
+          }
+
+          accumulatorRef.current -= stepInterval;
+        }
+
+        if (foodAnimRef.current < 1) {
+          foodAnimRef.current = Math.min(
+            1,
+            foodAnimRef.current + delta / 150,
+          );
+        }
+      }
+
+      draw(stateRef.current, foodAnimRef.current);
+      rafRef.current = requestAnimationFrame(loop);
+    };
+
+    rafRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, []);
 
   // controls
-  const dirRef = useRef(state.dir);
-  useEffect(() => {
-    dirRef.current = state.dir;
-  }, [state.dir]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const dir = dirRef.current;
-      if (e.key === "ArrowUp" && dir.y !== 1)
-        setState((s) => ({ ...s, dir: { x: 0, y: -1 } }));
-      if (e.key === "ArrowDown" && dir.y !== -1)
-        setState((s) => ({ ...s, dir: { x: 0, y: 1 } }));
-      if (e.key === "ArrowLeft" && dir.x !== 1)
-        setState((s) => ({ ...s, dir: { x: -1, y: 0 } }));
-      if (e.key === "ArrowRight" && dir.x !== -1)
-        setState((s) => ({ ...s, dir: { x: 1, y: 0 } }));
+      if (e.key === "ArrowUp" && dir.y !== 1) {
+        dirRef.current = { x: 0, y: -1 };
+        stateRef.current.dir = dirRef.current;
+      }
+      if (e.key === "ArrowDown" && dir.y !== -1) {
+        dirRef.current = { x: 0, y: 1 };
+        stateRef.current.dir = dirRef.current;
+      }
+      if (e.key === "ArrowLeft" && dir.x !== 1) {
+        dirRef.current = { x: -1, y: 0 };
+        stateRef.current.dir = dirRef.current;
+      }
+      if (e.key === "ArrowRight" && dir.x !== -1) {
+        dirRef.current = { x: 1, y: 0 };
+        stateRef.current.dir = dirRef.current;
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -133,10 +180,22 @@ const Snake = () => {
     { label: "Fast", value: 100 },
   ];
 
-  const width = state.gridSize * CELL_SIZE;
+  const width = gridSize * CELL_SIZE;
 
   return (
-    <GameShell game="snake" settings={settings}>
+    <GameShell
+      game="snake"
+      settings={settings}
+      onPause={() => {
+        runningRef.current = false;
+      }}
+      onResume={() => {
+        if (!gameOverRef.current) {
+          runningRef.current = true;
+          lastTimeRef.current = null;
+        }
+      }}
+    >
       <div className="flex flex-col items-center">
         <div className="flex justify-between mb-2 text-white" style={{ width }}>
           <div className="flex space-x-2">
@@ -156,7 +215,13 @@ const Snake = () => {
           </div>
           <div>Score: {score}</div>
         </div>
-        <canvas ref={canvasRef} width={width} height={width} />
+        <canvas
+          ref={canvasRef}
+          width={width}
+          height={width}
+          role="img"
+          aria-label={gameOver ? "Snake game over" : "Snake game"}
+        />
       </div>
     </GameShell>
   );
