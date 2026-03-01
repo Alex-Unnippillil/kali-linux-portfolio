@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import DOMPurify from 'dompurify';
+import figlet from 'figlet';
+import Standard from 'figlet/importable-fonts/Standard.js';
+import Slant from 'figlet/importable-fonts/Slant.js';
+import Big from 'figlet/importable-fonts/Big.js';
 
 // Preset character sets and color palettes
 const presetCharSets = {
@@ -7,6 +11,8 @@ const presetCharSets = {
   blocks: '█▓▒░ ',
   binary: '01',
 };
+
+const figletFonts = ['Standard', 'Slant', 'Big'];
 
 const palettes = {
   grayscale: [
@@ -36,6 +42,11 @@ const palettes = {
 };
 
 export default function AsciiArt() {
+  const [mode, setMode] = useState('image');
+  const [figletText, setFigletText] = useState('');
+  const [figletFont, setFigletFont] = useState(figletFonts[0]);
+  const [figletOutput, setFigletOutput] = useState('');
+  const [figletNotice, setFigletNotice] = useState('');
   const [asciiHtml, setAsciiHtml] = useState('');
   const [plainAscii, setPlainAscii] = useState('');
   const [ansiAscii, setAnsiAscii] = useState('');
@@ -94,6 +105,20 @@ export default function AsciiArt() {
       document.fonts.load(`10px ${font}`);
     }
   }, [font]);
+
+  useEffect(() => {
+    figlet.parseFont('Standard', Standard);
+    figlet.parseFont('Slant', Slant);
+    figlet.parseFont('Big', Big);
+  }, []);
+
+  useEffect(() => {
+    try {
+      setFigletOutput(figlet.textSync(figletText || '', { font: figletFont }));
+    } catch {
+      setFigletOutput('');
+    }
+  }, [figletText, figletFont]);
 
   // Canvas will be used for processing and exporting
 
@@ -248,6 +273,13 @@ export default function AsciiArt() {
     if (text) navigator.clipboard.writeText(text);
   }, [useColor, ansiAscii, plainAscii]);
 
+  const copyFiglet = useCallback(() => {
+    if (!figletOutput) return;
+    navigator.clipboard.writeText(figletOutput);
+    setFigletNotice('Copied banner text');
+    setTimeout(() => setFigletNotice(''), 2000);
+  }, [figletOutput]);
+
   const downloadAnsi = useCallback(() => {
     if (!ansiAscii) return;
     const blob = new Blob([ansiAscii], { type: 'text/plain' });
@@ -371,6 +403,66 @@ export default function AsciiArt() {
 
   return (
     <div className="h-full w-full flex flex-col p-4 bg-ub-cool-grey text-white overflow-auto">
+      <div className="mb-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setMode('image')}
+          className={`px-2 py-1 rounded ${
+            mode === 'image' ? 'bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+        >
+          Image to ASCII
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('text')}
+          className={`px-2 py-1 rounded ${
+            mode === 'text' ? 'bg-blue-700' : 'bg-gray-700 hover:bg-gray-600'
+          }`}
+        >
+          Text to ASCII
+        </button>
+      </div>
+      {mode === 'text' && (
+        <div className="mb-4 flex flex-col gap-3">
+          <div className="flex flex-wrap gap-2">
+            <label className="flex items-center gap-2">
+              Font
+              <select
+                value={figletFont}
+                onChange={(e) => setFigletFont(e.target.value)}
+                className="bg-gray-700 px-2 py-1"
+              >
+                {figletFonts.map((fontName) => (
+                  <option key={fontName} value={fontName}>
+                    {fontName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              onClick={copyFiglet}
+              className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded"
+            >
+              Copy Output
+            </button>
+          </div>
+          <textarea
+            value={figletText}
+            onChange={(e) => setFigletText(e.target.value)}
+            className="min-h-[4rem] w-full resize-none rounded bg-gray-800 px-2 py-1 text-white"
+            placeholder="Type text to convert with FIGlet"
+          />
+          <pre className="whitespace-pre overflow-auto rounded bg-gray-900 p-2">
+            {figletOutput}
+          </pre>
+          <div className="sr-only" aria-live="polite">
+            {figletNotice}
+          </div>
+        </div>
+      )}
+      {mode === 'image' && (
       <div className="mb-2 flex flex-wrap gap-2">
         <input
           type="file"
@@ -581,7 +673,7 @@ export default function AsciiArt() {
       <div className="sr-only" aria-live="polite">
         {altText}
       </div>
+      )}
     </div>
   );
 }
-
