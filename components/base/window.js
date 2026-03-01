@@ -2,7 +2,7 @@
 
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import Settings from '../apps/settings';
+import Settings from '../../apps/settings';
 import { logPageView } from '../../utils/analytics';
 import { SnapOverlayContext } from '../desktop/SnapOverlay';
 import {
