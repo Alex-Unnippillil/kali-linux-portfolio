@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { generateSudoku, isLegalMove } from '../../apps/games/sudoku';
+import { generateSudoku, getCandidates, isLegalMove } from '../../apps/games/sudoku';
 import { explainNextStep, getHint } from '../../workers/sudokuSolver';
 import {
   cellsToBoard,
@@ -199,6 +199,14 @@ const Sudoku = () => {
           event.preventDefault();
           handleNewPuzzleRequest();
         }
+        if (event.key.toLowerCase() === 'a') {
+          event.preventDefault();
+          handleAutoNotes();
+        }
+        if (event.key.toLowerCase() === 'x') {
+          event.preventDefault();
+          handleClearNotes();
+        }
       }
     };
     window.addEventListener('keydown', handler);
@@ -378,9 +386,8 @@ const Sudoku = () => {
         }
       }
     }
-    sanitizeAllCandidates(newBoard, (rr, cc, n) =>
-      isLegalMove(cellsToBoard(newBoard), rr, cc, n),
-    );
+    const matrixAfterMove = cellsToBoard(newBoard);
+    sanitizeAllCandidates(newBoard, (rr, cc, n) => isLegalMove(matrixAfterMove, rr, cc, n));
     if (!cellsEqual(previous, newBoard[r][c])) {
       recordHistory({ kind: settings.pencilMode || forcePencil ? 'candidate' : 'value', r, c, before: previous, after: cloneCell(newBoard[r][c]) });
     }
@@ -472,13 +479,68 @@ const Sudoku = () => {
       setAriaMessage('No candidates to remove for this hint');
       return;
     }
-    sanitizeAllCandidates(newBoard, (rr, cc, n) =>
-      isLegalMove(cellsToBoard(newBoard), rr, cc, n),
-    );
+    const matrixAfterHint = cellsToBoard(newBoard);
+    sanitizeAllCandidates(newBoard, (rr, cc, n) => isLegalMove(matrixAfterHint, rr, cc, n));
     setBoard(newBoard);
     recordHistory({ kind: 'batch-candidates', changes });
     setHintsApplied((count) => count + 1);
     setAriaMessage('Hint applied');
+  };
+
+  const handleAutoNotes = () => {
+    const nextBoard = cloneBoard(board);
+    const matrix = cellsToBoard(nextBoard);
+    const changes = [];
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const cell = nextBoard[r][c];
+        const before = cloneCell(cell);
+        if (cell.value !== 0) {
+          cell.candidates = [];
+        } else {
+          cell.candidates = getCandidates(matrix, r, c);
+        }
+        const after = cloneCell(cell);
+        if (!cellsEqual(before, after)) {
+          changes.push({ r, c, before, after });
+        }
+      }
+    }
+
+    if (changes.length === 0) {
+      setAriaMessage('No notes to fill');
+      return;
+    }
+
+    recordHistory({ kind: 'batch-candidates', changes });
+    setBoard(nextBoard);
+    setAriaMessage(`Auto notes filled for ${changes.length} cells`);
+  };
+
+  const handleClearNotes = () => {
+    const nextBoard = cloneBoard(board);
+    const changes = [];
+
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        const cell = nextBoard[r][c];
+        if (cell.candidates.length === 0) continue;
+        const before = cloneCell(cell);
+        cell.candidates = [];
+        const after = cloneCell(cell);
+        changes.push({ r, c, before, after });
+      }
+    }
+
+    if (changes.length === 0) {
+      setAriaMessage('No notes to clear');
+      return;
+    }
+
+    recordHistory({ kind: 'batch-candidates', changes });
+    setBoard(nextBoard);
+    setAriaMessage(`Cleared notes for ${changes.length} cells`);
   };
 
   const handleNumberPadInput = (value, { pencil = false } = {}) => {
@@ -837,6 +899,24 @@ const Sudoku = () => {
                   Redo
                 </button>
               </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-white/10 py-2 font-semibold text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                  onClick={handleAutoNotes}
+                  title="Fill legal notes for all empty cells (A)"
+                >
+                  Auto Notes
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-white/10 bg-white/10 py-2 font-semibold text-white transition hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                  onClick={handleClearNotes}
+                  title="Clear all notes from the board (X)"
+                >
+                  Clear Notes
+                </button>
+              </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs uppercase tracking-wider text-white/50">
                   <span>Number Pad</span>
@@ -884,7 +964,7 @@ const Sudoku = () => {
               </div>
               <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs leading-relaxed text-white/60">
                 <p>
-                  Arrow keys move, 1-9 enters values, Shift+1-9 toggles notes, P toggles pencil mode, H opens hints, N starts a new puzzle.
+                  Arrow keys move, 1-9 enters values, Shift+1-9 toggles notes, P toggles pencil mode, H opens hints, A fills auto notes, X clears notes, N starts a new puzzle.
                 </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs leading-relaxed text-white/60">
