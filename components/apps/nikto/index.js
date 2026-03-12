@@ -7,6 +7,37 @@ const suggestions = {
   '/': 'Disable or standardize ETag headers to avoid disclosing inodes.',
 };
 
+const severityTokens = {
+  info: 'bg-kali-info text-kali-inverse',
+  low: 'bg-kali-severity-low text-white',
+  medium: 'bg-kali-severity-medium text-white',
+  high: 'bg-kali-severity-high text-white',
+  critical: 'bg-kali-severity-critical text-white',
+};
+
+const severityGroupStyles = {
+  info: {
+    row: 'bg-kali-info/10 text-kali-info',
+    border: 'border-kali-info/60',
+  },
+  low: {
+    row: 'bg-kali-severity-low/10 text-kali-severity-low',
+    border: 'border-kali-severity-low/60',
+  },
+  medium: {
+    row: 'bg-kali-severity-medium/10 text-kali-severity-medium',
+    border: 'border-kali-severity-medium/60',
+  },
+  high: {
+    row: 'bg-kali-severity-high/12 text-kali-severity-high',
+    border: 'border-kali-severity-high/60',
+  },
+  critical: {
+    row: 'bg-kali-severity-critical/15 text-kali-severity-critical',
+    border: 'border-kali-severity-critical/60',
+  },
+};
+
 const NiktoApp = () => {
   const [host, setHost] = useState('');
   const [port, setPort] = useState('');
@@ -163,9 +194,9 @@ const NiktoApp = () => {
   };
 
   return (
-    <div className="p-4 bg-gray-900 text-white min-h-screen space-y-4">
+    <div className="min-h-screen space-y-4 bg-kali-background p-4 text-kali-text">
       <h1 className="text-2xl mb-4">Nikto Scanner</h1>
-      <p className="text-sm text-yellow-300 mb-4">
+      <p className="mb-4 text-sm text-kali-primary">
         Build a nikto command without running any scans. Data and reports are
         static and for learning only.
       </p>
@@ -176,7 +207,8 @@ const NiktoApp = () => {
           </label>
           <input
             id="nikto-host"
-            className="w-full p-2 rounded text-black"
+            aria-label="Host"
+            className="w-full rounded border border-kali-border/60 bg-kali-dark p-2 text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
             value={host}
             onChange={(e) => setHost(e.target.value)}
           />
@@ -187,8 +219,9 @@ const NiktoApp = () => {
           </label>
           <input
             id="nikto-port"
+            aria-label="Port"
             type="number"
-            className="w-full p-2 rounded text-black"
+            className="w-full rounded border border-kali-border/60 bg-kali-dark p-2 text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
             value={port}
             onChange={(e) => setPort(e.target.value)}
           />
@@ -196,6 +229,7 @@ const NiktoApp = () => {
         <div className="flex items-center mt-2">
           <input
             id="nikto-ssl"
+            aria-label="Enable SSL"
             type="checkbox"
             className="mr-2"
             checked={ssl}
@@ -208,35 +242,56 @@ const NiktoApp = () => {
       </form>
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>
-        <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
+        <pre className="overflow-auto rounded border border-kali-border/60 bg-kali-dark p-2 text-kali-primary">
           {command}
         </pre>
       </div>
       <div>
         <h2 className="text-lg mb-2">Findings</h2>
-        <table className="w-full text-sm">
+        <table className="w-full overflow-hidden rounded-lg border border-white/10 text-sm">
           <thead>
-            <tr className="bg-gray-700">
-              <th className="p-2 text-left">Path</th>
-              <th className="p-2 text-left">Finding</th>
+            <tr className="bg-kali-surface-muted/90 text-left text-xs font-semibold uppercase tracking-wide text-kali-muted">
+              <th className="p-3">Path</th>
+              <th className="p-3">Finding</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(grouped).map(([sev, list]) => (
               <React.Fragment key={sev}>
-                <tr className="bg-gray-800">
-                  <td colSpan={2} className="p-2 font-bold">
-                    {sev}
-                  </td>
-                </tr>
-                {list.map((f) => (
                   <tr
-                    key={f.path}
-                    className="odd:bg-gray-900 cursor-pointer hover:bg-gray-700"
-                    onClick={() => setSelected(f)}
+                    className={`text-xs uppercase tracking-wide ${
+                      severityGroupStyles[sev.toLowerCase()]?.row || 'bg-kali-surface-muted/60 text-kali-muted'
+                    }`}
                   >
-                    <td className="p-2">{f.path}</td>
-                    <td className="p-2">{f.finding}</td>
+                    <td
+                      colSpan={2}
+                      className={`border-l-4 px-3 py-2 font-semibold ${
+                        severityGroupStyles[sev.toLowerCase()]?.border || 'border-transparent'
+                      }`}
+                    >
+                      {sev}
+                    </td>
+                  </tr>
+                {list.map((f) => (
+                  <tr key={f.path} className="odd:bg-kali-surface/80 even:bg-kali-surface/60">
+                    <td colSpan={2} className="p-0">
+                      <button
+                        type="button"
+                        onClick={() => setSelected(f)}
+                        className="grid w-full grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto] items-start gap-3 px-3 py-2 text-left text-sm transition hover:bg-kali-primary/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-kali-primary"
+                        aria-label="View finding details"
+                      >
+                        <span className="font-medium text-white/90">{f.path}</span>
+                        <span className="text-white/80">{f.finding}</span>
+                        <span
+                          className={`justify-self-end rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${
+                            severityTokens[f.severity.toLowerCase()] || 'bg-kali-secondary text-kali-inverse'
+                          }`}
+                        >
+                          {f.severity}
+                        </span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </React.Fragment>
@@ -245,26 +300,34 @@ const NiktoApp = () => {
         </table>
       </div>
       {selected && (
-        <div className="fixed top-0 right-0 w-80 h-full bg-gray-800 p-4 overflow-auto shadow-lg">
-          <button
-            type="button"
-            onClick={() => setSelected(null)}
-            className="mb-2 bg-red-600 px-2 py-1 rounded text-sm"
-          >
-            Close
-          </button>
-          <h3 className="text-xl mb-2">{selected.path}</h3>
-          <p className="mb-2">{selected.finding}</p>
-          <p className="mb-2">
-            <span className="font-bold">Severity:</span> {selected.severity}
-          </p>
-          <p className="mb-2">
-            <span className="font-bold">References:</span> {selected.references.join(', ')}
-          </p>
-          <p className="mb-4">{selected.details}</p>
-          <p className="text-sm text-green-300">
-            {suggestions[selected.path] || 'No suggestion available.'}
-          </p>
+        <div className="fixed inset-0 z-50 flex justify-end bg-kali-overlay/70 backdrop-blur-sm">
+          <aside className="flex h-full w-80 flex-col border-l border-white/10 bg-kali-surface-raised/95 p-4 text-sm shadow-kali-panel">
+            <button
+              type="button"
+              onClick={() => setSelected(null)}
+              className="mb-3 inline-flex w-max items-center rounded-md bg-kali-error px-3 py-1 text-xs font-semibold text-white transition hover:bg-kali-error/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
+            >
+              Close
+            </button>
+            <h3 className="text-xl font-semibold text-white">{selected.path}</h3>
+            <p className="mt-2 text-white/80">{selected.finding}</p>
+            <p className="mt-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-kali-muted">
+              Severity
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${
+                  severityTokens[selected.severity.toLowerCase()] || 'bg-kali-secondary text-kali-inverse'
+                }`}
+              >
+                {selected.severity}
+              </span>
+            </p>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-kali-muted">References</p>
+            <p className="text-sm text-white/90">{selected.references.join(', ')}</p>
+            <p className="mt-3 text-sm text-white/80">{selected.details}</p>
+            <p className="mt-4 rounded-lg border border-kali-primary/40 bg-kali-primary/10 p-3 text-xs text-kali-primary">
+              {suggestions[selected.path] || 'No suggestion available.'}
+            </p>
+          </aside>
         </div>
       )}
       <div>
@@ -273,14 +336,14 @@ const NiktoApp = () => {
           <button
             type="button"
             onClick={copyReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className="rounded-md bg-kali-primary px-3 py-1 text-sm font-semibold text-kali-inverse transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             Copy HTML
           </button>
           <button
             type="button"
             onClick={exportReport}
-            className="px-2 py-1 bg-blue-600 rounded text-sm"
+            className="rounded-md bg-kali-secondary px-3 py-1 text-sm font-semibold text-kali-text transition hover:bg-kali-secondary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
           >
             Export HTML
           </button>
@@ -297,31 +360,33 @@ const NiktoApp = () => {
           data-testid="drop-zone"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
-          className="border-2 border-dashed border-gray-600 p-4 text-center mb-4"
+          className="mb-4 border-2 border-dashed border-kali-primary/50 bg-kali-surface/70 p-4 text-center text-kali-primary"
         >
           Drop Nikto text or XML report here
         </div>
-        {error && <p className="text-red-500 mb-2">{error}</p>}
+        {error && <p className="mb-2 text-kali-error">{error}</p>}
         {entries.length > 0 && (
           <div>
             <div className="flex space-x-2 mb-2">
               <input
+                aria-label="Filter host"
                 placeholder="Filter host"
                 value={filterHost}
                 onChange={(e) => setFilterHost(e.target.value)}
-                className="p-1 rounded text-black flex-1"
+                className="flex-1 rounded border border-kali-border/60 bg-kali-dark p-1 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
               />
               <input
+                aria-label="Filter path"
                 placeholder="Filter path"
                 value={filterPath}
                 onChange={(e) => setFilterPath(e.target.value)}
-                className="p-1 rounded text-black flex-1"
+                className="flex-1 rounded border border-kali-border/60 bg-kali-dark p-1 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
               />
               <select
                 aria-label="Filter severity"
                 value={filterSeverity}
                 onChange={(e) => setFilterSeverity(e.target.value)}
-                className="p-1 rounded text-black"
+                className="rounded border border-kali-border/60 bg-kali-dark p-1 text-sm text-kali-text focus:border-kali-primary focus:outline-none focus:ring-2 focus:ring-kali-primary/40"
               >
                 {['All', 'Info', 'Low', 'Medium', 'High', 'Critical'].map(
                   (s) => (
@@ -334,25 +399,33 @@ const NiktoApp = () => {
               <button
                 type="button"
                 onClick={exportCsv}
-                className="px-2 py-1 bg-blue-600 rounded text-sm"
+                className="rounded-md bg-kali-primary px-3 py-1 text-sm font-semibold text-kali-inverse transition hover:bg-kali-primary/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
               >
                 Export CSV
               </button>
             </div>
-            <table className="w-full text-sm">
+            <table className="w-full overflow-hidden rounded-lg border border-white/10 text-sm">
               <thead>
-                <tr className="bg-gray-700">
-                  <th className="p-2 text-left">Host</th>
-                  <th className="p-2 text-left">Path</th>
-                  <th className="p-2 text-left">Severity</th>
+                <tr className="bg-kali-surface-muted/90 text-left text-xs font-semibold uppercase tracking-wide text-kali-muted">
+                  <th className="p-3">Host</th>
+                  <th className="p-3">Path</th>
+                  <th className="p-3">Severity</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r, i) => (
-                  <tr key={i} className="odd:bg-gray-900">
-                    <td className="p-2">{r.host}</td>
-                    <td className="p-2">{r.path}</td>
-                    <td className="p-2">{r.severity}</td>
+                  <tr key={i} className="odd:bg-kali-surface/80 even:bg-kali-surface/60">
+                    <td className="px-3 py-2">{r.host}</td>
+                    <td className="px-3 py-2">{r.path}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${
+                          severityTokens[r.severity.toLowerCase()] || 'bg-kali-secondary text-kali-inverse'
+                        }`}
+                      >
+                        {r.severity}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
