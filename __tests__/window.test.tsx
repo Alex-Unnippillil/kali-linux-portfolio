@@ -162,6 +162,135 @@ describe('Window lifecycle', () => {
   });
 });
 
+describe('Window state transitions', () => {
+  it('preserves previous bounds across minimize, maximize, and snap operations', () => {
+    const focus = jest.fn();
+    const hasMinimised = jest.fn();
+    const onPositionChange = jest.fn();
+    const onSizeChange = jest.fn();
+    const ref = React.createRef<any>();
+
+    const renderWindow = (minimized = false) => (
+      <Window
+        id="transition-window"
+        title="Transition Test"
+        screen={() => <div>content</div>}
+        focus={focus}
+        hasMinimised={hasMinimised}
+        closed={() => {}}
+        openApp={() => {}}
+        onPositionChange={onPositionChange}
+        onSizeChange={onSizeChange}
+        snapEnabled
+        snapGrid={[8, 8]}
+        minimized={minimized}
+        ref={ref}
+      />
+    );
+
+    const { rerender } = render(renderWindow());
+
+    let frame = document.getElementById('transition-window');
+    expect(frame).not.toBeNull();
+    if (!frame) {
+      throw new Error('Window frame not found');
+    }
+
+    expect(frame).toHaveAttribute('data-window-state', 'active');
+
+    const topInset = measureWindowTopOffset();
+    const storedX = 160;
+    const storedYOffset = 128;
+    const storedY = topInset + storedYOffset;
+
+    const bounds = {
+      left: storedX,
+      top: storedY,
+      right: storedX + 320,
+      bottom: storedY + 240,
+      width: 320,
+      height: 240,
+      x: storedX,
+      y: storedY,
+      toJSON: () => {},
+    } as DOMRect;
+
+    frame.getBoundingClientRect = () => bounds;
+
+    const initialWidth = ref.current!.state.width;
+    const initialHeight = ref.current!.state.height;
+
+    act(() => {
+      ref.current!.minimizeWindow();
+    });
+
+    expect(hasMinimised).toHaveBeenCalledWith('transition-window');
+    expect(onPositionChange).toHaveBeenCalledWith(storedX, storedY);
+    expect(frame.style.getPropertyValue('--window-transform-x')).toBe(`${storedX.toFixed(1)}px`);
+    expect(frame.style.getPropertyValue('--window-transform-y')).toBe(`${storedY.toFixed(1)}px`);
+
+    rerender(renderWindow(true));
+    frame = document.getElementById('transition-window')!;
+    expect(frame).toHaveAttribute('data-window-state', 'minimized');
+
+    rerender(renderWindow(false));
+    frame = document.getElementById('transition-window')!;
+    expect(frame).toHaveAttribute('data-window-state', 'active');
+
+    act(() => {
+      ref.current!.maximizeWindow();
+    });
+
+    expect(focus).toHaveBeenCalledWith('transition-window');
+    expect(ref.current!.state.maximized).toBe(true);
+    expect(ref.current!.state.preMaximizeSize).toEqual({ width: initialWidth, height: initialHeight });
+    expect(frame).toHaveAttribute('data-window-state', 'maximized');
+
+    act(() => {
+      ref.current!.restoreWindow();
+    });
+
+    expect(ref.current!.state.maximized).toBe(false);
+    expect(frame).toHaveAttribute('data-window-state', 'active');
+    expect(ref.current!.state.width).toBeCloseTo(initialWidth, 2);
+    expect(ref.current!.state.height).toBeCloseTo(initialHeight, 2);
+
+    const sizeCallsBeforeSnap = onSizeChange.mock.calls.length;
+    act(() => {
+      ref.current!.snapWindow('left');
+    });
+
+    const snapSizeCalls = onSizeChange.mock.calls.slice(sizeCallsBeforeSnap);
+    expect(snapSizeCalls.length).toBeGreaterThanOrEqual(1);
+    const snapCall = snapSizeCalls[snapSizeCalls.length - 1];
+
+    expect(ref.current!.state.snapped).toBe('left');
+    expect(ref.current!.state.lastSize).toEqual({ width: initialWidth, height: initialHeight });
+    expect(frame).toHaveAttribute('data-window-state', 'snapped-left');
+    expect(onPositionChange).toHaveBeenCalledWith(storedX, storedY);
+    expect(snapCall[0]).toBeCloseTo(50, 2);
+    expect(snapCall[1]).toBeCloseTo(computeSnappedHeightPercent(), 2);
+    expect(frame.style.transform).toBe(`translate(0px, ${topInset}px)`);
+
+    const sizeCallsBeforeUnsnap = onSizeChange.mock.calls.length;
+    act(() => {
+      ref.current!.unsnapWindow();
+    });
+
+    const restoreSizeCalls = onSizeChange.mock.calls.slice(sizeCallsBeforeUnsnap);
+    expect(restoreSizeCalls.length).toBeGreaterThanOrEqual(1);
+    const restoreCall = restoreSizeCalls[restoreSizeCalls.length - 1];
+
+    expect(ref.current!.state.snapped).toBeNull();
+    expect(frame).toHaveAttribute('data-window-state', 'active');
+    expect(ref.current!.state.width).toBeCloseTo(initialWidth, 2);
+    expect(ref.current!.state.height).toBeCloseTo(initialHeight, 2);
+    expect(restoreCall[0]).toBeCloseTo(initialWidth, 2);
+    expect(restoreCall[1]).toBeCloseTo(initialHeight, 2);
+    expect(frame.style.transform).toBe(`translate(${storedX.toFixed(1)}px,${storedY.toFixed(1)}px)`);
+  });
+});
+
 describe('Window snap grid configuration', () => {
   it('applies custom grid to draggable when snapping is enabled', () => {
     renderWithOverlay(
