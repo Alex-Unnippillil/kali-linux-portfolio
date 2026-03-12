@@ -1,66 +1,10 @@
 import { useEffect, useState } from 'react';
-import Filter from 'bad-words';
-import offlineQuotesData from '../public/quotes/quotes.json';
+import { filterByTag, getAllQuotes, type Quote as BaseQuote } from '../quotes/localQuotes';
 
-const SAFE_CATEGORIES = [
-  'inspirational',
-  'life',
-  'love',
-  'wisdom',
-  'technology',
-  'humor',
-  'general',
-];
+const offlineQuotes = getAllQuotes();
 
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  inspirational: [
-    'inspire',
-    'dream',
-    'goal',
-    'courage',
-    'success',
-    'motivation',
-    'believe',
-    'achieve',
-  ],
-  life: ['life', 'living', 'journey', 'experience'],
-  love: ['love', 'heart', 'passion'],
-  wisdom: ['wisdom', 'knowledge', 'learn', 'education'],
-  technology: ['technology', 'science', 'computer'],
-  humor: ['laugh', 'funny', 'humor'],
-};
-
-const filter = new Filter();
-
-const processQuotes = (data: any[]) =>
-  data
-    .map((q) => {
-      const content = q.content || q.quote || '';
-      const author = q.author || 'Unknown';
-      let tags = Array.isArray(q.tags) ? q.tags.map((t: string) => t.toLowerCase()) : [];
-
-      if (!tags.length) {
-        const lower = content.toLowerCase();
-        Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
-          if (keywords.some((k) => lower.includes(k))) tags.push(cat);
-        });
-      }
-      if (!tags.length) tags.push('general');
-      return { content, author, tags };
-    })
-    .filter(
-      (q) =>
-        !filter.isProfane(q.content) &&
-        q.tags.some((t: string) => SAFE_CATEGORIES.includes(t))
-    );
-
-const offlineQuotes = processQuotes(offlineQuotesData as any[]);
-
-interface Quote {
-  content: string;
-  author: string;
+interface Quote extends BaseQuote {
   date: string;
-  tags?: string[];
 }
 
 export default function useDailyQuote(tag?: string) {
@@ -81,9 +25,7 @@ export default function useDailyQuote(tag?: string) {
       // ignore storage errors
     }
 
-    const pool = tag
-      ? offlineQuotes.filter((q) => q.tags.includes(tag))
-      : offlineQuotes;
+    const pool = filterByTag(offlineQuotes, tag);
 
     const fallbackPool = pool.length > 0 ? pool : offlineQuotes;
     const fetched =
