@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import { useRouter } from 'next/router';
 import { generateGrid, createRNG } from './generator';
@@ -10,9 +10,33 @@ import { SettingsProvider, useSettings } from '../../components/apps/GameSetting
 import { PUZZLE_PACKS, PackName } from '../../games/word-search/packs';
 import ListImport from '../../games/word-search/components/ListImport';
 
-const WORD_COUNT = 5;
-const GRID_SIZE = 12;
 const CELL_SIZE = 32; // px size of each grid cell
+
+const DIFFICULTIES = {
+  easy: {
+    label: 'Easy',
+    gridSize: 10,
+    wordCount: 6,
+    allowBackwards: false,
+    allowDiagonal: false,
+  },
+  medium: {
+    label: 'Medium',
+    gridSize: 12,
+    wordCount: 8,
+    allowBackwards: true,
+    allowDiagonal: false,
+  },
+  hard: {
+    label: 'Hard',
+    gridSize: 14,
+    wordCount: 10,
+    allowBackwards: true,
+    allowDiagonal: true,
+  },
+} as const;
+
+type DifficultyKey = keyof typeof DIFFICULTIES;
 
 function key(p: Position) {
   return `${p.row}-${p.col}`;
@@ -32,6 +56,16 @@ function computePath(start: Position, end: Position): Position[] {
   return path;
 }
 
+function formatTime(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const seconds = Math.floor(totalSeconds % 60)
+    .toString()
+    .padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
 const SAVE_KEY = 'game:word_search:save';
 const LB_KEY = 'game:word_search:leaderboard';
 
@@ -41,7 +75,21 @@ interface WordSearchInnerProps {
 
 const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const router = useRouter();
-  const { seed: seedQuery, words: wordsQuery } = router.query as { seed?: string; words?: string };
+  const {
+    seed: seedQuery,
+    words: wordsQuery,
+    difficulty: difficultyQuery,
+    pack: packQuery,
+    backwards: backwardsQuery,
+    diagonal: diagonalQuery,
+  } = router.query as {
+    seed?: string;
+    words?: string;
+    difficulty?: string;
+    pack?: string;
+    backwards?: string;
+    diagonal?: string;
+  };
   const [seed, setSeed] = useState('');
   const [words, setWords] = useState<string[]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
@@ -60,10 +108,15 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const cellRefs = useRef<(HTMLDivElement | null)[][]>([]);
   const { quality, setQuality, highContrast, setHighContrast } = useSettings();
   const [pack, setPack] = useState<PackName | 'random' | 'custom'>('random');
-  const [allowBackwards, setAllowBackwards] = useState(true);
-  const [allowDiagonal, setAllowDiagonal] = useState(true);
+  const [difficulty, setDifficulty] = useState<DifficultyKey>('medium');
+  const [allowBackwards, setAllowBackwards] = useState<boolean>(
+    DIFFICULTIES.medium.allowBackwards,
+  );
+  const [allowDiagonal, setAllowDiagonal] = useState<boolean>(DIFFICULTIES.medium.allowDiagonal);
   const [elapsed, setElapsed] = useState(0);
   const [announce, setAnnounce] = useState('');
+  const [gridSize, setGridSize] = useState(DIFFICULTIES.medium.gridSize);
+  const [seedInput, setSeedInput] = useState('');
 
   // load saved game on mount
   useEffect(() => {
@@ -80,26 +133,83 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         setHintCells(new Set<string>(data.hintCells || []));
         setFirstHints(data.firstHints ?? 3);
         setLastHints(data.lastHints ?? 3);
+        if (data.pack) {
+          setPack(data.pack);
+        }
+        if (data.difficulty && data.difficulty in DIFFICULTIES) {
+          setDifficulty(data.difficulty as DifficultyKey);
+        }
+        if (typeof data.allowBackwards === 'boolean') {
+          setAllowBackwards(data.allowBackwards);
+        }
+        if (typeof data.allowDiagonal === 'boolean') {
+          setAllowDiagonal(data.allowDiagonal);
+        }
+        if (typeof data.gridSize === 'number') {
+          setGridSize(data.gridSize);
+        }
       }
     } catch {
       // ignore
     }
   }, []);
 
-  function pickWords(s: string, p: PackName | 'random') {
-    if (p !== 'random') {
-      return PUZZLE_PACKS[p];
-    }
-    const rng = createRNG(s);
-    const chosen = new Set<string>();
-    while (chosen.size < WORD_COUNT) {
-      const w = wordList[Math.floor(rng() * wordList.length)];
-      chosen.add(w);
-    }
-    return Array.from(chosen);
-  }
+  useEffect(() => {
+    setSeedInput(seed);
+  }, [seed]);
 
   useEffect(() => {
+    if (!router.isReady) return;
+    if (typeof packQuery === 'string') {
+      if (packQuery === 'random' || packQuery === 'custom' || packQuery in PUZZLE_PACKS) {
+        setPack(packQuery as PackName | 'random' | 'custom');
+      }
+    }
+    if (typeof difficultyQuery === 'string' && difficultyQuery in DIFFICULTIES) {
+      const key = difficultyQuery as DifficultyKey;
+      setDifficulty(key);
+      setAllowBackwards(DIFFICULTIES[key].allowBackwards);
+      setAllowDiagonal(DIFFICULTIES[key].allowDiagonal);
+      setGridSize(DIFFICULTIES[key].gridSize);
+    }
+    if (typeof backwardsQuery === 'string') {
+      setAllowBackwards(backwardsQuery === '1' || backwardsQuery.toLowerCase() === 'true');
+    }
+    if (typeof diagonalQuery === 'string') {
+      setAllowDiagonal(diagonalQuery === '1' || diagonalQuery.toLowerCase() === 'true');
+    }
+  }, [router.isReady, packQuery, difficultyQuery, backwardsQuery, diagonalQuery]);
+
+  const difficultySettings = DIFFICULTIES[difficulty];
+
+  const pickWords = useCallback(
+    (s: string, p: PackName | 'random', wordCount: number) => {
+      if (p !== 'random') {
+        const list = PUZZLE_PACKS[p];
+        if (list.length <= wordCount) {
+          return list;
+        }
+        const rng = createRNG(`${s}:${p}`);
+        const chosen = new Set<string>();
+        while (chosen.size < wordCount) {
+          const w = list[Math.floor(rng() * list.length)];
+          chosen.add(w);
+        }
+        return Array.from(chosen);
+      }
+      const rng = createRNG(`${s}:${difficulty}`);
+      const chosen = new Set<string>();
+      while (chosen.size < wordCount) {
+        const w = wordList[Math.floor(rng() * wordList.length)];
+        chosen.add(w);
+      }
+      return Array.from(chosen);
+    },
+    [difficulty],
+  );
+
+  useEffect(() => {
+    if (!router.isReady) return;
     if (seed && words.length) return; // skip if loaded
     const init = async () => {
       let queryWords: string[] = [];
@@ -129,19 +239,37 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       const defaultSeed = (await getDailySeed?.()) ?? new Date().toISOString().split('T')[0];
       const s = typeof seedQuery === 'string' ? seedQuery : defaultSeed;
       setSeed(s);
-      setWords(queryWords.length ? queryWords : pickWords(s, pack));
+      if (queryWords.length) {
+        setPack('custom');
+        setWords(queryWords);
+      } else {
+        setWords(pickWords(s, pack, difficultySettings.wordCount));
+      }
     };
     void init();
-  }, [seedQuery, wordsQuery, seed, words.length, getDailySeed, pack]);
+  }, [
+    router.isReady,
+    seedQuery,
+    wordsQuery,
+    seed,
+    words.length,
+    getDailySeed,
+    pack,
+    pickWords,
+    difficultySettings.wordCount,
+  ]);
 
   useEffect(() => {
     if (!seed || pack === 'custom') return;
-    setWords(pickWords(seed, pack));
-  }, [pack, seed]);
+    setWords(pickWords(seed, pack, difficultySettings.wordCount));
+  }, [pack, seed, pickWords, difficultySettings.wordCount]);
 
   useEffect(() => {
     if (!seed || !words.length) return;
-    const { grid: g, placements: p } = generateGrid(words, GRID_SIZE, seed, {
+    const longestWord = words.reduce((max, word) => Math.max(max, word.length), 0);
+    const boardSize = Math.max(difficultySettings.gridSize, longestWord + 2);
+    const generatorSeed = `${seed}:${difficulty}:${allowBackwards ? 'B1' : 'B0'}:${allowDiagonal ? 'D1' : 'D0'}`;
+    const { grid: g, placements: p } = generateGrid(words, boardSize, generatorSeed, {
       allowBackwards,
       allowDiagonal,
     });
@@ -155,7 +283,16 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     startRef.current = Date.now();
     setElapsed(0);
     logGameStart('word_search');
-  }, [seed, words, allowBackwards, allowDiagonal]);
+    setGridSize(boardSize);
+    cellRefs.current = [];
+  }, [
+    seed,
+    words,
+    allowBackwards,
+    allowDiagonal,
+    difficulty,
+    difficultySettings.gridSize,
+  ]);
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -180,6 +317,11 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           hintCells: Array.from(hintCells),
           firstHints,
           lastHints,
+          difficulty,
+          pack,
+          allowBackwards,
+          allowDiagonal,
+          gridSize,
         };
         window.localStorage.setItem(SAVE_KEY, JSON.stringify(data));
       } catch {
@@ -187,7 +329,22 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       }
     }, 5000);
     return () => clearInterval(id);
-  }, [seed, words, grid, placements, found, foundCells, hintCells, firstHints, lastHints]);
+  }, [
+    seed,
+    words,
+    grid,
+    placements,
+    found,
+    foundCells,
+    hintCells,
+    firstHints,
+    lastHints,
+    difficulty,
+    pack,
+    allowBackwards,
+    allowDiagonal,
+    gridSize,
+  ]);
 
   useEffect(() => {
     if (selection.length) {
@@ -195,6 +352,137 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       setAnnounce(letters);
     }
   }, [selection, grid]);
+
+  const getQueryObject = useCallback(
+    (override?: {
+      seed?: string;
+      words?: string[];
+      pack?: PackName | 'random' | 'custom';
+      difficulty?: DifficultyKey;
+      allowBackwards?: boolean;
+      allowDiagonal?: boolean;
+    }) => {
+      const nextSeed = override?.seed ?? seed;
+      const nextPack = override?.pack ?? pack;
+      const nextDifficulty = override?.difficulty ?? difficulty;
+      const nextAllowBackwards = override?.allowBackwards ?? allowBackwards;
+      const nextAllowDiagonal = override?.allowDiagonal ?? allowDiagonal;
+      const nextWords = override?.words ?? (nextPack === 'custom' ? words : []);
+      const params: Record<string, string> = {
+        seed: nextSeed,
+        difficulty: nextDifficulty,
+        pack: nextPack,
+        backwards: nextAllowBackwards ? '1' : '0',
+        diagonal: nextAllowDiagonal ? '1' : '0',
+      };
+      if (nextWords.length) {
+        params.words = nextWords.join(',');
+      }
+      return params;
+    },
+    [seed, pack, difficulty, allowBackwards, allowDiagonal, words],
+  );
+
+  const updateQuery = useCallback(
+    (override?: {
+      seed?: string;
+      words?: string[];
+      pack?: PackName | 'random' | 'custom';
+      difficulty?: DifficultyKey;
+      allowBackwards?: boolean;
+      allowDiagonal?: boolean;
+    }) => {
+      router.replace(
+        { pathname: router.pathname, query: getQueryObject(override) },
+        undefined,
+        { shallow: true },
+      );
+    },
+    [router, getQueryObject],
+  );
+
+  const commitWord = useCallback(
+    (word: string, path: Position[]) => {
+      let added = false;
+      let newCount = 0;
+      setFound((prev) => {
+        if (prev.has(word)) {
+          return prev;
+        }
+        const updated = new Set(prev);
+        updated.add(word);
+        newCount = updated.size;
+        added = true;
+        return updated;
+      });
+      if (!added) {
+        return;
+      }
+      setFoundCells((prev) => {
+        const updated = new Set(prev);
+        path.forEach((p) => updated.add(key(p)));
+        return updated;
+      });
+      setHintCells((prev) => {
+        const updated = new Set(prev);
+        path.forEach((p) => updated.delete(key(p)));
+        return updated;
+      });
+      setAnnounce(`Found word ${word}`);
+      if (newCount === words.length) {
+        const time = Math.floor((Date.now() - startRef.current) / 1000);
+        startRef.current = 0;
+        try {
+          const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
+          lb.push({ seed, time, difficulty });
+          localStorage.setItem(LB_KEY, JSON.stringify(lb));
+          const dayKey = `game:word_search:daily:${new Date().toISOString().split('T')[0]}`;
+          localStorage.setItem(dayKey, JSON.stringify({ seed, time, difficulty }));
+        } catch {
+          // ignore
+        }
+        logGameEnd('word_search');
+      }
+    },
+    [difficulty, seed, words.length],
+  );
+
+  const handleDifficultyChange = (value: DifficultyKey) => {
+    const settings = DIFFICULTIES[value];
+    setDifficulty(value);
+    setAllowBackwards(settings.allowBackwards);
+    setAllowDiagonal(settings.allowDiagonal);
+    setGridSize(settings.gridSize);
+    updateQuery({
+      difficulty: value,
+      allowBackwards: settings.allowBackwards,
+      allowDiagonal: settings.allowDiagonal,
+    });
+  };
+
+  const handleSeedSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const trimmed = seedInput.trim();
+    if (!trimmed) return;
+    const normalized = trimmed.toUpperCase();
+    setSeed(normalized);
+    updateQuery({ seed: normalized });
+  };
+
+  const handlePackChange = (value: PackName | 'random' | 'custom') => {
+    setPack(value);
+    updateQuery({ pack: value });
+  };
+
+  const handleBackwardsToggle = (checked: boolean) => {
+    setAllowBackwards(checked);
+    updateQuery({ allowBackwards: checked });
+  };
+
+  const handleDiagonalToggle = (checked: boolean) => {
+    setAllowDiagonal(checked);
+    updateQuery({ allowDiagonal: checked });
+  };
 
   const handleMouseDown = (r: number, c: number) => {
     setSelecting(true);
@@ -207,6 +495,15 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     if (!selecting || !start) return;
     const path = computePath(start, { row: r, col: c });
     setSelection(path);
+    const letters = path.map((p) => grid[p.row][p.col]).join('');
+    const reversed = letters.split('').reverse().join('');
+    const match = words.find((w) => w === letters || w === reversed);
+    if (match) {
+      commitWord(match, path);
+      setSelecting(false);
+      setStart(null);
+      setSelection([]);
+    }
   };
 
   const finalizeSelection = () => {
@@ -220,30 +517,10 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     const letters = selection.map((p) => grid[p.row][p.col]).join('');
     const reversed = letters.split('').reverse().join('');
     const match = words.find((w) => w === letters || w === reversed);
-    setAnnounce(match ? `Found word ${match}` : letters);
-    if (match && !found.has(match)) {
-      const newFound = new Set(found);
-      newFound.add(match);
-      setFound(newFound);
-      const newCells = new Set(foundCells);
-      selection.forEach((p) => newCells.add(key(p)));
-      setFoundCells(newCells);
-      const newHints = new Set(hintCells);
-      selection.forEach((p) => newHints.delete(key(p)));
-      setHintCells(newHints);
-      if (newFound.size === words.length) {
-        const time = Math.floor((Date.now() - startRef.current) / 1000);
-        try {
-          const lb = JSON.parse(localStorage.getItem(LB_KEY) || '[]');
-          lb.push({ seed, time });
-          localStorage.setItem(LB_KEY, JSON.stringify(lb));
-          const dayKey = `game:word_search:daily:${new Date().toISOString().split('T')[0]}`;
-          localStorage.setItem(dayKey, JSON.stringify({ seed, time }));
-        } catch {
-          // ignore
-        }
-        logGameEnd('word_search');
-      }
+    if (match) {
+      commitWord(match, selection);
+    } else {
+      setAnnounce(letters);
     }
     setStart(null);
     setSelection([]);
@@ -264,13 +541,23 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       const dc = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
       const nr = r + dr;
       const nc = c + dc;
-      if (nr < 0 || nr >= GRID_SIZE || nc < 0 || nc >= GRID_SIZE) return;
+      if (nr < 0 || nr >= gridSize || nc < 0 || nc >= gridSize) return;
       if (e.shiftKey) {
         const s = start ?? { row: r, col: c };
         setStart(s);
         const path = computePath(s, { row: nr, col: nc });
         setSelection(path);
-        setSelecting(true);
+        const letters = path.map((p) => grid[p.row][p.col]).join('');
+        const reversed = letters.split('').reverse().join('');
+        const match = words.find((w) => w === letters || w === reversed);
+        if (match) {
+          commitWord(match, path);
+          setSelecting(false);
+          setStart(null);
+          setSelection([]);
+        } else {
+          setSelecting(true);
+        }
       } else {
         setStart(null);
         setSelection([]);
@@ -299,17 +586,14 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
     if (!list.length) return;
     const newSeed = Math.random().toString(36).slice(2);
     setSeed(newSeed);
-    setWords(list);
+    const upper = list.map((item) => item.toUpperCase());
+    setWords(upper);
     setPack('custom');
-    router.replace(
-      { pathname: router.pathname, query: { seed: newSeed, words: list.join(',') } },
-      undefined,
-      { shallow: true }
-    );
+    updateQuery({ seed: newSeed, words: upper, pack: 'custom' });
   };
 
   const copyLink = async () => {
-    const params = new URLSearchParams({ seed, words: words.join(',') });
+    const params = new URLSearchParams(getQueryObject());
     const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
     try {
       await navigator.clipboard?.writeText(url);
@@ -320,20 +604,28 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
 
   const newPuzzle = () => {
     const newSeed = Math.random().toString(36).slice(2);
-    router.replace(
-      { pathname: router.pathname, query: { seed: newSeed, words: words.join(',') } },
-      undefined,
-      { shallow: true }
-    );
+    setSeed(newSeed);
+    updateQuery({ seed: newSeed });
   };
 
   const restart = () => {
     window.localStorage.removeItem(SAVE_KEY);
     setSeed('');
+    setSeedInput('');
     setWords([]);
     setHintCells(new Set());
     setFirstHints(3);
     setLastHints(3);
+    setPack('random');
+    setDifficulty('medium');
+    setAllowBackwards(DIFFICULTIES.medium.allowBackwards);
+    setAllowDiagonal(DIFFICULTIES.medium.allowDiagonal);
+    setGridSize(DIFFICULTIES.medium.gridSize);
+    router.replace(
+      { pathname: router.pathname },
+      undefined,
+      { shallow: true }
+    );
   };
 
   const loadGame = () => {
@@ -350,6 +642,33 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         setHintCells(new Set<string>(data.hintCells || []));
         setFirstHints(data.firstHints ?? 3);
         setLastHints(data.lastHints ?? 3);
+        if (data.pack) {
+          setPack(data.pack);
+        }
+        if (data.difficulty && data.difficulty in DIFFICULTIES) {
+          setDifficulty(data.difficulty as DifficultyKey);
+        }
+        if (typeof data.allowBackwards === 'boolean') {
+          setAllowBackwards(data.allowBackwards);
+        }
+        if (typeof data.allowDiagonal === 'boolean') {
+          setAllowDiagonal(data.allowDiagonal);
+        }
+        if (typeof data.gridSize === 'number') {
+          setGridSize(data.gridSize);
+        }
+        const overrides: {
+          seed?: string;
+          words?: string[];
+          pack?: PackName | 'random' | 'custom';
+        } = { seed: data.seed };
+        if (Array.isArray(data.words)) {
+          overrides.words = data.words;
+        }
+        if (data.pack) {
+          overrides.pack = data.pack;
+        }
+        updateQuery(overrides);
       }
     } catch {
       // ignore
@@ -410,6 +729,16 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
   const progress = words.length ? found.size / words.length : 0;
   const radius = 16;
   const circumference = 2 * Math.PI * radius;
+  const remainingWords = useMemo(
+    () => words.filter((w) => !found.has(w)),
+    [words, found],
+  );
+  const foundWordsList = useMemo(
+    () => words.filter((w) => found.has(w)),
+    [words, found],
+  );
+  const formattedElapsed = useMemo(() => formatTime(elapsed), [elapsed]);
+  const allFound = words.length > 0 && foundWordsList.length === words.length;
 
   if (error) {
     return (
@@ -432,7 +761,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       <div aria-live="polite" role="status" className="sr-only">
         {announce}
       </div>
-      <div className="flex flex-wrap gap-2 mb-2 print:hidden items-center">
+      <div className="flex flex-wrap gap-2 mb-3 print:hidden items-center">
         <svg viewBox="0 0 36 36" className="w-10 h-10">
           <circle
             className="text-gray-300"
@@ -458,10 +787,52 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           />
           <text x="18" y="20.5" textAnchor="middle" className="text-xs">{`${found.size}/${words.length}`}</text>
         </svg>
-        <span className="text-sm">Time: {elapsed}s</span>
+        <span className="text-sm font-semibold">Time: {formattedElapsed}</span>
+        <div className="flex items-center gap-1">
+          <label htmlFor="word-search-difficulty" className="text-sm font-medium">
+            Difficulty
+          </label>
+          <select
+            id="word-search-difficulty"
+            value={difficulty}
+            onChange={(e) => handleDifficultyChange(e.target.value as DifficultyKey)}
+            className="px-2 py-1 border rounded"
+          >
+            {Object.entries(DIFFICULTIES).map(([key, info]) => (
+              <option key={key} value={key}>
+                {info.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <form
+          onSubmit={handleSeedSubmit}
+          className="flex items-center gap-1"
+          aria-label="Set puzzle seed"
+        >
+          <label htmlFor="word-search-seed" className="text-sm font-medium">
+            Seed
+          </label>
+          <input
+            id="word-search-seed"
+            type="text"
+            value={seedInput}
+            onChange={(e) => setSeedInput(e.target.value.toUpperCase())}
+            className="px-2 py-1 border rounded uppercase"
+            placeholder="Enter seed"
+            aria-describedby="word-search-seed-help"
+            aria-label="Puzzle seed"
+          />
+          <button type="submit" className="px-2 py-1 bg-slate-700 text-white rounded">
+            Apply
+          </button>
+        </form>
+        <span id="word-search-seed-help" className="sr-only">
+          Set the current puzzle seed to reproduce a board
+        </span>
         <select
           value={pack}
-          onChange={(e) => setPack(e.target.value as PackName | 'random' | 'custom')}
+          onChange={(e) => handlePackChange(e.target.value as PackName | 'random' | 'custom')}
           className="px-2 py-1 border rounded"
           aria-label="Word list pack"
         >
@@ -478,7 +849,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             id="word-search-backwards"
             type="checkbox"
             checked={allowBackwards}
-            onChange={(e) => setAllowBackwards(e.target.checked)}
+            onChange={(e) => handleBackwardsToggle(e.target.checked)}
             aria-label="Allow backwards words"
           />
           <span className="text-sm">Backwards</span>
@@ -488,7 +859,7 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
             id="word-search-diagonal"
             type="checkbox"
             checked={allowDiagonal}
-            onChange={(e) => setAllowDiagonal(e.target.checked)}
+            onChange={(e) => handleDiagonalToggle(e.target.checked)}
             aria-label="Allow diagonal words"
           />
           <span className="text-sm">Diagonal</span>
@@ -573,8 +944,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
       >
         <div
           style={{
-            gridTemplateColumns: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
-            gridTemplateRows: `repeat(${GRID_SIZE}, ${CELL_SIZE}px)`,
+            gridTemplateColumns: `repeat(${gridSize}, ${CELL_SIZE}px)`,
+            gridTemplateRows: `repeat(${gridSize}, ${CELL_SIZE}px)`,
           }}
           className={`grid w-max overflow-hidden rounded-lg border border-slate-300 bg-white/80 shadow-sm dark:border-slate-700 dark:bg-slate-900/60 ${highContrast ? 'contrast-200' : ''}`}
           role="grid"
@@ -621,8 +992,8 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
         {selection.length > 1 && (
           <svg
             className="absolute top-0 left-0 pointer-events-none"
-            width={GRID_SIZE * CELL_SIZE}
-            height={GRID_SIZE * CELL_SIZE}
+            width={gridSize * CELL_SIZE}
+            height={gridSize * CELL_SIZE}
           >
             <polyline
               className="word-search-selection-line"
@@ -637,16 +1008,51 @@ const WordSearchInner: React.FC<WordSearchInnerProps> = ({ getDailySeed }) => {
           </svg>
         )}
       </div>
-      <ul className="mt-6 grid gap-3 list-none p-0 sm:grid-cols-2 lg:grid-cols-3">
-        {words.map((w) => (
-          <li
-            key={w}
-            className={`word-search-clue${found.has(w) ? ' word-search-clue-found word-found' : ''}`}
-          >
-            {w}
-          </li>
-        ))}
-      </ul>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2">
+          <section aria-labelledby="word-search-remaining" className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 id="word-search-remaining" className="text-sm font-semibold uppercase tracking-wide">
+                Words to Find
+              </h2>
+              <span className="text-xs text-slate-500">{remainingWords.length}</span>
+            </div>
+            {remainingWords.length ? (
+              <ul className="grid gap-2 list-none p-0" aria-live="polite">
+                {remainingWords.map((w) => (
+                  <li key={w} className="word-search-clue">
+                    {w}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-green-600">All words found!</p>
+            )}
+          </section>
+          <section aria-labelledby="word-search-found" className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 id="word-search-found" className="text-sm font-semibold uppercase tracking-wide">
+                Found Words
+              </h2>
+              <span className="text-xs text-slate-500">{foundWordsList.length}</span>
+            </div>
+            <ul className="grid gap-2 list-none p-0" aria-live="polite">
+              {foundWordsList.length ? (
+                foundWordsList.map((w) => (
+                  <li key={w} className="word-search-clue word-search-clue-found word-found">
+                    {w}
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-slate-500">Start searching to see words here.</li>
+              )}
+            </ul>
+            {allFound && (
+              <p className="text-xs text-emerald-600">Puzzle complete! Share the seed to challenge friends.</p>
+            )}
+          </section>
+        </div>
+      </div>
     </div>
   );
 };
