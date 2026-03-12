@@ -74,7 +74,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
     };
 
     const handleNavigation = (event) => {
-        const { key, shiftKey, ctrlKey, metaKey } = event;
+        const { key, shiftKey } = event;
         const length = filtered.length;
         if (!length) return;
 
@@ -97,17 +97,24 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
         } else if (key === 'Enter') {
             event.preventDefault();
             triggerSelect(selected);
-        } else if (key === 'Escape') {
-            event.preventDefault();
-            if (typeof onClose === 'function') {
-                onClose();
+        }
+    };
+
+    const openSearch = (initialQuery = '') => {
+        setShowSearch(true);
+        setQuery(initialQuery);
+        setSelected(0);
+    };
+
+    const handleEscape = () => {
+        if (showSearch) {
+            if (query) {
+                setQuery('');
+            } else {
+                hideSearch();
             }
-        } else if (
-            (!showSearch && key === '/') ||
-            (key === 'f' && (ctrlKey || metaKey))
-        ) {
-            event.preventDefault();
-            setShowSearch(true);
+        } else if (typeof onClose === 'function') {
+            onClose();
         }
     };
 
@@ -115,6 +122,33 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
         if (showSearch && event.target === inputRef.current) {
             return;
         }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            handleEscape();
+            return;
+        }
+
+        if (!showSearch) {
+            const isCharacterKey =
+                event.key.length === 1 &&
+                !event.altKey &&
+                !event.ctrlKey &&
+                !event.metaKey;
+
+            if (event.key === '/' || (event.key === 'f' && (event.ctrlKey || event.metaKey))) {
+                event.preventDefault();
+                openSearch('');
+                return;
+            }
+
+            if (isCharacterKey) {
+                event.preventDefault();
+                openSearch(event.key);
+                return;
+            }
+        }
+
         handleNavigation(event);
     };
 
@@ -125,13 +159,8 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
         }
 
         if (event.key === 'Escape') {
-            if (query) {
-                event.preventDefault();
-                setQuery('');
-            } else if (typeof onClose === 'function') {
-                event.preventDefault();
-                onClose();
-            }
+            event.preventDefault();
+            handleEscape();
         }
     };
 
@@ -174,7 +203,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
                         ) : (
                             <button
                                 type="button"
-                                onClick={() => setShowSearch(true)}
+                                onClick={() => openSearch('')}
                                 className="rounded-md px-2 py-1 bg-white/10 hover:bg-white/20 transition"
                             >
                                 Search
