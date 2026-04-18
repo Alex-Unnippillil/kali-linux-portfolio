@@ -175,6 +175,7 @@ const DesktopWindow = React.memo(
       useEffect(() => {
         if (typeof window === "undefined") return undefined;
         let rafId: number | null = null;
+        const visualViewport = window.visualViewport;
 
         const performClamp = () => {
           rafId = null;
@@ -187,8 +188,12 @@ const DesktopWindow = React.memo(
         };
 
         window.addEventListener("resize", handler);
+        visualViewport?.addEventListener("resize", handler);
+        visualViewport?.addEventListener("scroll", handler);
         return () => {
           window.removeEventListener("resize", handler);
+          visualViewport?.removeEventListener("resize", handler);
+          visualViewport?.removeEventListener("scroll", handler);
           if (rafId) window.cancelAnimationFrame(rafId);
         };
       }, [clampToViewport]);
