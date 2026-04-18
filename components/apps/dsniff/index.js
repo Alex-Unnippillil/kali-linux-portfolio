@@ -3,6 +3,7 @@ import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import HorizontalScrollAffordance from '../shared/HorizontalScrollAffordance';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -481,7 +482,11 @@ const Dsniff = () => {
             Suite tools
           </h2>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
-            <table className="w-full table-fixed text-left text-xs md:text-sm">
+            <HorizontalScrollAffordance
+              className="overflow-x-auto"
+              regionLabel="Dsniff suite tools table"
+            >
+              <table className="w-full min-w-[42rem] table-fixed text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Tool</th>
@@ -509,7 +514,8 @@ const Dsniff = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </HorizontalScrollAffordance>
           </div>
         </section>
 
@@ -594,7 +600,11 @@ const Dsniff = () => {
             ))}
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
-            <table className="w-full text-left text-xs md:text-sm">
+            <HorizontalScrollAffordance
+              className="overflow-x-auto"
+              regionLabel="PCAP credential leakage table"
+            >
+              <table className="w-full min-w-[42rem] text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Src</th>
@@ -632,7 +642,8 @@ const Dsniff = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </HorizontalScrollAffordance>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
@@ -687,7 +698,11 @@ const Dsniff = () => {
             </div>
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
-            <table className="w-full text-left text-xs md:text-sm">
+            <HorizontalScrollAffordance
+              className="overflow-x-auto"
+              regionLabel="Parsed credentials by domain table"
+            >
+              <table className="w-full min-w-[44rem] text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
                 <tr>
                   <th className="px-4 py-3">Domain</th>
@@ -726,7 +741,8 @@ const Dsniff = () => {
                   </tr>
                 ))}
               </tbody>
-            </table>
+              </table>
+            </HorizontalScrollAffordance>
             {!filteredDomainSummary.length && (
               <div className="border-t border-slate-800/80 px-4 py-6 text-center text-xs text-slate-400">
                 No domains match the current risk filter.
@@ -871,12 +887,16 @@ const Dsniff = () => {
         </div>
 
         <div
-          className="h-56 overflow-auto rounded-2xl border border-slate-800/80 bg-black/70 text-emerald-300 shadow-inner"
+          className="rounded-2xl border border-slate-800/80 bg-black/70 text-emerald-300 shadow-inner"
           aria-live="polite"
           role="log"
         >
           {filteredLogs.length ? (
-            <table className="w-full text-left text-sm">
+            <HorizontalScrollAffordance
+              className="h-56 overflow-auto"
+              regionLabel="Captured traffic log table"
+            >
+              <table className="w-full min-w-[44rem] text-left text-sm">
               <thead className="sticky top-0 bg-black/80 text-[11px] uppercase tracking-[0.25em] text-slate-500">
                 <tr>
                   <th className="px-3 py-2">Time</th>
@@ -894,9 +914,10 @@ const Dsniff = () => {
                   />
                 ))}
               </tbody>
-            </table>
+              </table>
+            </HorizontalScrollAffordance>
           ) : (
-            <div className="flex h-full items-center justify-center text-sm text-slate-400">
+            <div className="flex h-56 items-center justify-center text-sm text-slate-400">
               No data
             </div>
           )}

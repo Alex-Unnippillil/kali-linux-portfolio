@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import TaskOverview from './task-overview';
 import PolicySettings from './policy-settings';
+import HorizontalScrollAffordance from '../shared/HorizontalScrollAffordance';
 import pciProfile from './templates/pci.json';
 import hipaaProfile from './templates/hipaa.json';
 import demoReport from './fixtures/demo-report.json';
@@ -740,17 +741,22 @@ const OpenVASApp = () => {
         {announce}
       </div>
       {output && (
-        <div className="overflow-auto rounded-lg border border-white/10 bg-kali-surface-muted text-xs font-mono text-white">
-          {output.split('\n').map((line, i) => (
-            <div
-              key={i}
-              className={`px-2 py-1 ${
-                i % 2 ? 'bg-kali-surface' : 'bg-kali-surface-muted/80'
-              }`}
-            >
-              {line || '\u00A0'}
-            </div>
-          ))}
+        <div className="rounded-lg border border-white/10 bg-kali-surface-muted text-xs font-mono text-white">
+          <HorizontalScrollAffordance
+            className="overflow-auto"
+            regionLabel="OpenVAS scan output table-style log"
+          >
+            {output.split('\n').map((line, i) => (
+              <div
+                key={i}
+                className={`px-2 py-1 ${
+                  i % 2 ? 'bg-kali-surface' : 'bg-kali-surface-muted/80'
+                }`}
+              >
+                {line || '\u00A0'}
+              </div>
+            ))}
+          </HorizontalScrollAffordance>
         </div>
       )}
       {summaryUrl && (
