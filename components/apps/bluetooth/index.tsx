@@ -107,6 +107,7 @@ const BluetoothApp: React.FC = () => {
           placeholder="Min RSSI"
           value={rssiFilter}
           onChange={(e) => setRssiFilter(e.target.value)}
+          aria-label="Minimum RSSI filter"
           className="w-1/3 rounded bg-gray-800 p-2 text-white"
         />
         <input
@@ -114,6 +115,7 @@ const BluetoothApp: React.FC = () => {
           placeholder="Search devices"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          aria-label="Search Bluetooth devices"
           className="w-2/3 rounded bg-gray-800 p-2 text-white"
         />
       </div>
@@ -154,13 +156,13 @@ const BluetoothApp: React.FC = () => {
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="w-64 rounded bg-gray-800 p-4 text-center">
             <p className="mb-4">Allow access to Bluetooth devices?</p>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 onClick={() => {
                   setShowPermissionModal(false);
                   setError("Permission denied.");
                 }}
-                className="w-[90px] rounded bg-gray-600 px-2 py-1"
+                className="inline-flex min-w-[90px] justify-center rounded bg-gray-600 px-3 py-1"
               >
                 Cancel
               </button>
@@ -170,7 +172,7 @@ const BluetoothApp: React.FC = () => {
                   setShowPermissionModal(false);
                   loadData();
                 }}
-                className="w-[90px] rounded bg-blue-600 px-2 py-1"
+                className="inline-flex min-w-[90px] justify-center rounded bg-blue-600 px-3 py-1"
               >
                 Allow
               </button>
@@ -184,10 +186,10 @@ const BluetoothApp: React.FC = () => {
             <p className="mb-4">
               Pair with {pairingDevice.name || pairingDevice.address}?
             </p>
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 onClick={() => setPairingDevice(null)}
-                className="w-[90px] rounded bg-gray-600 px-2 py-1"
+                className="inline-flex min-w-[90px] justify-center rounded bg-gray-600 px-3 py-1"
               >
                 Cancel
               </button>
@@ -196,7 +198,7 @@ const BluetoothApp: React.FC = () => {
                   setPairedDevice(pairingDevice.name || pairingDevice.address);
                   setPairingDevice(null);
                 }}
-                className="w-[90px] rounded bg-blue-600 px-2 py-1"
+                className="inline-flex min-w-[90px] justify-center rounded bg-blue-600 px-3 py-1"
               >
                 Pair
               </button>
