@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   createContext,
   useContext,
 } from 'react';
@@ -258,7 +259,15 @@ const GameLayout: React.FC<GameLayoutProps> = ({
 
   const resume = useCallback(() => setPaused(false), []);
 
-  const contextValue = { record, registerReplay };
+  const contextValue = useMemo(
+    () => ({ record, registerReplay }),
+    [record, registerReplay],
+  );
+
+  const controlButtonClass =
+    'min-h-8 rounded border border-slate-500/60 bg-slate-800/90 px-2 py-1 text-[11px] text-white transition-colors hover:bg-slate-700 focus:outline-none focus:ring focus:ring-sky-400/60 sm:text-xs';
+  const statCardClass =
+    'rounded px-2 py-1 text-[11px] sm:text-sm bg-slate-900/60 border border-slate-700/70 backdrop-blur';
 
   useEffect(() => {
     onPauseChange?.(paused);
@@ -293,9 +302,10 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   return (
     <RecorderContext.Provider value={contextValue}>
       <div
-        className="relative flex h-full w-full min-h-0 flex-col"
+        className="relative flex h-full w-full min-h-0 flex-col overflow-hidden"
         data-reduced-motion={prefersReducedMotion}
         data-game-viewport
+        style={{ contain: 'layout paint' }}
       >
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
         {paused && (
@@ -314,11 +324,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </button>
         </div>
       )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
+      <div className="absolute right-2 top-2 z-40 flex max-w-[calc(100%-1rem)] flex-wrap justify-end gap-1.5 sm:max-w-none">
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={controlButtonClass}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
@@ -326,7 +336,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={handleRestart}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className={controlButtonClass}
           >
             Restart
           </button>
@@ -334,21 +344,21 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         <button
           type="button"
           onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={controlButtonClass}
         >
           Snapshot
         </button>
         <button
           type="button"
           onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={controlButtonClass}
         >
           Replay
         </button>
         <button
           type="button"
           onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={controlButtonClass}
         >
           Share
         </button>
@@ -358,7 +368,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             aria-label="Settings"
             aria-expanded={showSettings}
             onClick={() => setShowSettings((s) => !s)}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className={controlButtonClass}
           >
             Settings
           </button>
@@ -367,7 +377,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className={controlButtonClass}
           >
             Share Score
           </button>
@@ -377,7 +387,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           aria-label="Help"
           aria-expanded={showHelp}
           onClick={toggle}
-          className="bg-gray-700 text-white rounded-full w-8 h-8 flex items-center justify-center focus:outline-none focus:ring"
+          className="h-8 w-8 rounded-full border border-slate-500/70 bg-slate-800/90 text-white transition-colors hover:bg-slate-700 focus:outline-none focus:ring focus:ring-sky-400/60"
         >
           ?
         </button>
@@ -394,12 +404,12 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         aria-live="polite"
       >
         {stage !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+          <div className={statCardClass}>
             Stage: {stage}
           </div>
         )}
         {lives !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
+          <div className={statCardClass}>
             Lives: {lives}
           </div>
         )}
