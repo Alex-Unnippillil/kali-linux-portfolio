@@ -40,8 +40,6 @@ const isMacLike = (): boolean => {
   return /Mac|iPhone|iPad|iPod/i.test(platform || userAgent);
 };
 
-const modifierHint = isMacLike() ? '⌘' : 'Ctrl';
-
 const normalizeIconPath = (icon?: string): string | undefined => {
   if (!icon || typeof icon !== 'string') return undefined;
   if (/^(https?:|data:)/i.test(icon)) return icon;
@@ -72,6 +70,7 @@ export default function CommandPalette({
   onSelect,
   onClose,
 }: CommandPaletteProps) {
+  const modifierHint = useMemo(() => (isMacLike() ? '⌘' : 'Ctrl'), []);
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
