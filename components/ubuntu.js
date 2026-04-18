@@ -191,7 +191,7 @@ export default class Ubuntu extends Component {
                 logPageView('/desktop', 'Custom Title');
 
                 window.removeEventListener('click', this.unLockScreen);
-                window.removeEventListener('keypress', this.unLockScreen);
+                window.removeEventListener('keydown', this.unLockScreen);
 
                 this.setState({ screen_locked: false });
                 safeLocalStorage?.setItem('screen-locked', false);
