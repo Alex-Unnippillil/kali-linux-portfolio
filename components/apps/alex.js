@@ -415,39 +415,63 @@ function Projects({ projects }) {
                 </div>
             </div>
 
-            {
-                projects.map((project, index) => {
+            <div className="w-full px-3 md:px-5 pb-4 space-y-3 md:space-y-4">
+                {projects.map((project, index) => {
                     const projectNameFromLink = project.link.split('/');
                     const projectName = projectNameFromLink[projectNameFromLink.length - 1];
+
                     return (
-                        <div key={index} className="flex w-full flex-col px-4">
-                            <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
-                                <div className="flex flex-wrap justify-between items-center">
-                                    <div className='flex justify-center items-center'>
-                                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">{project.name.toLowerCase()}</a>
+                        <article
+                            key={index}
+                            className="w-full rounded-lg border border-gray-50 border-opacity-10 bg-ub-cool-grey/40 px-3 py-3 md:px-4 md:py-4"
+                        >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                <div className="min-w-0">
+                                    <a
+                                        href={project.link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="break-words text-base md:text-lg leading-snug text-gray-100 hover:text-white"
+                                    >
+                                        {project.name.toLowerCase()}
+                                    </a>
+                                    <div className="mt-1">
                                         <GitHubStars user="alex-unnippillil" repo={projectName} />
                                     </div>
-                                    <div className="text-gray-300 font-light text-sm">{project.date}</div>
                                 </div>
-                                <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                                    {project.description.map((desc, idx) => (
-                                        <li key={idx} className="list-disc mt-1 text-gray-100">{desc}</li>
-                                    ))}
-                                </ul>
-                                <div className="flex flex-wrap items-start justify-start text-xs py-2">
-                                    {project.domains ? project.domains.map((domain, idx) => {
+                                <div className="text-xs sm:text-sm text-gray-300 font-light sm:pl-3">{project.date}</div>
+                            </div>
+
+                            <ul className="mt-3 space-y-1.5 pl-5 text-sm md:text-[0.95rem] leading-relaxed text-gray-100 list-disc">
+                                {project.description.map((desc, idx) => (
+                                    <li key={idx}>{desc}</li>
+                                ))}
+                            </ul>
+
+                            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                {project.domains
+                                    ? project.domains.map((domain, idx) => {
                                         const borderColorClass = `border-${tag_colors[domain]}`;
                                         const textColorClass = `text-${tag_colors[domain]}`;
+
                                         return (
-                                            <a key={idx} href={project.link} target="_blank" rel="noopener noreferrer" className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}>{domain}</a>
+                                            <a
+                                                key={idx}
+                                                href={project.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={`px-2 py-1 border ${borderColorClass} ${textColorClass} rounded-full leading-none`}
+                                            >
+                                                {domain}
+                                            </a>
                                         );
-                                    }) : null}
-                                </div>
+                                    })
+                                    : null}
                             </div>
-                        </div>
+                        </article>
                     );
-                })
-            }
+                })}
+            </div>
         </>
     )
 }
