@@ -14,7 +14,7 @@ const certBadges = [
     height: 240,
   },
   {
-    src: 'https://images.credly.com/images/a894153e-1762-4870-83b9-150ff294d7fb/image.png',
+    src: 'https://images.credly.com/size/680x680/images/635449f2-3a53-40b3-bf08-5af4fb95df61/blob',
     alt: 'AWS Knowledge: File Storage',
     href: 'https://www.credly.com/badges/a1b8a861-f978-459a-a6c4-887b5c818e0b/public_url',
     category: 'AWS',
@@ -23,7 +23,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/180494db-68d2-4328-b223-0b60fd4b1cf1/blob',
+    src: 'https://images.credly.com/size/680x680/images/b56fe67d-3fc7-4a5c-890a-edb693b2a9ef/blob',
     alt: 'Advanced PostgreSQL for Amazon Aurora and Amazon RDS',
     href: 'https://www.credly.com/badges/c9bce92a-558c-4a72-b743-a093cd749516/public_url',
     category: 'AWS',
@@ -32,7 +32,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/2b543538-c965-49d0-87c8-c00816cdab61/blob',
+    src: 'https://images.credly.com/size/680x680/images/070a8f93-7b7d-46a7-aff3-2f56a3c528c8/blob',
     alt: 'Amazon Connect Fundamentals',
     href: 'https://www.credly.com/badges/0449e5de-e879-4123-935b-88931e712734/public_url',
     category: 'AWS',
@@ -41,7 +41,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/9bcbde6d-1754-4617-9337-124f7b10a6c2/image.png',
+    src: 'https://images.credly.com/size/680x680/images/f5efafe6-ebdc-485c-9ffa-3a05533e634b/blob',
     alt: 'AWS Knowledge: Amazon EKS',
     href: 'https://www.credly.com/badges/99343604-0605-4fa1-8fb6-a3a60fb837f1/public_url',
     category: 'AWS',
@@ -59,7 +59,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/d7c2b294-d08e-4795-a342-88fc34df7e01/image.png',
+    src: 'https://images.credly.com/size/680x680/images/f9092eff-1951-4b43-901c-d43df9034b22/blob',
     alt: 'AWS Knowledge: Data Migration',
     href: 'https://www.credly.com/badges/ddc87a40-c404-4954-acad-175d7ae172b7/public_url',
     category: 'AWS',
@@ -68,7 +68,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/65b806c9-c09d-4125-bfb0-8fc87f4699ac/image.png',
+    src: 'https://images.credly.com/size/680x680/images/b6050277-c769-4d17-8c77-3fa963830231/blob',
     alt: 'AWS Knowledge: Events and Workflows',
     href: 'https://www.credly.com/badges/1dc5114f-deea-402b-b181-27d7c829a124/public_url',
     category: 'AWS',
@@ -86,7 +86,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/e07c6cc4-b737-4d7e-8ce8-66b6b7a60367/image.png',
+    src: 'https://images.credly.com/size/680x680/images/0c20a5b7-b4e9-4c2f-8b68-342e00a85e05/blob',
     alt: 'AWS Knowledge: Serverless',
     href: 'https://www.credly.com/badges/34e2df4b-6b96-4f69-a51f-fd9bd6961bd2/public_url',
     category: 'AWS',
@@ -95,7 +95,7 @@ const certBadges = [
     note: 'Skill badge verified on Credly',
   },
   {
-    src: 'https://images.credly.com/images/2784d0d8-327c-406f-971e-9f0e15097003/image.png',
+    src: 'https://images.credly.com/size/680x680/images/30816e43-2550-4e1c-be22-3f03c5573bb9/blob',
     alt: 'AWS Cloud Quest: Cloud Practitioner',
     href: 'https://www.credly.com/badges/9fd585d2-17b2-4a38-8c93-bb1dccb6733d/public_url',
     category: 'AWS',
