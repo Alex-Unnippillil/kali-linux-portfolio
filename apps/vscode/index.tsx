@@ -1,9 +1,9 @@
 'use client';
 
 export const STACKBLITZ_EMBED_URL =
-  'https://stackblitz.com/~/github.com/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md';
+  'https://stackblitz.com/edit/github/Alex-Unnippillil/kali-linux-portfolio?embed=1&file=README.md&hideNavigation=1&view=editor';
 const STACKBLITZ_EXTERNAL_URL =
-  'https://stackblitz.com/~/github.com/Alex-Unnippillil/kali-linux-portfolio?file=README.md';
+  'https://stackblitz.com/edit/github/Alex-Unnippillil/kali-linux-portfolio?file=README.md';
 
 const STACKBLITZ_IFRAME_ALLOW =
   'clipboard-read; clipboard-write; fullscreen; geolocation; microphone; camera; display-capture';
