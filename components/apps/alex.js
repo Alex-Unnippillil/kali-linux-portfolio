@@ -1,7 +1,6 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import { logEvent, logPageView } from '../../utils/analytics';
-import GitHubStars from '../GitHubStars';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
@@ -415,39 +414,75 @@ function Projects({ projects }) {
                 </div>
             </div>
 
-            {
-                projects.map((project, index) => {
+            <div className="w-full px-3 md:px-4 pb-3 space-y-2">
+                <a
+                    href="https://github.com/Alex-Unnippillil"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex text-xs md:text-sm text-ubt-blue hover:underline"
+                >
+                    github.com/Alex-Unnippillil
+                </a>
+                {projects.map((project, index) => {
                     const projectNameFromLink = project.link.split('/');
                     const projectName = projectNameFromLink[projectNameFromLink.length - 1];
+
                     return (
-                        <div key={index} className="flex w-full flex-col px-4">
-                            <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
-                                <div className="flex flex-wrap justify-between items-center">
-                                    <div className='flex justify-center items-center'>
-                                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">{project.name.toLowerCase()}</a>
-                                        <GitHubStars user="alex-unnippillil" repo={projectName} />
-                                    </div>
-                                    <div className="text-gray-300 font-light text-sm">{project.date}</div>
-                                </div>
-                                <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                                    {project.description.map((desc, idx) => (
-                                        <li key={idx} className="list-disc mt-1 text-gray-100">{desc}</li>
-                                    ))}
-                                </ul>
-                                <div className="flex flex-wrap items-start justify-start text-xs py-2">
-                                    {project.domains ? project.domains.map((domain, idx) => {
+                        <article
+                            key={index}
+                            className="w-full rounded-md border border-gray-50 border-opacity-10 bg-ub-cool-grey/30 px-3 py-2.5"
+                        >
+                            <div className="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:justify-between">
+                                <a
+                                    href={project.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="break-words text-sm md:text-base leading-snug text-gray-100 hover:text-white"
+                                >
+                                    {project.name.toLowerCase()}
+                                </a>
+                                <div className="text-xs text-gray-300 font-light sm:pl-3">{project.date}</div>
+                            </div>
+
+                            <a
+                                href={project.link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block mt-1 text-[11px] md:text-xs text-gray-400 break-all hover:text-gray-200"
+                            >
+                                github.com/alex-unnippillil/{projectName}
+                            </a>
+
+                            <ul className="mt-2 space-y-1 pl-4 text-xs md:text-sm leading-snug text-gray-100 list-disc">
+                                {project.description.map((desc, idx) => (
+                                    <li key={idx}>{desc}</li>
+                                ))}
+                            </ul>
+
+                            <div className="mt-2 flex flex-wrap gap-1.5 text-[11px] md:text-xs">
+                                {project.domains
+                                    ? project.domains.map((domain, idx) => {
                                         const borderColorClass = `border-${tag_colors[domain]}`;
                                         const textColorClass = `text-${tag_colors[domain]}`;
+
                                         return (
-                                            <a key={idx} href={project.link} target="_blank" rel="noopener noreferrer" className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}>{domain}</a>
+                                            <a
+                                                key={idx}
+                                                href={project.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className={`px-1.5 py-0.5 border ${borderColorClass} ${textColorClass} rounded-full leading-none`}
+                                            >
+                                                {domain}
+                                            </a>
                                         );
-                                    }) : null}
-                                </div>
+                                    })
+                                    : null}
                             </div>
-                        </div>
+                        </article>
                     );
-                })
-            }
+                })}
+            </div>
         </>
     )
 }
