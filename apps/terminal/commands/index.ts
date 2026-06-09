@@ -1,6 +1,21 @@
 import type { CommandContext, CommandDefinition, CommandHandler } from './types';
 import projectsData from '../../../data/projects.json';
+import apps from '../../../apps.config';
 import registry from './registry';
+
+const getAppCatalog = () => (apps || []).map((app) => ({
+  id: app.id,
+  title: app.title,
+  disabled: Boolean(app.disabled),
+}));
+
+const findApps = (query: string) => {
+  const normalized = query.trim().toLowerCase();
+  const catalog = getAppCatalog();
+  if (!normalized) return catalog;
+  return catalog.filter((app) => app.id.toLowerCase().includes(normalized)
+    || String(app.title || '').toLowerCase().includes(normalized));
+};
 
 // Re-export registry for use by Terminal App
 export { default as commandRegistry } from './registry';
@@ -208,16 +223,47 @@ const open: CommandHandler = (args, ctx) => {
   const target = args.trim();
   if (!target) {
     ctx.writeLine('Usage: open <app>');
+    ctx.writeLine('Tip: run "apps" to browse available app IDs.');
     return;
   }
-  // Remove file extension if present (e.g., spotify.app -> spotify) - just in case
-  const appId = target.replace(/\.(app|exe|sh)$/, '');
+
+  const normalized = target.replace(/\.(app|exe|sh)$/, '').trim().toLowerCase();
+  const appMatches = findApps(normalized).filter((app) => !app.disabled);
+
+  if (appMatches.length === 0) {
+    ctx.writeLine(`open: app "${target}" not found.`);
+    const suggestions = findApps(normalized.split('-')[0]).slice(0, 5);
+    if (suggestions.length) {
+      ctx.writeLine(`Did you mean: ${suggestions.map((app) => app.id).join(', ')}?`);
+    }
+    return;
+  }
+
+  const exactMatch = appMatches.find((app) => app.id.toLowerCase() === normalized)
+    || appMatches.find((app) => String(app.title || '').toLowerCase() === normalized);
+  const chosen = exactMatch || appMatches[0];
+  const appId = chosen.id;
 
   if (ctx.openApp) {
     ctx.openApp(appId);
     ctx.writeLine(`Opening ${appId}...`);
   } else {
     ctx.writeLine('Error: Desktop environment not connected (openApp missing).');
+  }
+};
+
+const listAppsCommand: CommandHandler = (args, ctx) => {
+  const results = findApps(args);
+    if (!results.length) {
+      ctx.writeLine('No apps matched your query.');
+      return;
+    }
+  ctx.writeLine(`Applications (${results.length}):`);
+  results
+    .slice(0, 60)
+    .forEach((app) => ctx.writeLine(`- ${app.id}${app.title ? ` (${app.title})` : ''}${app.disabled ? ' [disabled]' : ''}`));
+  if (results.length > 60) {
+    ctx.writeLine(`...and ${results.length - 60} more. Use: apps <search-term>`);
   }
 };
 
@@ -335,6 +381,7 @@ const registerAll = () => {
     { name: 'cat', description: 'Print a file.', usage: 'cat <file>', handler: cat },
     { name: 'clear', description: 'Clear the terminal buffer.', handler: clear },
     { name: 'open', description: 'Open another desktop app.', usage: 'open <app-id>', handler: open },
+    { name: 'apps', description: 'List or search launchable apps.', usage: 'apps [query]', handler: listAppsCommand },
     { name: 'projects', description: 'List the portfolio project catalog.', handler: projects },
     {
       name: 'ssh',

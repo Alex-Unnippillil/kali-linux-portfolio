@@ -10,6 +10,7 @@ export interface SessionManagerConfig {
   onHistoryUpdate?: (history: string[]) => void;
   onCancelRunning?: () => void;
   onCommand?: (command: string) => void;
+  getAutocompleteCandidates?: (buffer: string) => string[];
 }
 
 export interface SessionManager {
@@ -35,6 +36,7 @@ export function createSessionManager({
   onHistoryUpdate,
   onCancelRunning,
   onCommand,
+  getAutocompleteCandidates,
 }: SessionManagerConfig): SessionManager {
   // Mutable config state
   let currentConfig: SessionManagerConfig = {
@@ -44,7 +46,9 @@ export function createSessionManager({
     write,
     writeLine,
     onHistoryUpdate,
-    onCancelRunning
+    onCancelRunning,
+    onCommand,
+    getAutocompleteCandidates,
   };
 
   const updateConfig = (newConfig: Partial<SessionManagerConfig>) => {
@@ -122,9 +126,23 @@ export function createSessionManager({
   };
 
   const autocomplete = () => {
-    if (/\s/.test(buffer)) {
-      return;
+    const providedCandidates = currentConfig.getAutocompleteCandidates?.(buffer) || [];
+    if (providedCandidates.length > 0) {
+      const uniqueMatches = [...new Set(providedCandidates)].filter((value) => value.startsWith(buffer));
+      if (uniqueMatches.length === 1) {
+        const completion = uniqueMatches[0].slice(buffer.length);
+        if (completion) currentConfig.write(completion);
+        buffer = uniqueMatches[0];
+        return;
+      }
+      if (uniqueMatches.length > 1) {
+        currentConfig.write('\r\n');
+        uniqueMatches.slice(0, 30).forEach((value) => currentConfig.writeLine(value));
+        renderPrompt();
+        return;
+      }
     }
+    if (/\s/.test(buffer)) return;
     const registry = currentConfig.getRegistry();
     const entries = Object.values(registry);
     const matches = entries.filter((c) => c.name.startsWith(buffer));
