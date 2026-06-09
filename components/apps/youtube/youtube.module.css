@@ -18,7 +18,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .headerTop {
@@ -75,6 +76,16 @@
   flex-wrap: wrap;
   gap: 10px;
   justify-content: flex-start;
+  align-items: center;
+}
+
+.statBadge {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--kali-panel-border);
+  background: color-mix(in srgb, var(--kali-panel-highlight) 86%, transparent);
+  font-size: 12px;
+  color: color-mix(in srgb, var(--color-text) 80%, transparent);
 }
 
 .button {
@@ -204,9 +215,9 @@
 .panel {
   background: var(--color-surface);
   border: 1px solid var(--kali-panel-border);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 18px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26);
 }
 
 .panelHeader {
@@ -299,12 +310,13 @@
   gap: 12px;
   padding: 10px;
   text-align: left;
-  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+  transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
 }
 
 .playlistButton:hover {
   border-color: var(--kali-control);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  background: color-mix(in srgb, var(--color-surface-muted) 84%, var(--kali-panel-highlight));
 }
 
 .playlistButtonActive {
@@ -370,10 +382,14 @@
   margin: 8px 0 0;
 }
 
+.clearSearchButton {
+  margin-top: 10px;
+}
+
 .contentArea {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .contentGrid {
@@ -396,7 +412,7 @@
   margin-top: 8px;
   width: 100%;
   aspect-ratio: 16 / 9;
-  border-radius: 14px;
+  border-radius: 16px;
   background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.06), transparent 35%),
     var(--kali-panel-highlight);
   overflow: hidden;
@@ -427,7 +443,11 @@
   margin-top: 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--kali-panel-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--kali-panel-highlight) 62%, transparent);
 }
 
 .videoList {
@@ -491,11 +511,12 @@
   border: 1px solid var(--kali-panel-border);
   background: var(--color-surface-muted);
   text-align: left;
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease, background 150ms ease;
 }
 
 .videoButton:hover {
   border-color: var(--kali-control);
+  background: color-mix(in srgb, var(--color-surface-muted) 82%, var(--kali-panel-highlight));
 }
 
 .videoButtonActive {
@@ -558,8 +579,12 @@
   white-space: pre-wrap;
   font-size: 13px;
   color: color-mix(in srgb, var(--color-text) 70%, transparent);
-  line-height: 1.5;
+  line-height: 1.6;
   margin: 0;
+}
+
+.videoMetaRow {
+  margin-bottom: 4px;
 }
 
 .descriptionToggle {

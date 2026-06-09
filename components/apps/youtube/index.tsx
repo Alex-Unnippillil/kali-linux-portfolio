@@ -557,6 +557,11 @@ export default function YouTubeApp({ channelId }: Props) {
           </div>
 
           <div className={styles.actions}>
+            {channelSummary?.subscriberCount && (
+              <span className={styles.statBadge}>
+                {Number(channelSummary.subscriberCount).toLocaleString()} subscribers
+              </span>
+            )}
             {resolvedChannelId && (
               <a
                 href={channelUrl(resolvedChannelId)}
@@ -693,8 +698,7 @@ export default function YouTubeApp({ channelId }: Props) {
                 <button
                   type="button"
                   onClick={() => setFilter('')}
-                  className={`${styles.button} ${styles.smallButton}`}
-                  style={{ marginTop: '10px' }}
+                  className={`${styles.button} ${styles.smallButton} ${styles.clearSearchButton}`}
                 >
                   Clear search
                 </button>
@@ -778,7 +782,7 @@ export default function YouTubeApp({ channelId }: Props) {
                   <div className={styles.panelHeader}>
                     <h3 className={styles.videoTitle}>{selectedVideo.title}</h3>
                   </div>
-                  <p className={styles.metaText} style={{ marginBottom: 4 }}>
+                  <p className={`${styles.metaText} ${styles.videoMetaRow}`}>
                     Published {formatDate(selectedVideo.publishedAt)}
                   </p>
                   {selectedVideo.description && (
