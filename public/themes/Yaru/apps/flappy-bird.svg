@@ -1,6 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <circle cx="32" cy="32" r="20" fill="#f4d03f"/>
-  <polygon points="44,32 60,26 60,38" fill="#e67e22"/>
-  <circle cx="37" cy="25" r="3" fill="#000"/>
-  <path d="M20 32 q12 12 24 0" stroke="#fff" stroke-width="2" fill="none"/>
+<!--
+  Original Flappy Bird-style icon created for the Kali Linux Portfolio project.
+  Released under the MIT License (see repository LICENSE).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Flappy Bird icon</title>
+  <desc id="desc">Cartoon bird flying toward a green pipe inspired by Flappy Bird.</desc>
+  <rect x="42" y="8" width="14" height="48" rx="2" fill="#58c473"/>
+  <rect x="38" y="4" width="22" height="10" rx="2" fill="#76d989"/>
+  <rect x="38" y="4" width="22" height="3" rx="2" fill="#9beb9c"/>
+  <rect x="44" y="32" width="10" height="24" fill="#3aa659" opacity="0.6"/>
+  <g transform="translate(6 8)">
+    <circle cx="18" cy="22" r="14" fill="#f5d95c"/>
+    <path d="M16 12c3 0 6 2 7 5l-5 3-8-2c1-3 3-6 6-6z" fill="#f9e68e"/>
+    <path d="M10 28c0-4 3-7 8-7s8 3 8 7-3 7-8 7-8-3-8-7z" fill="#f2c94c"/>
+    <path d="M9 23l-7 4 7 4c2-1 4-2 4-4s-2-3-4-4z" fill="#f2994a"/>
+    <circle cx="22" cy="18" r="4.2" fill="#fff"/>
+    <circle cx="23.2" cy="18.2" r="1.8" fill="#2d2d2d"/>
+    <circle cx="23.9" cy="17.6" r="0.6" fill="#fff"/>
+    <path d="M20 27c3 0 6 2 7 5l-5 4c-3-1-6-3-8-6 1-2 3-3 6-3z" fill="#f7d86b"/>
+    <path d="M14 30l-6 5 7 2c2-1 3-3 3-5l-4-2z" fill="#f7b547"/>
+    <path d="M18 20c0 2-1 3-3 3s-3-1-3-3 1-3 3-3 3 1 3 3z" fill="#f8e6a6" opacity="0.7"/>
+    <path d="M32 20c-1-3-3-5-6-6-1 3-1 6 1 8 2 1 4 0 5-2z" fill="#f2994a"/>
+  </g>
 </svg>
