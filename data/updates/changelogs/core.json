@@ -1,0 +1,41 @@
+{
+  "id": "core-2024-05",
+  "release": "Core System Update",
+  "releasedAt": "2024-05-18",
+  "packages": [
+    {
+      "id": "linux-image-amd64",
+      "name": "linux-image-amd64",
+      "version": "6.8.12-1kali1",
+      "category": "security",
+      "summary": "Patches privilege escalation flaws in io_uring and updates LSM hooks for hardened sandboxing.",
+      "size": "72 MB",
+      "etaMinutes": 4,
+      "requiresRestart": true,
+      "restartType": "System reboot",
+      "cves": ["CVE-2024-1086", "CVE-2024-2443"]
+    },
+    {
+      "id": "openssl",
+      "name": "openssl",
+      "version": "3.2.1-2",
+      "category": "security",
+      "summary": "Fixes a timing leak in constant-time modular exponentiation and refreshes TLS cipher defaults.",
+      "size": "5.1 MB",
+      "etaMinutes": 1,
+      "requiresRestart": false,
+      "restartType": "Service reload recommended",
+      "cves": ["CVE-2024-2511"]
+    },
+    {
+      "id": "tmux",
+      "name": "tmux",
+      "version": "3.4-1",
+      "category": "feature",
+      "summary": "Adds pane zoom presets and improves Wayland clipboard synchronisation for nested sessions.",
+      "size": "1.8 MB",
+      "etaMinutes": 1,
+      "requiresRestart": false
+    }
+  ]
+}

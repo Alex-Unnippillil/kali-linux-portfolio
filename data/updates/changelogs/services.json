@@ -1,0 +1,36 @@
+{
+  "id": "services-2024-05",
+  "release": "Desktop Services Maintenance",
+  "releasedAt": "2024-05-12",
+  "packages": [
+    {
+      "id": "gdm3",
+      "name": "gdm3",
+      "version": "45.0-2",
+      "category": "bugfix",
+      "summary": "Prevents session freeze when Wayland remoting falls back to X.Org proxy.",
+      "size": "12 MB",
+      "etaMinutes": 2,
+      "requiresRestart": true,
+      "restartType": "Display manager restart"
+    },
+    {
+      "id": "network-manager",
+      "name": "network-manager",
+      "version": "1.46.2",
+      "category": "feature",
+      "summary": "Introduces split tunnel templates and quick WPA3 Enterprise enrolment.",
+      "size": "7.2 MB",
+      "requiresRestart": true,
+      "restartType": "Network service restart"
+    },
+    {
+      "id": "kali-artwork",
+      "name": "kali-themes",
+      "version": "2024.2",
+      "category": "feature",
+      "etaMinutes": 1,
+      "requiresRestart": false
+    }
+  ]
+}
