@@ -1,0 +1,86 @@
+[
+  {
+    "id": "ir-2024-001-memdump",
+    "title": "IR-2024-001 Memory Capture",
+    "summary": "Memory snapshot triaged for possible credential theft on workstation 07.",
+    "status": "Under Review",
+    "metadata": {
+      "caseId": "IR-2024-001",
+      "source": "Workstation 07 live response",
+      "location": "Toronto SOC lab",
+      "analyst": "Priya Desai",
+      "collectedAt": "2024-02-20T13:42:00Z",
+      "classification": "Confidential",
+      "tags": [
+        "case/IR-2024-001",
+        "artifact/memory",
+        "impact/credential-access"
+      ]
+    },
+    "attachments": [
+      {
+        "id": "ir-2024-001-note",
+        "kind": "note",
+        "title": "Initial triage notes",
+        "description": "Highlights suspicious processes from the memory capture.",
+        "createdAt": "2024-02-20T14:05:00Z",
+        "tags": ["analysis/triage"],
+        "body": "Reviewed Volatility pslist output; rundll32 -> powershell chain observed.\nRecommend string extraction for injection artifacts."
+      },
+      {
+        "id": "ir-2024-001-triage",
+        "kind": "file",
+        "title": "Volatility triage summary",
+        "description": "Text export of notable findings from volatility workflow.",
+        "createdAt": "2024-02-20T14:10:00Z",
+        "tags": ["export/report"],
+        "fileName": "memdump-triage.txt",
+        "mimeType": "text/plain",
+        "sizeBytes": 546,
+        "downloadUrl": "/demo-data/evidence-vault/memdump-triage.txt"
+      }
+    ]
+  },
+  {
+    "id": "ir-2024-002-exfil",
+    "title": "IR-2024-002 Exfiltration Review",
+    "summary": "Outbound data movement detected via email and cloud sync utilities.",
+    "status": "Containment",
+    "metadata": {
+      "caseId": "IR-2024-002",
+      "source": "Email security & proxy logs",
+      "location": "Remote workforce segment",
+      "analyst": "Jordan Miles",
+      "collectedAt": "2024-02-19T22:05:00Z",
+      "classification": "Restricted",
+      "tags": [
+        "case/IR-2024-002",
+        "impact/exfiltration",
+        "artifact/log"
+      ]
+    },
+    "attachments": [
+      {
+        "id": "ir-2024-002-note",
+        "kind": "note",
+        "title": "Containment checklist",
+        "description": "Steps executed with messaging security during incident triage.",
+        "createdAt": "2024-02-19T22:15:00Z",
+        "tags": ["analysis/containment"],
+        "body": "1. Disabled outbound email for account jordan.miles.\n2. Blocked storage.sync-cloud.example at proxy edge.\n3. Scheduled DLP forensic pull for impacted endpoints."
+      },
+      {
+        "id": "ir-2024-002-csv",
+        "kind": "file",
+        "title": "Exfil event timeline",
+        "description": "CSV export from proxy and DLP telemetry.",
+        "createdAt": "2024-02-19T22:20:00Z",
+        "tags": ["export/report"],
+        "fileName": "exfil-observation.csv",
+        "mimeType": "text/csv",
+        "sizeBytes": 345,
+        "downloadUrl": "/demo-data/evidence-vault/exfil-observation.csv"
+      }
+    ]
+  }
+]
