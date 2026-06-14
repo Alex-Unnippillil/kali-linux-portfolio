@@ -14,14 +14,19 @@ export interface SavedProfile {
   services: ServiceData[];
 }
 
-const getDir = async (): Promise<any> => {
+const getDir = async (): Promise<FileSystemDirectoryHandle | null> => {
   if (
     typeof navigator === 'undefined' ||
     !(navigator as any).storage?.getDirectory
   ) {
-    throw new Error('OPFS not supported');
+    return null;
   }
-  return await (navigator as any).storage.getDirectory();
+
+  try {
+    return await (navigator as any).storage.getDirectory();
+  } catch {
+    return null;
+  }
 };
 
 export const saveProfile = async (
@@ -29,6 +34,7 @@ export const saveProfile = async (
   profile: Omit<SavedProfile, 'deviceId'>
 ): Promise<void> => {
   const dir = await getDir();
+  if (!dir) return;
   const handle = await dir.getFileHandle(`${deviceId}.json`, { create: true });
   const writable = await handle.createWritable();
   await writable.write(JSON.stringify(profile));
@@ -40,6 +46,7 @@ export const loadProfile = async (
 ): Promise<SavedProfile | null> => {
   try {
     const dir = await getDir();
+    if (!dir) return null;
     const handle = await dir.getFileHandle(`${deviceId}.json`);
     const file = await handle.getFile();
     const data = JSON.parse(await file.text());
@@ -52,6 +59,7 @@ export const loadProfile = async (
 export const loadProfiles = async (): Promise<SavedProfile[]> => {
   try {
     const dir = await getDir();
+    if (!dir) return [];
     const profiles: SavedProfile[] = [];
     for await (const [name, handle] of (dir as any).entries()) {
       if (!name.endsWith('.json')) continue;
@@ -80,6 +88,7 @@ export const renameProfile = async (
 
 export const deleteProfile = async (deviceId: string): Promise<void> => {
   const dir = await getDir();
+  if (!dir) return;
   await dir.removeEntry(`${deviceId}.json`);
 };
 
