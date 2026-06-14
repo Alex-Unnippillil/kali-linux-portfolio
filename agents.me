@@ -1,0 +1,14 @@
+# kali-linux-portfolio — agents.me
+
+## Overview
+This file summarizes the guidance for automated contributors working in this repository. It mirrors the canonical instructions from `AGENTS.md` so tooling that reads `.me` manifests can still load the same expectations.
+
+## Key points
+- The portfolio emulates a Kali/Ubuntu desktop and all security tooling must remain **simulation only**.
+- Use Node.js version from `.nvmrc`, install dependencies with Yarn, and prefer feature flags over hardcoded secrets.
+- Run quality gates (`yarn lint`, `yarn test`, optional smoke/E2E suites) before committing changes.
+- Respect the Next.js architecture: keep React components functional, co-locate assets, and centralize window state logic.
+- Analytics, PWA behavior, and accessibility must not regress; treat API-backed features as demo-friendly when offline.
+
+## Additional resources
+See `AGENTS.md` for the full contributor playbook and expanded checklists.
