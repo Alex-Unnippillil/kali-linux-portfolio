@@ -1,10 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
+import usePersistentState from '../../../hooks/usePersistentState';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
 import LayerView from './LayerView';
+import ColorRuleEditor from './ColorRuleEditor';
+import {
+  ColorRule,
+  buildPacketRowMetadata,
+  isColorRuleArray,
+} from './colorRuleUtils';
 
 
 interface PcapViewerProps {
@@ -246,6 +253,18 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+  const [colorRules, setColorRules, resetColorRules] = usePersistentState<ColorRule[]>(
+    'pcap-viewer:color-rules',
+    () => [],
+    isColorRuleArray,
+  );
+
+  const handleColorRulesChange = useCallback(
+    (nextRules: ColorRule[]) => {
+      setColorRules(nextRules.map((rule) => ({ ...rule })));
+    },
+    [setColorRules],
+  );
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,16 +308,19 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filteredRows = useMemo(() => {
+    const metadata = buildPacketRowMetadata(packets, filter, colorRules);
+    return metadata.filter((row) => row.matchesFilter);
+  }, [packets, filter, colorRules]);
+
+  useEffect(() => {
+    if (selected !== null && selected >= filteredRows.length) {
+      setSelected(null);
+    }
+  }, [filteredRows.length, selected]);
+
+  const selectedPacket =
+    selected !== null ? filteredRows[selected]?.packet ?? null : null;
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -344,6 +366,13 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             >
               Copy
             </button>
+          </div>
+          <div className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0 text-xs">
+            <ColorRuleEditor
+              rules={colorRules}
+              onChange={handleColorRulesChange}
+              onReset={resetColorRules}
+            />
           </div>
           <div className="flex space-x-1">
             {presets.map(({ label, expression }) => (
@@ -397,55 +426,58 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((pkt, i) => (
-                    <tr
-                      key={i}
-                      className={`cursor-pointer hover:bg-gray-700 ${
-                        selected === i
-                          ? 'outline outline-2 outline-white'
-                          : protocolColors[
-                              protocolName(pkt.protocol).toString()
-                            ] || ''
-                      }`}
-                      onClick={() => setSelected(i)}
-                    >
-                      {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
-                        return (
-                          <td key={col} className="px-1 whitespace-nowrap">
-                            {val}
-                          </td>
-                        );
-                      })}
+                  {filteredRows.map(({ packet: pkt, colorClass }, i) => {
+                    const baseColor =
+                      protocolColors[protocolName(pkt.protocol).toString()] || '';
+                    const appliedColor = colorClass || baseColor;
+                    return (
+                      <tr
+                        key={i}
+                        className={`cursor-pointer hover:bg-gray-700 ${
+                          selected === i
+                            ? 'outline outline-2 outline-white'
+                            : appliedColor
+                        }`}
+                        onClick={() => setSelected(i)}
+                      >
+                        {columns.map((col) => {
+                          let val = '';
+                          switch (col) {
+                            case 'Time':
+                              val = pkt.timestamp;
+                              break;
+                            case 'Source':
+                              val = pkt.src;
+                              break;
+                            case 'Destination':
+                              val = pkt.dest;
+                              break;
+                            case 'Protocol':
+                              val = protocolName(pkt.protocol);
+                              break;
+                            case 'Info':
+                              val = pkt.info;
+                              break;
+                          }
+                          return (
+                            <td key={col} className="px-1 whitespace-nowrap">
+                              {val}
+                            </td>
+                          );
+                        })}
                     </tr>
-                  ))}
+                  );
+                  })}
                 </tbody>
               </table>
             </div>
             <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
+              {selectedPacket ? (
                 <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
+                  {decodePacketLayers(selectedPacket).map((layer, i) => (
                     <LayerView key={i} name={layer.name} fields={layer.fields} />
                   ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
+                  <pre className="text-green-400">{toHex(selectedPacket.data)}</pre>
                 </>
               ) : (
                 'Select a packet'
