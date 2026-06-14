@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>Kali Linux Portfolio Releases</title>
+<link>https://unnippillil.com/releases</link>
+<description>Release timeline for Kali Linux Portfolio</description>
+  <item>
+    <title>2.1.0</title>
+    <link>https://unnippillil.com/releases#v2.1.0</link>
+    <pubDate>Wed, 03 Sep 2025 00:00:00 GMT</pubDate>
+    <description>Added, Fixed, Upgrading</description>
+  </item>
+</channel>
+</rss>
