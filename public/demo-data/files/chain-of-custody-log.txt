@@ -1,0 +1,7 @@
+# Chain of Custody Log – WKS-14
+
+2025-02-19T17:22Z | Capture start | Device=WKS-14-SSD | Hash=9d7c3a6f2fb1f3c7c8a01b6d115be6f0f5a0ee5c22cda3f249d2a589b942ed3b
+2025-02-19T17:46Z | Capture sealed | Seal-ID=23-0411A | Courier=F. Morales
+2025-02-20T03:12Z | Intake verified | Vault=PF-Locker-07 | Intact=true
+2025-02-20T11:08Z | Analysis checkout | Analyst=R. Singh | Purpose=Timeline build
+2025-02-20T18:42Z | Return to vault | Chain hash verified | Notes=No anomalies
