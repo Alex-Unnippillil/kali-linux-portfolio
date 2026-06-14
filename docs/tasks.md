@@ -2,6 +2,9 @@
 
 This document tracks planned improvements and new features for the desktop portfolio apps.
 
+## Security
+- Track React2Shell (CVE-2025-55182) response using `docs/react2shell-response.md` and pause releases until patched Next.js/React builds are verified.
+
 ## Foundation
 - Add dynamic app factory at `utils/createDynamicApp.js` to unify dynamic imports and GA events.
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
