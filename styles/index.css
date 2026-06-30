@@ -306,9 +306,19 @@ dialog {
     }
 }
 
-/* Show Applications overlay animation */
+/* Show Applications/Places overlay animation */
 .all-apps-anim {
     animation: allAppsScale 200ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .all-apps-anim {
+        animation: none !important;
+    }
+}
+
+html.reduce-motion .all-apps-anim {
+    animation: none !important;
 }
 
 @keyframes allAppsScale {
