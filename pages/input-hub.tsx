@@ -10,6 +10,21 @@ const subjectTemplates = [
   'Feedback',
 ];
 
+const openWindows = [
+  {
+    start: '2024-11-08T16:00:00Z',
+    end: '2024-11-08T18:00:00Z',
+  },
+  {
+    start: '2024-11-09T14:00:00Z',
+    end: '2024-11-09T16:00:00Z',
+  },
+  {
+    start: '2024-11-10T15:00:00Z',
+    end: '2024-11-10T17:00:00Z',
+  },
+];
+
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
     const g: any = (window as any).grecaptcha;
@@ -33,6 +48,27 @@ const InputHub = () => {
   const [status, setStatus] = useState('');
   const [useCaptcha, setUseCaptcha] = useState(false);
   const [emailjsReady, setEmailjsReady] = useState(false);
+  const locale =
+    typeof navigator !== 'undefined' ? navigator.language : 'en-US';
+
+  const formatSlot = (slot: { start: string; end: string }) => {
+    const opts: Intl.DateTimeFormatOptions = {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZoneName: 'short',
+    };
+    return `${new Date(slot.start).toLocaleString(locale, opts)} - ${new Date(
+      slot.end,
+    ).toLocaleString(locale, opts)}`;
+  };
+
+  const suggestTimes = () => {
+    const suggestions = openWindows.map(formatSlot).join('\n');
+    setMessage((m) => (m ? `${m}\n\n${suggestions}` : suggestions));
+  };
 
   useEffect(() => {
     const { preset, title, text, url, files } = router.query;
@@ -197,6 +233,18 @@ const InputHub = () => {
           {emailjsReady ? 'EmailJS: Online' : 'EmailJS: Offline'}
         </span>
       </div>
+      <div className="mb-4">
+        <h2 className="font-semibold">Open Windows</h2>
+        <ul className="list-disc ml-5 text-sm">
+          {openWindows.map((slot, i) => (
+            <li key={i}>{formatSlot(slot)}</li>
+          ))}
+        </ul>
+        <p className="text-sm mt-1">Typical response time: within 24 hours.</p>
+        <p className="text-xs text-gray-600">
+          Times shown in your local timezone ({locale}) to simplify scheduling.
+        </p>
+      </div>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2">
         <input
           className="p-1 border"
@@ -230,6 +278,13 @@ const InputHub = () => {
           onChange={(e) => setMessage(e.target.value)}
           required
         />
+        <button
+          type="button"
+          className="text-blue-600 underline text-sm self-start"
+          onClick={suggestTimes}
+        >
+          Suggest times
+        </button>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
