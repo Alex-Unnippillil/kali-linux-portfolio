@@ -9,6 +9,7 @@ import FilterHelper from '../../../apps/wireshark/components/FilterHelper';
 import ColorRuleEditor from '../../../apps/wireshark/components/ColorRuleEditor';
 import { parsePcap } from '../../../utils/pcap';
 import SimulationBanner from '../SimulationBanner';
+import { compactUi } from '../shared/compactUi';
 
 const toHex = (bytes) =>
   Array.from(bytes, (b, i) =>
@@ -495,7 +496,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
       <section className="mx-2 mb-2 rounded border border-white/10 bg-gray-900 p-3 text-xs text-white/80">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-semibold text-white">Traffic insights</p>
-          <div className="flex items-center gap-3 text-[11px] text-gray-300">
+          <div className={`flex items-center gap-3 ${compactUi.bodySmall} text-gray-300`}>
             <span>Total: {packets.length}</span>
             <span>Displayed: {filteredCount}</span>
             <span>Unique hosts: {trafficInsights.uniqueHosts}</span>
@@ -508,7 +509,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
                 key={host}
                 type="button"
                 onClick={() => focusHost(host)}
-                className="rounded border border-blue-400/40 bg-blue-500/10 px-2 py-1 text-left text-[11px] text-blue-200 hover:bg-blue-500/20"
+                className={`rounded border border-blue-400/40 bg-blue-500/10 px-2 py-1 text-left ${compactUi.bodySmall} text-blue-200 hover:bg-blue-500/20`}
                 aria-label={`Focus host ${host}`}
               >
                 {host} <span className="text-blue-100/80">({count})</span>
@@ -521,7 +522,7 @@ const WiresharkApp = ({ initialPackets = [] }) => {
             <button
               type="button"
               onClick={() => handleFilterChange('')}
-              className="rounded border border-white/20 px-2 py-1 text-[11px] text-white/80 hover:text-white"
+              className={`rounded border border-white/20 px-2 py-1 ${compactUi.bodySmall} text-white/80 hover:text-white`}
             >
               Clear host focus
             </button>

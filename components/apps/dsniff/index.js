@@ -3,6 +3,7 @@ import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import { compactUi } from '../shared/compactUi';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -115,7 +116,7 @@ const LogRow = ({ log, prefersReduced }) => {
       ref={rowRef}
       className="odd:bg-slate-950/40 even:bg-slate-950/70 transition-colors"
     >
-      <td className="whitespace-nowrap px-3 py-2 text-[11px] uppercase tracking-wide text-slate-500">
+      <td className={`whitespace-nowrap px-3 py-2 ${compactUi.labelSmall} text-slate-500`}>
         {log.timestamp}
       </td>
       <td className="px-3 py-2 text-xs font-semibold text-emerald-300">
@@ -162,7 +163,7 @@ const Credential = ({ cred }) => {
   const [show, setShow] = useState(false);
   const hidden = cred.password && !show;
   return (
-    <span className="mr-2 inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-2 py-1 text-[11px] text-slate-100 shadow-sm">
+    <span className={`mr-2 inline-flex items-center gap-1 rounded-full border border-slate-800 bg-slate-950/60 px-2 py-1 ${compactUi.bodySmall} text-slate-100 shadow-sm`}>
       <span aria-hidden>{protocolIcons[cred.protocol] || '❓'}</span>
       <span className="font-medium">{cred.username}</span>
       {cred.password && (
@@ -170,7 +171,7 @@ const Credential = ({ cred }) => {
           <span className="text-slate-500">•</span>
           <span>{hidden ? '***' : cred.password}</span>
           <button
-            className="ml-1 rounded px-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-300 transition hover:text-emerald-200"
+            className={`ml-1 rounded px-1 ${compactUi.chipSmall} text-emerald-300 transition hover:text-emerald-200`}
             onClick={() => setShow(!show)}
           >
             {hidden ? 'Show' : 'Hide'}
@@ -218,7 +219,7 @@ const SessionTile = ({ session, onView }) => (
         </div>
       </div>
       <div className="space-y-1 text-xs leading-relaxed text-slate-300">
-        <div className="flex flex-wrap items-center gap-1 text-[11px] uppercase tracking-wide text-slate-400">
+        <div className={`flex flex-wrap items-center gap-1 ${compactUi.labelSmall} text-slate-400`}>
           <span className="rounded-full bg-slate-800/80 px-2 py-0.5 text-slate-200 shadow-inner">
             {session.src}
           </span>
@@ -227,7 +228,7 @@ const SessionTile = ({ session, onView }) => (
             {session.dst}
           </span>
         </div>
-        <div className="rounded-lg bg-slate-950/60 px-3 py-2 font-mono text-[11px] text-emerald-300 shadow-inner">
+        <div className={`rounded-lg bg-slate-950/60 px-3 py-2 font-mono ${compactUi.bodySmall} text-emerald-300 shadow-inner`}>
           {session.info}
         </div>
       </div>
@@ -482,7 +483,7 @@ const Dsniff = () => {
           </h2>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full table-fixed text-left text-xs md:text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
+              <thead className={`bg-slate-900/60 ${compactUi.labelSmall} tracking-[0.25em] text-slate-400`}>
                 <tr>
                   <th className="px-4 py-3">Tool</th>
                   <th className="px-4 py-3">Description</th>
@@ -523,7 +524,7 @@ const Dsniff = () => {
                 key={metric.label}
                 className="rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 py-3 shadow-sm"
               >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <p className={`${compactUi.chipSmall} text-slate-400`}>
                   {metric.label}
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-emerald-300">{metric.value}</p>
@@ -595,7 +596,7 @@ const Dsniff = () => {
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full text-left text-xs md:text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
+              <thead className={`bg-slate-900/60 ${compactUi.labelSmall} tracking-[0.25em] text-slate-400`}>
                 <tr>
                   <th className="px-4 py-3">Src</th>
                   <th className="px-4 py-3">Dst</th>
@@ -621,7 +622,7 @@ const Dsniff = () => {
                     <td className="px-4 py-3 text-slate-100">{pkt.src}</td>
                     <td className="px-4 py-3 text-slate-100">{pkt.dst}</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 ${compactUi.chipSmall} ${
                         protocolAccents[pkt.protocol] || 'from-slate-600 via-slate-500 to-slate-600 text-slate-100'
                       } bg-gradient-to-br`}
                       >
@@ -659,7 +660,7 @@ const Dsniff = () => {
               Parsed credentials/URLs by domain
             </h2>
             <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor="dsniff-domain-sort" className="text-[11px] uppercase tracking-wide text-slate-400">
+              <label htmlFor="dsniff-domain-sort" className={`${compactUi.labelSmall} text-slate-400`}>
                 Sort by
               </label>
               <select
@@ -676,7 +677,7 @@ const Dsniff = () => {
               <button
                 onClick={() => setHighRiskOnly((prev) => !prev)}
                 aria-pressed={highRiskOnly}
-                className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                className={`rounded-md border px-2.5 py-1 ${compactUi.chipSmall} transition ${
                   highRiskOnly
                     ? 'border-rose-400/70 bg-rose-500/20 text-rose-100'
                     : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-slate-500'
@@ -688,7 +689,7 @@ const Dsniff = () => {
           </div>
           <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full text-left text-xs md:text-sm">
-              <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
+              <thead className={`bg-slate-900/60 ${compactUi.labelSmall} tracking-[0.25em] text-slate-400`}>
                 <tr>
                   <th className="px-4 py-3">Domain</th>
                   <th className="px-4 py-3">URLs</th>
@@ -716,7 +717,7 @@ const Dsniff = () => {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wide ${
+                        className={`inline-flex items-center rounded-full px-3 py-1 ${compactUi.chipSmall} ${
                           riskBadgeStyles[d.risk] || 'bg-slate-800 text-slate-200'
                         }`}
                       >
@@ -771,7 +772,7 @@ const Dsniff = () => {
             {Object.entries(protocolRisks).map(([proto, risk]) => (
               <button
                 key={proto}
-                className={`inline-flex items-center rounded-full border border-slate-700 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide transition ${
+                className={`inline-flex items-center rounded-full border border-slate-700 px-3 py-1 ${compactUi.chipSmall} transition ${
                   protocolFilter.includes(proto)
                     ? 'bg-slate-800 text-emerald-300'
                     : 'bg-slate-900/60 text-slate-300 hover:text-emerald-200'
@@ -789,7 +790,7 @@ const Dsniff = () => {
             ))}
           </div>
           <button
-            className="rounded-md border border-slate-700 bg-slate-900/70 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-200 transition hover:border-slate-500 hover:text-white"
+            className={`rounded-md border border-slate-700 bg-slate-900/70 px-3 py-1.5 ${compactUi.chipSmall} text-slate-200 transition hover:border-slate-500 hover:text-white`}
             onClick={clearAllFilters}
           >
             Clear all filters
@@ -800,7 +801,7 @@ const Dsniff = () => {
           <div>
             <label
               id="dsniff-search-label"
-              className="text-[11px] font-semibold uppercase tracking-wide text-slate-400"
+              className={`${compactUi.chipSmall} text-slate-400`}
               htmlFor="dsniff-search"
             >
               Search logs
@@ -816,7 +817,7 @@ const Dsniff = () => {
             />
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400" id="dsniff-advanced-filter">
+            <p className={`${compactUi.chipSmall} text-slate-400`} id="dsniff-advanced-filter">
               Advanced filter
             </p>
             <div className="mt-1 flex flex-wrap gap-2" aria-labelledby="dsniff-advanced-filter">
@@ -854,11 +855,11 @@ const Dsniff = () => {
               {filters.map((f, i) => (
                 <span
                   key={i}
-                  className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 text-[11px] text-slate-100"
+                  className={`inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/70 px-3 py-1 ${compactUi.bodySmall} text-slate-100`}
                 >
                   {`${f.field}:${f.value}`}
                   <button
-                    className="rounded-full bg-slate-800/80 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-rose-200 transition hover:text-rose-100"
+                    className={`rounded-full bg-slate-800/80 px-2 py-0.5 ${compactUi.chipSmall} text-rose-200 transition hover:text-rose-100`}
                     onClick={() => removeFilter(i)}
                     aria-label={`Remove filter ${f.field}:${f.value}`}
                   >
@@ -877,7 +878,7 @@ const Dsniff = () => {
         >
           {filteredLogs.length ? (
             <table className="w-full text-left text-sm">
-              <thead className="sticky top-0 bg-black/80 text-[11px] uppercase tracking-[0.25em] text-slate-500">
+              <thead className={`sticky top-0 bg-black/80 ${compactUi.labelSmall} tracking-[0.25em] text-slate-500`}>
                 <tr>
                   <th className="px-3 py-2">Time</th>
                   <th className="px-3 py-2">Protocol</th>
