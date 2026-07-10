@@ -451,7 +451,7 @@ const OpenVASApp = () => {
         </div>
       )}
       <h2 className="mb-2 text-lg font-semibold">OpenVAS Scanner</h2>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-start gap-2">
           <input
             className="flex-1 min-w-[12rem] rounded-lg bg-kali-surface-muted px-3 py-2 text-sm text-white placeholder-white/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus"
             placeholder="Target (e.g. 192.168.1.1)"
@@ -466,7 +466,7 @@ const OpenVASApp = () => {
             onChange={(e) => setGroup(e.target.value)}
             aria-label="Asset group"
           />
-        <div className="flex items-center gap-2" role="tablist" aria-label="Scan profile">
+        <div className="flex flex-wrap items-center gap-2" role="tablist" aria-label="Scan profile">
           {profileTabs.map((p) => (
             <button
               key={p.id}
@@ -475,7 +475,7 @@ const OpenVASApp = () => {
               aria-selected={profile === p.id}
               aria-label={p.label}
               onClick={() => setProfile(p.id)}
-              className={`flex h-8 w-8 items-center justify-center rounded-md border border-white/10 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
+              className={`inline-flex min-h-8 min-w-8 items-center justify-center rounded-md border border-white/10 px-2 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-kali-focus ${
                 profile === p.id
                   ? 'bg-kali-surface-raised text-kali-control shadow-[0_0_0_1px_rgba(255,255,255,0.12)]'
                   : 'bg-kali-surface-muted text-white/70 hover:text-white'
