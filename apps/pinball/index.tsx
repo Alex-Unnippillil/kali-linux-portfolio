@@ -500,24 +500,25 @@ export default function Pinball({ windowMeta }: PinballProps) {
           </span>
         </div>
       </div>
-      <div className="relative">
+      <div className="relative rounded-2xl border border-slate-700/70 bg-[radial-gradient(circle_at_top,rgba(56,189,248,0.14),rgba(15,23,42,0.86)_45%,rgba(2,6,23,0.96)_100%)] p-3 shadow-[0_20px_50px_rgba(2,6,23,0.55)]">
+        <div className="pointer-events-none absolute inset-x-8 top-2 h-8 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.24),transparent_75%)] opacity-70" />
         <canvas
           ref={canvasRef}
           width={constants.WIDTH}
           height={constants.HEIGHT}
           aria-label="Pinball playfield"
-          className="border"
+          className="rounded-md border border-slate-500/55 shadow-[inset_0_0_0_1px_rgba(148,163,184,0.25),0_0_22px_rgba(14,165,233,0.22)]"
         />
-        <div className="absolute top-3 left-3 rounded bg-[var(--kali-overlay)] px-2 py-1 font-mono text-xs text-[var(--kali-text)]">
+        <div className="absolute top-6 left-6 rounded border border-slate-400/35 bg-[color-mix(in_srgb,var(--kali-overlay)_85%,rgba(2,6,23,0.75))] px-2 py-1 font-mono text-xs text-[var(--kali-text)] shadow">
           Balls: {ballsRemaining}
         </div>
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 font-mono text-2xl text-[var(--kali-text)]">
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 rounded bg-[color-mix(in_srgb,var(--kali-overlay)_64%,transparent)] px-3 py-1 font-mono text-2xl text-[var(--kali-text)] shadow">
           {formatScore(score)}
         </div>
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 font-mono text-xs tracking-widest text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
+        <div className="absolute top-16 left-1/2 -translate-x-1/2 font-mono text-xs tracking-[0.2em] text-[color-mix(in_srgb,var(--kali-text)_85%,transparent)]">
           HI {formatScore(highScore)}
         </div>
-        <div className="absolute top-3 right-3 flex flex-col items-end space-y-2">
+        <div className="absolute top-6 right-6 flex flex-col items-end space-y-2">
           <div>{overlay}</div>
           <button
             type="button"
