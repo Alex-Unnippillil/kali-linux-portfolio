@@ -25,11 +25,25 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadEvent = null;
                 this.bootScreenLoadTarget = null;
                 this.bootSequenceTimeoutId = null;
+                this.bootTimeoutIds = new Set();
         }
 
         componentDidMount() {
                 this.getLocalData();
         }
+
+        setBootTimeout = (callback, delay) => {
+                if (typeof window === 'undefined') return null;
+
+                let timeoutId = null;
+                timeoutId = window.setTimeout(() => {
+                        this.bootTimeoutIds.delete(timeoutId);
+                        callback();
+                }, delay);
+                this.bootTimeoutIds.add(timeoutId);
+
+                return timeoutId;
+        };
 
         componentWillUnmount() {
                 this.detachBootScreenLoadHandler();
@@ -47,10 +61,14 @@ export default class Ubuntu extends Component {
                         this.bootScreenLoadTarget = null;
                 }
 
-                if (this.bootSequenceTimeoutId) {
-                        window.clearTimeout(this.bootSequenceTimeoutId);
-                        this.bootSequenceTimeoutId = null;
+                if (this.bootTimeoutIds.size > 0) {
+                        this.bootTimeoutIds.forEach((timeoutId) => {
+                                window.clearTimeout(timeoutId);
+                        });
+                        this.bootTimeoutIds = new Set();
                 }
+
+                this.bootSequenceTimeoutId = null;
         };
 
         hideBootScreen = () => {
@@ -87,7 +105,7 @@ export default class Ubuntu extends Component {
                                 const schedule =
                                         typeof window.requestAnimationFrame === 'function'
                                                 ? window.requestAnimationFrame.bind(window)
-                                                : (cb) => window.setTimeout(cb, 0);
+                                                : (cb) => this.setBootTimeout(cb, 0);
                                 schedule(finalizeBoot);
                         };
 
@@ -99,11 +117,11 @@ export default class Ubuntu extends Component {
                                 const elapsed = performance.now() - bootStartTime;
                                 const remaining = Math.max(MIN_BOOT_DELAY - elapsed, 0);
                                 if (remaining > 0 && !isTestEnv) {
-                                        window.setTimeout(run, remaining);
+                                        this.setBootTimeout(run, remaining);
                                         return;
                                 }
                         } else if (MIN_BOOT_DELAY > 0 && !isTestEnv) {
-                                window.setTimeout(run, MIN_BOOT_DELAY);
+                                this.setBootTimeout(run, MIN_BOOT_DELAY);
                                 return;
                         }
 
@@ -115,6 +133,7 @@ export default class Ubuntu extends Component {
                 const finalizeAndClearTimers = () => {
                         if (this.bootSequenceTimeoutId) {
                                 window.clearTimeout(this.bootSequenceTimeoutId);
+                                this.bootTimeoutIds.delete(this.bootSequenceTimeoutId);
                                 this.bootSequenceTimeoutId = null;
                         }
                         scheduleFinalize();
@@ -132,7 +151,7 @@ export default class Ubuntu extends Component {
                 this.bootScreenLoadTarget = window;
                 window.addEventListener('load', this.bootScreenLoadHandler, { once: true });
 
-                this.bootSequenceTimeoutId = window.setTimeout(() => {
+                this.bootSequenceTimeoutId = this.setBootTimeout(() => {
                         scheduleFinalize();
                 }, MAX_BOOT_DELAY);
         };
