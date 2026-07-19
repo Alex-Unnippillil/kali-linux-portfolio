@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
+import Head from 'next/head';
 
 export default function ShareTarget() {
   const router = useRouter();
@@ -37,5 +38,12 @@ export default function ShareTarget() {
     }
   }, [router]);
 
-  return <p>Loading...</p>;
+  return (
+    <>
+      <Head>
+        <link rel="canonical" href="https://unnippillil.com/share-target" />
+      </Head>
+      <p>Loading...</p>
+    </>
+  );
 }

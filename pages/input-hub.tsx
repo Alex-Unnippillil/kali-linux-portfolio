@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import Head from 'next/head';
 
 const subjectTemplates = [
   'General Inquiry',
@@ -187,10 +188,14 @@ const InputHub = () => {
   };
 
   return (
-    <div className="p-4 text-black max-w-md mx-auto">
-      <div className="mb-4">
-        <span
-          className={`px-2 py-1 text-sm rounded ${
+    <>
+      <Head>
+        <link rel="canonical" href="https://unnippillil.com/input-hub" />
+      </Head>
+      <div className="p-4 text-black max-w-md mx-auto">
+        <div className="mb-4">
+          <span
+            className={`px-2 py-1 text-sm rounded ${
             emailjsReady ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
           }`}
         >
@@ -248,7 +253,8 @@ const InputHub = () => {
           {status}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
