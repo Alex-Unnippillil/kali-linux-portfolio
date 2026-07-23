@@ -10,13 +10,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: yarn
+      - run: corepack enable
+      - run: corepack prepare yarn@4.9.2 --activate
+      - run: yarn --version
       - run: yarn install --immutable
       - run: yarn dedupe --check
-      - run: npx playwright install --with-deps
+      - run: yarn playwright install --with-deps
       - run: |
           yarn dev &
-          npx wait-on http://localhost:3000
-      - run: npx pa11y-ci --config pa11yci.json
-      - run: npx playwright test playwright/a11y.spec.ts
+          yarn wait-on http://localhost:3000
+      - run: yarn pa11y-ci --config pa11yci.json
+      - run: yarn playwright test playwright/a11y.spec.ts

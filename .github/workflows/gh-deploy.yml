@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: 'yarn'
+          cache: yarn
       - name: Enable Corepack
         run: corepack enable
       - name: Prepare Yarn
@@ -25,19 +25,17 @@ jobs:
           sudo apt-get install -y libnss3 lsof libatk1.0-0 libatk-bridge2.0-0 libgtk-3-0 libxss1 libasound2t64 fonts-liberation libappindicator3-1 xdg-utils
       - name: Installing Packages
         run: yarn install --immutable
-      - name: Deduplicate dependencies
-        run: yarn dedupe
       - name: Verify dependencies are deduped
-        run: yarn dedupe --check
+        run: yarn dedupe:check
 
       - name: Test
-        run: yarn jest -w=1 --forceExit
+        run: yarn test -w=1 --forceExit
 
       - name: Lint
         run: yarn lint
 
       - name: Type Check
-        run: yarn tsc --noEmit
+        run: yarn typecheck
 
       - name: Building
         run: yarn build
@@ -51,8 +49,8 @@ jobs:
         run: yarn export
       - run: touch ./out/.nojekyll
 
-      - name: Deploy to Github-Pages 
+      - name: Deploy to Github-Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages 
-          folder: out 
+          branch: gh-pages
+          folder: out
