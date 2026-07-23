@@ -46,7 +46,18 @@ const resolveServiceWorkerPath = (): string => {
     const normalized = trimmed.endsWith('/') && trimmed !== '/' ? trimmed.replace(/\/+$/, '') : trimmed;
 
     if (withScheme) {
-      return `${normalized}/sw.js`;
+      if (typeof window === 'undefined') return undefined;
+      try {
+        const url = new URL(normalized, window.location.origin);
+        if (url.origin !== window.location.origin) return undefined;
+        const pathname =
+          url.pathname.endsWith('/') && url.pathname !== '/'
+            ? url.pathname.replace(/\/+$/, '')
+            : url.pathname;
+        return pathname === '/' || pathname === '' ? '/sw.js' : `${pathname}/sw.js`;
+      } catch {
+        return undefined;
+      }
     }
 
     const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
@@ -80,6 +91,8 @@ const kaliSans = Rajdhani({
   weight: ['300', '400', '500', '600', '700'],
 });
 
+const isAnalyticsEnabled = process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true';
+
 const isSpeedInsightsEnabled =
   process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
   (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
@@ -99,10 +112,18 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
     // In dev, a previously-registered service worker (e.g. from a production run on localhost)
     // can keep serving stale cached `_next/static/*` assets, causing `ChunkLoadError`.
     // Proactively unregister + clear SW caches once per tab session.
-    if (process.env.NODE_ENV !== 'production' && 'serviceWorker' in navigator) {
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      typeof navigator !== 'undefined' &&
+      'serviceWorker' in navigator
+    ) {
       const cleanupKey = '__kali_dev_sw_cleanup_done__';
-      const alreadyCleaned =
-        typeof window !== 'undefined' && window.sessionStorage?.getItem(cleanupKey) === 'true';
+      let alreadyCleaned = false;
+      try {
+        alreadyCleaned = window.sessionStorage?.getItem(cleanupKey) === 'true';
+      } catch {
+        alreadyCleaned = false;
+      }
 
       if (!alreadyCleaned) {
         try {
@@ -139,7 +160,13 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
       }
     }
 
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      typeof window !== 'undefined' &&
+      typeof document !== 'undefined' &&
+      typeof navigator !== 'undefined' &&
+      'serviceWorker' in navigator
+    ) {
       const swPath = resolveServiceWorkerPath();
       const register = async (): Promise<void> => {
         try {
@@ -148,7 +175,8 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
           window.manualRefresh = async () => {
             try {
               const existingRegistration = await navigator.serviceWorker.getRegistration(swPath);
-              const activeRegistration = existingRegistration ?? (await navigator.serviceWorker.register(swPath));
+              const activeRegistration =
+                existingRegistration ?? (await navigator.serviceWorker.register(swPath));
               await activeRegistration.update();
             } catch (manualRefreshError) {
               console.error('Service worker manual refresh failed', manualRefreshError);
@@ -220,16 +248,18 @@ function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
               <div aria-live="polite" id="live-region" />
               <Component {...pageProps} />
               <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
+              {isAnalyticsEnabled && (
+                <Analytics
+                  beforeSend={(event) => {
+                    if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+                    const evt = event as AnalyticsEventWithMetadata;
+                    if (evt.metadata && 'email' in evt.metadata) {
+                      delete evt.metadata.email;
+                    }
+                    return evt;
+                  }}
+                />
+              )}
 
               {isSpeedInsightsEnabled && <SpeedInsights />}
             </PipPortalProvider>

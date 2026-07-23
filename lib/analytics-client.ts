@@ -10,9 +10,10 @@ export function trackEvent(
   name: EventName,
   props?: Record<string, string | number | boolean>,
 ) {
+  if (process.env.NEXT_PUBLIC_ENABLE_ANALYTICS !== 'true') return;
+
   try {
-    // Dynamically require to avoid ESM issues in test environment
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    // Dynamically require to avoid ESM issues in test environment.
     const { track } = require('@vercel/analytics');
     track(name, props);
   } catch {
