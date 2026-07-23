@@ -236,7 +236,8 @@ export class Window extends Component {
     notifySizeChange = () => {
         if (typeof this.props.onSizeChange === 'function') {
             const { width, height } = this.state;
-            this.props.onSizeChange(width, height);
+            const targetId = this.id ?? this.props.id;
+            this.props.onSizeChange(targetId, width, height);
         }
     }
 
@@ -266,6 +267,10 @@ export class Window extends Component {
     }
 
     componentDidUpdate(prevProps) {
+        if (!prevProps.isFocused && this.props.isFocused) {
+            this.focusWindow();
+        }
+
         if (prevProps.minWidth === this.props.minWidth && prevProps.minHeight === this.props.minHeight) {
             return;
         }
@@ -1026,7 +1031,8 @@ export class Window extends Component {
         this.updatePositionState(roundedX, roundedY);
 
         if (this.props.onPositionChange) {
-            this.props.onPositionChange(absoluteX, absoluteY);
+            const targetId = this.id ?? this.props.id;
+            this.props.onPositionChange(targetId, roundedX, roundedY);
         }
 
         this.notifySizeChange();
