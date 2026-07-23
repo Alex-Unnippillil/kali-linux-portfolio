@@ -191,33 +191,11 @@ const WiresharkApp = ({ initialPackets = [] }) => {
   };
 
   const startCapture = () => {
-    if (socket || typeof window === 'undefined') return;
-    const ws = new WebSocket('ws://localhost:8080');
-    ws.onopen = () => {
-      if (tlsKeys) {
-        ws.send(JSON.stringify({ type: 'tlsKeys', keys: tlsKeys }));
-      }
-    };
-    ws.onmessage = (event) => {
-      try {
-        const pkt = JSON.parse(event.data);
-        setPackets((prev) => [pkt, ...prev].slice(0, 500));
-        if (!pausedRef.current) {
-          workerRef.current?.postMessage(pkt);
-        }
-      } catch (e) {
-        // ignore malformed packets
-      }
-    };
-    ws.onclose = () => setSocket(null);
-    setSocket(ws);
+    setError('Live capture is disabled in this offline simulation. Load a bundled PCAP sample instead.');
   };
 
   const stopCapture = () => {
-    if (socket) {
-      socket.close();
-      setSocket(null);
-    }
+    setSocket(null);
   };
 
   const handlePause = () => {

@@ -118,7 +118,10 @@ describe('Hydra API service validation', () => {
     await handler(req, res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(execFileMock).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ output: expect.stringContaining('No sockets were opened') }),
+    );
+    expect(execFileMock).not.toHaveBeenCalled();
   });
 
   it('rejects unsupported services', async () => {
@@ -179,7 +182,10 @@ describe('Hydra API resume session', () => {
 
     await handler(req, res);
 
-    const hydraCall = execFileMock.mock.calls.find((c) => c[0] === 'hydra');
-    expect(hydraCall[1]).toEqual(['-R']);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ output: expect.stringContaining('No network connections') }),
+    );
+    expect(execFileMock).not.toHaveBeenCalled();
   });
 });

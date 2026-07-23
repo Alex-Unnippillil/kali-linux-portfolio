@@ -61,12 +61,12 @@ test('removes temp files after hydra execution', async () => {
 
   await handler(req, res);
 
-  const [userResult, passResult] = randomUUIDMock.mock.results;
-  const userPath = `/tmp/hydra-users-${userResult.value}.txt`;
-  const passPath = `/tmp/hydra-pass-${passResult.value}.txt`;
-
-  await expect(fs.access(userPath)).rejects.toBeTruthy();
-  await expect(fs.access(passPath)).rejects.toBeTruthy();
+  expect(res.status).toHaveBeenCalledWith(200);
+  expect(res.json).toHaveBeenCalledWith(
+    expect.objectContaining({ output: expect.stringContaining('No sockets were opened') }),
+  );
+  expect(randomUUIDMock).not.toHaveBeenCalled();
+  expect(execFileMock).not.toHaveBeenCalled();
 });
 
 test('accepts http-get service names exposed in the UI', async () => {
@@ -94,7 +94,9 @@ test('accepts http-get service names exposed in the UI', async () => {
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ error: expect.any(String) }));
   } else {
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({ output: 'done' });
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ output: expect.stringContaining('No sockets were opened') }),
+    );
   }
 });
 

@@ -1,11 +1,3 @@
-import { execFile } from 'child_process';
-import { promises as fs } from 'fs';
-import { randomUUID } from 'crypto';
-import { promisify } from 'util';
-import path from 'path';
-import os from 'os';
-
-const execFileAsync = promisify(execFile);
 const allowed = new Set([
   'http',
   'https',
@@ -16,6 +8,17 @@ const allowed = new Set([
   'http-post-form',
 ]);
 
+const MAX_LIST_LINES = 50;
+
+const sanitizeLines = (value) =>
+  String(value || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, MAX_LIST_LINES);
+
+const mask = (value) => `${value.slice(0, 1)}${'*'.repeat(Math.min(Math.max(value.length - 1, 0), 8))}`;
+
 export default async function handler(req, res) {
   if (
     process.env.FEATURE_TOOL_APIS !== 'enabled' ||
@@ -24,45 +27,19 @@ export default async function handler(req, res) {
     res.status(501).json({ error: 'Not implemented' });
     return;
   }
-  // Hydra is an optional external dependency. Environments without the
-  // actual binary may stub this handler for demonstration purposes.
+
   if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
     res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
   const { action, target, service, userList, passList } = req.body || {};
 
-  const sessionDir = path.join(process.cwd(), 'hydra');
-  const restoreFile = path.join(sessionDir, 'hydra.restore');
-  const sessionFile = path.join(sessionDir, 'session');
-  await fs.mkdir(sessionDir, { recursive: true });
-
   if (action === 'resume') {
-    try {
-      await fs.copyFile(sessionFile, restoreFile);
-    } catch {
-      res.status(400).json({ error: 'No saved session' });
-      return;
-    }
-    try {
-      await execFileAsync('which', ['hydra']);
-    } catch {
-      res.status(500).json({ error: 'Hydra not installed' });
-      return;
-    }
-    try {
-      const { stdout } = await execFileAsync('hydra', ['-R'], {
-        cwd: sessionDir,
-        timeout: 1000 * 60,
-      });
-      res.status(200).json({ output: stdout.toString() });
-    } catch (error) {
-      const msg = error.stderr?.toString() || error.message;
-      res.status(500).json({ error: msg });
-    } finally {
-      await fs.copyFile(restoreFile, sessionFile).catch(() => { });
-    }
+    res.status(200).json({
+      output: 'Hydra demo session restored. No network connections or brute-force attempts were made.',
+    });
     return;
   }
 
@@ -70,49 +47,37 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Missing parameters' });
     return;
   }
+
   if (!allowed.has(service)) {
     res.status(400).json({ error: 'Unsupported service' });
     return;
   }
 
-  const userPath = path.join(os.tmpdir(), `hydra-users-${randomUUID()}.txt`);
-  const passPath = path.join(os.tmpdir(), `hydra-pass-${randomUUID()}.txt`);
+  const users = sanitizeLines(userList);
+  const passwords = sanitizeLines(passList);
 
-  try {
-    await fs.writeFile(userPath, userList);
-    await fs.writeFile(passPath, passList);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  if (!users.length || !passwords.length) {
+    res.status(400).json({ error: 'User and password lists must contain demo entries' });
     return;
   }
 
-  try {
-    await execFileAsync('which', ['hydra']);
-  } catch {
-    await Promise.all([
-      fs.unlink(userPath).catch(() => { }),
-      fs.unlink(passPath).catch(() => { }),
-    ]);
-    res.status(500).json({ error: 'Hydra not installed' });
-    return;
-  }
+  const targetLabel = String(target).replace(/[^a-zA-Z0-9 .:_-]/g, '').slice(0, 80) || 'demo-target';
+  const sampleAttempts = users.slice(0, 3).flatMap((user) =>
+    passwords.slice(0, 2).map((password) => `${user}:${mask(password)}`),
+  );
 
-  const args = ['-L', userPath, '-P', passPath, `${service}://${target}`];
+  const output = [
+    'Hydra training simulation only',
+    `Target label: ${targetLabel}`,
+    `Service profile: ${service}`,
+    `Credential combinations modeled: ${users.length * passwords.length}`,
+    'No sockets were opened and no authentication attempts were sent.',
+    '',
+    'Sample modeled attempts:',
+    ...sampleAttempts.map((attempt) => `  - ${attempt}`),
+    '',
+    'Result: demo complete. Use this view to discuss rate limits, lockouts, and defensive monitoring.',
+  ].join('\n');
 
-  try {
-    const { stdout } = await execFileAsync('hydra', args, {
-      cwd: sessionDir,
-      timeout: 1000 * 60,
-    });
-    res.status(200).json({ output: stdout.toString() });
-  } catch (error) {
-    const msg = error.stderr?.toString() || error.message;
-    res.status(500).json({ error: msg });
-  } finally {
-    await Promise.all([
-      fs.unlink(userPath).catch(() => { }),
-      fs.unlink(passPath).catch(() => { }),
-    ]);
-    await fs.copyFile(restoreFile, sessionFile).catch(() => { });
-  }
+  res.status(200).json({ output });
 }

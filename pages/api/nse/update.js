@@ -1,25 +1,27 @@
 import { readFile } from 'fs/promises';
 import path from 'path';
 
-export default async function handler(_req, res) {
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', ['GET']);
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
   try {
     const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');
     const raw = await readFile(versionPath, 'utf8');
-    const { sha: current } = JSON.parse(raw);
+    const { sha: current, updatedAt } = JSON.parse(raw);
 
-    const apiUrl = 'https://api.github.com/repos/nmap/nmap/commits?path=scripts/script.db&per_page=1';
-    const response = await fetch(apiUrl, {
-      headers: { 'User-Agent': 'kali-linux-portfolio' },
+    res.status(200).json({
+      updateAvailable: false,
+      current,
+      latest: current,
+      updatedAt,
+      source: 'bundled-demo-data',
+      note: 'Static demo response; no outbound repository check was performed.',
     });
-    if (!response.ok) {
-      res.status(502).json({ error: 'Failed to query script repository' });
-      return;
-    }
-    const json = await response.json();
-    const latest = json[0]?.sha || '';
-
-    res.status(200).json({ updateAvailable: current !== latest, current, latest });
   } catch (e) {
-    res.status(500).json({ error: 'Unable to check script versions' });
+    res.status(500).json({ error: 'Unable to read bundled script version' });
   }
 }
