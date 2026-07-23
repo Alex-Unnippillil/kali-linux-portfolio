@@ -5147,6 +5147,7 @@ export class Desktop extends Component {
                 onSizeChange: this.updateWindowSize,
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
+                zIndex: 100 + index,
                 context: this.state.window_context[id],
             };
 
@@ -5500,8 +5501,7 @@ export class Desktop extends Component {
                 this.focus(objId);
                 var r = document.querySelector("#" + objId);
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
+                const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
 
             }
@@ -5512,9 +5512,8 @@ export class Desktop extends Component {
                     this.focus(objId);
                     var r = document.querySelector("#" + objId);
                     r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                    this.setWorkspaceState({ minimized_windows }, this.saveSession);
                 } else {
                     this.focus(objId);
                     this.saveSession();
