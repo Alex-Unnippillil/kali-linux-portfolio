@@ -80,7 +80,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | radare2 | Radare2 | Security simulations pod | **In progress** – simulator backlog | Static analysis fixtures |
 | ghidra | Ghidra | Security simulations pod | **In progress** – simulator backlog | Reverse-engineering fixtures |
 | hashcat | Hashcat | Security simulations pod | **In progress** – simulator backlog | Hash samples |
-| msf-post | Metasploit Post | Security simulations pod | **In progress** – simulator backlog | Module JSON |
+| msf-post | Metasploit Post | Security simulations pod | **Ready for QA** – canned reports, lab banner, command builder | Scenario fixtures, lab-mode banner |
 | evidence-vault | Evidence Vault | Security simulations pod | **Needs polish** – clarify evidence data model | Forensics fixtures |
 | mimikatz | Mimikatz | Security simulations pod | **In progress** – simulator backlog | Credential dump fixtures |
 | mimikatz/offline | Mimikatz Offline | Security simulations pod | **Ready** – offline datasets packaged with lab flows and Jest coverage | Offline dataset suite |
