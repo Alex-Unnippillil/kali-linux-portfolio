@@ -259,27 +259,57 @@ const PopularModules: React.FC = () => {
           </button>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {listed.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => handleSelect(m)}
-            className="p-3 text-left bg-ub-grey rounded border border-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
-          >
-            <h3 className="font-semibold">{m.name}</h3>
-            <p className="text-sm text-gray-300">{m.description}</p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              {m.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="px-2 py-0.5 text-xs rounded bg-gray-700"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          </button>
-        ))}
+      <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+        {listed.map((m) => {
+          const isSelected = selected?.id === m.id;
+
+          return (
+            <article
+              key={m.id}
+              className={`rounded-2xl border bg-ub-grey/80 px-6 py-5 shadow-lg transition focus-within:ring-2 focus-within:ring-blue-400 focus:outline-none ${
+                isSelected
+                  ? 'border-blue-500 ring-2 ring-blue-400'
+                  : 'border-gray-700'
+              }`}
+            >
+              <div className="flex flex-col gap-4">
+                <header className="space-y-1">
+                  <h3 className="text-xl font-semibold text-white">{m.name}</h3>
+                  <p className="text-sm leading-relaxed text-gray-300">
+                    {m.description}
+                  </p>
+                </header>
+                <div className="flex flex-wrap gap-2">
+                  {m.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-gray-700 bg-gray-800/70 px-3 py-1 text-xs uppercase tracking-wide text-gray-200"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(m)}
+                    className={`min-h-[44px] rounded-full px-6 text-sm font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-300 ${
+                      isSelected
+                        ? 'bg-blue-500 text-black shadow-[0_0_0_2px_rgba(59,130,246,0.3)]'
+                        : 'bg-blue-400 text-black hover:bg-blue-300'
+                    }`}
+                    aria-label={`View module ${m.name}`}
+                  >
+                    View Module
+                  </button>
+                  <span className="text-xs uppercase tracking-wide text-gray-400">
+                    ID: {m.id}
+                  </span>
+                </div>
+              </div>
+            </article>
+          );
+        })}
       </div>
       {selected ? (
         <div className="space-y-2">
