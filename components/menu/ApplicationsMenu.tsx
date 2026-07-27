@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 
-export type KaliCategory = {
-  id: string;
-  label: string;
-};
-
-export const KALI_CATEGORIES: KaliCategory[] = [
+export const KALI_CATEGORIES = [
   { id: 'information-gathering', label: 'Information Gathering' },
   { id: 'vulnerability-analysis', label: 'Vulnerability Analysis' },
   { id: 'web-application-analysis', label: 'Web Application Analysis' },
@@ -23,11 +18,13 @@ export const KALI_CATEGORIES: KaliCategory[] = [
   { id: 'hardware-hacking', label: 'Hardware Hacking' },
   { id: 'extra', label: 'Extra' },
   { id: 'top10', label: 'Top 10 Security Tools' },
-];
+] as const;
+
+export type KaliCategory = (typeof KALI_CATEGORIES)[number];
 
 const DEFAULT_CATEGORY_ICON = '/themes/Yaru/status/preferences-system-symbolic.svg';
 
-const CATEGORY_ICON_LOOKUP: Record<string, string> = {
+const CATEGORY_ICON_LOOKUP = {
   'information-gathering': '/themes/kali/categories/information-gathering.svg',
   'vulnerability-analysis': '/themes/kali/categories/vulnerability-analysis.svg',
   'web-application-analysis': '/themes/kali/categories/web-application-analysis.svg',
@@ -51,7 +48,7 @@ const CATEGORY_ICON_LOOKUP: Record<string, string> = {
   'top10': '/themes/kali/categories/top10.svg',
   'top-10-tools': '/themes/kali/categories/top10.svg',
   'stress-testing': '/themes/kali/categories/exploitation-tools.svg',
-};
+} satisfies Record<string, string>;
 
 type CategoryIconProps = {
   categoryId: string;
@@ -90,8 +87,12 @@ const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onS
   return (
     <nav aria-label="Kali application categories">
       <ul className="space-y-1">
-        {KALI_CATEGORIES.map((category) => {
+        {KALI_CATEGORIES.map((category, index) => {
           const isActive = category.id === activeCategory;
+          const isPrimaryGroup = index < 14;
+          const displayLabel = isPrimaryGroup
+            ? `${String(index + 1).padStart(2, '0')} ${category.label}`
+            : category.label;
           return (
             <li key={category.id}>
               <button
@@ -103,7 +104,7 @@ const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onS
                 aria-pressed={isActive}
               >
                 <CategoryIcon categoryId={category.id} label={category.label} />
-                <span className="text-sm font-medium">{category.label}</span>
+                <span className="text-sm font-medium">{displayLabel}</span>
               </button>
             </li>
           );
