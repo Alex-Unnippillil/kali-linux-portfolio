@@ -12,6 +12,7 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
     const [query, setQuery] = useState('');
     const [selected, setSelected] = useState(0);
     const [showSearch, setShowSearch] = useState(false);
+    const [announcement, setAnnouncement] = useState('');
     const internalRef = useRef(null);
     const inputRef = useRef(null);
     const resolvedContainerRef = containerRef ?? internalRef;
@@ -67,6 +68,23 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
         return () => window.removeEventListener('keyup', handleKeyUp);
     }, [filtered, selected, onSelect, onClose]);
 
+    useEffect(() => {
+        if (!filtered.length) {
+            setAnnouncement(query ? 'No windows match your search.' : 'No open windows available.');
+            return;
+        }
+
+        const normalizedIndex = clampIndex(selected, filtered.length);
+        const activeWindow = filtered[normalizedIndex];
+        if (!activeWindow) {
+            setAnnouncement('');
+            return;
+        }
+
+        const title = activeWindow.title || activeWindow.id;
+        setAnnouncement(`${title} selected (${normalizedIndex + 1} of ${filtered.length}).`);
+    }, [filtered, query, selected]);
+
     const triggerSelect = (index) => {
         const win = filtered[index];
         if (!win || typeof onSelect !== 'function') return;
@@ -75,8 +93,26 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
 
     const handleNavigation = (event) => {
         const { key, shiftKey, ctrlKey, metaKey } = event;
+
+        if (key === 'Escape') {
+            event.preventDefault();
+            if (query) {
+                setQuery('');
+                setSelected(0);
+            } else if (showSearch) {
+                setShowSearch(false);
+                setQuery('');
+                resolvedContainerRef.current?.focus();
+            } else if (typeof onClose === 'function') {
+                onClose();
+            }
+            return;
+        }
+
         const length = filtered.length;
-        if (!length) return;
+        if (!length) {
+            return;
+        }
 
         if (key === 'Tab') {
             event.preventDefault();
@@ -97,11 +133,6 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
         } else if (key === 'Enter') {
             event.preventDefault();
             triggerSelect(selected);
-        } else if (key === 'Escape') {
-            event.preventDefault();
-            if (typeof onClose === 'function') {
-                onClose();
-            }
         } else if (
             (!showSearch && key === '/') ||
             (key === 'f' && (ctrlKey || metaKey))
@@ -112,6 +143,33 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
     };
 
     const handleContainerKeyDown = (event) => {
+        const isPrintableKey =
+            event.key.length === 1 && !event.ctrlKey && !event.metaKey && !event.isComposing;
+
+        if (isPrintableKey) {
+            event.preventDefault();
+            const shouldResetQuery = !showSearch;
+            setShowSearch(true);
+            setQuery((current) => (shouldResetQuery ? event.key : `${current}${event.key}`));
+            setSelected(0);
+            return;
+        }
+
+        if (
+            event.key === 'Backspace' &&
+            !event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey &&
+            !event.isComposing &&
+            (showSearch || query)
+        ) {
+            event.preventDefault();
+            setShowSearch(true);
+            setQuery((current) => current.slice(0, -1));
+            setSelected(0);
+            return;
+        }
+
         if (showSearch && event.target === inputRef.current) {
             return;
         }
@@ -119,19 +177,21 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
     };
 
     const handleInputKeyDown = (event) => {
-        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Tab', 'Home', 'End', 'Enter'].includes(event.key)) {
+        if (
+            [
+                'ArrowLeft',
+                'ArrowRight',
+                'ArrowUp',
+                'ArrowDown',
+                'Tab',
+                'Home',
+                'End',
+                'Enter',
+                'Escape',
+            ].includes(event.key)
+        ) {
             handleNavigation(event);
             return;
-        }
-
-        if (event.key === 'Escape') {
-            if (query) {
-                event.preventDefault();
-                setQuery('');
-            } else if (typeof onClose === 'function') {
-                event.preventDefault();
-                onClose();
-            }
         }
     };
 
@@ -159,6 +219,9 @@ export default function WindowSwitcher({ windows = [], onSelect, onClose, contai
             className="flex h-full w-full flex-col focus:outline-none text-white"
             role="presentation"
         >
+            <span aria-live="polite" className="sr-only" role="status">
+                {announcement}
+            </span>
             <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-ub-grey/80 p-6 shadow-2xl">
                 <div className="flex items-center justify-between gap-4">
                     <h2 className="text-lg font-semibold tracking-wide">Switch windows</h2>
