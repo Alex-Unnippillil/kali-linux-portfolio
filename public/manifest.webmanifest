@@ -16,7 +16,26 @@
       "src": "/images/logos/logo_1024.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icons/kali-portfolio-icon-light.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable",
+      "media": "(prefers-color-scheme: light)"
+    },
+    {
+      "src": "/icons/kali-portfolio-icon-dark.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable",
+      "media": "(prefers-color-scheme: dark)"
     }
+  ],
+  "categories": [
+    "productivity",
+    "utilities",
+    "education"
   ],
   "share_target": {
     "action": "/share-target",
