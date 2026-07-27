@@ -1,0 +1,62 @@
+[
+  {
+    "content": "Stay hungry, stay foolish.",
+    "author": "Steve Jobs",
+    "tags": ["inspiration", "technology"]
+  },
+  {
+    "content": "Simplicity is the soul of efficiency.",
+    "author": "Austin Freeman",
+    "tags": ["design", "technology"]
+  },
+  {
+    "content": "The future depends on what we do in the present.",
+    "author": "Mahatma Gandhi",
+    "tags": ["wisdom", "inspiration"]
+  },
+  {
+    "content": "Creativity is intelligence having fun.",
+    "author": "Albert Einstein",
+    "tags": ["creativity", "inspiration"]
+  },
+  {
+    "content": "Discipline is choosing between what you want now and what you want most.",
+    "author": "Abraham Lincoln",
+    "tags": ["focus", "leadership"]
+  },
+  {
+    "content": "Resilience is born from facing the storm, not avoiding it.",
+    "author": "Alex Unnippillil",
+    "tags": ["resilience", "mindfulness"]
+  },
+  {
+    "content": "Design is intelligence made visible.",
+    "author": "Alina Wheeler",
+    "tags": ["design", "creativity"]
+  },
+  {
+    "content": "Leadership is unlocking people's potential to become better.",
+    "author": "Bill Bradley",
+    "tags": ["leadership", "wisdom"]
+  },
+  {
+    "content": "Focus is a matter of deciding what things you're not going to do.",
+    "author": "John Carmack",
+    "tags": ["focus", "technology"]
+  },
+  {
+    "content": "Growth is never by mere chance; it is the result of forces working together.",
+    "author": "James Cash Penney",
+    "tags": ["growth", "resilience"]
+  },
+  {
+    "content": "Mindfulness isn't difficult; we just need to remember to do it.",
+    "author": "Sharon Salzberg",
+    "tags": ["mindfulness", "wisdom"]
+  },
+  {
+    "content": "The best way to predict the future is to invent it.",
+    "author": "Alan Kay",
+    "tags": ["technology", "inspiration"]
+  }
+]
