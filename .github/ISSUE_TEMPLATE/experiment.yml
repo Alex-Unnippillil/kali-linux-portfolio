@@ -1,0 +1,82 @@
+name: Experiment plan
+description: Track a product experiment from hypothesis through cleanup.
+title: "Experiment: <brief description>"
+labels:
+  - experiment
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to plan, launch, and wind down an experiment. Answer every section so reviewers understand the expected impact and who is accountable for monitoring.
+  - type: input
+    id: owners
+    attributes:
+      label: Owners
+      description: Who is accountable for the experiment lifecycle?
+      placeholder: "@owner, @observer"
+    validations:
+      required: true
+  - type: textarea
+    id: hypothesis
+    attributes:
+      label: Hypothesis
+      description: What behavior change do you expect and why is it valuable?
+      placeholder: "If we ..., then we expect ... because ..."
+    validations:
+      required: true
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Key metrics
+      description: Identify the primary success metric, guardrail metrics, and the analytics source for each.
+      placeholder: "Primary: conversion rate (%), Source: Product analytics\nGuardrail: Error rate, Source: Sentry"
+    validations:
+      required: true
+  - type: input
+    id: sample_size
+    attributes:
+      label: Minimum sample size
+      description: Enter the projected minimum audience or event count required before review.
+      placeholder: "At least 500 qualified sessions"
+    validations:
+      required: true
+  - type: textarea
+    id: duration
+    attributes:
+      label: Planned duration
+      description: Note the desired start date, minimum runtime, and conditions that would end the test early.
+      placeholder: "Start: 2024-05-01\nRun for: 14 days minimum\nStop early if: metric drops >5%"
+    validations:
+      required: true
+  - type: textarea
+    id: monitoring
+    attributes:
+      label: Monitoring setup
+      description: How will you monitor results and alerts during the run?
+      placeholder: "Dashboard link, alert channel, check cadence"
+    validations:
+      required: true
+  - type: textarea
+    id: milestones
+    attributes:
+      label: Review checkpoints
+      description: List the scheduled review dates and responsible reviewers.
+      placeholder: "Day 3: check guardrails with data science\nDay 7: full metric review with stakeholders"
+    validations:
+      required: true
+  - type: textarea
+    id: cleanup
+    attributes:
+      label: Cleanup plan
+      description: Document how you will roll forward, roll back, or archive assets after the experiment concludes.
+      placeholder: "If successful: promote variation to 100% and remove flag\nIf unsuccessful: revert feature flag and document learnings"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional notes
+      description: Capture open questions, dependencies, or rollout considerations.
+      placeholder: "Requires marketing email on 2024-05-04"
+    validations:
+      required: false
