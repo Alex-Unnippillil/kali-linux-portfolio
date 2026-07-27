@@ -1,28 +1,91 @@
 {
   "functions": [
     {
-      "name": "start",
-      "code": ["start:", "  mov eax, 1", "  call check", "  ret"],
-      "calls": ["check"],
+      "name": "_start",
+      "code": [
+        "_start:",
+        "  call init_logging",
+        "  call main",
+        "  hlt"
+      ],
+      "calls": ["init_logging", "main"],
       "blocks": [
-        {"id": "start", "label": "Start", "code": ["mov eax, 1", "call check", "ret"], "edges": [], "x": 40, "y": 60}
+        {"id": "start_entry", "label": "Entry", "code": ["call init_logging", "call main", "hlt"], "edges": [], "x": 60, "y": 60}
       ]
     },
     {
-      "name": "check",
-      "code": ["check:", "  cmp eax, 2", "  jne end", "  call helper", "  ret"],
-      "calls": ["helper"],
+      "name": "main",
+      "code": [
+        "main:",
+        "  call init_logging",
+        "  call load_license",
+        "  test rax, rax",
+        "  je main_failure",
+        "  lea rdi, str_success",
+        "  call log_status",
+        "  xor eax, eax",
+        "  ret",
+        "main_failure:",
+        "  lea rdi, str_failure",
+        "  call log_status",
+        "  mov eax, 0xffffffff",
+        "  ret"
+      ],
+      "calls": ["init_logging", "load_license", "log_status"],
       "blocks": [
-        {"id": "check", "label": "Check", "code": ["cmp eax, 2", "jne end", "call helper", "ret"], "edges": ["end"], "x": 40, "y": 60},
-        {"id": "end", "label": "End", "code": ["ret"], "edges": [], "x": 160, "y": 60}
+        {"id": "main_entry", "label": "Entry", "code": ["call init_logging", "call load_license", "test rax, rax", "je main_failure"], "edges": ["main_failure", "main_success"], "x": 60, "y": 40},
+        {"id": "main_failure", "label": "Failure", "code": ["lea rdi, str_failure", "call log_status", "mov eax, 0xffffffff"], "edges": [], "x": 220, "y": 20},
+        {"id": "main_success", "label": "Success", "code": ["lea rdi, str_success", "call log_status", "xor eax, eax"], "edges": [], "x": 220, "y": 80}
       ]
     },
     {
-      "name": "helper",
-      "code": ["helper:", "  ret"],
+      "name": "validate_license",
+      "code": [
+        "validate_license:",
+        "  test rdi, rdi",
+        "  je validate_fail",
+        "  mov esi, 0x10",
+        "  call checksum_buffer",
+        "  cmp ax, word ptr [EXPECTED_DIGEST]",
+        "  je validate_pass",
+        "validate_fail:",
+        "  mov eax, 0",
+        "  ret",
+        "validate_pass:",
+        "  mov eax, 1",
+        "  ret"
+      ],
+      "calls": ["checksum_buffer"],
+      "blocks": [
+        {"id": "validate_guard", "label": "Guard", "code": ["test rdi, rdi", "je validate_fail", "mov esi, 0x10", "call checksum_buffer", "cmp ax, word ptr [EXPECTED_DIGEST]", "je validate_pass"], "edges": ["validate_fail", "validate_pass"], "x": 80, "y": 40},
+        {"id": "validate_fail", "label": "Fail", "code": ["mov eax, 0", "ret"], "edges": [], "x": 240, "y": 20},
+        {"id": "validate_pass", "label": "Pass", "code": ["mov eax, 1", "ret"], "edges": [], "x": 240, "y": 80}
+      ]
+    },
+    {
+      "name": "checksum_buffer",
+      "code": [
+        "checksum_buffer:",
+        "  mov eax, 0x1337c0de",
+        "  xor ecx, ecx",
+        "loop:",
+        "  cmp ecx, esi",
+        "  jge checksum_done",
+        "  movzx edx, byte ptr [rdi+rcx]",
+        "  imul eax, eax, 33",
+        "  xor eax, edx",
+        "  inc ecx",
+        "  jmp loop",
+        "checksum_done:",
+        "  and eax, 0xffff",
+        "  ret"
+      ],
       "calls": [],
       "blocks": [
-        {"id": "helper", "label": "Helper", "code": ["ret"], "edges": [], "x": 40, "y": 60}
+        {"id": "checksum_init", "label": "Init", "code": ["mov eax, 0x1337c0de", "xor ecx, ecx"], "edges": ["checksum_loop", "checksum_return"], "x": 70, "y": 30},
+        {"id": "checksum_loop", "label": "Loop", "code": ["cmp ecx, esi", "jge checksum_done", "movzx edx, byte ptr [rdi+rcx]", "imul eax, eax, 33", "xor eax, edx", "inc ecx", "jmp checksum_loop"], "edges": ["checksum_done"], "x": 220, "y": 40},
+        {"id": "checksum_done", "label": "Done", "code": ["and eax, 0xffff", "ret"], "edges": [], "x": 220, "y": 90},
+        {"id": "checksum_return", "label": "Return", "code": ["ret"], "edges": [], "x": 70, "y": 90}
       ]
     }
   ]

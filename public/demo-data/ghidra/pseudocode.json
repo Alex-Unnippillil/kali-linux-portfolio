@@ -1,7 +1,9 @@
 {
   "snippet": [
-    { "pseudo": "int square(int x) {", "asm": "square:" },
-    { "pseudo": "  return x * x;", "asm": "  imul eax, edi, edi" },
+    { "pseudo": "bool validate_license(const char *key) {", "asm": "validate_license:" },
+    { "pseudo": "    if (!key) return false;", "asm": "  test rdi, rdi" },
+    { "pseudo": "    uint16_t digest = checksum_buffer(key, 16);", "asm": "  mov esi, 0x10" },
+    { "pseudo": "    return digest == EXPECTED_DIGEST;", "asm": "  call checksum_buffer" },
     { "pseudo": "}", "asm": "  ret" }
   ]
 }
