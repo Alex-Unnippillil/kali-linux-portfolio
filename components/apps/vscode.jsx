@@ -26,6 +26,7 @@ const files = ['README.md', 'CHANGELOG.md', 'package.json'];
 export default function VsCodeWrapper({ openApp }) {
   const [visible, setVisible] = useState(false);
   const [query, setQuery] = useState('');
+  const [showIframe, setShowIframe] = useState(false);
 
   const items = useMemo(() => {
     const list = [
@@ -61,7 +62,25 @@ export default function VsCodeWrapper({ openApp }) {
 
   return (
     <div className="relative h-full w-full">
-      <VsCode />
+      {showIframe ? (
+        <VsCode />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center bg-neutral-900/80">
+          <div className="max-w-md rounded border border-gray-700 bg-gray-900/90 p-6 text-center text-gray-100 shadow-lg">
+            <h2 className="text-lg font-semibold">VSCode (web)</h2>
+            <p className="mt-2 text-sm text-gray-400">
+              Launch the embedded editor when you are ready to start browsing the workspace.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowIframe(true)}
+              className="mt-4 inline-flex items-center justify-center rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+            >
+              Launch VSCode
+            </button>
+          </div>
+        </div>
+      )}
       {visible && (
         <div className="absolute inset-0 flex items-start justify-center pt-24 bg-black/50">
           <div className="bg-gray-800 text-white w-11/12 max-w-md rounded shadow-lg p-2">
@@ -95,4 +114,3 @@ export default function VsCodeWrapper({ openApp }) {
 }
 
 export const displayVsCode = (openApp) => <VsCodeWrapper openApp={openApp} />;
-
