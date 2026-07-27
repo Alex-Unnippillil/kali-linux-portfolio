@@ -1,3 +1,5 @@
+import themeChannel from '@/src/theming/channel';
+
 export const THEME_KEY = 'app:theme';
 
 // Score required to unlock each theme
@@ -27,7 +29,11 @@ export const getTheme = (): string => {
   }
 };
 
-export const setTheme = (theme: string): void => {
+type SetThemeOptions = {
+  broadcast?: boolean;
+};
+
+export const setTheme = (theme: string, options: SetThemeOptions = {}): void => {
   if (typeof window === 'undefined') return;
   try {
     window.localStorage.setItem(THEME_KEY, theme);
@@ -35,6 +41,9 @@ export const setTheme = (theme: string): void => {
     document.documentElement.classList.toggle('dark', isDarkTheme(theme));
   } catch {
     /* ignore storage errors */
+  }
+  if (options.broadcast ?? true) {
+    themeChannel.postMessage(theme);
   }
 };
 
