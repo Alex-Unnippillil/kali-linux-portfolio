@@ -19,6 +19,8 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   const [pipSupported, setPipSupported] = useState(false);
   const [docPipSupported, setDocPipSupported] = useState(false);
   const [isPip, setIsPip] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -43,6 +45,28 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
       video?.removeEventListener("ended", handleEnd);
     };
   }, [close]);
+
+  useEffect(() => {
+    const update = () => {
+      if (typeof window === "undefined") return;
+      setIsNarrow(window.innerWidth < 640);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  useEffect(() => {
+    if (!isNarrow) {
+      setOverflowOpen(false);
+    }
+  }, [isNarrow]);
+
+  useEffect(() => {
+    if (!docPipSupported) {
+      setOverflowOpen(false);
+    }
+  }, [docPipSupported]);
 
   const togglePiP = async () => {
     const video = videoRef.current;
@@ -114,6 +138,7 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
             max={1}
             step={0.05}
             value={vol}
+            aria-label="Adjust volume"
             onChange={(e) => {
               const v = parseFloat(e.target.value);
               setVol(v);
@@ -128,26 +153,66 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
-      {pipSupported && (
-        <button
-          type="button"
-          onClick={togglePiP}
-          className="absolute bottom-2 right-2 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          {isPip ? "Exit PiP" : "PiP"}
-        </button>
-      )}
-      {docPipSupported && (
-        <button
-          type="button"
-          onClick={openDocPip}
-          className="absolute bottom-2 right-16 rounded bg-black bg-opacity-50 px-2 py-1 text-xs text-white"
-        >
-          Doc-PiP
-        </button>
-      )}
+    <div className={`flex flex-col ${className}`.trim()}>
+      <div className="relative">
+        <video
+          ref={videoRef}
+          src={src}
+          poster={poster}
+          controls
+          className="h-auto w-full rounded"
+          aria-label="Video player"
+        />
+      </div>
+      <div className="mt-4 flex flex-col gap-3 rounded-lg bg-black/50 p-4 text-sm text-white shadow-md">
+        {pipSupported && (
+          <button
+            type="button"
+            onClick={togglePiP}
+            className="w-full rounded-md bg-indigo-500 px-4 py-3 text-base font-medium transition hover:bg-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          >
+            {isPip ? "Exit Picture-in-Picture" : "Enter Picture-in-Picture"}
+          </button>
+        )}
+        {docPipSupported && (
+          <div className="relative">
+            {isNarrow ? (
+              <div className="w-full">
+                <button
+                  type="button"
+                  onClick={() => setOverflowOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between rounded-md bg-zinc-800 px-4 py-3 text-base font-medium transition hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                >
+                  <span>More options</span>
+                  <span aria-hidden="true">⋮</span>
+                </button>
+                {overflowOpen && (
+                  <div className="mt-2 flex flex-col gap-2 rounded-md bg-zinc-900 p-3 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setOverflowOpen(false);
+                        void openDocPip();
+                      }}
+                      className="rounded-md bg-zinc-800 px-4 py-2 text-left text-base font-medium transition hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+                    >
+                      Open Doc-PiP Controls
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={openDocPip}
+                className="w-full rounded-md bg-zinc-800 px-4 py-3 text-base font-medium transition hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              >
+                Open Doc-PiP Controls
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
