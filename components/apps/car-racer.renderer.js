@@ -1,21 +1,12 @@
 const WIDTH = 300;
 const HEIGHT = 400;
-const LANES = 3;
-const LANE_WIDTH = WIDTH / LANES;
-const CAR_WIDTH = LANE_WIDTH * 0.6;
-const CAR_HEIGHT = 50;
-const OBSTACLE_HEIGHT = 40;
 
 let ctx;
 let state = {
-  car: { lane: 1, y: HEIGHT - CAR_HEIGHT - 10 },
-  carColor: '#ef4444',
+  car: { position: { x: 0, y: 0 } },
   obstacles: [],
-  roadside: { near: [], far: [] },
-  background: { near: [], far: [] },
-  lineOffsetNear: 0,
-  lineOffsetFar: 0,
   ghost: null,
+  color: '#ef4444',
 };
 
 self.onmessage = (e) => {
@@ -31,69 +22,32 @@ self.onmessage = (e) => {
 
 function draw() {
   if (!ctx) return;
-  ctx.fillStyle = '#333';
+  ctx.clearRect(0, 0, WIDTH, HEIGHT);
+  ctx.fillStyle = '#222';
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
-
-  if (state.background) {
-    ctx.fillStyle = '#111';
-    state.background.far.forEach(({ x, y }) => {
-      ctx.fillRect(x, y, 2, 2);
-    });
-    ctx.fillStyle = '#555';
-    state.background.near.forEach(({ x, y }) => {
-      ctx.fillRect(x, y, 3, 3);
-    });
-  }
-
-  if (state.roadside) {
-    ctx.fillStyle = '#999';
-    state.roadside.far.forEach((y) => {
-      ctx.fillRect(2, y, 6, 20);
-      ctx.fillRect(WIDTH - 8, y, 6, 20);
-    });
-    ctx.fillStyle = '#ccc';
-    state.roadside.near.forEach((y) => {
-      ctx.fillRect(0, y, 10, 30);
-      ctx.fillRect(WIDTH - 10, y, 10, 30);
-    });
-  }
-
   ctx.strokeStyle = '#fff';
   ctx.setLineDash([20, 20]);
-  ctx.globalAlpha = 0.6;
-  ctx.lineWidth = 2;
-  ctx.lineDashOffset = -(state.lineOffsetFar || 0);
-  for (let i = 1; i < LANES; i += 1) {
+  ctx.lineDashOffset = -(state.distance % 40 || 0);
+  const laneWidth = WIDTH / 3;
+  for (let i = 1; i < 3; i += 1) {
     ctx.beginPath();
-    ctx.moveTo(i * LANE_WIDTH, 0);
-    ctx.lineTo(i * LANE_WIDTH, HEIGHT);
-    ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
-  ctx.lineWidth = 4;
-  ctx.lineDashOffset = -(state.lineOffsetNear || 0);
-  for (let i = 1; i < LANES; i += 1) {
-    ctx.beginPath();
-    ctx.moveTo(i * LANE_WIDTH, 0);
-    ctx.lineTo(i * LANE_WIDTH, HEIGHT);
+    ctx.moveTo(i * laneWidth, 0);
+    ctx.lineTo(i * laneWidth, HEIGHT);
     ctx.stroke();
   }
   ctx.setLineDash([]);
+
   if (state.ghost) {
-    const gx = state.ghost.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = 'white';
-    ctx.fillRect(gx, state.ghost.y, CAR_WIDTH, CAR_HEIGHT);
+    ctx.globalAlpha = 0.4;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(state.ghost.x, state.ghost.y, state.ghost.width, state.ghost.height);
     ctx.globalAlpha = 1;
   }
 
-  const carX = state.car.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-  ctx.fillStyle = state.carColor || 'red';
-  ctx.fillRect(carX, state.car.y, CAR_WIDTH, CAR_HEIGHT);
-
-  ctx.fillStyle = 'blue';
+  ctx.fillStyle = state.color || '#ef4444';
+  ctx.fillRect(state.car.x, state.car.y, state.car.width, state.car.height);
+  ctx.fillStyle = '#3b82f6';
   state.obstacles.forEach((o) => {
-    const ox = o.lane * LANE_WIDTH + (LANE_WIDTH - CAR_WIDTH) / 2;
-    ctx.fillRect(ox, o.y, CAR_WIDTH, OBSTACLE_HEIGHT);
+    ctx.fillRect(o.x, o.y, o.width, o.height);
   });
 }
