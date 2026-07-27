@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import DataTypes from './DataTypes';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
@@ -90,6 +91,7 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [typeSnapshot, setTypeSnapshot] = useState(null);
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -241,6 +243,16 @@ export default function GhidraApp() {
     };
   }, []);
 
+  const typeDefinitionsById = useMemo(() => {
+    if (!typeSnapshot) return {};
+    const map = {};
+    typeSnapshot.definitions.forEach((def) => {
+      map[def.id] = def;
+    });
+    return map;
+  }, [typeSnapshot]);
+  const appliedTypes = typeSnapshot?.applications || [];
+
   if (engine === 'capstone') {
     return (
       <div
@@ -305,6 +317,9 @@ export default function GhidraApp() {
       <div className="p-2 border-t border-gray-700">
         <ImportAnnotate />
       </div>
+      <div className="border-t border-gray-700 max-h-[28rem] overflow-y-auto p-2">
+        <DataTypes onActiveSnapshotChange={setTypeSnapshot} />
+      </div>
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
           <div className="p-2">
@@ -314,6 +329,7 @@ export default function GhidraApp() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
+              aria-label="Search functions"
             />
           </div>
           {query ? (
@@ -380,6 +396,7 @@ export default function GhidraApp() {
                   }
                   placeholder="note"
                   className="ml-2 w-24 text-xs text-black rounded"
+                  aria-label={`Note for ${selected || 'function'} line ${idx + 1}`}
                 />
               </div>
             );
@@ -407,6 +424,29 @@ export default function GhidraApp() {
           {hexMap[selected] || ''}
         </pre>
       </div>
+      {appliedTypes.length > 0 && (
+        <div className="border-t border-gray-700 bg-gray-950 p-2 text-xs md:text-sm">
+          <h3 className="mb-2 font-semibold text-gray-100">Annotated memory ranges</h3>
+          <ul className="space-y-1">
+            {appliedTypes.map((entry) => (
+              <li
+                key={entry.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded border border-gray-700 bg-gray-900 px-2 py-1"
+              >
+                <div className="font-mono text-gray-200">
+                  {entry.address} · {entry.length} bytes
+                </div>
+                <div className="text-gray-300">
+                  {typeDefinitionsById[entry.typeId]?.name || 'Unknown type'}
+                </div>
+                {entry.comment && (
+                  <div className="text-gray-400">{entry.comment}</div>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <PseudoDisasmViewer />
       <div className="h-48 border-t border-gray-700">
         <CallGraph
@@ -425,6 +465,7 @@ export default function GhidraApp() {
             setFuncNotes({ ...funcNotes, [selected]: e.target.value })
           }
           className="w-full h-16 p-1 rounded text-black"
+          aria-label={`Notes for ${selected || 'function'}`}
         />
       </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
@@ -435,6 +476,7 @@ export default function GhidraApp() {
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
+            aria-label="Search strings"
           />
           <ul className="text-sm space-y-1">
             {filteredStrings.map((s) => (
@@ -466,6 +508,9 @@ export default function GhidraApp() {
               })
             }
             className="w-full h-full p-1 rounded text-black"
+            aria-label={`Notes for ${
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }`}
           />
         </div>
       </div>
