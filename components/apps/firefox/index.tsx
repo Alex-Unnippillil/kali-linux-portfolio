@@ -15,6 +15,7 @@ const BOOKMARKS = [
   { label: 'Kali NetHunter', url: 'https://www.kali.org/get-kali/#kali-platforms' },
   { label: 'Exploit-DB', url: 'https://www.exploit-db.com/' },
   { label: 'GoogleHackingDB', url: 'https://www.exploit-db.com/google-hacking-database' },
+  { label: 'Cert Viewer Lab', url: 'https://support.mozilla.org/certviewer' },
 ];
 
 const normaliseUrl = (value: string) => {

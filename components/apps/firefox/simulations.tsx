@@ -1,4 +1,5 @@
 import React from 'react';
+import CertViewer from './CertViewer';
 
 export type SimulationLink = {
   label: string;
@@ -19,6 +20,7 @@ export type FirefoxSimulation = {
   sections: SimulationSection[];
   externalUrl: string;
   ctaLabel?: string;
+  customContent?: React.ReactNode;
 };
 
 export const toSimulationKey = (value: string) => {
@@ -526,6 +528,37 @@ export const SIMULATIONS = Object.fromEntries([
     externalUrl: 'https://www.exploit-db.com/google-hacking-database',
     ctaLabel: 'Open GHDB',
   }),
+  createSimulationEntry({
+    url: 'https://support.mozilla.org/certviewer',
+    heading: 'TLS Certificate Viewer Lab',
+    description:
+      'Review curated X.509 chains to understand how Firefox surfaces Subject Alternative Names, expiration, and trust anchors.',
+    sections: [
+      {
+        title: 'Explore the sample chains',
+        body:
+          'Select a Kali-inspired production chain, a legacy broken chain, or a staging misconfiguration to see how issuers and SANs build trust.',
+      },
+      {
+        title: 'Learning resources',
+        links: [
+          {
+            label: 'How browsers validate certificates',
+            href: 'https://support.mozilla.org/en-US/kb/secure-website-certificate',
+            description: 'Mozilla support article on interpreting the certificate viewer.',
+          },
+          {
+            label: 'TLS configuration guidelines',
+            href: 'https://wiki.mozilla.org/Security/Server_Side_TLS',
+            description: 'Deployment recommendations for modern TLS stacks.',
+          },
+        ],
+      },
+    ],
+    externalUrl: 'https://support.mozilla.org/en-US/kb/secure-website-certificate',
+    ctaLabel: 'Read Mozilla docs',
+    customContent: <CertViewer />,
+  }),
 ]) as Record<string, FirefoxSimulation>;
 
 export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> = ({ simulation }) => (
@@ -543,32 +576,39 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
         <span aria-hidden="true" className="text-xs">↗</span>
       </a>
     </header>
-    <div className="flex-1 overflow-y-auto px-6 py-6">
-      <div className="grid gap-6 lg:grid-cols-2">
-        {simulation.sections.map((section) => (
-          <section key={section.title} className="rounded-lg border border-gray-800 bg-gray-900/60 p-5 shadow-inner">
-            <h2 className="text-lg font-semibold text-white">{section.title}</h2>
-            {section.body ? <p className="mt-2 text-sm text-gray-300">{section.body}</p> : null}
-            {section.links ? (
-              <ul className="mt-4 space-y-3 text-sm">
-                {section.links.map((link) => (
-                  <li key={link.href} className="rounded-md bg-gray-900/80 p-3 transition hover:bg-gray-800/80">
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
-                    >
-                      {link.label}
-                    </a>
-                    {link.description ? <p className="mt-1 text-xs text-gray-400">{link.description}</p> : null}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </section>
-        ))}
-      </div>
+    <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+      {simulation.customContent ? (
+        <div className="rounded-lg border border-gray-800 bg-gray-900/60 p-5 shadow-inner">
+          {simulation.customContent}
+        </div>
+      ) : null}
+      {simulation.sections.length ? (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {simulation.sections.map((section) => (
+            <section key={section.title} className="rounded-lg border border-gray-800 bg-gray-900/60 p-5 shadow-inner">
+              <h2 className="text-lg font-semibold text-white">{section.title}</h2>
+              {section.body ? <p className="mt-2 text-sm text-gray-300">{section.body}</p> : null}
+              {section.links ? (
+                <ul className="mt-4 space-y-3 text-sm">
+                  {section.links.map((link) => (
+                    <li key={link.href} className="rounded-md bg-gray-900/80 p-3 transition hover:bg-gray-800/80">
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-blue-300 hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                      >
+                        {link.label}
+                      </a>
+                      {link.description ? <p className="mt-1 text-xs text-gray-400">{link.description}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </section>
+          ))}
+        </div>
+      ) : null}
     </div>
   </div>
 );
