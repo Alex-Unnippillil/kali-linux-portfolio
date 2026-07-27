@@ -1,5 +1,11 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { colorDefinitions } from '../../../components/apps/wireshark/colorDefs';
+import {
+  finalizeInteraction,
+  recordChecksum,
+  recordMemorySample,
+  resetInteractionMetrics,
+} from './interactionMetrics';
 
 interface Rule {
   expression: string;
@@ -13,25 +19,49 @@ interface Props {
 
 const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
   const fileRef = useRef<HTMLInputElement>(null);
+  const initialRulesRef = useRef(rules);
+
+  useEffect(() => {
+    resetInteractionMetrics();
+    recordMemorySample('mount', initialRulesRef.current);
+    recordChecksum(initialRulesRef.current, 'mount');
+    return () => {
+      recordMemorySample('unmount', []);
+    };
+  }, []);
+
+  const commitRules = (
+    updated: Rule[],
+    event: string,
+    startedAt?: number
+  ) => {
+    onChange(updated);
+    finalizeInteraction(event, startedAt, updated);
+  };
 
   const handleRuleChange = (
     index: number,
     field: keyof Rule,
-    value: string
+    value: string,
+    startedAt?: number
   ) => {
     const updated = rules.map((r, i) => (i === index ? { ...r, [field]: value } : r));
-    onChange(updated);
+    commitRules(updated, 'rule-change', startedAt);
   };
 
-  const handleAdd = () => {
-    onChange([...rules, { expression: '', color: '' }]);
+  const handleAdd = (startedAt?: number) => {
+    commitRules([...rules, { expression: '', color: '' }], 'add-rule', startedAt);
   };
 
-  const handleRemove = (index: number) => {
-    onChange(rules.filter((_, i) => i !== index));
+  const handleRemove = (index: number, startedAt?: number) => {
+    commitRules(
+      rules.filter((_, i) => i !== index),
+      'remove-rule',
+      startedAt
+    );
   };
 
-  const handleExport = () => {
+  const handleExport = (startedAt?: number) => {
     const json = JSON.stringify(rules, null, 2);
     if (navigator?.clipboard?.writeText) {
       try {
@@ -48,9 +78,11 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
       a.click();
       URL.revokeObjectURL(url);
     }
+    finalizeInteraction('export', startedAt, rules);
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const startedAt = e.timeStamp;
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -58,7 +90,13 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
         try {
           const parsed = JSON.parse(reader.result as string);
           if (Array.isArray(parsed)) {
-            onChange(parsed);
+            const sanitized = parsed
+              .map((entry) => ({
+                expression: typeof entry.expression === 'string' ? entry.expression : '',
+                color: typeof entry.color === 'string' ? entry.color : '',
+              }))
+              .filter((entry) => entry.expression || entry.color);
+            commitRules(sanitized, 'import', startedAt);
           }
         } catch {
           // ignore invalid JSON
@@ -71,19 +109,27 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
 
   const triggerImport = () => fileRef.current?.click();
 
+  const handleClear = (startedAt?: number) => {
+    commitRules([], 'clear', startedAt);
+  };
+
   return (
     <div className="flex flex-col space-y-1">
       {rules.map((rule, i) => (
         <div key={i} className="flex space-x-1">
           <input
             value={rule.expression}
-            onChange={(e) => handleRuleChange(i, 'expression', e.target.value)}
+            onChange={(e) =>
+              handleRuleChange(i, 'expression', e.target.value, e.timeStamp)
+            }
             placeholder="Filter expression"
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
           />
           <select
             value={rule.color}
-            onChange={(e) => handleRuleChange(i, 'color', e.target.value)}
+            onChange={(e) =>
+              handleRuleChange(i, 'color', e.target.value, e.timeStamp)
+            }
             aria-label="Color"
             className="px-1 py-0.5 bg-gray-800 rounded text-white text-xs"
           >
@@ -95,7 +141,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
             ))}
           </select>
           <button
-            onClick={() => handleRemove(i)}
+            onClick={(e) => handleRemove(i, e.timeStamp)}
             aria-label="Remove rule"
             className="px-1 py-0.5 bg-gray-700 rounded text-xs"
             type="button"
@@ -106,7 +152,7 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
       ))}
       <div className="flex space-x-1">
         <button
-          onClick={handleAdd}
+          onClick={(e) => handleAdd(e.timeStamp)}
           type="button"
           className="px-1 py-0.5 bg-gray-700 rounded text-xs"
         >
@@ -120,11 +166,18 @@ const ColorRuleEditor: React.FC<Props> = ({ rules, onChange }) => {
           Import JSON
         </button>
         <button
-          onClick={handleExport}
+          onClick={(e) => handleExport(e.timeStamp)}
           type="button"
           className="px-1 py-0.5 bg-gray-700 rounded text-xs"
         >
           Export JSON
+        </button>
+        <button
+          onClick={(e) => handleClear(e.timeStamp)}
+          type="button"
+          className="px-1 py-0.5 bg-gray-700 rounded text-xs"
+        >
+          Clear rules
         </button>
       </div>
       <input
