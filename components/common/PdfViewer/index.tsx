@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import useRovingTabIndex from '../../../hooks/useRovingTabIndex';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import type { TextItem } from 'pdfjs-dist/types/src/display/api';
@@ -17,6 +17,10 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   const [query, setQuery] = useState('');
   const [matches, setMatches] = useState<number[]>([]);
   const thumbListRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sequenceRef = useRef<string[]>([]);
+  const sequenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [pageDescription, setPageDescription] = useState('Loading document…');
 
   useRovingTabIndex(
     thumbListRef as React.RefObject<HTMLElement>,
@@ -60,6 +64,14 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
   }, [pdf, page]);
 
   useEffect(() => {
+    if (!pdf) {
+      setPageDescription('Loading document…');
+      return;
+    }
+    setPageDescription(`Page ${page} of ${pdf.numPages}`);
+  }, [pdf, page]);
+
+  useEffect(() => {
     if (!pdf) return;
     const loadThumbs = async () => {
       const arr: HTMLCanvasElement[] = [];
@@ -95,6 +107,68 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
     if (found[0]) setPage(found[0]);
   };
 
+  const resetSequence = useCallback(() => {
+    sequenceRef.current = [];
+    if (sequenceTimeoutRef.current) {
+      clearTimeout(sequenceTimeoutRef.current);
+      sequenceTimeoutRef.current = null;
+    }
+  }, []);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault();
+        const delta = event.key === 'ArrowDown' ? 80 : -80;
+        container.scrollBy({ top: delta, behavior: 'smooth' });
+        resetSequence();
+        return;
+      }
+
+      if (event.key.toLowerCase() === 'g') {
+        if (event.shiftKey) {
+          event.preventDefault();
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+          resetSequence();
+          return;
+        }
+
+        sequenceRef.current.push('g');
+        if (sequenceTimeoutRef.current) {
+          clearTimeout(sequenceTimeoutRef.current);
+        }
+        sequenceTimeoutRef.current = setTimeout(() => {
+          sequenceRef.current = [];
+          sequenceTimeoutRef.current = null;
+        }, 600);
+
+        if (sequenceRef.current.length === 2) {
+          event.preventDefault();
+          container.scrollTo({ top: 0, behavior: 'smooth' });
+          resetSequence();
+        }
+        return;
+      }
+
+      if (event.key !== 'Shift') {
+        resetSequence();
+      }
+    },
+    [resetSequence],
+  );
+
+  useEffect(
+    () => () => {
+      if (sequenceTimeoutRef.current) {
+        clearTimeout(sequenceTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
   return (
     <div>
       <div className="flex gap-2 mb-2">
@@ -102,10 +176,45 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
+          aria-label="Search document text"
         />
         <button onClick={search}>Search</button>
+        <button
+          type="button"
+          onClick={() => scrollContainerRef.current?.focus()}
+          className="rounded border px-2 py-1 focus:outline-none focus-visible:ring"
+        >
+          Focus document
+        </button>
       </div>
-      <canvas ref={canvasRef} data-testid="pdf-canvas" />
+      <div className="sr-only" aria-live="polite" id="pdf-page-description">
+        {pageDescription}
+      </div>
+      <div
+        ref={scrollContainerRef}
+        tabIndex={0}
+        role="document"
+        aria-roledescription="PDF viewer"
+        aria-label={
+          pdf
+            ? `Document viewer showing page ${page} of ${pdf.numPages}`
+            : 'Document viewer loading'
+        }
+        aria-describedby="pdf-page-description"
+        className="max-h-[70vh] overflow-auto focus:outline-none focus-visible:ring"
+        onKeyDown={handleKeyDown}
+      >
+        <canvas
+          ref={canvasRef}
+          data-testid="pdf-canvas"
+          role="img"
+          aria-label={
+            pdf
+              ? `Page ${page} of ${pdf.numPages}`
+              : 'Document canvas loading'
+          }
+        />
+      </div>
       <div
         className="flex gap-2 overflow-x-auto mt-2"
         role="listbox"
@@ -118,6 +227,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({ url }) => {
             role="option"
             tabIndex={page === i + 1 ? 0 : -1}
             aria-selected={page === i + 1}
+            aria-label={`Go to page ${i + 1}`}
             data-testid={`thumb-${i + 1}`}
             onClick={() => setPage(i + 1)}
             onFocus={() => {
