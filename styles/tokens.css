@@ -84,6 +84,32 @@
   /* Fonts */
   --font-family-base: 'Rajdhani', 'Segoe UI', sans-serif;
   --font-multiplier: 1;
+  --font-size-root-base: clamp(15px, 14px + 0.4vw, 18px);
+  --font-size-root: calc(var(--font-size-root-base) * var(--font-multiplier));
+  --font-size-body-base: clamp(1rem, 0.98rem + 0.35vw, 1.15rem);
+  --font-size-body: calc(var(--font-size-body-base) * var(--font-multiplier));
+  --font-size-h6-base: clamp(1.05rem, 1rem + 0.4vw, 1.3rem);
+  --font-size-h6: calc(var(--font-size-h6-base) * var(--font-multiplier));
+  --font-size-h5-base: clamp(1.15rem, 1.05rem + 0.6vw, 1.5rem);
+  --font-size-h5: calc(var(--font-size-h5-base) * var(--font-multiplier));
+  --font-size-h4-base: clamp(1.3rem, 1.2rem + 0.8vw, 1.85rem);
+  --font-size-h4: calc(var(--font-size-h4-base) * var(--font-multiplier));
+  --font-size-h3-base: clamp(1.5rem, 1.35rem + 1.2vw, 2.2rem);
+  --font-size-h3: calc(var(--font-size-h3-base) * var(--font-multiplier));
+  --font-size-h2-base: clamp(1.8rem, 1.6rem + 1.4vw, 2.8rem);
+  --font-size-h2: calc(var(--font-size-h2-base) * var(--font-multiplier));
+  --font-size-h1-base: clamp(2.2rem, 1.9rem + 2vw, 3.4rem);
+  --font-size-h1: calc(var(--font-size-h1-base) * var(--font-multiplier));
+  --font-size-small-base: clamp(0.875rem, 0.84rem + 0.25vw, 0.95rem);
+  --font-size-small: calc(var(--font-size-small-base) * var(--font-multiplier));
+  --font-line-height-body: clamp(1.45em, 1.45em + 0.25vw, 1.7em);
+  --font-line-height-h6: clamp(1.2em, 1.2em + 0.25vw, 1.35em);
+  --font-line-height-h5: clamp(1.2em, 1.2em + 0.3vw, 1.4em);
+  --font-line-height-h4: clamp(1.15em, 1.15em + 0.35vw, 1.35em);
+  --font-line-height-h3: clamp(1.1em, 1.1em + 0.4vw, 1.3em);
+  --font-line-height-h2: clamp(1.08em, 1.08em + 0.45vw, 1.25em);
+  --font-line-height-h1: clamp(1.05em, 1.05em + 0.5vw, 1.2em);
+  --font-line-height-small: clamp(1.35em, 1.35em + 0.2vw, 1.55em);
   /* Minimum interactive target size */
   --hit-area: 32px;
   /* Focus outline */
