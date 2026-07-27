@@ -1,5 +1,7 @@
 import React from 'react';
+import Head from 'next/head';
 import Meta from '../components/SEO/Meta';
+import { buildBreadcrumbList, buildDefinedTerm } from '../src/lib/seo/jsonld';
 
 interface TileProps {
   title: string;
@@ -58,19 +60,42 @@ const DnsDiagram = () => (
   </svg>
 );
 
-const SpoofingOverview = () => (
-  <>
-    <Meta />
-    <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
-      <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
-        <ArpDiagram />
-      </ToolTile>
-      <ToolTile title="dnsspoof" link="https://manpages.debian.org/unstable/dsniff/dnsspoof.8.en.html">
-        <DnsDiagram />
-      </ToolTile>
-    </main>
-  </>
-);
+const baseUrl = 'https://example.com';
+export const spoofingJsonLd = [
+  buildDefinedTerm({
+    name: 'Spoofing',
+    description: 'Spoofing describes techniques used to impersonate another system or user.',
+    url: `${baseUrl}/spoofing`,
+  }),
+  buildBreadcrumbList([
+    { name: 'Home', url: baseUrl },
+    { name: 'Spoofing', url: `${baseUrl}/spoofing` },
+  ]),
+];
+
+const SpoofingOverview = () => {
+  return (
+    <>
+      <Meta />
+      <Head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(spoofingJsonLd),
+          }}
+        />
+      </Head>
+      <main className="p-4 grid gap-4 md:grid-cols-2 bg-ub-cool-grey min-h-screen">
+        <ToolTile title="arpspoof" link="https://manpages.debian.org/unstable/dsniff/arpspoof.8.en.html">
+          <ArpDiagram />
+        </ToolTile>
+        <ToolTile title="dnsspoof" link="https://manpages.debian.org/unstable/dsniff/dnsspoof.8.en.html">
+          <DnsDiagram />
+        </ToolTile>
+      </main>
+    </>
+  );
+};
 
 export default SpoofingOverview;
 
