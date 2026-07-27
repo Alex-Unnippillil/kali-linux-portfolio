@@ -1,0 +1,36 @@
+{
+  "references": [
+    {
+      "id": "xref-1",
+      "targetId": "s1",
+      "targetType": "string",
+      "value": "Hello, world!",
+      "location": { "function": "start", "offset": "0x401000" },
+      "preview": "mov eax, 1"
+    },
+    {
+      "id": "xref-2",
+      "targetId": "s2",
+      "targetType": "string",
+      "value": "Error occurred",
+      "location": { "function": "check", "offset": "0x401020" },
+      "preview": "call log_error"
+    },
+    {
+      "id": "xref-3",
+      "targetId": "const-1",
+      "targetType": "constant",
+      "value": "0x64",
+      "location": { "function": "process", "offset": "0x401050" },
+      "preview": "cmp eax, 0x64"
+    },
+    {
+      "id": "xref-4",
+      "targetId": "const-2",
+      "targetType": "constant",
+      "value": "0x0",
+      "location": { "function": "cleanup", "offset": "0x401080" },
+      "preview": "mov ebx, 0"
+    }
+  ]
+}
