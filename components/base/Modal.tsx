@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import useEscapeStack from '../../hooks/useEscapeStack';
 
 interface ModalProps {
     isOpen: boolean;
@@ -65,17 +66,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
         }
     }, []);
 
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                onClose();
-            }
-        };
-        document.addEventListener('keydown', handleKey);
-        return () => document.removeEventListener('keydown', handleKey);
-    }, [isOpen, onClose]);
+    const closeModal = useCallback(() => {
+        onClose();
+    }, [onClose]);
+
+    useEscapeStack(isOpen, closeModal);
 
     useEffect(() => {
         return () => {
