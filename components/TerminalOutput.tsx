@@ -16,14 +16,14 @@ export default function TerminalOutput({ text, ariaLabel }: TerminalOutputProps)
   };
   return (
     <div
-      className="bg-black text-green-400 font-mono text-xs p-2 rounded"
+      className="max-w-full overflow-x-auto rounded bg-black p-2 font-mono text-xs text-green-400"
       aria-label={ariaLabel}
     >
       {lines.map((line, idx) => (
-        <div key={idx} className="flex items-start">
-          <span className="flex-1 whitespace-pre-wrap">{line}</span>
+        <div key={idx} className="flex items-start gap-2">
+          <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">{line}</span>
           <button
-            className="ml-2 text-gray-400 hover:text-white"
+            className="shrink-0 text-gray-400 hover:text-white"
             onClick={() => copyLine(line)}
             aria-label="copy line"
           >
