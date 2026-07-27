@@ -35,3 +35,9 @@ test('My App launches', async ({ page }) => {
   await expect(page.locator('[data-testid="my-app"]')).toBeVisible();
 });
 ```
+
+## TypeScript & accessibility
+
+- Keep new components free of `any`; prefer explicit prop interfaces and generics when dealing with reusable utilities.
+- Handle nullable DOM APIs with type guards to satisfy `strictNullChecks`.
+- Associate every interactive control (inputs, checkboxes, sliders, icon-only buttons) with a `<label>` or `aria-label` so linting passes without overrides.

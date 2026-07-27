@@ -19,6 +19,17 @@ yarn install
 yarn dev
 ```
 
+## Quality checks before committing
+
+TypeScript now runs with `strict` options enabled. Keep the build healthy by running:
+
+```bash
+yarn typecheck
+yarn lint
+```
+
+Avoid using `any` in new code—prefer accurate interfaces, discriminated unions, or type guards. Interactive controls must also have accessible labels (`<label>` or `aria-label`) so `yarn lint` remains clean.
+
 See the [Architecture](./architecture.md) document for an overview of how the project is organized.
 
 For app contributions, see the [New App Checklist](./new-app-checklist.md).

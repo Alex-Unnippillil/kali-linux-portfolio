@@ -1,5 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 
+type DirectoryIterator = AsyncIterableIterator<
+  FileSystemHandle | [string, FileSystemHandle]
+>;
+
+const getDirectoryIterator = (
+  dir: FileSystemDirectoryHandle,
+): DirectoryIterator | null => {
+  const withEntries = dir as FileSystemDirectoryHandle & {
+    entries?: () => AsyncIterableIterator<[string, FileSystemHandle]>;
+    values?: () => AsyncIterableIterator<FileSystemHandle>;
+  };
+
+  if (typeof withEntries.entries === 'function') return withEntries.entries();
+  if (typeof withEntries.values === 'function') return withEntries.values();
+
+  return null;
+};
+
+const isFileHandle = (
+  handle: FileSystemHandle,
+): handle is FileSystemFileHandle => handle.kind === 'file';
+
 export interface OPFSHook {
   supported: boolean;
   root: FileSystemDirectoryHandle | null;
@@ -117,10 +139,14 @@ export default function useOPFS(): OPFSHook {
   const listFiles = useCallback<OPFSHook['listFiles']>(
     async (dir: FileSystemDirectoryHandle | null | undefined = root) => {
       if (!dir) return [];
+      const iterator = getDirectoryIterator(dir);
+      if (!iterator) return [];
+
       const files: FileSystemFileHandle[] = [];
       try {
-        for await (const entry of (dir as any).values()) {
-          if (entry.kind === 'file') files.push(entry as FileSystemFileHandle);
+        for await (const entry of iterator) {
+          const handle = Array.isArray(entry) ? entry[1] : entry;
+          if (isFileHandle(handle)) files.push(handle);
         }
       } catch {}
       return files;
