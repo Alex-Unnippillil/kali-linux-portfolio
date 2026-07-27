@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
+import Segments from './Segments';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
 const DEFAULT_WASM = '/wasm/ghidra.wasm';
@@ -12,6 +13,11 @@ async function loadCapstoneModule() {
   if (typeof window === 'undefined') return null;
   await loadCapstone();
   return { Capstone, Const };
+}
+
+function sanitizeId(value) {
+  if (!value) return '';
+  return String(value).replace(/[^a-zA-Z0-9_-]/g, '-');
 }
 
 // Disassembly data is now loaded from pre-generated JSON
@@ -90,6 +96,8 @@ export default function GhidraApp() {
   const capstoneRef = useRef(null);
   const [instructions, setInstructions] = useState([]);
   const [arch, setArch] = useState('x86');
+  const [segments, setSegments] = useState([]);
+  const [selectedSegmentId, setSelectedSegmentId] = useState(null);
   // S1: Detect GHIDRA web support and fall back to Capstone
   const ensureCapstone = useCallback(async () => {
     if (capstoneRef.current) return capstoneRef.current;
@@ -137,6 +145,19 @@ export default function GhidraApp() {
     [arch, ensureCapstone]
   );
 
+  const handleSegmentSelect = useCallback(
+    (segment) => {
+      setSelectedSegmentId(segment.id);
+      const candidate =
+        (segment.symbols || []).find((symbol) => funcMap[symbol]) ||
+        (segment.symbols || [])[0];
+      if (candidate) {
+        setSelected(candidate);
+      }
+    },
+    [funcMap]
+  );
+
   const switchEngine = async () => {
     const next = engine === 'ghidra' ? 'capstone' : 'ghidra';
     setEngine(next);
@@ -180,6 +201,38 @@ export default function GhidraApp() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    fetch('/demo-data/ghidra/segments.json')
+      .then((r) => r.json())
+      .then((data) => {
+        setSegments(data.segments || []);
+        if (data.segments && data.segments[0]) {
+          setSelectedSegmentId((prev) => prev || data.segments[0].id);
+        }
+      })
+      .catch(() => setSegments([]));
+  }, []);
+
+  const segmentBySymbol = useMemo(() => {
+    const map = {};
+    segments.forEach((segment) => {
+      (segment.symbols || []).forEach((symbol) => {
+        if (!map[symbol]) {
+          map[symbol] = segment.id;
+        }
+      });
+    });
+    return map;
+  }, [segments]);
+
+  useEffect(() => {
+    if (!selected) return;
+    const segId = segmentBySymbol[selected];
+    if (segId) {
+      setSelectedSegmentId((prev) => (prev === segId ? prev : segId));
+    }
+  }, [segmentBySymbol, selected]);
+
   // S2: Respect reduced motion preference
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -218,6 +271,24 @@ export default function GhidraApp() {
       setLiveMessage(`Selected function ${selected}`);
     }
   }, [selected]);
+
+  useEffect(() => {
+    const scrollElement = (element) => {
+      if (!element) return;
+      if (prefersReducedMotion || typeof element.scrollTo !== 'function') {
+        element.scrollTop = 0;
+        return;
+      }
+      try {
+        element.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (error) {
+        element.scrollTop = 0;
+      }
+    };
+
+    scrollElement(decompileRef.current);
+    scrollElement(hexRef.current);
+  }, [prefersReducedMotion, selected]);
 
   // S5: Synchronize scrolling between decompile and hex panes
   useEffect(() => {
@@ -292,6 +363,9 @@ export default function GhidraApp() {
     s.value.toLowerCase().includes(stringQuery.toLowerCase())
   );
 
+  const functionNotesId = `notes-${sanitizeId(selected || 'function')}`;
+  const stringNotesId = `string-notes-${sanitizeId(selectedString || 'string')}`;
+
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
       <div className="p-2">
@@ -305,17 +379,25 @@ export default function GhidraApp() {
       <div className="p-2 border-t border-gray-700">
         <ImportAnnotate />
       </div>
+      <div className="p-2 border-t border-gray-700 h-72">
+        <Segments
+          segments={segments}
+          selectedSegmentId={selectedSegmentId}
+          onSelectSegment={handleSegmentSelect}
+        />
+      </div>
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
-          <div className="p-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search symbols"
-              className="w-full mb-2 p-1 rounded text-black"
-            />
-          </div>
+            <div className="p-2">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search symbols"
+                aria-label="Search symbols"
+                className="w-full mb-2 p-1 rounded text-black"
+              />
+            </div>
           {query ? (
             <ul className="p-2 text-sm space-y-1">
               {filteredFunctions.map((f) => (
@@ -379,6 +461,7 @@ export default function GhidraApp() {
                     })
                   }
                   placeholder="note"
+                  aria-label={`Note for ${selected || 'function'} line ${idx + 1}`}
                   className="ml-2 w-24 text-xs text-black rounded"
                 />
               </div>
@@ -415,18 +498,20 @@ export default function GhidraApp() {
           onSelect={setSelected}
         />
       </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
-      </div>
+        <div className="border-t border-gray-700 p-2">
+          <label className="block text-sm mb-1" htmlFor={functionNotesId}>
+            Notes for {selected || 'function'}
+          </label>
+          <textarea
+            value={funcNotes[selected] || ''}
+            onChange={(e) =>
+              setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+            }
+            id={functionNotesId}
+            aria-label={`Notes for ${selected || 'function'}`}
+            className="w-full h-16 p-1 rounded text-black"
+          />
+        </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
         <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
           <input
@@ -434,6 +519,7 @@ export default function GhidraApp() {
             value={stringQuery}
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
+            aria-label="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
           />
           <ul className="text-sm space-y-1">
@@ -452,7 +538,7 @@ export default function GhidraApp() {
           </ul>
         </div>
         <div className="p-2">
-          <label className="block text-sm mb-1">
+          <label className="block text-sm mb-1" htmlFor={stringNotesId}>
             Notes for {
               strings.find((s) => s.id === selectedString)?.value || 'string'
             }
@@ -465,6 +551,10 @@ export default function GhidraApp() {
                 [selectedString]: e.target.value,
               })
             }
+            id={stringNotesId}
+            aria-label={`Notes for ${
+              strings.find((s) => s.id === selectedString)?.value || 'string'
+            }`}
             className="w-full h-full p-1 rounded text-black"
           />
         </div>

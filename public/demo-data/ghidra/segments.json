@@ -1,0 +1,84 @@
+{
+  "segments": [
+    {
+      "id": "segment-text",
+      "name": ".text",
+      "start": 4096,
+      "end": 12287,
+      "size": 8192,
+      "permissions": ["r", "x"],
+      "type": "CODE",
+      "symbols": ["start", "check", "helper"]
+    },
+    {
+      "id": "segment-init",
+      "name": ".init",
+      "start": 12288,
+      "end": 13311,
+      "size": 1024,
+      "permissions": ["r", "x"],
+      "type": "INIT",
+      "symbols": []
+    },
+    {
+      "id": "segment-plt",
+      "name": ".plt",
+      "start": 13312,
+      "end": 14335,
+      "size": 1024,
+      "permissions": ["r", "x"],
+      "type": "PLT",
+      "symbols": []
+    },
+    {
+      "id": "segment-rodata",
+      "name": ".rodata",
+      "start": 16384,
+      "end": 17407,
+      "size": 1024,
+      "permissions": ["r"],
+      "type": "DATA",
+      "symbols": []
+    },
+    {
+      "id": "segment-data",
+      "name": ".data",
+      "start": 20480,
+      "end": 21503,
+      "size": 1024,
+      "permissions": ["r", "w"],
+      "type": "DATA",
+      "symbols": []
+    },
+    {
+      "id": "segment-bss",
+      "name": ".bss",
+      "start": 24576,
+      "end": 26623,
+      "size": 2048,
+      "permissions": ["r", "w"],
+      "type": "BSS",
+      "symbols": []
+    },
+    {
+      "id": "segment-got",
+      "name": ".got",
+      "start": 28672,
+      "end": 29695,
+      "size": 1024,
+      "permissions": ["r", "w"],
+      "type": "GOT",
+      "symbols": []
+    },
+    {
+      "id": "segment-stack",
+      "name": "[stack]",
+      "start": 65536,
+      "end": 69631,
+      "size": 4096,
+      "permissions": ["r", "w"],
+      "type": "STACK",
+      "symbols": []
+    }
+  ]
+}
