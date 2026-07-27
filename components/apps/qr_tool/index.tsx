@@ -1,6 +1,8 @@
 'use client';
 import React, { useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
+import SpoofingWarning from '../../ui/SpoofingWarning';
+import { sanitizeText } from '../../../utils/sanitizeText';
 
 interface BatchItem {
   name: string;
@@ -21,6 +23,8 @@ const QRTool: React.FC = () => {
   const [csv, setCsv] = useState('');
   const [batch, setBatch] = useState<BatchItem[]>([]);
   const workerRef = React.useRef<Worker | null>(null);
+  const textSanitization = useMemo(() => sanitizeText(text), [text]);
+  const csvSanitization = useMemo(() => sanitizeText(csv), [csv]);
 
   const initWorker = React.useCallback(() => {
     if (
@@ -69,7 +73,7 @@ const QRTool: React.FC = () => {
   }, [opts]);
 
   useEffect(() => {
-    const value = text || ' ';
+    const value = textSanitization.safe || ' ';
     encodeQr(value)
       .then(({ png: p, svg: s }) => {
         setPng(p);
@@ -79,7 +83,7 @@ const QRTool: React.FC = () => {
         setPng('');
         setSvg('');
       });
-  }, [text, opts, encodeQr]);
+  }, [textSanitization.safe, opts, encodeQr]);
 
   const downloadDataUrl = (dataUrl: string, filename: string) => {
     const link = document.createElement('a');
@@ -107,15 +111,17 @@ const QRTool: React.FC = () => {
   };
 
   const generateBatch = async () => {
-    const lines = csv
+    const lines = csvSanitization.safe
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
     const items = await Promise.all(
       lines.map(async (line, i) => {
         const [val, nameCol] = line.split(',');
-        const value = val.trim();
-        const name = nameCol ? nameCol.trim() : `code-${i + 1}`;
+        const valueSanitized = sanitizeText(val.trim());
+        const nameSanitized = sanitizeText(nameCol ? nameCol.trim() : `code-${i + 1}`);
+        const value = valueSanitized.safe;
+        const name = nameSanitized.safe || `code-${i + 1}`;
         const pngData = await QRCode.toDataURL(value, opts);
         const svgText = await QRCode.toString(value, { ...opts, type: 'svg' });
         return { name, png: pngData, svg: svgText };
@@ -136,6 +142,7 @@ const QRTool: React.FC = () => {
             onChange={(e) => setText(e.target.value)}
             className="w-full rounded p-1 text-black"
           />
+          <SpoofingWarning result={textSanitization} />
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="qr-error" className="flex items-center gap-1 text-sm">
@@ -189,6 +196,7 @@ const QRTool: React.FC = () => {
             onChange={(e) => setCsv(e.target.value)}
             className="w-full rounded p-1 text-black"
           />
+          <SpoofingWarning result={csvSanitization} />
         </label>
         <button
           type="button"
