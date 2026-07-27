@@ -18,5 +18,20 @@ jobs:
       - run: |
           yarn dev &
           npx wait-on http://localhost:3000
-      - run: npx pa11y-ci --config pa11yci.json
+      - name: Run pa11y audit
+        id: pa11y
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts
+          set -o pipefail
+          npx pa11y-ci --config pa11yci.json | tee artifacts/pa11y-report.log
+      - name: Upload pa11y report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pa11y-report
+          path: artifacts/pa11y-report.log
       - run: npx playwright test playwright/a11y.spec.ts
+      - name: Fail if pa11y reported issues
+        if: always() && steps.pa11y.conclusion == 'failure'
+        run: exit 1
