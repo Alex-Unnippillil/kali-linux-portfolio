@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Sample app icon">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#77216F" />
+      <stop offset="100%" stop-color="#2C001E" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#bg)" />
+  <path
+    d="M32 17a3 3 0 0 1 2.66 1.66l15 30A3 3 0 0 1 47 52H17a3 3 0 0 1-2.66-4.34l15-30A3 3 0 0 1 32 17Zm0 8.12L21.9 49h20.2Z"
+    fill="#F6F5F4"
+  />
+  <circle cx="32" cy="44" r="4" fill="#E95420" />
+</svg>
