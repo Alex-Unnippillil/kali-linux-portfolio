@@ -169,6 +169,8 @@ const NotepadApp = createDynamicApp(() => import('./components/apps/notepad'), '
 const TrashApp = createDynamicApp(() => import('./components/apps/trash'), 'Trash');
 const SerialTerminalApp = createDynamicApp(() => import('./components/apps/serial-terminal'), 'Serial Terminal');
 
+const LogConsoleApp = createDynamicApp('log-console', 'Log Console');
+
 
 const WiresharkApp = createDynamicApp(() => import('./components/apps/wireshark'), 'Wireshark');
 const BleSensorApp = createDynamicApp(() => import('./components/apps/ble-sensor'), 'BLE Sensor');
@@ -270,6 +272,7 @@ const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displayNotepad = createDisplay(NotepadApp);
 const displaySerialTerminal = createDisplay(SerialTerminalApp);
+const displayLogConsole = createDisplay(LogConsoleApp);
 const displayWeatherWidget = createDisplay(WeatherWidgetApp);
 const displayInputLab = createDisplay(InputLabApp);
 const displaySubnetCalculator = createDisplay(SubnetCalculatorApp);
@@ -911,6 +914,15 @@ const apps = [
     category: 'system',
     responsiveWidth: { mobile: 95, desktop: 60 },
     responsiveHeight: { mobile: 85, desktop: 75 },
+  },
+  {
+    id: 'log-console',
+    title: 'Log Console',
+    icon: '/themes/Yaru/apps/radar-symbolic.svg',
+    disabled: false,
+    favourite: false,
+    desktop_shortcut: false,
+    screen: displayLogConsole,
   },
   {
     id: 'screen-recorder',
