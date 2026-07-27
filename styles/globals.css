@@ -224,7 +224,7 @@ html[data-theme='matrix'] {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
+  background: color-mix(in srgb, var(--kali-blue) 65%, var(--kali-bg));
   color: var(--kali-text);
 }
 
