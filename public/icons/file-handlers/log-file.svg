@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <rect width="96" height="96" rx="16" fill="#0f1317"/>
+  <path fill="#1f2937" d="M28 14c-3.3 0-6 2.7-6 6v56c0 3.3 2.7 6 6 6h40c3.3 0 6-2.7 6-6V32L54 14H28z"/>
+  <path fill="#111827" d="M54 14v18c0 2.2 1.8 4 4 4h16L54 14z"/>
+  <g fill="#f97316">
+    <rect x="32" y="44" width="30" height="4" rx="2" opacity="0.85"/>
+    <rect x="32" y="54" width="26" height="4" rx="2" opacity="0.7"/>
+    <rect x="32" y="64" width="22" height="4" rx="2" opacity="0.55"/>
+  </g>
+  <text x="48" y="34" fill="#f97316" font-family="'Fira Code', 'Courier New', monospace" font-size="14" font-weight="700" text-anchor="middle">LOG</text>
+</svg>
