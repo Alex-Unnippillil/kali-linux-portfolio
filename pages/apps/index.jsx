@@ -93,6 +93,25 @@ const AppsPage = () => {
           );
         })}
       </div>
+      <footer className="mt-8 text-center text-sm text-gray-500">
+        <Link
+          href="/input-hub"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Request a Tool
+        </Link>
+        {' | '}
+        <Link
+          href="/dummy-form"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline"
+        >
+          Request a Feature
+        </Link>
+      </footer>
     </div>
   );
 };
