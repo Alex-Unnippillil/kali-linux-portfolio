@@ -1,0 +1,34 @@
+/*
+ * Resume typography intentionally uses system serif faces first to avoid
+ * flash of unstyled text (FOUT) when the custom face is still loading.
+ * The Source Serif 4 web font remains available as the final fallback for
+ * consistency once it finishes downloading.
+ */
+:root {
+  --font-family-resume: 'Iowan Old Style', 'Palatino Linotype', 'URW Palladio L',
+    'Book Antiqua', 'Georgia', 'Cambria', 'Times New Roman', 'Nimbus Roman No9 L',
+    'Liberation Serif', ui-serif, 'Source Serif 4', serif;
+}
+
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Source Serif 4 Regular'), local('SourceSerif4-Regular'),
+    url('/fonts/SourceSerif4-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Source Serif 4';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Source Serif 4 Bold'), local('SourceSerif4-Bold'),
+    url('/fonts/SourceSerif4-Bold.ttf') format('truetype');
+}
+
+#resume-content {
+  font-family: var(--font-family-resume);
+  font-variant-ligatures: discretionary-ligatures;
+}
