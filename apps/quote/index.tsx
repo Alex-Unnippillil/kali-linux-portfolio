@@ -1,12 +1,19 @@
 'use client';
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Filter from 'bad-words';
 import { toPng } from 'html-to-image';
-import offlineQuotes from '../../public/quotes/quotes.json';
 import PlaylistBuilder from './components/PlaylistBuilder';
 import share, { canShare } from '../../utils/share';
 import Posterizer from './components/Posterizer';
 import copyToClipboard from '../../utils/clipboard';
+import {
+  getAllQuotes,
+  getQuoteKey,
+  listSafeTags,
+  mergeQuotes,
+  normalizeQuotes,
+  type Quote,
+} from '../../quotes/localQuotes';
+import { createRotationQueue } from '../../quotes/rotation';
 
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -21,56 +28,8 @@ const TwitterIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-interface Quote {
-  content: string;
-  author: string;
-  tags: string[];
-}
-
-const SAFE_CATEGORIES = [
-  'inspirational',
-  'life',
-  'love',
-  'wisdom',
-  'technology',
-  'humor',
-  'general',
-];
-
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  inspirational: ['inspire', 'dream', 'goal', 'courage', 'success', 'motivation', 'believe', 'achieve'],
-  life: ['life', 'living', 'journey', 'experience'],
-  love: ['love', 'heart', 'passion'],
-  wisdom: ['wisdom', 'knowledge', 'learn', 'education'],
-  technology: ['technology', 'science', 'computer'],
-  humor: ['laugh', 'funny', 'humor'],
-};
-
-const processQuotes = (data: any[]): Quote[] => {
-  const filter = new Filter();
-  return data
-    .map((q) => {
-      const content = q.content || q.quote || '';
-      const author = q.author || 'Unknown';
-      let tags = Array.isArray(q.tags) ? q.tags.map((t: string) => t.toLowerCase()) : [];
-      if (!tags.length) {
-        const lower = content.toLowerCase();
-        Object.entries(CATEGORY_KEYWORDS).forEach(([cat, keywords]) => {
-          if (keywords.some((k) => lower.includes(k))) tags.push(cat);
-        });
-      }
-      if (!tags.length) tags.push('general');
-      return { content, author, tags } as Quote;
-    })
-    .filter(
-      (q) => !filter.isProfane(q.content) && q.tags.some((t) => SAFE_CATEGORIES.includes(t))
-    );
-};
-
-const keyOf = (q: Quote) => `${q.content}—${q.author}`;
-
 export default function QuoteApp() {
-  const [quotes, setQuotes] = useState<Quote[]>(processQuotes(offlineQuotes as any[]));
+  const [quotes, setQuotes] = useState<Quote[]>(() => getAllQuotes());
   const [current, setCurrent] = useState<Quote | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [category, setCategory] = useState('');
@@ -86,6 +45,9 @@ export default function QuoteApp() {
   const [playing, setPlaying] = useState(false);
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
+  const rotationQueueRef = useRef<number[]>([]);
+  const lastQuoteRef = useRef<Quote | null>(null);
+  const currentRef = useRef<Quote | null>(null);
 
   useEffect(() => {
     const fav = localStorage.getItem('quote-favorites');
@@ -96,7 +58,7 @@ export default function QuoteApp() {
     if (custom) {
       try {
         const parsed = JSON.parse(custom);
-        setQuotes((q) => [...q, ...processQuotes(parsed)]);
+        setQuotes((q) => mergeQuotes(q, normalizeQuotes(parsed)));
       } catch { /* ignore */ }
     }
   }, []);
@@ -141,7 +103,7 @@ export default function QuoteApp() {
     return quotes.filter((q) => {
       const matchCategory =
         category === 'favorites'
-          ? favorites.includes(keyOf(q))
+          ? favorites.includes(getQuoteKey(q))
           : !category || q.tags.includes(category);
       const matchSearch = q.content.toLowerCase().includes(lower);
       const matchAuthor = q.author.toLowerCase().includes(lowerAuthor);
@@ -160,13 +122,26 @@ export default function QuoteApp() {
     if (idx >= 0) setCurrentIndex(idx);
   }, [current, filtered]);
 
-  const changeQuote = () => {
-    if (filtered.length === 0) {
+  const takeRandomQuote = useCallback(() => {
+    if (!filtered.length) {
+      rotationQueueRef.current = [];
       setCurrent(null);
       return;
     }
-    setCurrent(filtered[Math.floor(Math.random() * filtered.length)]);
-  };
+
+    if (!rotationQueueRef.current.length) {
+      rotationQueueRef.current = createRotationQueue(filtered, lastQuoteRef.current);
+    }
+
+    const nextIndex = rotationQueueRef.current.shift();
+    if (nextIndex == null) return;
+
+    setCurrent(filtered[nextIndex]);
+  }, [filtered]);
+
+  const changeQuote = useCallback(() => {
+    takeRandomQuote();
+  }, [takeRandomQuote]);
 
   const nextQuote = useCallback(() => {
     if (!filtered.length) {
@@ -187,9 +162,36 @@ export default function QuoteApp() {
   }, [filtered, currentIndex]);
 
   useEffect(() => {
-    changeQuote();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtered]);
+    if (!filtered.length) {
+      rotationQueueRef.current = [];
+      setCurrent(null);
+      return;
+    }
+
+    const active = currentRef.current;
+    rotationQueueRef.current = createRotationQueue(filtered, lastQuoteRef.current);
+
+    if (active) {
+      const activeKey = getQuoteKey(active);
+      const activeIndex = filtered.findIndex((quote) => getQuoteKey(quote) === activeKey);
+      if (activeIndex >= 0) {
+        rotationQueueRef.current = rotationQueueRef.current.filter((index) => index !== activeIndex);
+        return;
+      }
+    }
+
+    takeRandomQuote();
+  }, [filtered, takeRandomQuote]);
+
+  useEffect(() => {
+    currentRef.current = current;
+    if (!current) return;
+    lastQuoteRef.current = current;
+    const idx = filtered.findIndex((quote) => getQuoteKey(quote) === getQuoteKey(current));
+    if (idx >= 0) {
+      rotationQueueRef.current = rotationQueueRef.current.filter((index) => index !== idx);
+    }
+  }, [current, filtered]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -231,7 +233,7 @@ export default function QuoteApp() {
 
   const toggleFavorite = () => {
     if (!current) return;
-    const key = keyOf(current);
+    const key = getQuoteKey(current);
     setFavorites((favs) => {
       const updated = favs.includes(key)
         ? favs.filter((f) => f !== key)
@@ -250,8 +252,8 @@ export default function QuoteApp() {
         try {
           const parsed = JSON.parse(text);
           setQuotes((q) => {
-            const processed = processQuotes(parsed);
-            const next = [...q, ...processed];
+            const processed = normalizeQuotes(parsed);
+            const next = mergeQuotes(q, processed);
             localStorage.setItem('custom-quotes', JSON.stringify(parsed));
             return next;
           });
@@ -307,15 +309,11 @@ export default function QuoteApp() {
   const stopPlaylist = () => setPlaying(false);
 
   const categories = useMemo(() => {
-    const base = Array.from(
-      new Set(
-        quotes.flatMap((q) => q.tags).filter((t) => SAFE_CATEGORIES.includes(t))
-      )
-    );
+    const base = listSafeTags(quotes);
     return ['favorites', ...base];
   }, [quotes]);
 
-  const isFav = current ? favorites.includes(keyOf(current)) : false;
+  const isFav = current ? favorites.includes(getQuoteKey(current)) : false;
 
   return (
     <div className="h-full w-full flex flex-col items-center justify-start bg-[var(--kali-bg)] text-[var(--color-text)] p-4 overflow-auto">
@@ -339,7 +337,7 @@ export default function QuoteApp() {
           className="group relative w-full overflow-hidden rounded-2xl p-8 text-center shadow-xl backdrop-blur kali-gradient-card"
         >
           {current ? (
-            <div key={keyOf(current)} className="animate-quote">
+            <div key={getQuoteKey(current)} className="animate-quote">
               <span
                 className="pointer-events-none absolute -top-6 left-6 text-[96px] font-serif quote-card-glyph"
                 aria-hidden="true"

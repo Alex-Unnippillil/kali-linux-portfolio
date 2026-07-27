@@ -84,7 +84,7 @@ Tools to cover: **BeEF, Ettercap, Metasploit, Wireshark, Kismet, Nikto, Autopsy,
 - Provide font selector, copy-to-clipboard, and cache fonts in IndexedDB.
 
 ### Quote Generator
-- Use offline JSON quotes with tags and "no repeats" option.
+- ~~Use offline JSON quotes with tags and "no repeats" option.~~ (shipped via `quotes/localQuotes.ts` and rotation queue.)
 
 ### Weather
 - Show fake data with city picker and unit toggle, or accept user-provided API key in settings.

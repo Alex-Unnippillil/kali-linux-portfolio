@@ -1,11 +1,6 @@
 'use client';
 import { useState, useMemo, useEffect } from 'react';
-
-interface Quote {
-  content: string;
-  author: string;
-  tags: string[];
-}
+import type { Quote } from '../../../quotes/localQuotes';
 
 interface PlaylistBuilderProps {
   quotes: Quote[];

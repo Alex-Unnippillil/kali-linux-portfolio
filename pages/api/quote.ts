@@ -1,20 +1,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import quotesData from '../../public/quotes/quotes.json';
+import { filterByTag, getAllQuotes } from '../../quotes/localQuotes';
 
-interface Quote {
-  content: string;
-  author: string;
-  tags?: string[];
-}
-
-const quotes = quotesData as Quote[];
+const quotes = getAllQuotes();
 
 export default function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
   const tag = Array.isArray(req.query.tag) ? req.query.tag[0] : req.query.tag;
-  const pool = tag ? quotes.filter((q) => q.tags?.includes(tag)) : quotes;
+  const pool = tag ? filterByTag(quotes, tag) : quotes;
 
   if (pool.length === 0) {
     res
