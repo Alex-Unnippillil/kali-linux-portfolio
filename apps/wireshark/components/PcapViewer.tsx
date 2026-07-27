@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
@@ -300,6 +300,20 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     );
   });
 
+  const protocolStats = useMemo(() => {
+    const counts: Record<string, number> = {};
+    packets.forEach((p) => {
+      const proto = protocolName(p.protocol);
+      counts[proto] = (counts[proto] || 0) + 1;
+    });
+    const total = packets.length || 1;
+    return Object.entries(counts).map(([proto, count]) => ({
+      proto,
+      count,
+      pct: (count / total) * 100,
+    }));
+  }, [packets]);
+
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
       <div className="flex items-center space-x-2">
@@ -308,6 +322,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
           accept=".pcap,.pcapng"
           onChange={handleFile}
           className="text-sm"
+          aria-label="Open capture file"
         />
         <select
           onChange={(e) => {
@@ -315,6 +330,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
             e.target.value = '';
           }}
           className="text-sm bg-gray-700 text-white rounded"
+          aria-label="Open sample"
         >
           <option value="">Open sample</option>
           {samples.map(({ label, path }) => (
@@ -354,6 +370,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                   protocolColors[label.toUpperCase()] || 'bg-gray-500'
                 }`}
                 title={label}
+                aria-label={label}
                 type="button"
               />
             ))}
@@ -368,6 +385,35 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 </div>
               ))}
             </div>
+          )}
+          {protocolStats.length > 0 && (
+            <table className="text-xs w-full mb-2">
+              <thead>
+                <tr className="text-left">
+                  <th className="px-1">Protocol</th>
+                  <th className="px-1">Count</th>
+                  <th className="px-1">Proportion</th>
+                </tr>
+              </thead>
+              <tbody>
+                {protocolStats.map(({ proto, count, pct }) => (
+                  <tr key={proto}>
+                    <td className="px-1">{proto}</td>
+                    <td className="px-1">{count}</td>
+                      <td className="px-1">
+                        <span
+                          className={`inline-block h-2 ${
+                            protocolColors[proto.toUpperCase()] || 'bg-gray-500'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                          aria-hidden="true"
+                        ></span>
+                        <span className="ml-1">{pct.toFixed(1)}%</span>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
           )}
           <div className="flex flex-1 overflow-hidden space-x-2">
             <div className="overflow-auto flex-1">
