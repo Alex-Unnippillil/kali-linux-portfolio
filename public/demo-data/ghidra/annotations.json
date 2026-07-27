@@ -1,0 +1,143 @@
+{
+  "state": {
+    "comments": {
+      "0x401000": "Entry routine sets up the stack frame.",
+      "0x40100c": "Early bounds check before branching.",
+      "0x401050": "Cross-checks credentials against static table.",
+      "0x401080": "Hot path sanitizing buffer.",
+      "0x4010a0": "Copies sanitized payload for later inspection.",
+      "0x4010c8": "Dispatches to analytics collector.",
+      "0x402010": "User agent banner string loaded here.",
+      "0x40204c": "Hostname lookup fallback path.",
+      "0x402088": "Telemetry flag toggled by CLI argument."
+    },
+    "labels": {
+      "0x401000": "entry",
+      "0x401050": "validate_user",
+      "0x401080": "sanitize_input",
+      "0x4010a0": "prepare_payload",
+      "0x4010c8": "dispatch_analytics",
+      "0x402010": "STR_user_agent",
+      "0x40204c": "STR_dns_suffix",
+      "0x402088": "STR_telemetry_flag"
+    },
+    "types": {
+      "0x401000": "void __cdecl entry(void)",
+      "0x401050": "bool __cdecl validate_user(const char *username)",
+      "0x401080": "size_t __cdecl sanitize_input(char *buffer, size_t len)",
+      "0x4010a0": "void __cdecl prepare_payload(struct payload_ctx *ctx)",
+      "0x4010c8": "void __cdecl dispatch_analytics(struct payload_ctx *ctx)",
+      "0x402010": "const char *",
+      "0x40204c": "const char *",
+      "0x402088": "uint8_t"
+    }
+  },
+  "snapshots": [
+    {
+      "id": "baseline-import",
+      "name": "Baseline import",
+      "createdAt": "2023-11-15T08:00:00.000Z",
+      "comments": {
+        "0x401000": "Entry routine sets up the stack frame.",
+        "0x401050": "Cross-checks credentials against static table.",
+        "0x401080": "Hot path sanitizing buffer.",
+        "0x4010a0": "Copies sanitized payload for later inspection.",
+        "0x4010c8": "Dispatches to analytics collector.",
+        "0x402010": "User agent banner string loaded here.",
+        "0x40204c": "Hostname lookup fallback path."
+      },
+      "labels": {
+        "0x401000": "entry",
+        "0x401050": "validate_user",
+        "0x401080": "sanitize_input",
+        "0x4010a0": "prepare_payload",
+        "0x4010c8": "dispatch_analytics",
+        "0x402010": "STR_user_agent",
+        "0x40204c": "STR_dns_suffix"
+      },
+      "types": {
+        "0x401000": "void __cdecl entry(void)",
+        "0x401050": "bool __cdecl validate_user(const char *username)",
+        "0x401080": "size_t __cdecl sanitize_input(char *buffer, size_t len)",
+        "0x4010a0": "void __cdecl prepare_payload(struct payload_ctx *ctx)",
+        "0x4010c8": "void __cdecl dispatch_analytics(struct payload_ctx *ctx)",
+        "0x402010": "const char *",
+        "0x40204c": "const char *"
+      }
+    },
+    {
+      "id": "qa-hardening",
+      "name": "QA hardening review",
+      "createdAt": "2024-03-02T16:45:00.000Z",
+      "comments": {
+        "0x401000": "Prologue verified against stripped symbol table.",
+        "0x40100c": "Inserted comment about negative length guard.",
+        "0x401050": "Cred table now validated via CRC.",
+        "0x401080": "Sanitizer updated to strip UTF-7 payloads.",
+        "0x4010a0": "Copies sanitized payload for later inspection.",
+        "0x4010c8": "Dispatch stub patched for deferred send.",
+        "0x402010": "User agent banner string loaded here.",
+        "0x40204c": "Hostname lookup fallback path.",
+        "0x402088": "Telemetry flag toggled by CLI argument."
+      },
+      "labels": {
+        "0x401000": "entry",
+        "0x401050": "validate_user",
+        "0x401080": "sanitize_input",
+        "0x4010a0": "stage_payload",
+        "0x4010c8": "dispatch_analytics",
+        "0x402010": "STR_user_agent",
+        "0x40204c": "STR_dns_suffix",
+        "0x402088": "STR_telemetry_flag"
+      },
+      "types": {
+        "0x401000": "void __cdecl entry(void)",
+        "0x401050": "bool __cdecl validate_user(const char *username)",
+        "0x401080": "size_t __cdecl sanitize_input(char *buffer, size_t len)",
+        "0x4010a0": "void __cdecl stage_payload(struct payload_ctx *ctx)",
+        "0x4010c8": "void __cdecl dispatch_analytics(struct payload_ctx *ctx)",
+        "0x402010": "const char *",
+        "0x40204c": "const char *",
+        "0x402088": "uint8_t"
+      }
+    },
+    {
+      "id": "incident-retro",
+      "name": "Incident retro annotations",
+      "createdAt": "2024-06-18T11:12:00.000Z",
+      "comments": {
+        "0x401000": "Entry routine sets up the stack frame.",
+        "0x401050": "Cred table now validated via CRC.",
+        "0x401080": "Sanitizer updated to strip UTF-7 payloads.",
+        "0x4010a0": "Payload builder duplicates state for telemetry.",
+        "0x4010c8": "Dispatch stub patched for deferred send.",
+        "0x402010": "Banner string is user supplied at runtime.",
+        "0x40204c": "Hostname lookup fallback removed in prod build.",
+        "0x402088": "Telemetry flag toggled by CLI argument.",
+        "0x4020b0": "Incident marker: suspicious host inserted here."
+      },
+      "labels": {
+        "0x401000": "entry",
+        "0x401050": "validate_user",
+        "0x401080": "sanitize_input",
+        "0x4010a0": "prepare_payload",
+        "0x4010c8": "dispatch_analytics_async",
+        "0x402010": "STR_user_agent_mutable",
+        "0x40204c": "STR_dns_suffix",
+        "0x402088": "STR_telemetry_flag",
+        "0x4020b0": "STR_suspicious_host"
+      },
+      "types": {
+        "0x401000": "void __cdecl entry(void)",
+        "0x401050": "bool __cdecl validate_user(const char *username)",
+        "0x401080": "size_t __cdecl sanitize_input(char *buffer, size_t len)",
+        "0x4010a0": "void __cdecl prepare_payload(struct payload_ctx *ctx)",
+        "0x4010c8": "void __cdecl dispatch_analytics_async(struct payload_ctx *ctx)",
+        "0x402010": "char *",
+        "0x40204c": "const char *",
+        "0x402088": "uint8_t",
+        "0x4020b0": "const char *"
+      }
+    }
+  ]
+}
