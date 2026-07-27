@@ -1,0 +1,14 @@
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .dock,
+  .titlebar,
+  dialog,
+  dialog::backdrop,
+  .switcher {
+    display: none !important;
+  }
+}
