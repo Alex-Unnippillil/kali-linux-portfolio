@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+
+import { parseSimulator } from '@/src/workers/parsing';
+import {
+  isTaskCancelledError,
+  type WorkerPoolTask,
+} from '@/src/workers/workerPool';
+
 import usePersistentState from '../../hooks/usePersistentState';
-import type {
-  SimulatorParserRequest,
-  SimulatorParserResponse,
-  ParsedLine,
-} from '../../workers/simulatorParser.worker';
+import type { ParsedLine } from '../../workers/simulatorParser.worker';
 interface TabDefinition { id: string; title: string; content: React.ReactNode; }
 
 const LAB_BANNER = 'For lab use only. Commands are never executed.';
@@ -23,28 +26,15 @@ const Simulator: React.FC = () => {
   const [filter, setFilter] = useState('');
   const [progress, setProgress] = useState(0);
   const [eta, setEta] = useState(0);
-  const workerRef = useRef<Worker|null>(null);
+  const taskRef = useRef<WorkerPoolTask<ParsedLine[]> | null>(null);
+  const mountedRef = useRef(true);
   const [activeTab, setActiveTab] = useState('raw');
   const [sortCol, setSortCol] = useState<'line'|'key'|'value'>('line');
   const [sortDir, setSortDir] = useState<'asc'|'desc'>('asc');
 
-  useEffect(() => {
-    const worker = new Worker(
-      new URL('../../workers/simulatorParser.worker.ts', import.meta.url),
-    );
-    workerRef.current = worker;
-    worker.onmessage = (e: MessageEvent<SimulatorParserResponse>) => {
-      const data = e.data;
-      if (data.type === 'progress') {
-        setProgress(data.progress);
-        setEta(data.eta);
-      } else if (data.type === 'done') {
-        setParsed(data.parsed);
-        setProgress(1);
-        setEta(0);
-      }
-    };
-    return () => worker.terminate();
+  useEffect(() => () => {
+    mountedRef.current = false;
+    taskRef.current?.cancel();
   }, []);
 
   const parseText = useCallback((text: string) => {
@@ -52,11 +42,39 @@ const Simulator: React.FC = () => {
     setParsed([]);
     setProgress(0);
     setEta(0);
-    workerRef.current?.postMessage({ action: 'parse', text } as SimulatorParserRequest);
+    taskRef.current?.cancel();
+    if (!text) return;
+    const handle = parseSimulator(text, {
+      onProgress: ({ progress: value, eta: nextEta }) => {
+        if (!mountedRef.current) return;
+        setProgress(value);
+        setEta(nextEta);
+      },
+    });
+    taskRef.current = handle;
+    handle.promise
+      .then((rows) => {
+        if (!mountedRef.current || taskRef.current !== handle) return;
+        setParsed(rows);
+        setProgress(1);
+        setEta(0);
+      })
+      .catch((err) => {
+        if (isTaskCancelledError(err)) return;
+        console.error(err);
+      })
+      .finally(() => {
+        if (taskRef.current === handle) {
+          taskRef.current = null;
+        }
+      });
   }, []);
 
-  const cancelParse = () =>
-    workerRef.current?.postMessage({ action: 'cancel' } as SimulatorParserRequest);
+  const cancelParse = () => {
+    taskRef.current?.cancel();
+    setProgress(0);
+    setEta(0);
+  };
 
   const onSampleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
