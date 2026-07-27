@@ -1,0 +1,27 @@
+.i {
+  mask-image: var(--icon-url);
+  background: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+}
+
+.i-menu {
+  --icon-url: url('/icons/menu.svg');
+}
+
+.i-search {
+  --icon-url: url('/icons/search.svg');
+}
+
+.i-close {
+  --icon-url: url('/icons/close.svg');
+}
+
+.i-arrow-left {
+  --icon-url: url('/icons/arrow-left.svg');
+}
+
+.i-arrow-right {
+  --icon-url: url('/icons/arrow-right.svg');
+}
