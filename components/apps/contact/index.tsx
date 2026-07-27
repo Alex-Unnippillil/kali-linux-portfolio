@@ -320,11 +320,15 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <input
             id="contact-name"
+            type="text"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             placeholder=" "
+            inputMode="text"
+            autoComplete="name"
+            autoCorrect="off"
           />
           <label
             htmlFor="contact-name"
@@ -344,6 +348,9 @@ const ContactApp: React.FC = () => {
             aria-invalid={!!emailError}
             aria-describedby={emailError ? 'contact-email-error' : undefined}
             placeholder=" "
+            inputMode="email"
+            autoComplete="email"
+            autoCorrect="off"
           />
           <label
             htmlFor="contact-email"
@@ -368,6 +375,9 @@ const ContactApp: React.FC = () => {
             aria-invalid={!!messageError}
             aria-describedby={messageError ? 'contact-message-error' : undefined}
             placeholder=" "
+            inputMode="text"
+            autoComplete="on"
+            autoCorrect="on"
           />
           <label
             htmlFor="contact-message"

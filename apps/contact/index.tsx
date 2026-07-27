@@ -290,11 +290,15 @@ const ContactApp: React.FC = () => {
                 <div className="relative">
                   <input
                     id="contact-name"
+                    type="text"
                     className="h-11 w-full rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] pl-10 pr-3 text-[color:var(--kali-text)] shadow-inner shadow-[inset_0_1px_0_0_color:color-mix(in_srgb,var(--kali-panel)_55%,transparent)] transition focus:border-[color:var(--kali-control)] focus:outline-none focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--kali-control)_60%,transparent)] focus:ring-offset-2 focus:ring-offset-[var(--kali-bg)]"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                     aria-labelledby="contact-name-label"
+                    inputMode="text"
+                    autoComplete="name"
+                    autoCorrect="off"
                   />
                   <svg
                     className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-[color:var(--kali-text-faint)]"
@@ -334,6 +338,9 @@ const ContactApp: React.FC = () => {
                     aria-invalid={!!emailError}
                     aria-describedby={emailError ? "contact-email-error" : undefined}
                     aria-labelledby="contact-email-label"
+                    inputMode="email"
+                    autoComplete="email"
+                    autoCorrect="off"
                   />
                   <svg
                     className="pointer-events-none absolute left-3 top-1/2 h-6 w-6 -translate-y-1/2 text-[color:var(--kali-text-faint)]"
@@ -379,6 +386,9 @@ const ContactApp: React.FC = () => {
                     aria-invalid={!!messageError}
                     aria-describedby={messageError ? "contact-message-error" : undefined}
                     aria-labelledby="contact-message-label"
+                    inputMode="text"
+                    autoComplete="on"
+                    autoCorrect="on"
                   />
                   <svg
                     className="pointer-events-none absolute left-3 top-3 h-6 w-6 text-[color:var(--kali-text-faint)]"
