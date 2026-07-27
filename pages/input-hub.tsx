@@ -1,14 +1,44 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import emailjs from '@emailjs/browser';
 import { useRouter } from 'next/router';
+import {
+  DEFAULT_LOCALE,
+  ErrorCode,
+  Locale,
+  getLocalizedErrorCopy,
+  isErrorCode,
+  listErrorCodes,
+  matchLocale,
+} from '../types/errorCodes';
 
 const subjectTemplates = [
   'General Inquiry',
   'Bug Report',
   'Feedback',
 ];
+
+type FormStatus =
+  | { type: 'idle' }
+  | { type: 'info'; message: string }
+  | { type: 'success'; message: string }
+  | { type: 'error'; code: ErrorCode };
+
+interface QueuedMessage {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  useCaptcha: boolean;
+  errorCode?: ErrorCode;
+}
+
+const formatMessageBody = (body: string, code?: ErrorCode) => {
+  if (!code) return body;
+  const tagged = `[Error code: ${code}]`;
+  return body.includes(tagged) ? body : `${tagged}\n${body}`;
+};
 
 const getRecaptchaToken = (siteKey: string): Promise<string> =>
   new Promise((resolve) => {
@@ -30,14 +60,35 @@ const InputHub = () => {
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState(subjectTemplates[0]);
   const [message, setMessage] = useState('');
-  const [status, setStatus] = useState('');
+  const [locale, setLocale] = useState<Locale>(DEFAULT_LOCALE);
+  const [errorCode, setErrorCode] = useState<ErrorCode | ''>('');
+  const [status, setStatus] = useState<FormStatus>({ type: 'idle' });
   const [useCaptcha, setUseCaptcha] = useState(false);
   const [emailjsReady, setEmailjsReady] = useState(false);
+  const errorOptions = useMemo(() => listErrorCodes(), []);
+  const selectedError = useMemo(
+    () => (errorCode ? getLocalizedErrorCopy(errorCode, locale) : null),
+    [errorCode, locale]
+  );
+  const statusDescriptor =
+    status.type === 'error'
+      ? getLocalizedErrorCopy(status.code, locale)
+      : null;
 
   useEffect(() => {
-    const { preset, title, text, url, files } = router.query;
+    const { preset, title, text, url, files, errorCode: errorCodeQuery } =
+      router.query;
     if (preset === 'contact') {
       setSubject('General Inquiry');
+    }
+    if (preset === 'bug-report') {
+      setSubject('Bug Report');
+      if (
+        typeof errorCodeQuery === 'string' &&
+        isErrorCode(errorCodeQuery)
+      ) {
+        setErrorCode(errorCodeQuery);
+      }
     }
     const parts: string[] = [];
     if (title) parts.push(String(title));
@@ -80,6 +131,17 @@ const InputHub = () => {
   }, [router.query]);
 
   useEffect(() => {
+    if (typeof navigator === 'undefined') return;
+    setLocale(matchLocale(navigator.language));
+  }, []);
+
+  useEffect(() => {
+    if (subject !== 'Bug Report' && errorCode) {
+      setErrorCode('');
+    }
+  }, [subject, errorCode]);
+
+  useEffect(() => {
     const userId = process.env.NEXT_PUBLIC_USER_ID;
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID;
@@ -109,7 +171,7 @@ const InputHub = () => {
       if (!emailjsReady || !navigator.onLine) return;
       try {
         const raw = localStorage.getItem(QUEUE_KEY);
-        const queue: any[] = raw ? JSON.parse(raw) : [];
+        const queue: QueuedMessage[] = raw ? JSON.parse(raw) : [];
         for (const q of queue) {
           const token = q.useCaptcha
             ? await getRecaptchaToken(siteKey)
@@ -118,7 +180,8 @@ const InputHub = () => {
             name: q.name,
             email: q.email,
             subject: q.subject,
-            message: q.message,
+            message: formatMessageBody(q.message, q.errorCode),
+            error_code: q.errorCode ?? '',
             'g-recaptcha-response': token,
           });
         }
@@ -133,16 +196,10 @@ const InputHub = () => {
     return () => window.removeEventListener('online', flushQueue);
   }, [emailjsReady]);
 
-  const enqueueMessage = (msg: {
-    name: string;
-    email: string;
-    subject: string;
-    message: string;
-    useCaptcha: boolean;
-  }) => {
+  const enqueueMessage = (msg: QueuedMessage) => {
     try {
       const raw = localStorage.getItem(QUEUE_KEY);
-      const queue = raw ? JSON.parse(raw) : [];
+      const queue: QueuedMessage[] = raw ? JSON.parse(raw) : [];
       queue.push(msg);
       localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
     } catch {
@@ -153,36 +210,57 @@ const InputHub = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailjsReady) {
-      setStatus('Email service unavailable');
+      setStatus({
+        type: 'error',
+        code: ErrorCode.CONTACT_SERVICE_UNAVAILABLE,
+      });
       return;
     }
     const serviceId = process.env.NEXT_PUBLIC_SERVICE_ID as string;
     const templateId = process.env.NEXT_PUBLIC_TEMPLATE_ID as string;
     const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || '';
     if (!navigator.onLine) {
-      enqueueMessage({ name, email, subject, message, useCaptcha });
-      setStatus('Message queued; will send when online.');
+      enqueueMessage({
+        name,
+        email,
+        subject,
+        message,
+        useCaptcha,
+        errorCode: errorCode || undefined,
+      });
+      setStatus({
+        type: 'success',
+        message: 'Message queued; will send when online.',
+      });
       setName('');
       setEmail('');
       setMessage('');
       return;
     }
     const token = useCaptcha ? await getRecaptchaToken(siteKey) : '';
-    setStatus('Sending...');
+    setStatus({ type: 'info', message: 'Sending...' });
     try {
+      const preparedMessage = formatMessageBody(
+        message,
+        errorCode || undefined
+      );
       await emailjs.send(serviceId, templateId, {
         name,
         email,
         subject,
-        message,
+        message: preparedMessage,
+        error_code: errorCode || '',
         'g-recaptcha-response': token,
       });
-      setStatus('Message sent!');
+      setStatus({ type: 'success', message: 'Message sent!' });
       setName('');
       setEmail('');
       setMessage('');
     } catch {
-      setStatus('Failed to send message');
+      setStatus({
+        type: 'error',
+        code: ErrorCode.CONTACT_DELIVERY_FAILED,
+      });
     }
   };
 
@@ -223,6 +301,42 @@ const InputHub = () => {
             </option>
           ))}
         </select>
+        {subject === 'Bug Report' && (
+          <div className="rounded border border-gray-300 bg-gray-100 p-2 text-sm text-black">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-semibold uppercase text-gray-600">
+                Attach error code
+              </span>
+              <select
+                className="p-1"
+                value={errorCode}
+                onChange={(e) =>
+                  setErrorCode(
+                    e.target.value
+                      ? (e.target.value as ErrorCode)
+                      : ''
+                  )
+                }
+              >
+                <option value="">Select an error code (optional)</option>
+                {errorOptions.map((code) => {
+                  const descriptor = getLocalizedErrorCopy(code, locale);
+                  return (
+                    <option key={code} value={code}>
+                      {`${code} — ${descriptor.summary}`}
+                    </option>
+                  );
+                })}
+              </select>
+            </label>
+            {selectedError && (
+              <div className="mt-2 space-y-1 text-xs text-gray-700">
+                <p className="font-semibold">{selectedError.summary}</p>
+                <p>{selectedError.remediation}</p>
+              </div>
+            )}
+          </div>
+        )}
         <textarea
           className="p-1 border"
           placeholder="Message"
@@ -243,9 +357,29 @@ const InputHub = () => {
           Send
         </button>
       </form>
-      {status && (
-        <div role="status" aria-live="polite" className="mt-2 text-sm">
-          {status}
+      {status.type !== 'idle' && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`mt-2 text-sm ${
+            status.type === 'error'
+              ? 'text-red-600'
+              : status.type === 'success'
+              ? 'text-green-700'
+              : 'text-gray-800'
+          }`}
+        >
+          {status.type === 'error' && statusDescriptor ? (
+            <div className="space-y-1">
+              <p className="font-semibold">{statusDescriptor.summary}</p>
+              <p>{statusDescriptor.remediation}</p>
+              <p className="text-xs text-gray-600">
+                Error code: {statusDescriptor.code}
+              </p>
+            </div>
+          ) : status.type === 'info' || status.type === 'success' ? (
+            <span>{status.message}</span>
+          ) : null}
         </div>
       )}
     </div>
