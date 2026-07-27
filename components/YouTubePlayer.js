@@ -1,18 +1,26 @@
 "use client";
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import Head from 'next/head';
 import usePrefersReducedMotion from '../hooks/usePrefersReducedMotion';
 import useOPFS from '../hooks/useOPFS';
+import YouTube from './util-components/YouTube';
+
+const PLAYER_STATES = {
+  UNSTARTED: -1,
+  ENDED: 0,
+  PLAYING: 1,
+  PAUSED: 2,
+  BUFFERING: 3,
+  CUED: 5,
+};
 
 // Basic YouTube player with keyboard shortcuts, playback rate cycling,
 // chapter drawer and Picture-in-Picture helpers. The Doc-PiP window is a
 // simple overlay used for notes/transcripts.
 export default function YouTubePlayer({ videoId }) {
   const [activated, setActivated] = useState(false);
-  const containerRef = useRef(null); // DOM node hosting the iframe
-  const playerRef = useRef(null); // YT.Player instance
-  const [isPlaying, setIsPlaying] = useState(false);
+  const playerRef = useRef(null);
+  const [playerState, setPlayerState] = useState(null);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -21,86 +29,53 @@ export default function YouTubePlayer({ videoId }) {
   const [results, setResults] = useState([]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
+  const isPlaying = playerState === PLAYER_STATES.PLAYING;
 
   // Load the YouTube IFrame API lazily on user interaction
-  const loadPlayer = () => {
+  const loadPlayer = useCallback(async () => {
     if (activated) return;
     setActivated(true);
-
-    const createPlayer = () => {
-      if (!containerRef.current) return;
-      playerRef.current = new YT.Player(containerRef.current, {
-        videoId,
-        host: 'https://www.youtube-nocookie.com',
-        playerVars: {
-          enablejsapi: 1,
-          origin: window.location.origin,
-        },
-        events: {
-          onReady: (e) => {
-            const data = e.target.getVideoData();
-            if (data?.chapters) setChapters(data.chapters);
-            if (prefersReducedMotion) {
-              e.target.pauseVideo();
-            } else {
-              setIsPlaying(true);
-            }
-          },
-          onStateChange: (e) => {
-            if (e.data === window.YT.PlayerState.PLAYING) {
-              setIsPlaying(true);
-            } else if (
-              e.data === window.YT.PlayerState.PAUSED ||
-              e.data === window.YT.PlayerState.ENDED
-            ) {
-              setIsPlaying(false);
-            }
-          },
-        },
-      });
-    };
-
-    if (typeof window !== 'undefined') {
-      // Load the IFrame Player API script only after user interaction
-      if (!window.YT) {
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube-nocookie.com/iframe_api';
-        tag.async = true;
-        window.onYouTubeIframeAPIReady = createPlayer;
-        document.body.appendChild(tag);
+    if (!playerRef.current) return;
+    try {
+      await playerRef.current.activate();
+      const data = await playerRef.current.getVideoData();
+      if (data?.chapters) setChapters(data.chapters);
+      if (prefersReducedMotion) {
+        playerRef.current.pause();
       } else {
-        createPlayer();
+        playerRef.current.play();
       }
+    } catch (err) {
+      console.error('Failed to initialise YouTube player', err);
     }
-  };
+  }, [activated, prefersReducedMotion]);
 
   const togglePlay = () => {
     if (!playerRef.current) return;
-    const state = playerRef.current.getPlayerState();
-    if (state === window.YT.PlayerState.PLAYING) {
-      playerRef.current.pauseVideo();
+    if (isPlaying) {
+      playerRef.current.pause();
     } else {
-      playerRef.current.playVideo();
+      playerRef.current.play();
     }
   };
 
   // Keyboard controls for seeking and playback rate cycling
-  const handleKey = (e) => {
-    if (!playerRef.current) return;
+  const handleKey = async (e) => {
+    if (!playerRef.current || !activated) return;
     switch (e.key) {
       case 'ArrowLeft':
         e.preventDefault();
-        playerRef.current.seekTo(
-          Math.max(playerRef.current.getCurrentTime() - 5, 0),
-          true
-        );
+        {
+          const current = await playerRef.current.getCurrentTime();
+          playerRef.current.seekTo(Math.max(current - 5, 0));
+        }
         break;
       case 'ArrowRight':
         e.preventDefault();
-        playerRef.current.seekTo(
-          playerRef.current.getCurrentTime() + 5,
-          true
-        );
+        {
+          const current = await playerRef.current.getCurrentTime();
+          playerRef.current.seekTo(current + 5);
+        }
         break;
       case ' ':
       case 'k':
@@ -110,20 +85,20 @@ export default function YouTubePlayer({ videoId }) {
         break;
       case '>':
       case '.': {
-        const rates = playerRef.current.getAvailablePlaybackRates();
-        const cur = playerRef.current.getPlaybackRate();
+        const rates = await playerRef.current.getAvailablePlaybackRates();
+        const cur = await playerRef.current.getPlaybackRate();
         const idx = rates.indexOf(cur);
-        playerRef.current.setPlaybackRate(rates[(idx + 1) % rates.length]);
+        const nextRate = rates[(idx + 1) % rates.length];
+        playerRef.current.setPlaybackRate(nextRate);
         break;
       }
       case '<':
       case ',': {
-        const rates = playerRef.current.getAvailablePlaybackRates();
-        const cur = playerRef.current.getPlaybackRate();
+        const rates = await playerRef.current.getAvailablePlaybackRates();
+        const cur = await playerRef.current.getPlaybackRate();
         const idx = rates.indexOf(cur);
-        playerRef.current.setPlaybackRate(
-          rates[(idx - 1 + rates.length) % rates.length]
-        );
+        const nextRate = rates[(idx - 1 + rates.length) % rates.length];
+        playerRef.current.setPlaybackRate(nextRate);
         break;
       }
       case 'c':
@@ -136,11 +111,15 @@ export default function YouTubePlayer({ videoId }) {
 
   // Trigger standard browser PiP on the iframe
   const triggerPiP = () => {
-    const iframe = containerRef.current?.querySelector('iframe');
+    const iframe = playerRef.current?.getIframe();
     if (iframe?.requestPictureInPicture) {
       iframe.requestPictureInPicture().catch(() => {});
     }
   };
+
+  const handleStateChange = useCallback((state) => {
+    setPlayerState(state);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -195,20 +174,22 @@ export default function YouTubePlayer({ videoId }) {
 
   return (
     <>
-      <Head>
-        <link
-          rel="preconnect"
-          href="https://www.youtube-nocookie.com"
-        />
-        <link rel="preconnect" href="https://i.ytimg.com" />
-      </Head>
       <div
         className="relative w-full"
         style={{ aspectRatio: '16 / 9' }}
         tabIndex={0}
         onKeyDown={handleKey}
       >
-        <div className="w-full h-full" ref={containerRef}>
+        <div className="w-full h-full">
+          <YouTube
+            ref={playerRef}
+            videoId={videoId}
+            title="YouTube video player"
+            active={activated}
+            captions
+            className="absolute inset-0 h-full w-full"
+            onStateChange={handleStateChange}
+          />
           {!activated && (
             <button
               type="button"
