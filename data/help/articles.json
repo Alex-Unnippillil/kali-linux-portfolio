@@ -1,0 +1,58 @@
+[
+  {
+    "slug": "network-timeout",
+    "title": "Resolve network timeouts",
+    "summary": "Fix connectivity issues when the desktop cannot reach API endpoints or background services.",
+    "keywords": ["network", "timeout", "offline", "api", "retry", "connectivity"],
+    "content": [
+      "# Resolve network timeouts",
+      "Network timeouts normally indicate that the browser could not reach the API within the allowed time window.",
+      "## Quick checks",
+      "- Confirm your device still has an active connection and that airplane mode is disabled.\n- Verify that VPN or proxy settings are not blocking requests to the application domain.\n- Retry the action after a short pause. Transient outages are often resolved automatically.",
+      "## Advanced steps",
+      "1. Open the network inspector and confirm the failing request URL.\n2. If you are working offline, enable demo data or use cached content exposed in the settings panel.\n3. Clear the service worker cache from the desktop settings and relaunch the application."
+    ]
+  },
+  {
+    "slug": "access-denied",
+    "title": "Understand access denied errors",
+    "summary": "Learn why permission failures occur and how to unblock secure actions.",
+    "keywords": ["access", "denied", "permission", "auth", "policy", "login"],
+    "content": [
+      "# Understand access denied errors",
+      "An access denied error means the current profile does not meet the security policy required for the request.",
+      "## Why this happens",
+      "- The session expired or was revoked by an administrator.\n- You attempted to reach a restricted workspace or app without the correct role.\n- Multi-factor authentication requirements were not completed in time.",
+      "## What to do",
+      "1. Sign out and sign back in to refresh credentials.\n2. Review the access control matrix in the admin console to verify your role assignments.\n3. Contact the maintainer listed in the About window if additional access is needed."
+    ]
+  },
+  {
+    "slug": "data-integrity",
+    "title": "Investigate data integrity warnings",
+    "summary": "Steps to follow when checksum or replay protections detect unexpected changes.",
+    "keywords": ["data", "integrity", "checksum", "cache", "validation", "replay"],
+    "content": [
+      "# Investigate data integrity warnings",
+      "Integrity warnings help prevent cached or replayed content from corrupting saved work.",
+      "## Checklist",
+      "- Confirm the local clock matches the network time service.\n- Clear the affected cache from the maintenance tools window.\n- Re-import the dataset or configuration from a trusted backup.",
+      "## Need more help?",
+      "Send the integrity report (without personal data) to support so they can compare hashes."
+    ]
+  },
+  {
+    "slug": "troubleshooting-basics",
+    "title": "General troubleshooting steps",
+    "summary": "Baseline recovery steps for unknown or unexpected application errors.",
+    "keywords": ["troubleshooting", "basics", "unknown", "error", "reset"],
+    "content": [
+      "# General troubleshooting steps",
+      "When the application reports an unknown error, follow these baseline recovery steps.",
+      "## Reset the workspace",
+      "- Close unused windows and relaunch the affected module.\n- Check the notifications center for maintenance announcements.\n- Use the reset layout option in desktop settings to clear stale state.",
+      "## Capture diagnostics",
+      "1. Record the steps taken before the failure occurred.\n2. Capture a screenshot of the error dialog for maintainers.\n3. Include logs exported from the diagnostics pane when opening a ticket."
+    ]
+  }
+]
