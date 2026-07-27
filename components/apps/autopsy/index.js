@@ -518,8 +518,178 @@ function Autopsy({ initialArtifacts = null }) {
       .join('')
       .trim();
 
-  const decodeBase64 = (b64) =>
-    Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+const decodeBase64 = (b64) => {
+  if (!b64) return new Uint8Array();
+  if (typeof atob === 'function') {
+    return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  }
+  if (typeof Buffer !== 'undefined') {
+    return new Uint8Array(Buffer.from(b64, 'base64'));
+  }
+  return new Uint8Array();
+};
+
+const readAscii = (view, offset, count) => {
+  const chars = [];
+  for (let i = 0; i < count; i += 1) {
+    const pos = offset + i;
+    if (pos >= view.byteLength) break;
+    const byte = view.getUint8(pos);
+    if (byte === 0) break;
+    chars.push(byte);
+  }
+  return String.fromCharCode(...chars).trim();
+};
+
+const readRationals = (view, offset, count, littleEndian) => {
+  const values = [];
+  for (let i = 0; i < count; i += 1) {
+    const start = offset + i * 8;
+    if (start + 8 > view.byteLength) break;
+    const numerator = view.getUint32(start, littleEndian);
+    const denominator = view.getUint32(start + 4, littleEndian) || 1;
+    values.push(numerator / denominator);
+  }
+  return values;
+};
+
+const parseGpsCoordinate = (values = [], ref = '') => {
+  if (values.length < 3) return null;
+  const [degrees, minutes, seconds] = values;
+  const decimal = degrees + minutes / 60 + seconds / 3600;
+  if (Number.isNaN(decimal)) return null;
+  if (ref === 'S' || ref === 'W') {
+    return -decimal;
+  }
+  return decimal;
+};
+
+const parseExifMetadata = (bytes) => {
+  if (!bytes || bytes.length < 12) return null;
+  let offset = 2;
+  while (offset + 4 < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = bytes[offset + 1];
+    if (marker === 0xda || marker === 0xd9) break;
+    const length = (bytes[offset + 2] << 8) + bytes[offset + 3];
+    if (marker === 0xe1) {
+      const start = offset + 4;
+      const header = new TextDecoder().decode(
+        bytes.slice(start, start + 6)
+      );
+      if (header === 'Exif\u0000\u0000') {
+        const tiffStart = start + 6;
+        const view = new DataView(
+          bytes.buffer,
+          bytes.byteOffset + tiffStart,
+          bytes.length - tiffStart
+        );
+        const byteOrder = view.getUint16(0, false);
+        const littleEndian = byteOrder === 0x4949;
+        const firstIfdOffset = view.getUint32(4, littleEndian);
+        if (firstIfdOffset + 2 > view.byteLength) return null;
+        const ifdOffset = firstIfdOffset;
+        const entries = view.getUint16(ifdOffset, littleEndian);
+        let make = null;
+        let model = null;
+        let gpsOffset = null;
+        for (let i = 0; i < entries; i += 1) {
+          const entryOffset = ifdOffset + 2 + i * 12;
+          if (entryOffset + 12 > view.byteLength) break;
+          const tag = view.getUint16(entryOffset, littleEndian);
+          const type = view.getUint16(entryOffset + 2, littleEndian);
+          const count = view.getUint32(entryOffset + 4, littleEndian);
+          const valueOffset = view.getUint32(entryOffset + 8, littleEndian);
+          const valuePosition =
+            count > 4 ? valueOffset : entryOffset + 8;
+          if (tag === 0x010f && type === 2) {
+            make = readAscii(view, valuePosition, count);
+          } else if (tag === 0x0110 && type === 2) {
+            model = readAscii(view, valuePosition, count);
+          } else if (tag === 0x8825) {
+            gpsOffset = valueOffset;
+          }
+        }
+        let latitude = null;
+        let longitude = null;
+        if (gpsOffset && gpsOffset + 2 <= view.byteLength) {
+          const gpsEntries = view.getUint16(gpsOffset, littleEndian);
+          let latRef = null;
+          let latValues = null;
+          let lonRef = null;
+          let lonValues = null;
+          for (let i = 0; i < gpsEntries; i += 1) {
+            const entryOffset = gpsOffset + 2 + i * 12;
+            if (entryOffset + 12 > view.byteLength) break;
+            const tag = view.getUint16(entryOffset, littleEndian);
+            const type = view.getUint16(entryOffset + 2, littleEndian);
+            const count = view.getUint32(entryOffset + 4, littleEndian);
+            const valueOffset = view.getUint32(entryOffset + 8, littleEndian);
+            if (tag === 0x0001 && type === 2) {
+              latRef = readAscii(
+                view,
+                count > 4 ? valueOffset : entryOffset + 8,
+                count
+              );
+            } else if (tag === 0x0002 && type === 5) {
+              latValues = readRationals(view, valueOffset, count, littleEndian);
+            } else if (tag === 0x0003 && type === 2) {
+              lonRef = readAscii(
+                view,
+                count > 4 ? valueOffset : entryOffset + 8,
+                count
+              );
+            } else if (tag === 0x0004 && type === 5) {
+              lonValues = readRationals(view, valueOffset, count, littleEndian);
+            }
+          }
+          latitude = parseGpsCoordinate(latValues, latRef);
+          longitude = parseGpsCoordinate(lonValues, lonRef);
+        }
+        if (make || model || latitude !== null || longitude !== null) {
+          return {
+            make: make || null,
+            model: model || null,
+            latitude,
+            longitude,
+          };
+        }
+        return null;
+      }
+    }
+    if (length <= 0) break;
+    offset += 2 + length;
+  }
+  return null;
+};
+
+const parsePdfMetadata = (bytes) => {
+  if (!bytes || bytes.length === 0) return null;
+  let text = '';
+  try {
+    text = new TextDecoder('latin1').decode(bytes);
+  } catch {
+    return null;
+  }
+  const fields = {
+    title: /\/Title\s*\(([^)]*)\)/i,
+    author: /\/Author\s*\(([^)]*)\)/i,
+    subject: /\/Subject\s*\(([^)]*)\)/i,
+    producer: /\/Producer\s*\(([^)]*)\)/i,
+    creator: /\/Creator\s*\(([^)]*)\)/i,
+  };
+  const metadata = {};
+  Object.entries(fields).forEach(([key, regex]) => {
+    const match = regex.exec(text);
+    if (match && match[1]) {
+      metadata[key] = match[1];
+    }
+  });
+  return Object.keys(metadata).length > 0 ? metadata : null;
+};
 
   const selectFile = async (file) => {
     try {
@@ -529,7 +699,7 @@ function Autopsy({ initialArtifacts = null }) {
         .decode(bytes)
         .replace(/[^\x20-\x7E]+/g, ' ');
       let hash = '';
-      if (crypto && crypto.subtle) {
+      if (typeof crypto !== 'undefined' && crypto.subtle) {
         const buf = await crypto.subtle.digest('SHA-256', bytes);
         hash = bufferToHex(new Uint8Array(buf)).replace(/ /g, '');
       }
@@ -543,6 +713,15 @@ function Autopsy({ initialArtifacts = null }) {
           imageUrl = null;
         }
       }
+      const metadata = {};
+      const lowerName = file.name.toLowerCase();
+      if (/\.jpe?g$/.test(lowerName)) {
+        const exif = parseExifMetadata(bytes);
+        if (exif) metadata.exif = exif;
+      } else if (/\.pdf$/.test(lowerName)) {
+        const pdf = parsePdfMetadata(bytes);
+        if (pdf) metadata.pdf = pdf;
+      }
       setSelectedFile({
         name: file.name,
         hex,
@@ -550,6 +729,7 @@ function Autopsy({ initialArtifacts = null }) {
         hash,
         known,
         imageUrl,
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
       });
       setPreviewTab('hex');
     } catch (e) {
@@ -560,10 +740,66 @@ function Autopsy({ initialArtifacts = null }) {
         hash: '',
         known: null,
         imageUrl: null,
+        metadata: null,
       });
       setPreviewTab('hex');
     }
   };
+
+  const copyToClipboard = useCallback((value) => {
+    if (!value) return;
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.clipboard &&
+      navigator.clipboard.writeText
+    ) {
+      navigator.clipboard.writeText(value).catch(() => {});
+      return;
+    }
+    if (typeof document !== 'undefined') {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        // ignore errors in fallback copy
+      }
+      document.body.removeChild(textarea);
+    }
+  }, []);
+
+  const renderMetadataField = useCallback(
+    (label, value) => {
+      if (value === null || value === undefined || value === '') return null;
+      const stringValue = typeof value === 'string' ? value : String(value);
+      return (
+        <div
+          key={label}
+          className="flex items-center justify-between gap-2 text-xs"
+        >
+          <span className="text-gray-300">{label}:</span>
+          <div className="flex items-center gap-1 text-white">
+            <span className="break-all">{stringValue}</span>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(stringValue)}
+              className="bg-ub-cool-grey px-2 py-0.5 rounded text-xs"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      );
+    },
+    [copyToClipboard]
+  );
+
+  const formatCoordinate = (value) =>
+    typeof value === 'number' ? value.toFixed(6) : null;
 
   useEffect(() => {
     return () => {
@@ -808,6 +1044,65 @@ function Autopsy({ initialArtifacts = null }) {
                       alt={selectedFile.name}
                       className="max-w-full h-auto"
                     />
+                  )}
+                  {selectedFile.metadata && (
+                    <div className="mt-3 space-y-2">
+                      <div className="font-semibold text-sm">Metadata</div>
+                      {selectedFile.metadata.exif && (
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-gray-300">
+                            EXIF Metadata
+                          </div>
+                          {renderMetadataField(
+                            'Camera Make',
+                            selectedFile.metadata.exif.make
+                          )}
+                          {renderMetadataField(
+                            'Camera Model',
+                            selectedFile.metadata.exif.model
+                          )}
+                          {renderMetadataField(
+                            'Latitude',
+                            formatCoordinate(
+                              selectedFile.metadata.exif.latitude
+                            )
+                          )}
+                          {renderMetadataField(
+                            'Longitude',
+                            formatCoordinate(
+                              selectedFile.metadata.exif.longitude
+                            )
+                          )}
+                        </div>
+                      )}
+                      {selectedFile.metadata.pdf && (
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-gray-300">
+                            PDF Metadata
+                          </div>
+                          {renderMetadataField(
+                            'Title',
+                            selectedFile.metadata.pdf.title
+                          )}
+                          {renderMetadataField(
+                            'Author',
+                            selectedFile.metadata.pdf.author
+                          )}
+                          {renderMetadataField(
+                            'Producer',
+                            selectedFile.metadata.pdf.producer
+                          )}
+                          {renderMetadataField(
+                            'Creator',
+                            selectedFile.metadata.pdf.creator
+                          )}
+                          {renderMetadataField(
+                            'Subject',
+                            selectedFile.metadata.pdf.subject
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
