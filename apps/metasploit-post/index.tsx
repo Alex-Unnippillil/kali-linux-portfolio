@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import modules from './modules.json';
 import privTree from './priv-esc.json';
 import RemediationTable from './components/RemediationTable';
+import IssueList from './components/IssueList';
 import ResultCard from './components/ResultCard';
 import usePersistentState from '../../hooks/usePersistentState';
 
@@ -639,6 +640,7 @@ const MetasploitPost: React.FC = () => {
             <h3 className="font-semibold mb-2">Privilege Escalation Tree</h3>
             <PrivTree node={privTree as PrivNode} />
           </div>
+          <IssueList />
           <RemediationTable />
           <EvidenceVault />
         </div>
