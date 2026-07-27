@@ -1,5 +1,6 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useContext } from 'react';
 import usePersistentState from '../../hooks/usePersistentState';
+import { NotificationsContext } from '../../components/common/NotificationCenter';
 
 export interface TrashItem {
   id: string;
@@ -12,10 +13,12 @@ export interface TrashItem {
 const ITEMS_KEY = 'window-trash';
 const HISTORY_KEY = 'window-trash-history';
 const HISTORY_LIMIT = 20;
+export const TRASH_FULL_THRESHOLD = 10;
 
 export default function useTrashState() {
   const [items, setItems] = usePersistentState<TrashItem[]>(ITEMS_KEY, []);
   const [history, setHistory] = usePersistentState<TrashItem[]>(HISTORY_KEY, []);
+  const notifications = useContext(NotificationsContext);
 
   useEffect(() => {
     const purgeDays = parseInt(
@@ -37,6 +40,53 @@ export default function useTrashState() {
     },
     [setHistory],
   );
+
+  const moveToTrash = useCallback(
+    (item: TrashItem) => {
+      setItems(prev => {
+        const purgeDays = parseInt(
+          window.localStorage.getItem('trash-purge-days') || '30',
+          10,
+        );
+        const ms = purgeDays * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const filtered = prev.filter(it => now - it.closedAt <= ms);
+        const next = [...filtered, item];
+        if (
+          notifications &&
+          filtered.length <= TRASH_FULL_THRESHOLD &&
+          next.length > TRASH_FULL_THRESHOLD
+        ) {
+          notifications.pushNotification('trash', 'Trash is full');
+        }
+        return next;
+      });
+      window.dispatchEvent(new Event('trash-change'));
+    },
+    [setItems, notifications],
+  );
+
+  const restore = useCallback(
+    (index: number): TrashItem | null => {
+      const removed = items[index] ?? null;
+      if (removed) {
+        setItems(prev => prev.filter((_, i) => i !== index));
+        window.dispatchEvent(new Event('trash-change'));
+      }
+      return removed;
+    },
+    [items, setItems],
+  );
+
+  const empty = useCallback(() => {
+    setItems(prev => {
+      if (prev.length) {
+        pushHistory(prev);
+      }
+      window.dispatchEvent(new Event('trash-change'));
+      return [];
+    });
+  }, [setItems, pushHistory]);
 
   const resolveNameConflict = (
     restored: TrashItem,
@@ -104,6 +154,16 @@ export default function useTrashState() {
     });
   }, [setHistory, setItems]);
 
-  return { items, setItems, history, pushHistory, restoreFromHistory, restoreAllFromHistory };
+  return {
+    items,
+    setItems,
+    history,
+    pushHistory,
+    restoreFromHistory,
+    restoreAllFromHistory,
+    moveToTrash,
+    restore,
+    empty,
+  };
 }
 
