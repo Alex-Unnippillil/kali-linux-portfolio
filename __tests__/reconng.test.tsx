@@ -66,4 +66,52 @@ describe('ReconNG app', () => {
     const rows = screen.getAllByText('example.com');
     expect(rows.length).toBe(1);
   });
+
+  it('persists template edits to localStorage', async () => {
+    render(<ReconNG />);
+    await userEvent.click(screen.getByText('Reports'));
+    const body = screen.getByLabelText('Body');
+    await userEvent.clear(body);
+    await userEvent.type(body, 'Summary for {{title}}');
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('reconng-template-library') || '{}',
+      );
+      const [first] = Object.values(stored) as { template: string }[];
+      expect(first.template).toContain('Summary for');
+    });
+  });
+
+  it('inserts template text at the cursor when editing findings', async () => {
+    render(<ReconNG />);
+    await userEvent.click(screen.getByText('Reports'));
+    const notes = screen.getByLabelText('Finding Notes');
+    await userEvent.clear(notes);
+    await userEvent.type(notes, 'Hello');
+    (notes as HTMLTextAreaElement).setSelectionRange(2, 2);
+    await userEvent.click(screen.getByRole('button', { name: /Insert Template/i }));
+    await waitFor(() => {
+      expect(notes).toHaveValue('He- Open Port 80 (Low)\nllo');
+    });
+  });
+
+  it('imports templates from a JSON file', async () => {
+    render(<ReconNG />);
+    await userEvent.click(screen.getByText('Reports'));
+    await userEvent.click(screen.getByRole('button', { name: /Import \/ Share/i }));
+    const fileInput = screen.getByLabelText('Import templates JSON');
+    const content = JSON.stringify({
+      custom: { name: 'Custom', template: 'Custom snippet {{title}}' },
+    });
+    const file = new File([content], 'templates.json', {
+      type: 'application/json',
+    });
+    await userEvent.upload(fileInput, file);
+    await waitFor(() => {
+      const stored = JSON.parse(
+        localStorage.getItem('reconng-template-library') || '{}',
+      );
+      expect(Object.keys(stored)).toContain('custom');
+    });
+  });
 });
