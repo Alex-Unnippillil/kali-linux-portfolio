@@ -27,61 +27,58 @@ describe('Settings reset flow', () => {
       </SettingsProvider>
     );
 
-    await screen.findByRole('button', { name: 'Reset' });
+    const expectSwitchState = (toggle: HTMLElement, expected: boolean) => {
+      expect(toggle).toHaveAttribute('aria-checked', expected ? 'true' : 'false');
+    };
 
-    const densitySelect = screen.getByRole('combobox');
-    const fontSlider = screen.getByLabelText('Adjust font scale');
-    const defaultAccentRadio = screen.getByRole('radio', {
-      name: `select-accent-${defaults.accent}`,
-    });
-    const alternateAccentRadio = screen.getByRole('radio', {
-      name: 'select-accent-#e53e3e',
-    });
-
-    const kaliWallpaperToggle = screen.getByLabelText('Enable Kali gradient wallpaper');
-    const reducedMotionToggle = screen.getByLabelText('Enable reduced motion');
-    const largeHitAreasToggle = screen.getByLabelText('Enable large hit areas');
-    const highContrastToggle = screen.getByLabelText('Enable high contrast mode');
-    const allowNetworkToggle = screen.getByLabelText('Allow simulated network requests');
-    const hapticsToggle = screen.getByLabelText('Enable haptics');
-    const pongSpinToggle = screen.getByLabelText('Enable pong spin');
-
-    await waitFor(() => expect(hapticsToggle).toBeChecked());
-    await waitFor(() => expect(pongSpinToggle).toBeChecked());
-
-    await user.click(alternateAccentRadio);
-    await user.selectOptions(densitySelect, 'compact');
-    fireEvent.change(fontSlider, { target: { value: '1.5' } });
+    const kaliWallpaperToggle = screen.getByRole('switch', { name: 'Toggle Gradient' });
     await user.click(kaliWallpaperToggle);
+    expectSwitchState(kaliWallpaperToggle, !defaults.useKaliWallpaper);
+
+    await user.click(screen.getByRole('button', { name: 'Accessibility' }));
+    const fontSlider = screen.getByRole('slider');
+    const reducedMotionToggle = screen.getByRole('switch', { name: 'Reduced Motion' });
+    const highContrastToggle = screen.getByRole('switch', { name: 'High Contrast' });
+    const largeHitAreasToggle = screen.getByRole('switch', { name: 'Large Hit Areas' });
+    const hapticsToggle = screen.getByRole('switch', { name: 'Haptics' });
+
+    fireEvent.change(fontSlider, { target: { value: '1.5' } });
     await user.click(reducedMotionToggle);
-    await user.click(largeHitAreasToggle);
     await user.click(highContrastToggle);
-    await user.click(allowNetworkToggle);
+    await user.click(largeHitAreasToggle);
     await user.click(hapticsToggle);
-    await user.click(pongSpinToggle);
 
-    expect(alternateAccentRadio).toHaveAttribute('aria-checked', 'true');
-    expect(densitySelect).toHaveValue('compact');
-    expect(fontSlider).toHaveValue('1.5');
-    expect(kaliWallpaperToggle).toBeChecked();
-    expect(reducedMotionToggle).toBeChecked();
-    expect(largeHitAreasToggle).toBeChecked();
-    expect(highContrastToggle).toBeChecked();
-    expect(allowNetworkToggle).toBeChecked();
-    expect(hapticsToggle).not.toBeChecked();
-    expect(pongSpinToggle).not.toBeChecked();
+    expectSwitchState(reducedMotionToggle, !defaults.reducedMotion);
+    expectSwitchState(highContrastToggle, !defaults.highContrast);
+    expectSwitchState(largeHitAreasToggle, !defaults.largeHitAreas);
+    expectSwitchState(hapticsToggle, !defaults.haptics);
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Privacy' }));
+    const allowNetworkToggle = screen.getByRole('switch', { name: 'Network' });
+    await user.click(allowNetworkToggle);
+    expectSwitchState(allowNetworkToggle, !defaults.allowNetwork);
 
-    await waitFor(() => expect(densitySelect).toHaveValue(defaults.density));
-    expect(fontSlider).toHaveValue(String(defaults.fontScale));
-    expect(kaliWallpaperToggle.checked).toBe(defaults.useKaliWallpaper);
-    expect(reducedMotionToggle.checked).toBe(defaults.reducedMotion);
-    expect(largeHitAreasToggle.checked).toBe(defaults.largeHitAreas);
-    expect(highContrastToggle.checked).toBe(defaults.highContrast);
-    expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
-    expect(hapticsToggle.checked).toBe(defaults.haptics);
-    expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
+    await user.click(screen.getByRole('button', { name: 'Reset all settings to default' }));
+
+    await user.click(screen.getByRole('button', { name: 'Appearance' }));
+    const resetWallpaperToggle = screen.getByRole('switch', { name: 'Toggle Gradient' });
+    await waitFor(() => expectSwitchState(resetWallpaperToggle, defaults.useKaliWallpaper));
+
+    await user.click(screen.getByRole('button', { name: 'Accessibility' }));
+    const resetFontSlider = screen.getByRole('slider');
+    const resetReducedMotionToggle = screen.getByRole('switch', { name: 'Reduced Motion' });
+    const resetHighContrastToggle = screen.getByRole('switch', { name: 'High Contrast' });
+    const resetLargeHitAreasToggle = screen.getByRole('switch', { name: 'Large Hit Areas' });
+    const resetHapticsToggle = screen.getByRole('switch', { name: 'Haptics' });
+    await waitFor(() => expect(resetFontSlider).toHaveValue(String(defaults.fontScale)));
+    expectSwitchState(resetReducedMotionToggle, defaults.reducedMotion);
+    expectSwitchState(resetHighContrastToggle, defaults.highContrast);
+    expectSwitchState(resetLargeHitAreasToggle, defaults.largeHitAreas);
+    expectSwitchState(resetHapticsToggle, defaults.haptics);
+
+    await user.click(screen.getByRole('button', { name: 'Privacy' }));
+    const resetAllowNetworkToggle = screen.getByRole('switch', { name: 'Network' });
+    expectSwitchState(resetAllowNetworkToggle, defaults.allowNetwork);
   });
 });
 
