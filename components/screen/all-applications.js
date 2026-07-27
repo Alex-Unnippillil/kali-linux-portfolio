@@ -618,7 +618,11 @@ class AllApplications extends React.Component {
                         </div>
                     ) : null}
                     {!hasResults && (
-                        <p className="mt-6 text-center text-sm text-white/70">
+                        <p
+                            role="status"
+                            aria-live="polite"
+                            className="mt-6 text-center text-sm text-white/70"
+                        >
                             No applications match your search.
                         </p>
                     )}
