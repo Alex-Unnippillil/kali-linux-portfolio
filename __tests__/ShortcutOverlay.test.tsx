@@ -25,4 +25,12 @@ describe('ShortcutOverlay', () => {
     expect(items[0]).toHaveAttribute('data-conflict', 'true');
     expect(items[1]).toHaveAttribute('data-conflict', 'true');
   });
+
+  it('closes with Escape key', () => {
+    render(<ShortcutOverlay />);
+    fireEvent.keyDown(window, { key: '?' });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
 });
