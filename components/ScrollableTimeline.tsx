@@ -40,7 +40,12 @@ const ScrollableTimeline: React.FC = () => {
 
   const monthItems = useMemo(() => {
     if (!selectedYear) return [] as GroupedMilestone[];
-    return milestonesByYear[selectedYear].sort((a, b) => a.month.localeCompare(b.month));
+    // If the selected year doesn't exist in the milestones map, default to an
+    // empty array to prevent runtime errors. Spread into a new array before
+    // sorting to avoid mutating the original data structure.
+    return [...(milestonesByYear[selectedYear] ?? [])].sort((a, b) =>
+      a.month.localeCompare(b.month),
+    );
   }, [milestonesByYear, selectedYear]);
 
   useEffect(() => {
