@@ -1,0 +1,64 @@
+<!--
+  Incident Response After Action Template
+  Expects data keys declared in templates/reports/incident-response.json
+-->
+
+# {{cover.title}}
+
+**Incident Name:** {{cover.incidentName}}  \
+**Client:** {{cover.client}}  \
+**Prepared By:** {{cover.preparedBy}}  \
+**Response Lead:** {{cover.responseLead}}  \
+**Report Date:** {{cover.reportDate}}  \
+**Document Version:** {{cover.version}}
+
+---
+
+## Executive Summary
+
+{{executiveSummary}}
+
+---
+
+## Incident Timeline
+
+{{#each timeline}}
+- **{{timestamp}}** — {{description}} _(Owner: {{owner}})_
+{{/each}}
+
+---
+
+## Impact Assessment
+
+{{impactAssessment}}
+
+---
+
+## Containment and Eradication
+
+{{containment}}
+
+---
+
+## Recovery Status
+
+{{recoveryStatus}}
+
+---
+
+## Lessons Learned
+
+{{lessonsLearned}}
+
+---
+
+## Follow-up Actions
+
+{{followUpActions}}
+
+---
+
+## Appendix — Evidence Log
+
+{{evidenceLog}}
+
