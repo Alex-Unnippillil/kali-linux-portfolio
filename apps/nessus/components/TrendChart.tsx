@@ -17,12 +17,12 @@ interface Entry {
   counts: Record<Severity, number>;
 }
 
-const colors: Record<Severity, string> = {
-  Critical: '#dc2626',
-  High: '#f97316',
-  Medium: '#eab308',
-  Low: '#16a34a',
-  Info: '#6b7280',
+const severityPalette: Record<Severity, string> = {
+  Critical: 'var(--color-severity-critical)',
+  High: 'var(--color-severity-high)',
+  Medium: 'var(--color-severity-medium)',
+  Low: 'var(--color-severity-low)',
+  Info: 'color-mix(in srgb, var(--color-text) 35%, transparent)',
 };
 
 export default function TrendChart() {
@@ -85,7 +85,7 @@ export default function TrendChart() {
             key={sev}
             d={d}
             fill="none"
-            stroke={colors[sev]}
+            stroke={severityPalette[sev]}
             strokeWidth={2.5}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -113,13 +113,13 @@ export default function TrendChart() {
           accept="application/json"
           onChange={handleFile}
           aria-labelledby="nessus-trend-upload-label"
-          className="block w-full max-w-xs cursor-pointer rounded-lg border border-slate-700/70 bg-slate-900/60 px-3 py-2 text-sm text-slate-200 file:mr-3 file:rounded-md file:border-0 file:bg-sky-500/90 file:px-3 file:py-1 file:text-sm file:font-semibold file:text-slate-900 hover:border-slate-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          className="block w-full max-w-xs cursor-pointer rounded-lg border border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_90%,transparent)] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)] file:mr-3 file:rounded-md file:border-0 file:bg-[color:color-mix(in_srgb,var(--color-accent)_90%,transparent)] file:px-3 file:py-1 file:text-sm file:font-semibold file:text-kali-inverse hover:border-[color:var(--color-accent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)]"
         />
         {hasHistory && (
           <button
             type="button"
             onClick={clear}
-            className="inline-flex items-center rounded-full border border-slate-600/70 bg-slate-800/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-200 transition hover:border-red-400/70 hover:text-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="inline-flex items-center rounded-full border border-[color:color-mix(in_srgb,var(--color-severity-critical)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_85%,var(--color-severity-critical)_15%)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_92%,transparent)] transition hover:border-[color:var(--color-severity-critical)] hover:text-[color:var(--color-text)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-severity-critical)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--kali-panel)]"
           >
             Clear history
           </button>
@@ -127,28 +127,28 @@ export default function TrendChart() {
       </div>
 
       {!hasHistory && (
-        <p className="text-sm text-slate-400">
+        <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
           Import previous scan JSON exports to visualise how severity counts evolve between assessments.
         </p>
       )}
 
       {hasHistory && (
-        <div className="space-y-6 rounded-xl border border-slate-800/70 bg-slate-900/70 p-4 shadow-inner shadow-black/30">
+        <div className="space-y-6 rounded-xl border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)] p-4 shadow-inner shadow-black/30">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]">
                 Severity trendlines
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[color:color-mix(in_srgb,var(--color-text)_55%,transparent)]">
                 Overlay of findings per severity across imported reports.
               </p>
             </div>
-            <ul className="flex flex-wrap items-center gap-3 text-xs">
+            <ul className="flex flex-wrap items-center gap-3 text-xs text-[color:color-mix(in_srgb,var(--color-text)_80%,transparent)]">
               {severities.map((sev) => (
-                <li key={sev} className="flex items-center gap-1 text-slate-300">
+                <li key={sev} className="flex items-center gap-1">
                   <span
                     className="inline-block h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: colors[sev] }}
+                    style={{ backgroundColor: severityPalette[sev] }}
                   />
                   <span className="uppercase tracking-wide">{sev}</span>
                 </li>
@@ -159,7 +159,7 @@ export default function TrendChart() {
             <svg
               width={width}
               height={height}
-              className="min-w-[20rem] rounded-lg bg-slate-950/60"
+              className="min-w-[20rem] rounded-lg bg-[color:color-mix(in_srgb,var(--kali-panel)_80%,transparent)]"
               role="img"
               aria-label="Trend lines showing findings per severity"
             >
@@ -169,15 +169,15 @@ export default function TrendChart() {
 
           {latest && (
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-slate-400">
+              <div className="flex items-center justify-between text-xs uppercase tracking-wide text-[color:color-mix(in_srgb,var(--color-text)_65%,transparent)]">
                 <span>Most recent import</span>
-                <span className="font-semibold text-slate-200">{latest.label}</span>
+                <span className="font-semibold text-[color:color-mix(in_srgb,var(--color-text)_90%,transparent)]">{latest.label}</span>
               </div>
               <div className="overflow-x-auto">
                 <svg
                   width={width}
                   height={height}
-                  className="min-w-[20rem] rounded-lg bg-slate-950/60"
+                  className="min-w-[20rem] rounded-lg bg-[color:color-mix(in_srgb,var(--kali-panel)_80%,transparent)]"
                   role="img"
                   aria-label="Bar chart of latest severity distribution"
                 >
@@ -193,14 +193,14 @@ export default function TrendChart() {
                           y={y}
                           width={barWidth}
                           height={barHeight || 2}
-                          fill={colors[sev]}
+                          fill={severityPalette[sev]}
                           rx={4}
                         />
                         <text
                           x={x + barWidth / 2}
                           y={height - 6}
                           textAnchor="middle"
-                          className="fill-slate-300 text-[11px] font-medium"
+                          className="fill-[color:color-mix(in_srgb,var(--color-text)_85%,transparent)] text-[11px] font-medium"
                         >
                           {latest.counts[sev]}
                         </text>
