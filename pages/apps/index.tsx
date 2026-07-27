@@ -4,14 +4,17 @@ import Link from 'next/link';
 import DelayedTooltip from '../../components/ui/DelayedTooltip';
 import AppTooltipContent from '../../components/ui/AppTooltipContent';
 import {
+  type AppEntry,
+  type AppMetadata,
   buildAppMetadata,
   loadAppRegistry,
 } from '../../lib/appRegistry';
+import { buildAppRoute } from '../../utils/routes';
 
 const AppsPage = () => {
-  const [apps, setApps] = useState([]);
+  const [apps, setApps] = useState<AppEntry[]>([]);
   const [query, setQuery] = useState('');
-  const [metadata, setMetadata] = useState({});
+  const [metadata, setMetadata] = useState<Record<string, AppMetadata>>({});
 
   useEffect(() => {
     let isMounted = true;
@@ -47,11 +50,12 @@ const AppsPage = () => {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Search apps"
+        aria-label="Search apps"
         className="mb-4 w-full rounded border p-2"
       />
       <div
         id="app-grid"
-        tabIndex="-1"
+        tabIndex={-1}
         className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
       >
         {filteredApps.map((app) => {
@@ -69,7 +73,7 @@ const AppsPage = () => {
                   className="flex flex-col items-center"
                 >
                   <Link
-                    href={`/apps/${app.id}`}
+                    href={buildAppRoute({ appId: app.id })}
                     className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
                     aria-label={app.title}
                     onFocus={onFocus}
