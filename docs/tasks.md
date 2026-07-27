@@ -2,6 +2,11 @@
 
 This document tracks planned improvements and new features for the desktop portfolio apps.
 
+## CI Workflows
+- Add a dedicated **Preview Release Cycle** workflow that can be triggered manually to guard the release pipeline. It pulls the Preview environment (`vercel pull`), runs `yarn lint`, `yarn tsc --noEmit`, and builds with `NEXT_PUBLIC_VERCEL_ENV=preview` before launching the production server.
+- The workflow drives Playwright spec `tests/release-cycle.spec.ts` against the preview build, which promotes the release channel to Preview, calls the service worker's `manualRefresh`, checks for console/storage errors, and resets the `release-channel` key back to Stable.
+- After the preview validation, the workflow rebuilds with `NEXT_PUBLIC_VERCEL_ENV=stable` and runs `yarn smoke` to confirm the stable channel remains healthy across Chromium, Firefox, and WebKit.
+
 ## Foundation
 - Add dynamic app factory at `utils/createDynamicApp.js` to unify dynamic imports and GA events.
 - Replace app imports in `apps.config.js` with the factory and `createDisplay` helper.
