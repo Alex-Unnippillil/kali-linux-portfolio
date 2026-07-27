@@ -22,6 +22,7 @@ const severityStyles = {
 const moduleTypes = ['auxiliary', 'exploit', 'post'];
 
 const timelineSteps = 5;
+const timelineStages = ['discovery', 'exploitation', 'post'];
 
 
 
@@ -152,7 +153,11 @@ const MetasploitApp = ({
 
   const [sessions, setSessions] = useState([]);
 
-  const [timeline, setTimeline] = useState([]);
+  const [timeline, setTimeline] = useState({
+    discovery: [],
+    exploitation: [],
+    post: [],
+  });
   const [replaying, setReplaying] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -385,22 +390,26 @@ const MetasploitApp = ({
 
   const startReplay = () => {
     if (workerRef.current) workerRef.current.terminate();
-    setTimeline([]);
+    setTimeline({ discovery: [], exploitation: [], post: [] });
     setProgress(0);
     setReplaying(true);
     const steps = [
-      'Initializing exploit...',
-      'Checking target...',
-      'Sending payload...',
-      'Gaining access...',
-      'Session established.'
+      { stage: 'discovery', message: 'Initializing exploit...' },
+      { stage: 'discovery', message: 'Checking target...' },
+      { stage: 'exploitation', message: 'Sending payload...' },
+      { stage: 'exploitation', message: 'Gaining access...' },
+      { stage: 'post', message: 'Session established.' }
     ];
     const lootItem = { host: '10.0.0.3', data: 'ssh-creds.txt' };
     if (typeof Worker === 'function') {
       const worker = new Worker(new URL('./exploit.worker.js', import.meta.url));
       worker.onmessage = (e) => {
         if (e.data.step) {
-          setTimeline((t) => [...t, e.data.step]);
+          const { stage, message } = e.data.step;
+          setTimeline((t) => ({
+            ...t,
+            [stage]: [...t[stage], message],
+          }));
         } else if (e.data.loot) {
           setLoot((l) => [...l, e.data.loot]);
           setShowLoot(true);
@@ -415,8 +424,11 @@ const MetasploitApp = ({
       let i = 0;
       const sendStep = () => {
         if (i < steps.length) {
-          const step = steps[i];
-          setTimeline((t) => [...t, step]);
+          const { stage, message } = steps[i];
+          setTimeline((t) => ({
+            ...t,
+            [stage]: [...t[stage], message],
+          }));
           if (i === 2) {
             setLoot((l) => [...l, lootItem]);
             setShowLoot(true);
@@ -460,6 +472,8 @@ const MetasploitApp = ({
       return added.length ? [...prev, ...added] : prev;
     });
   }, [output]);
+
+  const hasTimeline = Object.values(timeline).some((t) => t.length > 0);
 
   return (
     <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white">
@@ -720,18 +734,25 @@ const MetasploitApp = ({
             >
               Replay Mock Exploit
             </button>
-            {timeline.length > 0 && (
+            {hasTimeline && (
               <>
-                <ul
-                  className="mt-2 text-xs max-h-32 overflow-auto"
+                <div
+                  className="mt-2 text-xs space-y-1 max-h-32 overflow-auto"
                   role="log"
                   aria-live="polite"
                   aria-relevant="additions"
                 >
-                  {timeline.map((t, i) => (
-                    <li key={i}>{t}</li>
+                  {timelineStages.map((stage) => (
+                    <div key={stage} className="flex items-center">
+                      <span className="w-24 capitalize">{stage}</span>
+                      <ul className="flex-1 flex space-x-2 overflow-x-auto">
+                        {timeline[stage].map((t, i) => (
+                          <li key={i}>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
                 <div
                   className="w-full bg-ub-grey h-2 mt-2"
                   role="progressbar"
