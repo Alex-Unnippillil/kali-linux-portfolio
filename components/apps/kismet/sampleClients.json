@@ -1,13 +1,25 @@
 [
-  {"mac": "00:11:22:33:44:55", "history": [
-    {"ssid": "HomeWiFi", "bssid": "00:11:22:00:00:01"},
-    {"ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01"}
-  ]},
-  {"mac": "66:77:88:99:AA:BB", "history": [
-    {"ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01"},
-    {"ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01"}
-  ]},
-  {"mac": "AA:BB:CC:DD:EE:FF", "history": [
-    {"ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01"}
-  ]}
+  {
+    "mac": "00:11:22:33:44:55",
+    "type": "Laptop",
+    "history": [
+      { "ssid": "HomeWiFi", "bssid": "00:11:22:00:00:01" },
+      { "ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01" }
+    ]
+  },
+  {
+    "mac": "66:77:88:99:AA:BB",
+    "type": "Smartphone",
+    "history": [
+      { "ssid": "CoffeeShopWiFi", "bssid": "66:77:88:00:00:01" },
+      { "ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01" }
+    ]
+  },
+  {
+    "mac": "AA:BB:CC:DD:EE:FF",
+    "type": "IoT",
+    "history": [
+      { "ssid": "FreeAirport", "bssid": "AA:BB:CC:00:00:01" }
+    ]
+  }
 ]
