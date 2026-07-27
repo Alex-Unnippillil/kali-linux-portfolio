@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface LoaderProps {
   onData: (rows: any[]) => void;
@@ -9,6 +9,8 @@ interface LoaderProps {
 export default function FixturesLoader({ onData }: LoaderProps) {
   const [progress, setProgress] = useState(0);
   const [worker, setWorker] = useState<Worker | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const lastLoggedError = useRef<string | null>(null);
 
   useEffect(() => {
     const w = new Worker(new URL('../workers/fixturesParser.ts', import.meta.url));
@@ -28,15 +30,35 @@ export default function FixturesLoader({ onData }: LoaderProps) {
     return () => w.terminate();
   }, [onData]);
 
+  const logError = (message: string, detail?: unknown) => {
+    if (process.env.NODE_ENV !== 'production' && lastLoggedError.current !== message) {
+      console.error('[FixturesLoader] ', message, detail);
+      lastLoggedError.current = message;
+    }
+  };
+
   const loadSample = async () => {
-    const res = await fetch('/fixtures/sample.json');
-    const text = await res.text();
-    worker?.postMessage({ type: 'parse', text });
+    setError(null);
+    try {
+      const res = await fetch('/fixtures/sample.json');
+      if (!res.ok) {
+        throw new Error(`Request failed with status ${res.status}`);
+      }
+      const text = await res.text();
+      worker?.postMessage({ type: 'parse', text });
+      lastLoggedError.current = null;
+    } catch (err) {
+      const message = 'Unable to load sample fixtures. Please retry.';
+      setError(message);
+      logError(message, err);
+    }
   };
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setError(null);
+    lastLoggedError.current = null;
     const reader = new FileReader();
     reader.onload = () => {
       worker?.postMessage({ type: 'parse', text: reader.result });
@@ -60,6 +82,14 @@ export default function FixturesLoader({ onData }: LoaderProps) {
           Cancel
         </button>
       </div>
+      {error ? (
+        <div className="mb-2 flex items-center gap-2 text-ub-orange" role="alert">
+          <span>{error}</span>
+          <button onClick={loadSample} className="px-2 py-1 bg-ub-cool-grey text-white" type="button">
+            Retry
+          </button>
+        </div>
+      ) : null}
       <div className="mb-2" aria-label="progress">
         Parsing: {progress}%
       </div>
