@@ -1,6 +1,7 @@
 # Application Task List
 
 This document tracks planned improvements and new features for the desktop portfolio apps.
+For mobile-specific shell and launcher polish, see `docs/TASKS_MOBILE.md` which now contains stubbed helper code for responsive work.
 
 ## Foundation
 - Add dynamic app factory at `utils/createDynamicApp.js` to unify dynamic imports and GA events.
