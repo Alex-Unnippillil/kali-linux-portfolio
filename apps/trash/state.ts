@@ -16,6 +16,11 @@ const HISTORY_LIMIT = 20;
 export default function useTrashState() {
   const [items, setItems] = usePersistentState<TrashItem[]>(ITEMS_KEY, []);
   const [history, setHistory] = usePersistentState<TrashItem[]>(HISTORY_KEY, []);
+  const emitChange = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('trash-change'));
+    }
+  }, []);
 
   useEffect(() => {
     const purgeDays = parseInt(
@@ -24,8 +29,15 @@ export default function useTrashState() {
     );
     const ms = purgeDays * 24 * 60 * 60 * 1000;
     const now = Date.now();
-    setItems(prev => prev.filter(item => now - item.closedAt <= ms));
+    setItems(prev => {
+      const filtered = prev.filter(item => now - item.closedAt <= ms);
+      return filtered.length === prev.length ? prev : filtered;
+    });
   }, [setItems]);
+
+  useEffect(() => {
+    emitChange();
+  }, [items, emitChange]);
 
   const pushHistory = useCallback(
     (item: TrashItem | TrashItem[]) => {
