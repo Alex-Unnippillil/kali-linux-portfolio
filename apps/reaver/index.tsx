@@ -8,6 +8,7 @@ import RouterProfiles, {
 } from './components/RouterProfiles';
 import APList from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import PixieDustDemo from './components/PixieDustDemo';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -66,7 +67,7 @@ const formatTime = (seconds: number) => {
     .join(':');
 };
 
-const ReaverPanel: React.FC = () => {
+export const ReaverPanel: React.FC = () => {
   const [routers, setRouters] = useState<RouterMeta[]>([]);
   const [routerIdx, setRouterIdx] = useState(0);
   const [rate, setRate] = useState(1);
@@ -80,6 +81,7 @@ const ReaverPanel: React.FC = () => {
   const lockRef = useRef(0); // lockout seconds remaining
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logRef = useRef<HTMLDivElement>(null);
+  const [showPixieDust, setShowPixieDust] = useState(false);
 
   useEffect(() => {
     fetch('/demo-data/reaver/routers.json')
@@ -176,7 +178,9 @@ const ReaverPanel: React.FC = () => {
     }, [stageIdx]);
 
   useEffect(() => {
-    logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
+    if (logRef.current && typeof logRef.current.scrollTo === 'function') {
+      logRef.current.scrollTo({ top: logRef.current.scrollHeight });
+    }
   }, [logs]);
 
   const stageStatus = (i: number) => {
@@ -209,8 +213,23 @@ const ReaverPanel: React.FC = () => {
       </p>
 
       <div className="mb-6">
-        <h2 className="text-lg mb-2">Access Points</h2>
-        <APList />
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-lg">Access Points</h2>
+          {!showPixieDust && (
+            <button
+              type="button"
+              onClick={() => setShowPixieDust(true)}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm"
+            >
+              Launch Pixie Dust Guided Demo
+            </button>
+          )}
+        </div>
+        {showPixieDust ? (
+          <PixieDustDemo onCancel={() => setShowPixieDust(false)} />
+        ) : (
+          <APList />
+        )}
       </div>
 
       <div className="mb-6">
