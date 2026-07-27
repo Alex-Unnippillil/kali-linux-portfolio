@@ -10,6 +10,8 @@ export type PlacesMenuItem = {
 export interface PlacesMenuProps {
   heading?: string;
   items: PlacesMenuItem[];
+  error?: unknown;
+  onRetry?: () => void;
 }
 
 const KALI_ICON_MAP: Record<string, string> = {
@@ -46,56 +48,107 @@ const resolveKaliIcon = (id: string): string | undefined => {
   return KALI_ICON_MAP[normalizedId];
 };
 
-const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items }) => {
+const PlacesMenu: React.FC<PlacesMenuProps> = ({ heading = 'Places', items, error, onRetry }) => {
+  const retryButtonRef = React.useRef<HTMLButtonElement | null>(null);
+
+  React.useEffect(() => {
+    if (error && process.env.NODE_ENV !== 'production') {
+      console.error('[PlacesMenu] Failed to load menu items', error);
+    }
+  }, [error]);
+
+  const hasItems = items.length > 0;
+  const shouldShowFallback = !hasItems || Boolean(error);
+
+  React.useEffect(() => {
+    if (shouldShowFallback) {
+      retryButtonRef.current?.focus({ preventScroll: true });
+    }
+  }, [shouldShowFallback]);
+
+  const handleRetry = () => {
+    if (!onRetry) {
+      return;
+    }
+
+    onRetry();
+
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        retryButtonRef.current?.focus({ preventScroll: true });
+      });
+    } else {
+      retryButtonRef.current?.focus({ preventScroll: true });
+    }
+  };
+
   return (
     <nav aria-label={heading} className="w-56 select-none text-sm text-white">
       <header className="px-3 pb-2 text-xs font-semibold uppercase tracking-wide text-ubt-grey">
         {heading}
       </header>
-      <ul className="space-y-1">
-        {items.map((item) => {
-          const kaliIcon = resolveKaliIcon(item.id);
-          const src = kaliIcon ?? item.icon;
+      {shouldShowFallback ? (
+        <div
+          role="status"
+          className="flex flex-col gap-3 rounded px-3 py-4 text-sm text-ubt-grey"
+        >
+          <p className="font-medium text-white">Cannot open.</p>
+          <button
+            type="button"
+            onClick={handleRetry}
+            ref={retryButtonRef}
+            disabled={!onRetry}
+            className="inline-flex w-max items-center justify-center rounded bg-gray-700 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-ubb-orange disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Retry
+          </button>
+        </div>
+      ) : (
+        <ul className="space-y-1">
+          {items.map((item) => {
+            const kaliIcon = resolveKaliIcon(item.id);
+            const src = kaliIcon ?? item.icon;
 
-          const handleClick = () => {
-            item.onSelect?.();
-          };
+            const handleClick = () => {
+              item.onSelect?.();
+            };
 
-          return (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={handleClick}
-                className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
-              >
-                <img
-                  src={src}
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="h-7 w-7 flex-shrink-0"
-                  data-fallback-src={item.icon}
-                  onError={(event) => {
-                    const target = event.currentTarget;
-                    if (target.getAttribute(FALLBACK_FLAG) === 'true') {
-                      return;
-                    }
+            return (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={handleClick}
+                  className="flex w-full items-center gap-3 rounded px-3 py-2 text-left transition hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-ubb-orange"
+                >
+                  <img
+                    src={src}
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="h-7 w-7 flex-shrink-0"
+                    data-fallback-src={item.icon}
+                    onError={(event) => {
+                      const target = event.currentTarget;
+                      if (target.getAttribute(FALLBACK_FLAG) === 'true') {
+                        return;
+                      }
 
-                    const fallback = target.getAttribute(FALLBACK_SRC);
-                    if (!fallback) {
-                      return;
-                    }
+                      const fallback = target.getAttribute(FALLBACK_SRC);
+                      if (!fallback) {
+                        return;
+                      }
 
-                    target.setAttribute(FALLBACK_FLAG, 'true');
-                    target.src = fallback;
-                  }}
-                />
-                <span className="truncate">{item.label}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                      target.setAttribute(FALLBACK_FLAG, 'true');
+                      target.src = fallback;
+                    }}
+                  />
+                  <span className="truncate">{item.label}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </nav>
 
   );
