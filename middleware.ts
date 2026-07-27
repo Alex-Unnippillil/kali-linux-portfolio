@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 function nonce() {
-  const arr = new Uint8Array(16);
-  crypto.getRandomValues(arr);
-  return Buffer.from(arr).toString('base64');
+  const arr = crypto.getRandomValues(new Uint8Array(16));
+  return btoa(String.fromCharCode(...arr));
 }
 
 export function middleware(req: NextRequest) {
