@@ -1,6 +1,7 @@
 import React from 'react';
 import FeedStatusCard from './feed-status-card';
 import TaskRunChart from './task-run-chart';
+import { AppPanel, AppToolbar, StatusChip } from '../shared';
 
 const TaskOverview = () => {
   const tasks = [
@@ -12,10 +13,12 @@ const TaskOverview = () => {
   return (
     <div className="mb-4">
       <FeedStatusCard />
-      <div className="rounded-xl border border-white/10 bg-kali-surface-muted/80 p-4 text-white shadow-kali-panel backdrop-blur">
-        <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-kali-control">
-          Demo Task Overview
-        </h3>
+      <AppPanel className="border-white/10 bg-kali-surface-muted/80 p-4 text-white shadow-kali-panel backdrop-blur">
+        <AppToolbar className="mb-2 rounded-lg border-white/10 bg-kali-surface-raised/60 px-3 py-2">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-kali-control">
+            Demo Task Overview
+          </h3>
+        </AppToolbar>
         <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-kali-muted">
           Run History
         </h4>
@@ -24,16 +27,16 @@ const TaskOverview = () => {
           {tasks.map((t) => (
             <li key={t.name} className="flex items-center justify-between">
               <span>{t.name}</span>
-              <span className="rounded-full bg-kali-surface-raised/70 px-2 py-0.5 text-xs font-medium text-white/70">
+              <StatusChip className="border-white/15 bg-kali-surface-raised/70 text-white/70">
                 {t.status}
-              </span>
+              </StatusChip>
             </li>
           ))}
         </ul>
         <p className="mt-2 text-xs text-white/60">
           All task data is canned for demonstration purposes.
         </p>
-      </div>
+      </AppPanel>
     </div>
   );
 };
