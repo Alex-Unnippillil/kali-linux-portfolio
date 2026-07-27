@@ -5,6 +5,7 @@ import React, {
   useEffect,
 } from 'react';
 import rawMilestones from '../data/milestones.json';
+import { observeViewport } from '../utils/viewport';
 
 interface Milestone {
   date: string; // YYYY-MM
@@ -53,20 +54,25 @@ const ScrollableTimeline: React.FC = () => {
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+
+    const nodes = itemRefs.current.filter((el): el is HTMLLIElement => el !== null);
+    const uniqueNodes = Array.from(new Set(nodes));
+
+    const unsubscribers = uniqueNodes.map((el) =>
+      observeViewport(
+        el,
+        (entry) => {
           if (entry.isIntersecting) {
             (entry.target as HTMLElement).focus();
           }
-        });
-      },
-      { root: container, threshold: 0.6 },
+        },
+        { root: container, threshold: 0.6 },
+      ),
     );
-    itemRefs.current.forEach((el) => {
-      if (el) observer.observe(el);
-    });
-    return () => observer.disconnect();
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => unsubscribe());
+    };
   }, [view, years, monthItems]);
 
   const renderTags = (tags: string[]) => (
