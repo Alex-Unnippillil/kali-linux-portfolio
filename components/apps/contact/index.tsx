@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import FormError from '../../ui/FormError';
+import Button from '../../ui/Button';
 import { copyToClipboard } from '../../../utils/clipboard';
 import { openMailto } from '../../../utils/mailto';
 import { contactSchema } from '../../../utils/contactSchema';
@@ -401,17 +402,9 @@ const ContactApp: React.FC = () => {
           autoComplete="off"
         />
         {error && <FormError className="mt-3">{error}</FormError>}
-        <button
-          type="submit"
-          disabled={submitting}
-          className="flex items-center justify-center rounded bg-blue-600 px-4 py-2 disabled:opacity-50"
-        >
-          {submitting ? (
-            <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          ) : (
-            'Send'
-          )}
-        </button>
+        <Button type="submit" loading={submitting} className="mt-2 w-full sm:w-auto">
+          Send
+        </Button>
       </form>
     </div>
   );
