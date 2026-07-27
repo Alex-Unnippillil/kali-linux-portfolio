@@ -144,6 +144,52 @@ describe('Sudoku app UI', () => {
     expect(screen.getByText('Best')).toBeInTheDocument();
   });
 
+  test('auto notes fills candidates and can be undone', async () => {
+    render(<Sudoku />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /auto notes/i }));
+    });
+
+    expect(screen.getByText(/Auto notes filled for/i)).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /undo last move/i }));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/Undid last action/i)).toBeInTheDocument();
+    });
+  });
+
+  test('clear notes removes candidate notes and supports redo', async () => {
+    render(<Sudoku />);
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /auto notes/i }));
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /clear notes/i }));
+    });
+
+    expect(screen.getByText(/Cleared notes for/i)).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /undo last move/i }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/Undid last action/i)).toBeInTheDocument();
+    });
+
+    act(() => {
+      fireEvent.click(screen.getByRole('button', { name: /redo last move/i }));
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/Redid last action/i)).toBeInTheDocument();
+    });
+  });
+
   test('reset clears persisted puzzle state', async () => {
     render(<Sudoku />);
 
