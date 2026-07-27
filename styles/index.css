@@ -1,6 +1,20 @@
 @import './globals.css';
 @import './animation.css';
 
+:root {
+    --kali-surface-0: var(--color-bg);
+    --kali-surface-1: var(--color-dark);
+    --kali-surface-2: var(--color-surface);
+    --kali-surface-3: var(--color-muted);
+    --kali-surface-4: color-mix(in srgb, var(--color-muted), var(--color-text) 20%);
+    --kali-border: var(--color-border);
+    --kali-text: var(--color-text);
+    --kali-muted: var(--color-muted);
+    --kali-link: var(--color-primary);
+    --kali-accent: var(--color-accent);
+    --kali-accent-weak: color-mix(in srgb, var(--color-accent), transparent 50%);
+}
+
 html {
     font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
 }
