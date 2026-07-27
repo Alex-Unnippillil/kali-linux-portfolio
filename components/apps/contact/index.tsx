@@ -281,6 +281,33 @@ const ContactApp: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       <h1 className="mb-6 text-2xl">Contact</h1>
+      <section
+        className="mb-6 rounded border border-blue-500 bg-gray-800 p-4 text-sm"
+        aria-labelledby="contact-service-info-title"
+      >
+        <h2
+          id="contact-service-info-title"
+          className="text-base font-semibold text-blue-200"
+        >
+          Service information
+        </h2>
+        <p className="mt-2 text-gray-200">
+          This portfolio runs the contact form as a demo. When server credentials
+          are not configured, the backend stays read-only and surfaces the copy
+          and mailto fallbacks so you can still reach out manually.
+        </p>
+        <p className="mt-2 text-gray-200">
+          Requests to <code className="bg-gray-900 px-1">/api/contact</code> are
+          rate limited to <strong>5 submissions per minute</strong> to protect the
+          service. If you see a rate limit warning, wait about a minute before
+          trying again.
+        </p>
+        <p className="mt-2 text-gray-200">
+          Drafts stay on your device thanks to the browser file system API, so
+          your message is preserved even while the backend operates in
+          read-only mode.
+        </p>
+      </section>
       {banner && (
         <div
           className={`mb-6 rounded p-3 text-sm ${
