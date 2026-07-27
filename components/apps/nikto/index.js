@@ -1,10 +1,58 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+} from 'react';
+import rules from './rules.json';
 
 const suggestions = {
   '/admin': 'Restrict access to the admin portal or remove it from public view.',
   '/cgi-bin/test':
     'Remove or secure unnecessary CGI scripts and ensure they are up to date.',
   '/': 'Disable or standardize ETag headers to avoid disclosing inodes.',
+};
+
+const formatCategory = (name) =>
+  name.replace(/\b\w/g, (char) => char.toUpperCase());
+
+const slugifyCategory = (name) => name.replace(/\s+/g, '-').toLowerCase();
+
+const buildPendingChecks = (categories) =>
+  Object.entries(rules).flatMap(([category, checks]) =>
+    categories[category]
+      ? checks.map((rule) => ({ ...rule, category }))
+      : []
+  );
+
+const createInitialConfiguration = () => {
+  const categories = Object.keys(rules).reduce((acc, category) => {
+    acc[category] = true;
+    return acc;
+  }, {});
+  return {
+    categories,
+    pending: buildPendingChecks(categories),
+  };
+};
+
+const configurationReducer = (state, action) => {
+  switch (action.type) {
+    case 'toggle-category': {
+      if (!(action.category in state.categories)) return state;
+      const categories = {
+        ...state.categories,
+        [action.category]: !state.categories[action.category],
+      };
+      return {
+        categories,
+        pending: buildPendingChecks(categories),
+      };
+    }
+    default:
+      return state;
+  }
 };
 
 const NiktoApp = () => {
@@ -18,6 +66,12 @@ const NiktoApp = () => {
   const [filterPath, setFilterPath] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('All');
   const [error, setError] = useState('');
+  const [configuration, dispatchConfiguration] = useReducer(
+    configurationReducer,
+    undefined,
+    createInitialConfiguration
+  );
+  const categoryEntries = useMemo(() => Object.entries(rules), []);
 
   useEffect(() => {
     const load = async () => {
@@ -206,6 +260,78 @@ const NiktoApp = () => {
           </label>
         </div>
       </form>
+      <div className="bg-gray-800 p-4 rounded space-y-3">
+        <h2 className="text-lg mb-1">Scan Configuration</h2>
+        <fieldset className="space-y-2">
+          <legend className="text-sm text-gray-300">Rule Categories</legend>
+          {categoryEntries.map(([category, checks]) => {
+            const slug = slugifyCategory(category);
+            return (
+              <label
+                key={category}
+                htmlFor={`nikto-category-${slug}`}
+                className="flex items-center justify-between rounded border border-gray-700 px-3 py-2 text-sm"
+              >
+                <span className="flex items-center">
+                  <input
+                    id={`nikto-category-${slug}`}
+                    type="checkbox"
+                    className="mr-2"
+                    checked={configuration.categories[category]}
+                    onChange={() =>
+                      dispatchConfiguration({
+                        type: 'toggle-category',
+                        category,
+                      })
+                    }
+                  />
+                  <span className="font-medium">
+                    {formatCategory(category)}
+                  </span>
+                </span>
+                <span className="text-xs text-gray-400">
+                  {checks.length} checks
+                </span>
+              </label>
+            );
+          })}
+        </fieldset>
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-md">Pending Checks</h3>
+            <span className="text-xs bg-gray-700 px-2 py-1 rounded-full">
+              {configuration.pending.length}
+            </span>
+          </div>
+          {configuration.pending.length > 0 ? (
+            <ul
+              data-testid="pending-checks"
+              className="space-y-2 text-sm"
+            >
+              {configuration.pending.map((rule) => (
+                <li key={rule.id} className="bg-gray-900 p-2 rounded">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">{rule.title}</span>
+                    <span className="text-xs uppercase tracking-wide text-gray-400">
+                      {formatCategory(rule.category)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300 mt-1">
+                    {rule.description}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p
+              className="text-sm text-green-300"
+              data-testid="pending-checks-empty"
+            >
+              All categories disabled. Checks paused.
+            </p>
+          )}
+        </div>
+      </div>
       <div>
         <h2 className="text-lg mb-2">Command Preview</h2>
         <pre className="bg-black text-green-400 p-2 rounded overflow-auto">
