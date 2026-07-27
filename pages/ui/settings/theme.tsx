@@ -73,9 +73,20 @@ export default function ThemeSettings() {
       <nav className="w-48 p-4 border-r border-ubt-cool-grey text-sm">
         <ul className="space-y-1.5">
           <li>
-            <a className="flex items-center gap-2 p-2 rounded-l-md border-l-2 border-ubt-blue bg-ub-cool-grey">
+            <a
+              className="flex items-center gap-2 p-2 rounded-l-md border-l-2 border-ubt-blue bg-ub-cool-grey"
+            >
               <span className="w-6 h-6 bg-ubt-grey rounded"></span>
               <span>Theme</span>
+            </a>
+          </li>
+          <li>
+            <a
+              href="/ui/settings/display"
+              className="flex items-center gap-2 p-2 rounded-l-md hover:bg-ub-cool-grey"
+            >
+              <span className="w-6 h-6 bg-ubt-grey rounded"></span>
+              <span>Display</span>
             </a>
           </li>
         </ul>
