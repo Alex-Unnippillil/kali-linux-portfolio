@@ -1,0 +1,60 @@
+/* Monospace fallbacks tuned for consistent glyph widths across locales.
+ * - Modern developer fonts lead the stack for crisp Latin/Cyrillic rendering.
+ * - Platform defaults follow to match macOS, Windows, and Linux expectations.
+ * - Courier New and script-specific faces cover RTL use cases without width jitter.
+ * - Noto Sans Mono CJK variants round out East Asian support before the generic fallback.
+ */
+:root {
+  --font-family-monospace:
+    /* Contemporary IDE-friendly monospace faces */
+    'JetBrains Mono',
+    'Fira Code',
+    'Fira Mono',
+    'Ubuntu Mono',
+    'Cascadia Code',
+    'Source Code Pro',
+    'IBM Plex Mono',
+    /* Platform defaults to preserve native rendering */
+    'SFMono-Regular',
+    'Menlo',
+    'Consolas',
+    'DejaVu Sans Mono',
+    'Liberation Mono',
+    /* Wide-script fallbacks with reliable advance widths */
+    'Courier New',
+    'Noto Sans Mono',
+    'Noto Sans Mono CJK JP',
+    'Noto Sans Mono CJK KR',
+    'Noto Sans Mono CJK SC',
+    'Noto Sans Mono CJK TC',
+    ui-monospace,
+    monospace;
+}
+
+/* Prefer fonts with proven Arabic and Hebrew coverage when the page runs RTL. */
+:root[dir='rtl'],
+[dir='rtl'] {
+  --font-family-monospace:
+    'Simplified Arabic Fixed',
+    'Miriam Fixed',
+    'Courier New',
+    'Noto Sans Mono',
+    'Noto Sans Mono CJK JP',
+    'Noto Sans Mono CJK KR',
+    'Noto Sans Mono CJK SC',
+    'Noto Sans Mono CJK TC',
+    'JetBrains Mono',
+    'Fira Code',
+    'Fira Mono',
+    'Ubuntu Mono',
+    'Cascadia Code',
+    'Source Code Pro',
+    'IBM Plex Mono',
+    'SFMono-Regular',
+    'Menlo',
+    'Consolas',
+    'DejaVu Sans Mono',
+    'Liberation Mono',
+    ui-monospace,
+    monospace;
+}
