@@ -12,6 +12,20 @@ const MAX_RECENT_APPS = 10;
 const GRID_ROW_HEIGHT = 176;
 const MAX_GRID_HEIGHT = 560;
 
+const shouldProfileLauncher = () =>
+    typeof window !== 'undefined' && window.__APP_LAUNCHER_PROFILE === true;
+
+const withLauncherProfile = (label, fn) => {
+    if (!shouldProfileLauncher() || typeof performance === 'undefined') {
+        return fn();
+    }
+    const start = performance.now();
+    const result = fn();
+    const duration = performance.now() - start;
+    console.debug(`[Launcher] ${label} in ${duration.toFixed(2)}ms`);
+    return result;
+};
+
 const SEARCH_WEIGHTS = {
     exactTitle: 100,
     startsWith: 80,
@@ -215,6 +229,9 @@ class AllApplications extends React.Component {
             focusedIndex: null,
             columnCount: 1,
         };
+        this.rankCache = null;
+        this.appCollectionsCache = null;
+        this.resizeRaf = null;
     }
 
     componentDidMount() {
@@ -240,7 +257,15 @@ class AllApplications extends React.Component {
         });
 
         this.handleResize = () => {
-            this.setState({ columnCount: getColumnCount(window.innerWidth) });
+            if (this.resizeRaf) {
+                cancelAnimationFrame(this.resizeRaf);
+            }
+            this.resizeRaf = requestAnimationFrame(() => {
+                const nextCount = getColumnCount(window.innerWidth);
+                if (nextCount !== this.state.columnCount) {
+                    this.setState({ columnCount: nextCount });
+                }
+            });
         };
         window.addEventListener('resize', this.handleResize);
     }
@@ -249,13 +274,102 @@ class AllApplications extends React.Component {
         if (this.handleResize) {
             window.removeEventListener('resize', this.handleResize);
         }
+        if (this.resizeRaf) {
+            cancelAnimationFrame(this.resizeRaf);
+        }
     }
+
+    getRankedApps = (query, unfilteredApps) => {
+        if (
+            this.rankCache &&
+            this.rankCache.query === query &&
+            this.rankCache.apps === unfilteredApps
+        ) {
+            return this.rankCache;
+        }
+
+        const ranked = withLauncherProfile('rank apps', () => rankApps(unfilteredApps, query));
+        this.rankCache = { query, apps: unfilteredApps, ...ranked };
+        return this.rankCache;
+    };
+
+    getAppCollections = (apps, favorites, recents) => {
+        if (
+            this.appCollectionsCache &&
+            this.appCollectionsCache.apps === apps &&
+            this.appCollectionsCache.favorites === favorites &&
+            this.appCollectionsCache.recents === recents
+        ) {
+            return this.appCollectionsCache.result;
+        }
+
+        const result = withLauncherProfile('build launcher collections', () => {
+            const appMap = new Map(apps.map((app) => [app.id, app]));
+            const appIndexMap = new Map(apps.map((app, index) => [app.id, index]));
+            const favoriteApps = sortAppsByTitle(
+                favorites
+                    .map((id) => appMap.get(id))
+                    .filter(Boolean)
+            );
+            const recentApps = recents
+                .map((id) => appMap.get(id))
+                .filter(Boolean);
+            const folderTemplates = createFolderDefinitions();
+            const folderMap = new Map(folderTemplates.map((folder) => [folder.id, folder]));
+            const assignedIds = new Set();
+            apps.forEach((app) => {
+                const targetFolder = app.category ? folderMap.get(app.category) : null;
+                if (targetFolder) {
+                    targetFolder.items.push(app);
+                    assignedIds.add(app.id);
+                }
+            });
+            const remainingApps = apps.filter((app) => !assignedIds.has(app.id));
+            if (remainingApps.length) {
+                folderTemplates.push({
+                    id: 'other',
+                    title: 'Additional Apps',
+                    description: 'Tools that do not fit into the main folders.',
+                    icon: DEFAULT_FOLDER_ICON,
+                    accent: '#94a3b8',
+                    match: () => false,
+                    items: sortAppsByTitle(remainingApps),
+                });
+            }
+            const folderSections = folderTemplates
+                .map((folder) => ({
+                    ...folder,
+                    items: sortAppsByTitle(folder.items || []),
+                }))
+                .filter((folder) => folder.items.length > 0);
+
+            const hasResults =
+                favoriteApps.length > 0 ||
+                recentApps.length > 0 ||
+                folderSections.length > 0;
+
+            return {
+                appMap,
+                appIndexMap,
+                favoriteApps,
+                recentApps,
+                folderSections,
+                hasResults,
+            };
+        });
+
+        this.appCollectionsCache = { apps, favorites, recents, result };
+        return result;
+    };
 
     handleChange = (e) => {
         const value = e.target.value;
         const { unfilteredApps } = this.state;
         const query = typeof value === 'string' ? value : '';
-        const { results, matches } = rankApps(unfilteredApps, query);
+        const { results, matches } = this.getRankedApps(query, unfilteredApps);
+        if (query === this.state.query && results === this.state.apps) {
+            return;
+        }
         this.setState({
             query,
             apps: results,
@@ -513,49 +627,14 @@ class AllApplications extends React.Component {
     render() {
         const { apps, favorites, recents } = this.state;
         const { searchInputRef, headingId = 'all-apps-title' } = this.props;
-        const appMap = new Map(apps.map((app) => [app.id, app]));
-        this.appIndexMap = new Map(apps.map((app, index) => [app.id, index]));
-        const favoriteApps = sortAppsByTitle(
-            favorites
-                .map((id) => appMap.get(id))
-                .filter(Boolean)
-        );
-        const recentApps = recents
-            .map((id) => appMap.get(id))
-            .filter(Boolean);
-        const folderTemplates = createFolderDefinitions();
-        const folderMap = new Map(folderTemplates.map((folder) => [folder.id, folder]));
-        const assignedIds = new Set();
-        apps.forEach((app) => {
-            const targetFolder = app.category ? folderMap.get(app.category) : null;
-            if (targetFolder) {
-                targetFolder.items.push(app);
-                assignedIds.add(app.id);
-            }
-        });
-        const remainingApps = apps.filter((app) => !assignedIds.has(app.id));
-        if (remainingApps.length) {
-            folderTemplates.push({
-                id: 'other',
-                title: 'Additional Apps',
-                description: 'Tools that do not fit into the main folders.',
-                icon: DEFAULT_FOLDER_ICON,
-                accent: '#94a3b8',
-                match: () => false,
-                items: sortAppsByTitle(remainingApps),
-            });
-        }
-        const folderSections = folderTemplates
-            .map((folder) => ({
-                ...folder,
-                items: sortAppsByTitle(folder.items || []),
-            }))
-            .filter((folder) => folder.items.length > 0);
-
-        const hasResults =
-            favoriteApps.length > 0 ||
-            recentApps.length > 0 ||
-            folderSections.length > 0;
+        const {
+            appIndexMap,
+            favoriteApps,
+            recentApps,
+            folderSections,
+            hasResults,
+        } = this.getAppCollections(apps, favorites, recents);
+        this.appIndexMap = appIndexMap;
 
         const headerAccentStyles = {
             borderColor: 'color-mix(in srgb, var(--color-accent), transparent 55%)',
