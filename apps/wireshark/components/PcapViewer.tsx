@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
@@ -9,6 +9,7 @@ import LayerView from './LayerView';
 
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: Packet[];
 }
 
 const protocolColors: Record<string, string> = {
@@ -21,6 +22,136 @@ const samples = [
   { label: 'HTTP', path: '/samples/wireshark/http.pcap' },
   { label: 'DNS', path: '/samples/wireshark/dns.pcap' },
 ];
+
+interface StreamInfo {
+  id: string;
+  canonicalA: StreamEndpoint;
+  canonicalB: StreamEndpoint;
+  direction: 'forward' | 'reverse';
+}
+
+const extractTcpPayload = (data: Uint8Array): Uint8Array | undefined => {
+  const ethernetHeader = 14;
+  if (data.length <= ethernetHeader) return undefined;
+  const ipHeaderLength = (data[ethernetHeader] & 0x0f) * 4;
+  const tcpHeaderOffset = ethernetHeader + ipHeaderLength;
+  if (tcpHeaderOffset + 13 >= data.length) return undefined;
+  const tcpHeaderLength = ((data[tcpHeaderOffset + 12] >> 4) & 0xf) * 4;
+  if (tcpHeaderLength <= 0) return undefined;
+  const payloadStart = tcpHeaderOffset + tcpHeaderLength;
+  if (payloadStart >= data.length) return undefined;
+  return data.slice(payloadStart);
+};
+
+const ipToNumber = (ip: string) =>
+  ip
+    .split('.')
+    .map((part) => Number(part) & 0xff)
+    .reduce((acc, part) => (acc << 8) + (Number.isNaN(part) ? 0 : part), 0);
+
+const buildStreamKey = (packet: Packet): StreamInfo | null => {
+  if (packet.protocol !== 6 || packet.sport == null || packet.dport == null)
+    return null;
+  const srcEndpoint: StreamEndpoint = { ip: packet.src, port: packet.sport };
+  const destEndpoint: StreamEndpoint = { ip: packet.dest, port: packet.dport };
+  const ordered = [srcEndpoint, destEndpoint].sort((a, b) => {
+    const diffIp = ipToNumber(a.ip) - ipToNumber(b.ip);
+    if (diffIp !== 0) return diffIp;
+    return a.port - b.port;
+  });
+  const [canonicalA, canonicalB] = ordered;
+  const direction =
+    canonicalA.ip === srcEndpoint.ip && canonicalA.port === srcEndpoint.port
+      ? 'forward'
+      : 'reverse';
+  const id = `6:${canonicalA.ip}:${canonicalA.port}-${canonicalB.ip}:${canonicalB.port}`;
+  return { id, canonicalA, canonicalB, direction };
+};
+
+const toPrintablePayload = (payload: Uint8Array): string => {
+  let text = '';
+  for (let i = 0; i < payload.length; i += 1) {
+    const byte = payload[i];
+    if (byte === 10) text += '\n';
+    else if (byte === 13) text += '\r';
+    else if (byte === 9) text += '\t';
+    else if (byte >= 32 && byte <= 126) text += String.fromCharCode(byte);
+    else text += '.';
+  }
+  return text;
+};
+
+const formatStreamTranscript = (stream: StreamData): string => {
+  if (!stream.messages.length) {
+    return `Stream ${stream.id} has no payload.`;
+  }
+  return stream.messages
+    .map((message) => {
+      const from =
+        message.direction === 'forward'
+          ? stream.endpoints.a
+          : stream.endpoints.b;
+      const to =
+        message.direction === 'forward'
+          ? stream.endpoints.b
+          : stream.endpoints.a;
+      return `[${message.timestamp}] ${from.ip}:${from.port} → ${to.ip}:${to.port}\n${message.payload}`;
+    })
+    .join('\n\n');
+};
+
+const processPackets = (
+  input: Packet[]
+): { processed: ProcessedPacket[]; streams: Record<string, StreamData> } => {
+  const streamMap: Record<string, StreamData> = {};
+  const processed = input.map((pkt, index) => {
+    const payloadBytes =
+      pkt.protocol === 6
+        ? pkt.payload ?? extractTcpPayload(pkt.data)
+        : undefined;
+    const processedPacket: ProcessedPacket = {
+      ...pkt,
+      payload: payloadBytes,
+    };
+    const streamInfo = buildStreamKey(processedPacket);
+    if (streamInfo) {
+      processedPacket.streamKey = streamInfo.id;
+      if (!streamMap[streamInfo.id]) {
+        streamMap[streamInfo.id] = {
+          id: streamInfo.id,
+          protocol: pkt.protocol,
+          endpoints: {
+            a: streamInfo.canonicalA,
+            b: streamInfo.canonicalB,
+          },
+          messages: [],
+        };
+      }
+      const stream = streamMap[streamInfo.id];
+      if (payloadBytes && payloadBytes.length > 0) {
+        const text = toPrintablePayload(payloadBytes);
+        if (text) {
+          const last = stream.messages[stream.messages.length - 1];
+          if (last && last.direction === streamInfo.direction) {
+            last.payload += text;
+          } else {
+            stream.messages.push({
+              direction: streamInfo.direction,
+              payload: text,
+              timestamp: pkt.timestamp,
+              index,
+            });
+          }
+        }
+      }
+    }
+    return processedPacket;
+  });
+  Object.values(streamMap).forEach((stream) => {
+    stream.messages.sort((a, b) => a.index - b.index);
+  });
+  return { processed, streams: streamMap };
+};
 
 // Convert bytes to hex dump string
 const toHex = (bytes: Uint8Array) =>
@@ -37,11 +168,38 @@ interface Packet {
   data: Uint8Array;
   sport?: number;
   dport?: number;
+  payload?: Uint8Array;
 }
 
 interface Layer {
   name: string;
   fields: Record<string, string>;
+}
+
+interface ProcessedPacket extends Packet {
+  streamKey?: string;
+}
+
+interface StreamEndpoint {
+  ip: string;
+  port: number;
+}
+
+interface StreamMessage {
+  direction: 'forward' | 'reverse';
+  payload: string;
+  timestamp: string;
+  index: number;
+}
+
+interface StreamData {
+  id: string;
+  protocol: number;
+  endpoints: {
+    a: StreamEndpoint;
+    b: StreamEndpoint;
+  };
+  messages: StreamMessage[];
 }
 
 // Basic Ethernet + IPv4 parser
@@ -57,7 +215,8 @@ const parseEthernetIpv4 = (data: Uint8Array) => {
     const sport = (data[34] << 8) | data[35];
     const dport = (data[36] << 8) | data[37];
     info = `TCP ${sport} → ${dport}`;
-    return { src, dest, protocol, info, sport, dport };
+    const payload = extractTcpPayload(data);
+    return { src, dest, protocol, info, sport, dport, payload };
   }
   if (protocol === 17 && data.length >= 42) {
     const sport = (data[34] << 8) | data[35];
@@ -96,6 +255,7 @@ const parsePcap = (buf: ArrayBuffer): Packet[] => {
       sport: meta.sport,
       dport: meta.dport,
       data,
+      payload: meta.payload,
     });
     offset += capLen;
   }
@@ -154,6 +314,7 @@ const parsePcapNg = (buf: ArrayBuffer): Packet[] => {
         sport: meta.sport,
         dport: meta.dport,
         data,
+        payload: meta.payload,
       });
     }
 
@@ -234,8 +395,16 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+const PcapViewer: React.FC<PcapViewerProps> = ({
+  showLegend = true,
+  initialPackets,
+}) => {
+  const [packets, setPackets] = useState<ProcessedPacket[]>([]);
+  const [streams, setStreams] = useState<Record<string, StreamData>>({});
+  const [activeStreamId, setActiveStreamId] = useState<string | null>(null);
+  const [streamLoading, setStreamLoading] = useState(false);
+  const frameRef = useRef<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -246,6 +415,80 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     'Info',
   ]);
   const [dragCol, setDragCol] = useState<string | null>(null);
+
+  const cancelScheduledLoading = useCallback(() => {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.cancelAnimationFrame === 'function' &&
+      frameRef.current !== null
+    ) {
+      window.cancelAnimationFrame(frameRef.current);
+    }
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    frameRef.current = null;
+    timeoutRef.current = null;
+  }, []);
+
+  const closeStream = useCallback(() => {
+    cancelScheduledLoading();
+    setStreamLoading(false);
+    setActiveStreamId(null);
+  }, [cancelScheduledLoading]);
+
+  const finalizeLoading = useCallback(() => {
+    cancelScheduledLoading();
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.requestAnimationFrame === 'function'
+    ) {
+      frameRef.current = window.requestAnimationFrame(() => {
+        setStreamLoading(false);
+        frameRef.current = null;
+      });
+    } else {
+      timeoutRef.current = setTimeout(() => {
+        setStreamLoading(false);
+        timeoutRef.current = null;
+      }, 50);
+    }
+  }, [cancelScheduledLoading]);
+
+  const openStream = useCallback(
+    (streamId: string) => {
+      if (!streams[streamId]) return;
+      setStreamLoading(true);
+      setActiveStreamId(streamId);
+      finalizeLoading();
+    },
+    [streams, finalizeLoading]
+  );
+
+  const applyPackets = useCallback(
+    (pkts: Packet[]) => {
+      const { processed, streams: computedStreams } = processPackets(pkts);
+      setPackets(processed);
+      setStreams(computedStreams);
+      setSelected(null);
+      closeStream();
+    },
+    [closeStream]
+  );
+
+  useEffect(() => {
+    if (initialPackets === undefined) return;
+    if (initialPackets.length) {
+      applyPackets(initialPackets);
+    } else {
+      setPackets([]);
+      setStreams({});
+      setSelected(null);
+      closeStream();
+    }
+  }, [initialPackets, applyPackets, closeStream]);
+
+  useEffect(() => cancelScheduledLoading, [cancelScheduledLoading]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -272,33 +515,91 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     window.history.replaceState(null, '', url.toString());
   }, [filter]);
 
+  useEffect(() => {
+    if (activeStreamId && !streams[activeStreamId]) {
+      closeStream();
+    }
+  }, [activeStreamId, streams, closeStream]);
+
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const buf = await file.arrayBuffer();
     const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
-    setSelected(null);
+    applyPackets(pkts);
   };
 
   const handleSample = async (path: string) => {
     const res = await fetch(path);
     const buf = await res.arrayBuffer();
     const pkts = await parseWithWasm(buf);
-    setPackets(pkts);
-    setSelected(null);
+    applyPackets(pkts);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = useMemo(() => {
+    return packets.filter((p) => {
+      if (!filter) return true;
+      const term = filter.toLowerCase();
+      return (
+        p.src.toLowerCase().includes(term) ||
+        p.dest.toLowerCase().includes(term) ||
+        protocolName(p.protocol).toLowerCase().includes(term) ||
+        (p.info || '').toLowerCase().includes(term)
+      );
+    });
+  }, [packets, filter]);
+
+  useEffect(() => {
+    if (selected !== null && (selected < 0 || selected >= filtered.length)) {
+      setSelected(null);
+      closeStream();
+    }
+  }, [filtered.length, selected, closeStream]);
+
+  const selectedPacket = selected !== null ? filtered[selected] ?? null : null;
+  const activeStream = activeStreamId ? streams[activeStreamId] : null;
+  const canFollow = Boolean(
+    selectedPacket && selectedPacket.protocol === 6 && selectedPacket.streamKey
+  );
+  const followActive = Boolean(
+    canFollow && activeStreamId === selectedPacket?.streamKey
+  );
+  const exportDisabled =
+    !activeStream || !activeStream.messages.length || streamLoading;
+
+  const handleRowSelect = (pkt: ProcessedPacket, index: number) => {
+    setSelected(index);
+    if (pkt.protocol === 6 && pkt.streamKey) {
+      openStream(pkt.streamKey);
+    } else {
+      closeStream();
+    }
+  };
+
+  const handleFollowClick = () => {
+    if (selectedPacket?.streamKey) {
+      openStream(selectedPacket.streamKey);
+    }
+  };
+
+  const handleExport = () => {
+    if (exportDisabled || !activeStream) return;
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    if (typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function')
+      return;
+    const text = formatStreamTranscript(activeStream);
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `stream-${activeStream.id}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    if (typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(url);
+    }
+  };
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -399,7 +700,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 <tbody>
                   {filtered.map((pkt, i) => (
                     <tr
-                      key={i}
+                      key={`${pkt.timestamp}-${i}`}
                       className={`cursor-pointer hover:bg-gray-700 ${
                         selected === i
                           ? 'outline outline-2 outline-white'
@@ -407,7 +708,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                               protocolName(pkt.protocol).toString()
                             ] || ''
                       }`}
-                      onClick={() => setSelected(i)}
+                      onClick={() => handleRowSelect(pkt, i)}
                     >
                       {columns.map((col) => {
                         let val = '';
@@ -439,18 +740,117 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                 </tbody>
               </table>
             </div>
-            <div className="flex-1 bg-black overflow-auto p-2 text-xs font-mono space-y-1">
-              {selected !== null ? (
-                <>
-                  {decodePacketLayers(filtered[selected]).map((layer, i) => (
-                    <LayerView key={i} name={layer.name} fields={layer.fields} />
-                  ))}
-                  <pre className="text-green-400">{toHex(filtered[selected].data)}</pre>
-                </>
-              ) : (
-                'Select a packet'
-              )}
+            <div className="flex flex-col flex-1 bg-black text-xs font-mono">
+              <div className="flex items-center justify-between px-2 py-2 border-b border-gray-800">
+                <span className="uppercase tracking-wide text-gray-300 text-[11px]">
+                  Packet details
+                </span>
+                <button
+                  type="button"
+                  onClick={handleFollowClick}
+                  disabled={!canFollow}
+                  className={`px-2 py-1 rounded text-[11px] ${
+                    canFollow
+                      ? 'bg-indigo-700 hover:bg-indigo-600'
+                      : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                  }`}
+                  aria-pressed={followActive}
+                >
+                  {followActive ? 'Following stream' : 'Follow stream'}
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-2 space-y-1">
+                {selectedPacket ? (
+                  <>
+                    {decodePacketLayers(selectedPacket).map((layer, i) => (
+                      <LayerView key={i} name={layer.name} fields={layer.fields} />
+                    ))}
+                    <pre className="text-green-400">{toHex(selectedPacket.data)}</pre>
+                  </>
+                ) : (
+                  'Select a packet'
+                )}
+              </div>
             </div>
+            {activeStream && (
+              <aside
+                className="w-80 md:w-96 flex-shrink-0 bg-gray-900 border-l border-gray-700 flex flex-col p-2 text-xs font-mono space-y-2"
+                aria-label="Stream conversation"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-sm font-semibold">Follow stream</div>
+                    <div className="text-[11px] text-gray-300">
+                      {protocolName(activeStream.protocol)} ·{' '}
+                      {activeStream.endpoints.a.ip}:{activeStream.endpoints.a.port} ↔{' '}
+                      {activeStream.endpoints.b.ip}:{activeStream.endpoints.b.port}
+                    </div>
+                  </div>
+                  <div className="flex flex-col space-y-1">
+                    <button
+                      type="button"
+                      onClick={handleExport}
+                      disabled={exportDisabled}
+                      className={`px-2 py-1 rounded ${
+                        !exportDisabled
+                          ? 'bg-blue-700 hover:bg-blue-600'
+                          : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Export text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeStream}
+                      className="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+                <div
+                  className="flex-1 overflow-auto space-y-2"
+                  aria-busy={streamLoading}
+                >
+                  {streamLoading ? (
+                    <div className="text-gray-400">Loading stream…</div>
+                  ) : activeStream.messages.length ? (
+                    activeStream.messages.map((message, idx) => {
+                      const from =
+                        message.direction === 'forward'
+                          ? activeStream.endpoints.a
+                          : activeStream.endpoints.b;
+                      const to =
+                        message.direction === 'forward'
+                          ? activeStream.endpoints.b
+                          : activeStream.endpoints.a;
+                      return (
+                        <div
+                          key={`${message.index}-${idx}`}
+                          data-testid="stream-message"
+                          className={`p-2 rounded border ${
+                            message.direction === 'forward'
+                              ? 'border-blue-700 bg-blue-950/60'
+                              : 'border-pink-700 bg-pink-950/60'
+                          }`}
+                        >
+                          <div className="text-[10px] uppercase text-gray-300 tracking-wide">
+                            [{message.timestamp}] {from.ip}:{from.port} → {to.ip}:{to.port}
+                          </div>
+                          <pre className="whitespace-pre-wrap break-words text-[12px]">
+                            {message.payload}
+                          </pre>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-gray-400">
+                      No payload captured for this stream.
+                    </div>
+                  )}
+                </div>
+              </aside>
+            )}
           </div>
         </>
       )}
