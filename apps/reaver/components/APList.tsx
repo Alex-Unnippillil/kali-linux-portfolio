@@ -6,6 +6,10 @@ export interface AccessPoint {
   wps: 'enabled' | 'locked' | 'disabled';
 }
 
+interface APListProps {
+  onSelect?: (ap: AccessPoint) => void;
+}
+
 const LockOpen = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
     <path
@@ -44,7 +48,7 @@ const statusIcon = (status: AccessPoint['wps']) => {
   }
 };
 
-const APList: React.FC = () => {
+const APList: React.FC<APListProps> = ({ onSelect }) => {
   const [aps, setAps] = useState<AccessPoint[]>([]);
 
   useEffect(() => {
@@ -57,16 +61,28 @@ const APList: React.FC = () => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
       {aps.map((ap) => (
-        <div
+        <button
+          type="button"
           key={ap.bssid}
-          className="flex items-center justify-between bg-gray-800 rounded p-3"
+          onClick={onSelect ? () => onSelect(ap) : undefined}
+          className="w-full flex items-center justify-between bg-gray-800 rounded p-3 text-left transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label={
+            onSelect
+              ? `Run Pixie Dust demo for ${ap.ssid}`
+              : undefined
+          }
         >
           <div>
             <div className="font-semibold">{ap.ssid}</div>
             <div className="text-xs font-mono text-gray-400">{ap.bssid}</div>
+            {onSelect && (
+              <span className="mt-2 block text-xs text-blue-300">
+                Launch Pixie Dust demo
+              </span>
+            )}
           </div>
           {statusIcon(ap.wps)}
-        </div>
+        </button>
       ))}
     </div>
   );

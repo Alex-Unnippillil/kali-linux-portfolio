@@ -6,8 +6,9 @@ import RouterProfiles, {
   ROUTER_PROFILES,
   RouterProfile,
 } from './components/RouterProfiles';
-import APList from './components/APList';
+import APList, { AccessPoint } from './components/APList';
 import ProgressDonut from './components/ProgressDonut';
+import PixieDustDemo from './components/PixieDustDemo';
 
 const PlayIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 20 20" fill="currentColor" {...props}>
@@ -71,6 +72,7 @@ const ReaverPanel: React.FC = () => {
   const [routerIdx, setRouterIdx] = useState(0);
   const [rate, setRate] = useState(1);
   const [profile, setProfile] = useState<RouterProfile>(ROUTER_PROFILES[0]);
+  const [selectedAp, setSelectedAp] = useState<AccessPoint | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [running, setRunning] = useState(false);
   const [lockRemaining, setLockRemaining] = useState(0);
@@ -210,7 +212,14 @@ const ReaverPanel: React.FC = () => {
 
       <div className="mb-6">
         <h2 className="text-lg mb-2">Access Points</h2>
-        <APList />
+        {selectedAp ? (
+          <PixieDustDemo
+            ap={selectedAp}
+            onExit={() => setSelectedAp(null)}
+          />
+        ) : (
+          <APList onSelect={setSelectedAp} />
+        )}
       </div>
 
       <div className="mb-6">
