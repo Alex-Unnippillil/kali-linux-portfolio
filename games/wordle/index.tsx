@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import GameShell from "../../components/games/GameShell";
 import usePersistentState from "../../hooks/usePersistentState";
 import {
@@ -13,7 +13,12 @@ import {
 import type { GuessEntry, LetterResult } from "./logic";
 import { evaluateGuess, hardModeViolation } from "./logic";
 import Keyboard from "./components/Keyboard";
-import share from "../../utils/share";
+import share, { canShare } from "../../utils/share";
+import {
+  computeWordleShareScore,
+  paintWordleShareCanvas,
+  renderWordleShareCanvas,
+} from "./shareImage";
 
 const WordleGame = () => {
   const [hardMode, setHardMode] = usePersistentState<boolean>(
@@ -31,11 +36,14 @@ const WordleGame = () => {
   const [guesses, setGuesses] = useState<GuessWithReveal[]>([]);
   const [guess, setGuess] = useState("");
   const [message, setMessage] = useState("");
+  const [shareMessage, setShareMessage] = useState("");
+  const shareCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     setGuesses([]);
     setGuess("");
     setMessage("");
+    setShareMessage("");
   }, [dictName]);
 
   const revealRow = (row: number) => {
@@ -177,14 +185,71 @@ const WordleGame = () => {
   const isSolved = guesses.some((g) => g.guess === solution);
   const isGameOver = isSolved || guesses.length === 6;
 
+  useEffect(() => {
+    if (!isGameOver) {
+      return;
+    }
+
+    const canvas = shareCanvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    try {
+      paintWordleShareCanvas(canvas, guesses, solution);
+    } catch (error) {
+      console.error("Failed to draw Wordle share preview", error);
+    }
+  }, [isGameOver, guesses, solution]);
+
+  useEffect(() => {
+    if (!isGameOver) {
+      setShareMessage("");
+    }
+  }, [isGameOver]);
+
   const shareResult = async () => {
     const mosaic = buildResultMosaic(guesses.map((g) => g.result));
-    const text = `Wordle ${guesses.length}/6\n${mosaic}`;
-    if (!(await share(text))) {
+    const summary = computeWordleShareScore(guesses, solution);
+    const text = `Wordle ${summary.scoreText}\n${mosaic}`;
+
+    setShareMessage("");
+
+    try {
+      const { blob, score } = await renderWordleShareCanvas(guesses, solution);
+      const fileName = `wordle-${score.scoreText.replace("/", "-")}.png`;
+      const file = new File([blob], fileName, { type: "image/png" });
+      const sharePayload = {
+        files: [file],
+        text,
+        title: `Wordle ${score.scoreText}`,
+      } as const;
+
+      if (canShare(sharePayload) && (await share(sharePayload))) {
+        setShareMessage("Share dialog opened.");
+        return;
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      setShareMessage("PNG downloaded for sharing.");
+    } catch (error) {
+      console.error("Wordle share export failed", error);
+      if (await share(text)) {
+        setShareMessage("Shared result text.");
+        return;
+      }
       try {
         await navigator.clipboard.writeText(text);
+        setShareMessage("Result copied to clipboard.");
       } catch {
-        /* ignore */
+        setShareMessage("Unable to share result automatically.");
       }
     }
   };
@@ -226,18 +291,32 @@ const WordleGame = () => {
         {message && <div className="text-sm text-red-400">{message}</div>}
 
         {isGameOver && (
-          <div className="p-4 bg-gray-800 rounded text-center space-y-2">
-            <div className="font-semibold">Result</div>
-            <pre className="text-sm leading-4">
-              {buildResultMosaic(guesses.map((g) => g.result))}
-            </pre>
-            <button
-              type="button"
-              onClick={shareResult}
-              className="px-4 py-2 bg-gray-700 rounded"
-            >
-              Share
-            </button>
+          <div className="p-4 bg-gray-800 rounded text-center space-y-3 w-full max-w-md">
+            <div className="font-semibold text-lg">Result</div>
+            <div className="flex flex-col items-center space-y-3">
+              <canvas
+                ref={shareCanvasRef}
+                className="w-full max-w-xs rounded border border-gray-700 bg-gray-900"
+                role="img"
+                aria-label="Wordle result share preview"
+              />
+              <pre className="text-sm leading-4 bg-gray-900 px-3 py-2 rounded border border-gray-700 text-left">
+                {buildResultMosaic(guesses.map((g) => g.result))}
+              </pre>
+              <button
+                type="button"
+                onClick={shareResult}
+                className="px-4 py-2 bg-ubt-blue text-black font-semibold rounded hover:bg-ubt-blue/80 focus:outline-none focus:ring-2 focus:ring-ubt-blue focus:ring-offset-2 focus:ring-offset-gray-800 transition"
+              >
+                Share PNG
+              </button>
+              {shareMessage && (
+                <div className="text-xs text-gray-300">{shareMessage}</div>
+              )}
+              <div className="text-xs text-gray-400">
+                {isSolved ? `Solution: ${solution}` : `Missed • ${solution}`}
+              </div>
+            </div>
           </div>
         )}
       </div>
