@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { useState } from 'react';
 import { getUnlockedThemes } from '../utils/theme';
 import { useSettings, ACCENT_OPTIONS } from '../hooks/useSettings';
@@ -14,8 +15,6 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
     setAccent,
     theme,
     setTheme,
-    volume,
-    setVolume,
     reducedMotion,
     setReducedMotion,
   } = useSettings();
@@ -72,20 +71,6 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
                 ))}
               </div>
             </label>
-            <label className="flex flex-col gap-2" htmlFor="drawer-volume">
-              <span className="text-xs uppercase tracking-wide text-kali-text/60">Volume ({volume}%)</span>
-              <input
-                id="drawer-volume"
-                type="range"
-                min="0"
-                max="100"
-                step="1"
-                value={volume}
-                onChange={(event) => setVolume(parseInt(event.target.value, 10))}
-                className="kali-slider"
-                aria-label="Adjust volume"
-              />
-            </label>
             <label className="flex items-center gap-2 text-xs text-kali-text/70">
               <input
                 type="checkbox"
@@ -96,6 +81,12 @@ const SettingsDrawer = ({ highScore = 0 }: Props) => {
               />
               Reduced motion
             </label>
+            <Link
+              href="/apps/settings"
+              className="inline-flex items-center justify-center rounded-md border border-kali-border/60 bg-kali-surface-muted px-2 py-1 text-xs font-semibold uppercase tracking-wide text-kali-text/70 transition-colors hover:border-kali-focus/60"
+            >
+              Open full Settings
+            </Link>
           </div>
         </div>
       )}
