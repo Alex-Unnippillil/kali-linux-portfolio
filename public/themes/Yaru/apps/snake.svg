@@ -1,6 +1,33 @@
-<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-  <rect width="64" height="64" fill="#2e3436"/>
-  <path d="M8 40 Q16 24 24 40 T40 40 T56 24" stroke="#4caf50" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="56" cy="24" r="5" fill="#4caf50"/>
-  <circle cx="58" cy="22" r="1.5" fill="#2e3436"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Pixel snake and apple icon</title>
+  <desc id="desc">Pixel art of a green snake approaching a red apple on a dark background.</desc>
+  <rect width="64" height="64" fill="#1b1f23"/>
+  <g fill="#6bcf4b">
+    <rect x="8" y="40" width="8" height="8" rx="1"/>
+    <rect x="16" y="40" width="8" height="8" rx="1"/>
+    <rect x="24" y="40" width="8" height="8" rx="1"/>
+    <rect x="32" y="40" width="8" height="8" rx="1"/>
+    <rect x="32" y="32" width="8" height="8" rx="1"/>
+    <rect x="40" y="32" width="8" height="8" rx="1"/>
+    <rect x="48" y="32" width="8" height="8" rx="1"/>
+    <rect x="48" y="24" width="8" height="8" rx="1"/>
+  </g>
+  <rect x="48" y="24" width="8" height="8" rx="1" fill="#5ab842"/>
+  <rect x="48" y="24" width="8" height="8" rx="1" fill="url(#headGradient)" opacity="0.3"/>
+  <rect x="52" y="26" width="2" height="2" fill="#101417"/>
+  <rect x="56" y="26" width="2" height="2" fill="#101417"/>
+  <rect x="56" y="30" width="4" height="2" fill="#f45d48"/>
+  <g>
+    <rect x="36" y="12" width="10" height="10" fill="#d63649" rx="2"/>
+    <rect x="38" y="10" width="6" height="4" fill="#d63649" rx="2"/>
+    <rect x="40" y="8" width="2" height="4" fill="#5fbb4c" rx="1"/>
+    <rect x="40" y="6" width="2" height="2" fill="#2a8f36" rx="1"/>
+    <rect x="38" y="14" width="6" height="4" fill="#f04f3a" rx="1"/>
+  </g>
+  <defs>
+    <linearGradient id="headGradient" x1="48" y1="24" x2="56" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
 </svg>
