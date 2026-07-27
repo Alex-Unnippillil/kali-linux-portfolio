@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { protocolName } from '../../../components/apps/wireshark/utils';
 import FilterHelper from './FilterHelper';
 import presets from '../filters/presets.json';
@@ -9,6 +9,7 @@ import LayerView from './LayerView';
 
 interface PcapViewerProps {
   showLegend?: boolean;
+  initialPackets?: Packet[];
 }
 
 const protocolColors: Record<string, string> = {
@@ -28,7 +29,7 @@ const toHex = (bytes: Uint8Array) =>
     `${b.toString(16).padStart(2, '0')}${(i + 1) % 16 === 0 ? '\n' : ' '}`
   ).join('');
 
-interface Packet {
+export interface Packet {
   timestamp: string;
   src: string;
   dest: string;
@@ -234,8 +235,42 @@ const decodePacketLayers = (pkt: Packet): Layer[] => {
   return layers;
 };
 
-const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
-  const [packets, setPackets] = useState<Packet[]>([]);
+const getColumnValue = (pkt: Packet, column: string): string => {
+  switch (column) {
+    case 'Time':
+      return pkt.timestamp;
+    case 'Source':
+      return pkt.src;
+    case 'Destination':
+      return pkt.dest;
+    case 'Protocol':
+      return String(protocolName(pkt.protocol));
+    case 'Info':
+      return pkt.info || '';
+    default:
+      return '';
+  }
+};
+
+const formatCsvValue = (value: string | number | undefined | null): string => {
+  if (value === undefined || value === null) return '';
+  const str = String(value);
+  if (/[",\r\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
+const buildCsvRow = (pkt: Packet, columnOrder: string[]): string =>
+  columnOrder
+    .map((column) => formatCsvValue(getColumnValue(pkt, column)))
+    .join(',');
+
+const PcapViewer: React.FC<PcapViewerProps> = ({
+  showLegend = true,
+  initialPackets = [],
+}) => {
+  const [packets, setPackets] = useState<Packet[]>(initialPackets);
   const [filter, setFilter] = useState('');
   const [selected, setSelected] = useState<number | null>(null);
   const [columns, setColumns] = useState<string[]>([
@@ -265,6 +300,11 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
   }, []);
 
   useEffect(() => {
+    setPackets(initialPackets);
+    setSelected(null);
+  }, [initialPackets]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const url = new URL(window.location.href);
     if (filter) url.searchParams.set('filter', filter);
@@ -289,16 +329,61 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
     setSelected(null);
   };
 
-  const filtered = packets.filter((p) => {
-    if (!filter) return true;
-    const term = filter.toLowerCase();
-    return (
-      p.src.toLowerCase().includes(term) ||
-      p.dest.toLowerCase().includes(term) ||
-      protocolName(p.protocol).toLowerCase().includes(term) ||
-      (p.info || '').toLowerCase().includes(term)
-    );
-  });
+  const filtered = useMemo(() => {
+    return packets.filter((p) => {
+      if (!filter) return true;
+      const term = filter.toLowerCase();
+      return (
+        p.src.toLowerCase().includes(term) ||
+        p.dest.toLowerCase().includes(term) ||
+        protocolName(p.protocol).toString().toLowerCase().includes(term) ||
+        (p.info || '').toLowerCase().includes(term)
+      );
+    });
+  }, [packets, filter]);
+
+  const handleExport = async () => {
+    if (typeof window === 'undefined') return;
+    if (!columns.length) return;
+
+    const columnOrder = [...columns];
+    const header = `${columnOrder
+      .map((column) => formatCsvValue(column))
+      .join(',')}`;
+    const csvParts: string[] = [`${header}\r\n`];
+    const chunkSize = 5000;
+
+    for (let i = 0; i < filtered.length; i += 1) {
+      csvParts.push(`${buildCsvRow(filtered[i], columnOrder)}\r\n`);
+      if ((i + 1) % chunkSize === 0) {
+        // Yield to the browser event loop to keep the UI responsive for large exports.
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    const blob = new Blob(csvParts, { type: 'text/csv;charset=utf-8;' });
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `wireshark-export-${timestamp}.csv`;
+
+    const nav = navigator as Navigator & {
+      msSaveOrOpenBlob?: (blob: Blob, defaultName?: string) => boolean | void;
+    };
+    if (nav.msSaveOrOpenBlob) {
+      nav.msSaveOrOpenBlob(blob, filename);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
 
   return (
     <div className="p-4 text-white bg-ub-cool-grey h-full w-full flex flex-col space-y-2">
@@ -343,6 +428,16 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
               title="Copy display filter (Ctrl+Shift+C)"
             >
               Copy
+            </button>
+            <button
+              onClick={() => {
+                void handleExport();
+              }}
+              className="px-2 py-1 bg-gray-700 rounded text-xs"
+              type="button"
+              title="Export filtered table as CSV"
+            >
+              Export CSV
             </button>
           </div>
           <div className="flex space-x-1">
@@ -410,24 +505,7 @@ const PcapViewer: React.FC<PcapViewerProps> = ({ showLegend = true }) => {
                       onClick={() => setSelected(i)}
                     >
                       {columns.map((col) => {
-                        let val = '';
-                        switch (col) {
-                          case 'Time':
-                            val = pkt.timestamp;
-                            break;
-                          case 'Source':
-                            val = pkt.src;
-                            break;
-                          case 'Destination':
-                            val = pkt.dest;
-                            break;
-                          case 'Protocol':
-                            val = protocolName(pkt.protocol);
-                            break;
-                          case 'Info':
-                            val = pkt.info;
-                            break;
-                        }
+                        const val = getColumnValue(pkt, col);
                         return (
                           <td key={col} className="px-1 whitespace-nowrap">
                             {val}
