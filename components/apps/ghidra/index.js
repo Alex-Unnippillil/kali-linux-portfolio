@@ -3,6 +3,7 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import SymbolImport from './SymbolImport';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
@@ -70,6 +71,7 @@ function ControlFlowGraph({ blocks, selected, onSelect, prefersReducedMotion }) 
 export default function GhidraApp() {
   const [engine, setEngine] = useState('ghidra');
   const [functions, setFunctions] = useState([]);
+  const [symbols, setSymbols] = useState([]);
   const [funcMap, setFuncMap] = useState({});
   const [selected, setSelected] = useState(null);
   const [hexMap, setHexMap] = useState({});
@@ -150,21 +152,38 @@ export default function GhidraApp() {
     fetch('/demo-data/ghidra/disassembly.json')
       .then((r) => r.json())
       .then((data) => {
+        const baseAddress = 0x401000;
+        const enriched = data.functions.map((f, idx) => {
+          const hex = (baseAddress + idx * 0x20)
+            .toString(16)
+            .padStart(8, '0')
+            .toUpperCase();
+          return { ...f, address: `0x${hex}` };
+        });
         const map = {};
         const xr = {};
-        data.functions.forEach((f) => {
+        enriched.forEach((f) => {
           map[f.name] = f;
         });
-        data.functions.forEach((f) => {
+        enriched.forEach((f) => {
           (f.calls || []).forEach((c) => {
             if (!xr[c]) xr[c] = [];
             xr[c].push(f.name);
           });
         });
-        setFunctions(data.functions);
+        setFunctions(enriched);
         setFuncMap(map);
         setXrefs(xr);
-        setSelected(data.functions[0]?.name || null);
+        setSelected(enriched[0]?.name || null);
+        const initialSymbols = enriched.map((f) => ({
+          address: f.address,
+          name: f.name,
+          section: '.text',
+          type: 'Function',
+          size: (f.code?.length || 0) * 4,
+          source: 'current',
+        }));
+        setSymbols(initialSymbols);
       });
   }, []);
 
@@ -291,6 +310,10 @@ export default function GhidraApp() {
   const filteredStrings = strings.filter((s) =>
     s.value.toLowerCase().includes(stringQuery.toLowerCase())
   );
+  const functionNotesId = selected ? `function-notes-${selected}` : 'function-notes';
+  const stringNotesId = selectedString
+    ? `string-notes-${selectedString}`
+    : 'string-notes';
 
   return (
     <div className="w-full h-full flex flex-col bg-gray-900 text-gray-100">
@@ -302,19 +325,21 @@ export default function GhidraApp() {
           Use Capstone
         </button>
       </div>
-      <div className="p-2 border-t border-gray-700">
+      <div className="grid gap-4 p-2 border-t border-gray-700 md:grid-cols-2">
+        <SymbolImport currentSymbols={symbols} onMerge={setSymbols} />
         <ImportAnnotate />
       </div>
       <div className="grid flex-1 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
         <div className="border-b md:border-b-0 md:border-r border-gray-700 overflow-auto min-h-0 last:border-b-0 md:last:border-r-0">
           <div className="p-2">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search symbols"
-              className="w-full mb-2 p-1 rounded text-black"
-            />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search symbols"
+                aria-label="Search symbols"
+                className="w-full mb-2 p-1 rounded text-black"
+              />
           </div>
           {query ? (
             <ul className="p-2 text-sm space-y-1">
@@ -367,20 +392,21 @@ export default function GhidraApp() {
             return (
               <div key={idx} className="flex items-start">
                 <div className="flex-1">{codeElem}</div>
-                <input
-                  value={note}
-                  onChange={(e) =>
-                    setLineNotes({
-                      ...lineNotes,
+                  <input
+                    value={note}
+                    onChange={(e) =>
+                      setLineNotes({
+                        ...lineNotes,
                       [selected]: {
                         ...(lineNotes[selected] || {}),
                         [idx]: e.target.value,
                       },
                     })
-                  }
-                  placeholder="note"
-                  className="ml-2 w-24 text-xs text-black rounded"
-                />
+                    }
+                    placeholder="note"
+                    aria-label={`Note for line ${idx + 1}`}
+                    className="ml-2 w-24 text-xs text-black rounded"
+                  />
               </div>
             );
           })}
@@ -416,26 +442,29 @@ export default function GhidraApp() {
         />
       </div>
       <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
+          <label htmlFor={functionNotesId} className="block text-sm mb-1">
+            Notes for {selected || 'function'}
+          </label>
+          <textarea
+            id={functionNotesId}
+            value={funcNotes[selected] || ''}
+            onChange={(e) =>
+              setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+            }
+            aria-label={`Notes for ${selected || 'function'}`}
+            className="w-full h-16 p-1 rounded text-black"
+          />
       </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
         <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
-          <input
-            type="text"
-            value={stringQuery}
-            onChange={(e) => setStringQuery(e.target.value)}
-            placeholder="Search strings"
-            className="w-full mb-2 p-1 rounded text-black"
-          />
+            <input
+              type="text"
+              value={stringQuery}
+              onChange={(e) => setStringQuery(e.target.value)}
+              placeholder="Search strings"
+              aria-label="Search strings"
+              className="w-full mb-2 p-1 rounded text-black"
+            />
           <ul className="text-sm space-y-1">
             {filteredStrings.map((s) => (
               <li key={s.id}>
@@ -451,22 +480,26 @@ export default function GhidraApp() {
             ))}
           </ul>
         </div>
-        <div className="p-2">
-          <label className="block text-sm mb-1">
-            Notes for {
-              strings.find((s) => s.id === selectedString)?.value || 'string'
-            }
-          </label>
-          <textarea
-            value={stringNotes[selectedString] || ''}
-            onChange={(e) =>
-              setStringNotes({
-                ...stringNotes,
-                [selectedString]: e.target.value,
-              })
-            }
-            className="w-full h-full p-1 rounded text-black"
-          />
+          <div className="p-2">
+            <label htmlFor={stringNotesId} className="block text-sm mb-1">
+              Notes for {
+                strings.find((s) => s.id === selectedString)?.value || 'string'
+              }
+            </label>
+            <textarea
+              id={stringNotesId}
+              value={stringNotes[selectedString] || ''}
+              onChange={(e) =>
+                setStringNotes({
+                  ...stringNotes,
+                  [selectedString]: e.target.value,
+                })
+              }
+              aria-label={`Notes for ${
+                strings.find((s) => s.id === selectedString)?.value || 'string'
+              }`}
+              className="w-full h-full p-1 rounded text-black"
+            />
         </div>
       </div>
       {/* S8: Hidden live region for assistive tech announcements */}
