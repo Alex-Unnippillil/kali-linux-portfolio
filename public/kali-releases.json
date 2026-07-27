@@ -1,0 +1,32 @@
+[
+  {
+    "title": "Kali Linux 2025.2 Release (Kali Menu Refresh, BloodHound CE & CARsenal)",
+    "link": "https://www.kali.org/blog/kali-linux-2025-2-release/",
+    "date": "2025-06-13"
+  },
+  {
+    "title": "Kali Linux 2025.1a Release (2025 Theme, & Raspberry Pi)",
+    "link": "https://www.kali.org/blog/kali-linux-2025-1-release/",
+    "date": "2025-03-19"
+  },
+  {
+    "title": "Kali Linux 2024.4 Release (Python 3.12, Goodbye i386, Raspberry Pi Imager & Kali NetHunter)",
+    "link": "https://www.kali.org/blog/kali-linux-2024-4-release/",
+    "date": "2024-12-16"
+  },
+  {
+    "title": "Kali Linux 2024.3 Release (Multiple transitions)",
+    "link": "https://www.kali.org/blog/kali-linux-2024-3-release/",
+    "date": "2024-09-11"
+  },
+  {
+    "title": "Kali Linux 2024.2 Release (t64, GNOME 46 & Community Packages)",
+    "link": "https://www.kali.org/blog/kali-linux-2024-2-release/",
+    "date": "2024-06-05"
+  },
+  {
+    "title": "Kali Linux 2024.1 Release (Micro Mirror)",
+    "link": "https://www.kali.org/blog/kali-linux-2024-1-release/",
+    "date": "2024-02-28"
+  }
+]
