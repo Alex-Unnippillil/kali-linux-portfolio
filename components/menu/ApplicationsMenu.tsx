@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import Image from 'next/image';
 
 export type KaliCategory = {
@@ -87,20 +87,26 @@ type ApplicationsMenuProps = {
 };
 
 const ApplicationsMenu: React.FC<ApplicationsMenuProps> = ({ activeCategory, onSelect }) => {
+  const menuLabelId = useId();
+
   return (
-    <nav aria-label="Kali application categories">
-      <ul className="space-y-1">
+    <nav aria-labelledby={menuLabelId}>
+      <h2 id={menuLabelId} className="sr-only">
+        Kali application categories
+      </h2>
+      <ul aria-labelledby={menuLabelId} className="space-y-1" role="menu">
         {KALI_CATEGORIES.map((category) => {
           const isActive = category.id === activeCategory;
           return (
-            <li key={category.id}>
+            <li key={category.id} role="none">
               <button
                 type="button"
+                role="menuitem"
                 onClick={() => onSelect(category.id)}
                 className={`flex w-full items-center gap-3 rounded px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-sky-400 ${
                   isActive ? 'bg-gray-700 text-white' : 'bg-transparent hover:bg-gray-700/60'
                 }`}
-                aria-pressed={isActive}
+                aria-current={isActive ? 'true' : undefined}
               >
                 <CategoryIcon categoryId={category.id} label={category.label} />
                 <span className="text-sm font-medium">{category.label}</span>
