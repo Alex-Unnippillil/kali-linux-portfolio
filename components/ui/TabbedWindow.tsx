@@ -58,6 +58,16 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const allowMouseSwipe = process.env.NODE_ENV === 'test';
+  const swipeStateRef = useRef({
+    pointerId: null as number | null,
+    startX: 0,
+    startY: 0,
+    lastX: 0,
+    lastY: 0,
+    isTracking: false,
+    isVerticalScroll: false,
+  });
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -149,6 +159,37 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     });
   };
 
+  const activateAdjacentTab = useCallback(
+    (
+      direction: 'previous' | 'next',
+      { focus = true }: { focus?: boolean } = {},
+    ) => {
+      setActiveId((currentId) => {
+        if (tabs.length === 0) return currentId;
+        const currentIndex = tabs.findIndex((t) => t.id === currentId);
+        if (currentIndex === -1) {
+          const fallback = tabs[0];
+          if (fallback) {
+            if (focus) requestAnimationFrame(() => focusTab(fallback.id));
+            return fallback.id;
+          }
+          return currentId;
+        }
+        const nextIndex =
+          direction === 'previous'
+            ? (currentIndex - 1 + tabs.length) % tabs.length
+            : (currentIndex + 1) % tabs.length;
+        const nextTab = tabs[nextIndex];
+        if (!nextTab || nextTab.id === currentId) {
+          return currentId;
+        }
+        if (focus) requestAnimationFrame(() => focusTab(nextTab.id));
+        return nextTab.id;
+      });
+    },
+    [focusTab, tabs],
+  );
+
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (e.ctrlKey && e.key.toLowerCase() === 'w') {
       e.preventDefault();
@@ -162,35 +203,96 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     }
     if (e.ctrlKey && e.key === 'Tab') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx = e.shiftKey
-          ? (idx - 1 + prev.length) % prev.length
-          : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        requestAnimationFrame(() => focusTab(nextTab.id));
-        return prev;
-      });
+      activateAdjacentTab(e.shiftKey ? 'previous' : 'next');
       return;
     }
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
-      setTabs((prev) => {
-        if (prev.length === 0) return prev;
-        const idx = prev.findIndex((t) => t.id === activeId);
-        const nextIdx =
-          e.key === 'ArrowLeft'
-            ? (idx - 1 + prev.length) % prev.length
-            : (idx + 1) % prev.length;
-        const nextTab = prev[nextIdx];
-        setActiveId(nextTab.id);
-        requestAnimationFrame(() => focusTab(nextTab.id));
-        return prev;
-      });
+      activateAdjacentTab(e.key === 'ArrowLeft' ? 'previous' : 'next');
     }
   };
+
+  const resetSwipeState = useCallback(() => {
+    swipeStateRef.current = {
+      pointerId: null,
+      startX: 0,
+      startY: 0,
+      lastX: 0,
+      lastY: 0,
+      isTracking: false,
+      isVerticalScroll: false,
+    };
+  }, []);
+
+  const handleContentPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const pointerType = event.pointerType;
+      const isTouchLike =
+        pointerType === 'touch' ||
+        pointerType === 'pen' ||
+        (allowMouseSwipe && (!pointerType || pointerType === 'mouse'));
+      if (!isTouchLike) {
+        return;
+      }
+      swipeStateRef.current.pointerId = event.pointerId;
+      swipeStateRef.current.startX = event.clientX;
+      swipeStateRef.current.startY = event.clientY;
+      swipeStateRef.current.lastX = event.clientX;
+      swipeStateRef.current.lastY = event.clientY;
+      swipeStateRef.current.isTracking = true;
+      swipeStateRef.current.isVerticalScroll = false;
+    },
+    [allowMouseSwipe],
+  );
+
+  const handleContentPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const state = swipeStateRef.current;
+      if (!state.isTracking || state.pointerId !== event.pointerId) {
+        return;
+      }
+      state.lastX = event.clientX;
+      state.lastY = event.clientY;
+      if (state.isVerticalScroll) {
+        return;
+      }
+      const dx = event.clientX - state.startX;
+      const dy = event.clientY - state.startY;
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+        state.isVerticalScroll = true;
+      }
+    },
+    [],
+  );
+
+  const handleContentPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const state = swipeStateRef.current;
+      if (!state.isTracking || state.pointerId !== event.pointerId) {
+        return;
+      }
+      const dx = event.clientX - state.startX;
+      const dy = event.clientY - state.startY;
+      const absDx = Math.abs(dx);
+      const absDy = Math.abs(dy);
+      if (!state.isVerticalScroll && absDx > 45 && absDx > absDy) {
+        activateAdjacentTab(dx < 0 ? 'next' : 'previous', { focus: false });
+      }
+      resetSwipeState();
+    },
+    [activateAdjacentTab, resetSwipeState],
+  );
+
+  const handleContentPointerCancel = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      const state = swipeStateRef.current;
+      if (state.pointerId !== event.pointerId) {
+        return;
+      }
+      resetSwipeState();
+    },
+    [resetSwipeState],
+  );
 
   const updateOverflow = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -429,7 +531,14 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
           </button>
         )}
       </div>
-      <div className="flex-grow relative overflow-hidden">
+      <div
+        className="flex-grow relative overflow-hidden"
+        data-testid="tabbed-window-content"
+        onPointerDown={handleContentPointerDown}
+        onPointerMove={handleContentPointerMove}
+        onPointerUp={handleContentPointerEnd}
+        onPointerCancel={handleContentPointerCancel}
+      >
         {tabs.map((t) => (
           <TabContext.Provider
             key={t.id}
