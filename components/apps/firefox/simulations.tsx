@@ -1,4 +1,5 @@
 import React from 'react';
+import Waterfall from './Waterfall';
 
 export type SimulationLink = {
   label: string;
@@ -544,7 +545,8 @@ export const FirefoxSimulationView: React.FC<{ simulation: FirefoxSimulation }> 
       </a>
     </header>
     <div className="flex-1 overflow-y-auto px-6 py-6">
-      <div className="grid gap-6 lg:grid-cols-2">
+      <Waterfall />
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {simulation.sections.map((section) => (
           <section key={section.title} className="rounded-lg border border-gray-800 bg-gray-900/60 p-5 shadow-inner">
             <h2 className="text-lg font-semibold text-white">{section.title}</h2>
