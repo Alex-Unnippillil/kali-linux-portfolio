@@ -116,6 +116,11 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, overlayRoot })
             ref={modalRef}
             onKeyDown={handleKeyDown}
             tabIndex={-1}
+            style={{
+                width: 'fit-content',
+                maxWidth: 'min(720px, 90vw)',
+                overflowX: 'hidden'
+            }}
         >
             {children}
         </div>,
