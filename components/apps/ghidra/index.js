@@ -3,6 +3,7 @@ import PseudoDisasmViewer from './PseudoDisasmViewer';
 import FunctionTree from './FunctionTree';
 import CallGraph from './CallGraph';
 import ImportAnnotate from './ImportAnnotate';
+import Patcher from './Patcher';
 import { Capstone, Const, loadCapstone } from 'capstone-wasm';
 
 // Applies S1–S8 guidelines for responsive and accessible binary analysis UI
@@ -313,6 +314,7 @@ export default function GhidraApp() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search symbols"
+              aria-label="Search symbols"
               className="w-full mb-2 p-1 rounded text-black"
             />
           </div>
@@ -379,6 +381,7 @@ export default function GhidraApp() {
                     })
                   }
                   placeholder="note"
+                  aria-label={`Note for line ${idx + 1}`}
                   className="ml-2 w-24 text-xs text-black rounded"
                 />
               </div>
@@ -407,6 +410,7 @@ export default function GhidraApp() {
           {hexMap[selected] || ''}
         </pre>
       </div>
+      <Patcher />
       <PseudoDisasmViewer />
       <div className="h-48 border-t border-gray-700">
         <CallGraph
@@ -415,18 +419,20 @@ export default function GhidraApp() {
           onSelect={setSelected}
         />
       </div>
-      <div className="border-t border-gray-700 p-2">
-        <label className="block text-sm mb-1">
-          Notes for {selected || 'function'}
-        </label>
-        <textarea
-          value={funcNotes[selected] || ''}
-          onChange={(e) =>
-            setFuncNotes({ ...funcNotes, [selected]: e.target.value })
-          }
-          className="w-full h-16 p-1 rounded text-black"
-        />
-      </div>
+        <div className="border-t border-gray-700 p-2">
+          <label className="block text-sm mb-1" htmlFor="ghidra-function-notes">
+            Notes for {selected || 'function'}
+          </label>
+          <textarea
+            id="ghidra-function-notes"
+            value={funcNotes[selected] || ''}
+            onChange={(e) =>
+              setFuncNotes({ ...funcNotes, [selected]: e.target.value })
+            }
+            aria-label="Function notes"
+            className="w-full h-16 p-1 rounded text-black"
+          />
+        </div>
       <div className="grid border-t border-gray-700 grid-cols-1 md:grid-cols-2 md:h-40">
         <div className="overflow-auto p-2 border-b md:border-b-0 md:border-r border-gray-700 min-h-0">
           <input
@@ -434,6 +440,7 @@ export default function GhidraApp() {
             value={stringQuery}
             onChange={(e) => setStringQuery(e.target.value)}
             placeholder="Search strings"
+            aria-label="Search strings"
             className="w-full mb-2 p-1 rounded text-black"
           />
           <ul className="text-sm space-y-1">
@@ -451,22 +458,27 @@ export default function GhidraApp() {
             ))}
           </ul>
         </div>
-        <div className="p-2">
-          <label className="block text-sm mb-1">
-            Notes for {
-              strings.find((s) => s.id === selectedString)?.value || 'string'
-            }
-          </label>
-          <textarea
-            value={stringNotes[selectedString] || ''}
-            onChange={(e) =>
-              setStringNotes({
-                ...stringNotes,
-                [selectedString]: e.target.value,
-              })
-            }
-            className="w-full h-full p-1 rounded text-black"
-          />
+          <div className="p-2">
+            <label
+              className="block text-sm mb-1"
+              htmlFor="ghidra-string-notes"
+            >
+              Notes for {
+                strings.find((s) => s.id === selectedString)?.value || 'string'
+              }
+            </label>
+            <textarea
+              id="ghidra-string-notes"
+              value={stringNotes[selectedString] || ''}
+              onChange={(e) =>
+                setStringNotes({
+                  ...stringNotes,
+                  [selectedString]: e.target.value,
+                })
+              }
+              aria-label="String notes"
+              className="w-full h-full p-1 rounded text-black"
+            />
         </div>
       </div>
       {/* S8: Hidden live region for assistive tech announcements */}
