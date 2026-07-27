@@ -121,6 +121,13 @@ export default function LockScreen(props) {
                 <div className=" mt-16 text-base">
                     Click or press Enter, Space, or Escape to unlock
                 </div>
+                <button
+                    type="button"
+                    onClick={props.unLockScreen}
+                    className="mt-6 px-6 py-3 rounded-md border border-white/40 bg-white/10 text-white font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-black hover:bg-white/20"
+                >
+                    Unlock screen
+                </button>
             </div>
         </div>
     );
