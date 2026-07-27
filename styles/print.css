@@ -6,6 +6,25 @@
     background: white;
     color: black;
   }
+  /* Ensure all text renders in high contrast for monochrome printers */
+  a,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: black !important;
+  }
+  img {
+    filter: grayscale(100%);
+  }
+  /* Hide interactive chrome and navigation when printing */
+  header,
+  nav,
+  footer,
+  .main-navbar-vp,
+  .dock,
   .no-print {
     display: none !important;
   }
