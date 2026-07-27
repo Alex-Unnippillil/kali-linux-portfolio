@@ -223,6 +223,25 @@ html[data-theme='matrix'] {
 
 }
 
+/* Kali theme */
+html[data-theme='kali'] {
+  --color-bg: var(--kali-neutral);
+  --color-text: var(--kali-text);
+  --color-primary: var(--kali-accent);
+  --color-secondary: var(--kali-surface);
+  --color-accent: var(--kali-accent);
+  --color-muted: var(--kali-surface);
+  --color-surface: var(--kali-surface);
+  --color-inverse: var(--kali-neutral);
+  --color-border: var(--kali-surface);
+  --color-terminal: #00ff00;
+  --color-dark: var(--kali-neutral);
+  --color-focus-ring: var(--kali-accent);
+  --color-selection: var(--kali-accent);
+  --color-control-accent: var(--kali-accent);
+  accent-color: var(--color-control-accent);
+}
+
 ::selection {
   background: color-mix(in srgb, var(--color-primary) 65%, var(--kali-bg));
   color: var(--kali-text);
