@@ -1,0 +1,81 @@
+import tailwindConfig from '../../tailwind.config.js';
+import fs from 'fs';
+import path from 'path';
+
+const css = fs.readFileSync(path.join(process.cwd(), 'styles', 'tokens.css'), 'utf8');
+
+const radii = Object.fromEntries(
+  Array.from(css.matchAll(/--radius-(\w+):\s*([^;]+);/g)).map(([, name, value]) => [name, value.trim()])
+);
+
+const { colors, fontFamily, fontSize, spacing } = tailwindConfig.theme.extend;
+
+# Design Tokens
+
+## Colors
+
+<div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
+  {Object.entries(colors).map(([name, value]) => (
+    <div key={name} className="flex flex-col items-center">
+      <div className="w-16 h-16 rounded" style={{ backgroundColor: value }} />
+      <code className="mt-2">{name}</code>
+    </div>
+  ))}
+</div>
+
+```tsx
+<div className="bg-bg text-primary">Color example</div>
+```
+
+## Typography
+
+### Fonts
+
+<div className="flex flex-col gap-2 my-4">
+  {Object.entries(fontFamily).map(([name, fonts]) => (
+    <p key={name} style={{ fontFamily: fonts.join(', ') }}>
+      {name} – The quick brown fox jumps over the lazy dog.
+    </p>
+  ))}
+</div>
+
+### Font Sizes
+
+<div className="flex flex-col gap-2 my-4">
+  {Object.entries(fontSize).map(([name, [size]]) => (
+    <p key={name} style={{ fontSize: size }}>
+      {name} – {size}
+    </p>
+  ))}
+</div>
+
+```tsx
+<p className="text-h1">Heading 1</p>
+```
+
+## Spacing
+
+<div className="flex flex-wrap gap-4 my-4">
+  {Object.entries(spacing).map(([name, value]) => (
+    <div key={name} className="flex flex-col items-center">
+      <div className="bg-primary" style={{ width: value, height: value }} />
+      <code className="mt-2">{name}</code>
+    </div>
+  ))}
+</div>
+
+```tsx
+<div className="p-space-4 m-space-2">Spacing example</div>
+```
+
+## Radii
+
+<div className="flex gap-4 my-4">
+  {Object.entries(radii).map(([name, value]) => (
+    <div key={name} className="w-16 h-16 bg-primary" style={{ borderRadius: value }} />
+  ))}
+</div>
+
+```tsx
+<div className="rounded-md">Rounded example</div>
+```
