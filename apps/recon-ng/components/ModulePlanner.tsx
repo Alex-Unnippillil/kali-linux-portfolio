@@ -3,20 +3,13 @@
 import React, { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
+import { getPackage, packageNames } from '../packageMetadata';
+import {
+  describeConflict,
+  evaluateToggle,
+  getHeldPackages,
+} from '../packagePlanner';
 
-interface ModuleDef {
-  deps: string[];
-  tags: string[];
-}
-
-const MODULES: Record<string, ModuleDef> = {
-  'DNS Enumeration': { deps: [], tags: ['dns', 'recon'] },
-  'WHOIS Lookup': { deps: ['DNS Enumeration'], tags: ['whois', 'network'] },
-  'Reverse IP Lookup': { deps: ['WHOIS Lookup'], tags: ['ip'] },
-  'Port Scan': { deps: ['Reverse IP Lookup'], tags: ['ports', 'network'] },
-};
-
-const moduleNames = Object.keys(MODULES);
 const WORKSPACES = ['default', 'testing', 'production'];
 
 const ForceGraph2D = dynamic(
@@ -32,10 +25,23 @@ const ModulePlanner: React.FC = () => {
   );
   const [log, setLog] = useState('');
 
+  const heldWarnings = useMemo(() => getHeldPackages(plan), [plan]);
+
   const toggle = (name: string) => {
-    setPlan((p) =>
-      p.includes(name) ? p.filter((m) => m !== name) : [...p, name],
-    );
+    setPlan((currentPlan) => {
+      const evaluation = evaluateToggle(currentPlan, name);
+      if (evaluation.conflicts.length > 0 && evaluation.isRemoval) {
+        const message = `${evaluation.conflicts
+          .map((conflict) => describeConflict(conflict))
+          .join('\n')}\n\nProceed with removal?`;
+        const proceed =
+          typeof window === 'undefined' ? true : window.confirm(message);
+        if (!proceed) {
+          return currentPlan;
+        }
+      }
+      return evaluation.nextPlan;
+    });
   };
 
   const exportPlan = () => {
@@ -44,6 +50,12 @@ const ModulePlanner: React.FC = () => {
       'Modules:',
       ...plan.map((m) => `- ${m}`),
     ];
+    if (heldWarnings.length > 0) {
+      lines.push('Warnings:');
+      heldWarnings.forEach((warning) =>
+        lines.push(`! ${warning.name}: ${warning.reason}`),
+      );
+    }
     setLog(lines.join('\n'));
   };
 
@@ -54,7 +66,7 @@ const ModulePlanner: React.FC = () => {
     const visit = (m: string) => {
       if (nodes.has(m)) return;
       nodes.add(m);
-      MODULES[m]?.deps.forEach((d) => {
+      getPackage(m)?.deps.forEach((d) => {
         visit(d);
         links.push({ source: d, target: m });
       });
@@ -85,9 +97,26 @@ const ModulePlanner: React.FC = () => {
           ))}
         </select>
       </div>
+      {heldWarnings.length > 0 && (
+        <div
+          role="alert"
+          className="rounded border border-yellow-500 bg-yellow-900/40 p-3 text-xs text-yellow-100"
+        >
+          <h2 className="font-semibold text-yellow-200">Held packages</h2>
+          <ul className="mt-1 space-y-1 list-disc list-inside">
+            {heldWarnings.map((warning) => (
+              <li key={warning.name}>
+                <span className="font-semibold">{warning.name}</span>: {' '}
+                {warning.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {moduleNames.map((m) => {
-          const mod = MODULES[m];
+        {packageNames.map((m) => {
+          const pkg = getPackage(m);
+          if (!pkg) return null;
           const active = plan.includes(m);
           return (
             <div
@@ -101,7 +130,7 @@ const ModulePlanner: React.FC = () => {
             >
               <div className="font-bold">{m}</div>
               <div className="mt-1 flex flex-wrap gap-1">
-                {mod.tags.map((t) => (
+                {pkg.tags.map((t) => (
                   <span
                     key={t}
                     className="text-xs bg-gray-700 px-1 rounded"
@@ -110,6 +139,28 @@ const ModulePlanner: React.FC = () => {
                   </span>
                 ))}
               </div>
+              {(pkg.pinned || pkg.held) && (
+                <div className="mt-2 space-y-1 text-xs">
+                  {pkg.pinned && (
+                    <p className="flex items-center gap-1 text-sky-200">
+                      <span aria-hidden="true" role="img">
+                        📌
+                      </span>
+                      <span>
+                        Pinned: {pkg.pinned.reason}
+                      </span>
+                    </p>
+                  )}
+                  {pkg.held && (
+                    <p className="flex items-center gap-1 text-yellow-200">
+                      <span aria-hidden="true" role="img">
+                        ⚠️
+                      </span>
+                      <span>Held: {pkg.held.reason}</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
