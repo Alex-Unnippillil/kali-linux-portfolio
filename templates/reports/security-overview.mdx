@@ -1,0 +1,72 @@
+<!--
+  Security Assessment Overview Template
+  Expects data keys declared in templates/reports/security-overview.json
+-->
+
+# {{cover.title}}
+
+> {{cover.subtitle}}
+
+**Client:** {{cover.client}}  \
+**Assessment Date:** {{cover.assessmentDate}}  \
+**Prepared By:** {{cover.preparedBy}}  \
+**Document Version:** {{cover.version}}  \
+{{#if cover.confidentiality}}**Classification:** {{cover.confidentiality}}{{/if}}
+
+---
+
+## Executive Summary
+
+{{executiveSummary}}
+
+---
+
+## Assessment Scope
+
+{{assessmentScope}}
+
+---
+
+## Methodology
+
+{{methodology}}
+
+---
+
+## Key Findings
+
+{{#each keyFindings}}
+### {{title}} — {{severity}}
+
+**Impact**
+
+{{impact}}
+
+**Evidence**
+
+{{evidence}}
+
+**Recommendation**
+
+{{remediation}}
+
+{{/each}}
+
+---
+
+## Risk Heatmap
+
+{{riskOverview}}
+
+---
+
+## Prioritized Roadmap
+
+{{roadmap}}
+
+---
+
+## Appendix A — Artifacts Reviewed
+
+{{artifactsReviewed}}
+
