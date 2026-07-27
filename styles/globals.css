@@ -1,4 +1,5 @@
 @import './tokens.css';
+@import './density.css';
 
 /* Accessible theme color palette meeting WCAG AA contrast ratios */
 :root {
