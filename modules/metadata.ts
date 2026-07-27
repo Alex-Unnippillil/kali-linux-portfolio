@@ -7,6 +7,8 @@ export interface ModuleOption {
 export interface ModuleMetadata {
   name: string;
   description: string;
+  /** Optional preview graphic for the module */
+  thumbnail?: string;
   tags: string[];
   options: ModuleOption[];
 }
