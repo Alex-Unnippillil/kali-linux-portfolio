@@ -1,4 +1,5 @@
 import { abortableFetch } from '../utils/abortableFetch';
+import { createCancelScope } from '../utils/cancel';
 
 test('abortableFetch can be aborted', async () => {
   const fetchSpy = jest.spyOn(global, 'fetch').mockImplementation((_input: any, init?: RequestInit) => {
@@ -9,8 +10,13 @@ test('abortableFetch can be aborted', async () => {
     }) as any;
   });
 
-  const { promise, abort } = abortableFetch('https://example.com');
-  abort();
+  const cancel = createCancelScope('test-fetch');
+  const { promise, cancel: scope } = abortableFetch('https://example.com', { cancel });
+  expect(fetchSpy).toHaveBeenCalledWith(
+    'https://example.com',
+    expect.objectContaining({ signal: cancel.signal }),
+  );
+  scope.abort({ message: 'abort test' });
   await expect(promise).rejects.toHaveProperty('name', 'AbortError');
   fetchSpy.mockRestore();
 });
