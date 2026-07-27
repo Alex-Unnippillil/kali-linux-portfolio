@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>command not found</title>
+  <style>
+    body { display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #000; color: #fff; font-family: sans-serif; }
+    a { color: #4ea1ff; }
+  </style>
+</head>
+<body>
+  <p>command not found. Try <a href="#" id="help-link">help</a>.</p>
+  <script>
+    document.getElementById('help-link').addEventListener('click', function(e) {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent('open-app', { detail: 'terminal' }));
+      setTimeout(function() {
+        window.dispatchEvent(new KeyboardEvent('keydown', { ctrlKey: true, shiftKey: true, key: 'p' }));
+      }, 100);
+    });
+  </script>
+</body>
+</html>
