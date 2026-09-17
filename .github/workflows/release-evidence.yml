@@ -1,0 +1,49 @@
+name: Release debugging evidence
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/release-evidence.yml'
+permissions:
+  contents: read
+jobs:
+  environment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Archive the exact revision, without credentials or local files
+        run: |
+          mkdir -p /tmp/release-evidence
+          git archive --format=tar.gz HEAD > /tmp/release-evidence/source.tar.gz
+          git rev-parse HEAD > /tmp/release-evidence/revision.txt
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - name: Reproduce the immutable installation
+        run: |
+          set -o pipefail
+          node --version | tee /tmp/release-evidence/node-version.txt
+          yarn --version | tee /tmp/release-evidence/yarn-version.txt
+          yarn install --immutable 2>&1 | tee /tmp/release-evidence/install.log
+      - name: Package the reproducible dependency tree (no environment or Git state)
+        run: |
+          tar -czf /tmp/release-evidence/dependencies.tar.gz node_modules .yarn/install-state.gz
+          cp "$(command -v node)" /tmp/release-evidence/node
+          gzip /tmp/release-evidence/node
+      - name: Keep source and installation evidence even when installation fails
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-debug-environment
+          path: /tmp/release-evidence
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
