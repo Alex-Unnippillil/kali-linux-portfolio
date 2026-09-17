@@ -70,7 +70,6 @@ export class AboutAlex extends Component {
                         aria-label={section.label}
                         aria-pressed={this.state.active_screen === section.id}
                         key={section.id}
-                        id={section.id}
                         onClick={() => this.changeScreen(section.id)}
                         className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default min-h-[44px] py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
                     >
@@ -92,7 +91,7 @@ export class AboutAlex extends Component {
     render() {
         return (
             <div className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-                <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
+                <div className="hidden md:flex flex-col w-1/5 text-sm overflow-y-auto border-r border-black">
                     {this.renderNavLinks()}
                 </div>
                 <div className="md:hidden absolute top-1 left-1 z-30">

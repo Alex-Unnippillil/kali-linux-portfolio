@@ -69,7 +69,8 @@ const AppsPage = () => {
                   className="flex flex-col items-center"
                 >
                   <Link
-                    href={`/apps/${app.id}`}
+                    href={`/?app=${encodeURIComponent(app.id)}`}
+                    prefetch={false}
                     className="flex h-full w-full flex-col items-center rounded border p-4 text-center focus:outline-none focus:ring"
                     aria-label={app.title}
                     onFocus={onFocus}
