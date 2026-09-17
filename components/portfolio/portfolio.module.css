@@ -103,3 +103,8 @@
 @media(prefers-reduced-motion:reduce) { .shell *, .catalog * { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
 @media(forced-colors:active) { .primary,.secondary,.projectCard,.window { border:1px solid ButtonText; } }
 @media print { .sidebar,.systemBar,.statusBar,.remember { display:none; } .workspace { display:block; padding:0; } .shell,.window,.projectCard { background:white; color:black; box-shadow:none; } .window { border:0; } .content { padding:0; } .projectCard { break-inside:avoid; } }
+
+.projectTitleButton { color: inherit; font: inherit; text-align: left; cursor: pointer; min-height: 44px; }
+.projectTitleButton:hover { text-decoration: underline; }
+.projectTitleButton:focus-visible { outline: 2px solid var(--pf-accent, #7dd3fc); outline-offset: 3px; }
+.desktopCatalog { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

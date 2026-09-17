@@ -2,6 +2,7 @@
 
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
+import { isCompactWindowViewport, compactWindowBounds } from '../../utils/compactWindow';
 import Settings from '../apps/settings';
 import { logPageView } from '../../utils/analytics';
 import { SnapOverlayContext } from '../desktop/SnapOverlay';
@@ -233,7 +234,14 @@ export class Window extends Component {
         this._hasRestoredLayout = false;
     }
 
+    isCompactViewport = () => {
+        const { width, height } = getViewportMetrics();
+        const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
+        return isCompactWindowViewport(width, height, coarse);
+    }
+
     notifySizeChange = () => {
+        if (this.isCompactViewport()) return;
         if (typeof this.props.onSizeChange === 'function') {
             const { width, height } = this.state;
             const targetId = this.id ?? this.props.id;
@@ -251,6 +259,8 @@ export class Window extends Component {
 
         // on window resize, resize boundary
         window.addEventListener('resize', this.resizeBoundries);
+        window.visualViewport?.addEventListener?.('resize', this.resizeBoundries);
+        window.visualViewport?.addEventListener?.('scroll', this.resizeBoundries);
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -335,6 +345,8 @@ export class Window extends Component {
         logPageView('/desktop', 'Custom Title');
 
         window.removeEventListener('resize', this.resizeBoundries);
+        window.visualViewport?.removeEventListener?.('resize', this.resizeBoundries);
+        window.visualViewport?.removeEventListener?.('scroll', this.resizeBoundries);
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
@@ -387,6 +399,7 @@ export class Window extends Component {
         // Resolve responsive dimensions
         const resolveResponsive = (responsiveProp, defaultProp, fallbackMobile, fallbackDesktop) => {
             if (responsiveProp && typeof responsiveProp === 'object') {
+                if (this.isCompactViewport() && typeof responsiveProp.desktop === 'number') return responsiveProp.desktop;
                 if (isMobile && typeof responsiveProp.mobile === 'number') {
                     return responsiveProp.mobile;
                 }
@@ -429,7 +442,7 @@ export class Window extends Component {
         );
     }
 
-    resizeBoundries = () => {
+    resizeBoundries = (event) => {
         const hasWindow = typeof window !== 'undefined';
         const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
         const topInset = hasWindow
@@ -452,7 +465,23 @@ export class Window extends Component {
         this._lastSnapBottomInset = snapBottomInset;
         this._lastSafeAreaBottom = safeAreaBottom;
 
+        const compact = this.isCompactViewport();
+        const fitted = {};
+        if (event?.type === 'resize' && !compact && viewportWidth && viewportHeight) {
+            const width = Math.min(this.state.width, 100);
+            const height = this.state.maximized ? percentOf(availableVertical, viewportHeight) : Math.min(this.state.height, percentOf(availableVertical, viewportHeight));
+            const position = clampWindowPositionWithinViewport(this.state.position,
+                { width: viewportWidth * width / 100, height: viewportHeight * height / 100 },
+                { viewportWidth, viewportHeight, viewportLeft, viewportTop, topOffset: topInset, snapBottomInset, bottomInset: safeAreaBottom });
+            if (position) { fitted.position = position; this.updateTransformVariables(this.getWindowNode(), position.x, position.y); }
+            fitted.width = width;
+            fitted.height = height;
+        }
         this.setState({
+            ...fitted,
+            compact,
+            compactBounds: compactWindowBounds({ width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop }, topInset, snapBottomInset + safeAreaBottom, { left: measureSafeAreaInset('left'), right: measureSafeAreaInset('right') }),
+            availableHeight: availableVertical,
             parentSize: {
                 height: maxTop,
                 width: availableHorizontal,
@@ -461,6 +490,9 @@ export class Window extends Component {
             viewportOffset: { left: viewportLeft, top: viewportTop },
 
         }, () => {
+            if (fitted.position) {
+                this.props.onPositionChange?.(this.id ?? this.props.id, fitted.position.x, fitted.position.y);
+            }
             if (this._uiExperiments) {
                 this.scheduleUsageCheck();
             }
@@ -654,7 +686,7 @@ export class Window extends Component {
     }
 
     persistLayout = () => {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || this.isCompactViewport()) return;
         const key = this.getLayoutStorageKey();
         if (!key) return;
         const node = this.getWindowNode();
@@ -704,7 +736,7 @@ export class Window extends Component {
             width: (viewportWidth * normalizedWidth) / 100,
             height: (viewportHeight * normalizedHeight) / 100,
         };
-        const clampedPosition = clampWindowPositionWithinViewport(
+        const clampedPosition = this.isCompactViewport() ? position : clampWindowPositionWithinViewport(
             { x: position.x, y: position.y },
             size,
             {
@@ -1805,13 +1837,14 @@ export class Window extends Component {
         this.props.focus(this.id);
         const node = this.getWindowNode();
         if (!node || typeof node.focus !== 'function') return;
-        const alreadyFocused = typeof document !== 'undefined' && document.activeElement === node;
+        const alreadyFocused = typeof document !== 'undefined' && node.contains(document.activeElement);
         if (!alreadyFocused) {
-            node.focus();
+            node.focus({ preventScroll: true });
         }
     }
 
     handleTitleBarDoubleClick = (event) => {
+        if (this.state.compact) return;
         if (event) {
             event.preventDefault();
             event.stopPropagation();
@@ -2139,6 +2172,8 @@ export class Window extends Component {
     }
 
     render() {
+        const compact = this.state.compact;
+        const compactBounds = this.state.compactBounds;
         const snapGrid = this.getSnapGrid();
 
         const viewportLeft = this.state.viewportOffset?.left ?? 0;
@@ -2169,7 +2204,8 @@ export class Window extends Component {
                     onDrag={this.handleDrag}
                     allowAnyClick={false}
                     defaultPosition={{ x: this.startX, y: this.startY }}
-                    position={this.state.position}
+                    position={compact ? { x: compactBounds.x, y: compactBounds.y } : this.state.position}
+                    disabled={compact}
                     bounds={{
                         left: viewportLeft - DRAG_BOUNDS_PADDING,
                         top: boundsTop - DRAG_BOUNDS_PADDING,
@@ -2181,10 +2217,12 @@ export class Window extends Component {
                         ref={this.windowRef}
                         style={{
                             position: 'absolute',
-                            width: `${this.state.width}%`,
-                            height: `${this.state.height}%`,
-                            minWidth: `${this.state.minWidth}%`,
-                            minHeight: `${this.state.minHeight}%`,
+                            width: compact ? compactBounds.width : `${this.state.width}%`,
+                            height: compact ? compactBounds.height : `${this.state.height}%`,
+                            minWidth: compact ? 0 : `${this.state.minWidth}%`,
+                            minHeight: compact ? 0 : `${this.state.minHeight}%`,
+                            maxWidth: '100%',
+                            maxHeight: this.state.availableHeight || undefined,
                             zIndex: this.props.zIndex,
                         }}
                         className={[
@@ -2194,13 +2232,15 @@ export class Window extends Component {
                             this.state.grabbed ? 'opacity-70' : '',
                             'opened-window overflow-hidden min-w-1/4 min-h-1/4 main-window absolute flex flex-col window-shadow',
                             styles.windowFrame,
+                            compact ? styles.windowFrameCompact : '',
                             this.props.isFocused ? styles.windowFrameActive : styles.windowFrameInactive,
                             this.state.maximized ? styles.windowFrameMaximized : '',
                             this.state.resizing ? styles.windowFrameResizing : '',
                         ].filter(Boolean).join(' ')}
                         id={this.id}
                         role="dialog"
-                        data-window-state={windowState}
+                        data-window-state={compact && !this.props.minimized ? 'compact' : windowState}
+                        data-window-compact={compact ? 'true' : undefined}
                         aria-hidden={this.props.minimized ? true : false}
                         aria-label={this.props.title}
                         tabIndex={0}
@@ -2208,7 +2248,7 @@ export class Window extends Component {
                         onPointerDown={this.focusWindow}
                         onFocus={this.focusWindow}
                     >
-                        {this.props.resizable !== false && !this.state.maximized && (
+                        {!compact && this.props.resizable !== false && !this.state.maximized && (
                             <>
                                 <WindowEdgeHandle direction="n" onResizeStart={this.beginResize} active={this.state.resizing === 'n'} />
                                 <WindowEdgeHandle direction="s" onResizeStart={this.beginResize} active={this.state.resizing === 's'} />
@@ -2234,7 +2274,7 @@ export class Window extends Component {
                                     isMaximised={this.state.maximized}
                                     close={this.closeWindow}
                                     id={this.id}
-                                    allowMaximize={this.props.allowMaximize !== false}
+                                    allowMaximize={!compact && this.props.allowMaximize !== false}
                                 />
                             )}
                         />
@@ -2260,7 +2300,8 @@ export function WindowTopBar({ title, onKeyDown, onBlur, grabbed, onPointerDown,
         <div
             className={`${styles.windowTitlebar} bg-ub-window-title text-white select-none`}
             tabIndex={0}
-            role="button"
+            role="group"
+            aria-label={`${title} window title bar`}
             aria-grabbed={grabbed}
             onKeyDown={onKeyDown}
             onBlur={onBlur}
@@ -2576,10 +2617,11 @@ export class WindowMainScreen extends Component {
         }
     }
     componentDidMount() {
-        setTimeout(() => {
+        this.backgroundTimer = setTimeout(() => {
             this.setState({ setDarkBg: true });
         }, 3000);
     }
+    componentWillUnmount() { clearTimeout(this.backgroundTimer); }
     render() {
         return (
             <div className={"w-full flex-grow min-h-0 z-20 max-h-full overflow-y-auto windowMainScreen" + (this.state.setDarkBg ? " bg-ub-drk-abrgn " : " bg-ub-cool-grey")}>

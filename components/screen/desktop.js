@@ -1145,6 +1145,7 @@ export class Desktop extends Component {
         const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
         this.handleViewportBucketChange(viewportWidth);
+        if (document.querySelector('[data-window-compact="true"]')) return;
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
         const storedPositions = this.state.window_positions || {};
@@ -3842,7 +3843,8 @@ export class Desktop extends Component {
                         session.windows.forEach(({ id }) => this.openApp(id));
                     });
                 } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
-                    this.openApp('about');
+                    const initialApp = apps.some((app) => app.id === this.props.initialApp && !app.disabled) ? this.props.initialApp : 'about';
+                    this.openApp(initialApp, this.props.initialContext);
                 }
             });
             this.checkForNewFolders();
@@ -3862,6 +3864,9 @@ export class Desktop extends Component {
     }
 
     componentDidUpdate(prevProps, prevState) {
+        if ((prevProps.initialApp !== this.props.initialApp || prevProps.initialContext !== this.props.initialContext) && this.props.initialApp) {
+            this.openApp(this.props.initialApp, this.props.initialContext);
+        }
         if (
             prevProps?.density !== this.props.density ||
             prevProps?.fontScale !== this.props.fontScale ||
@@ -5949,7 +5954,7 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    className="absolute h-full w-full bg-transparent"
+                    className="absolute inset-0 h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
                     {this.renderWindows()}

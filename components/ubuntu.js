@@ -242,7 +242,7 @@ export default class Ubuntu extends Component {
                                         />
                                         <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                         {this.state.desktopMounted ? (
-                                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                                <Desktop initialApp={this.props.initialApp} initialContext={this.props.initialContext} bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
                                         ) : null}
                                 </NotificationCenter>
                         </Layout>

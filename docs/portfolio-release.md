@@ -1,15 +1,74 @@
-# Portfolio-first engineering release
+# Kali desktop reliability release
 
-The root is a server-rendered overview. `?desktop=1` opens the retained Linux desktop; `?overview=1` returns to reading. The remember option is explicit, local, storage-failure tolerant, and reversible. Public `/about`, `/projects`, `/projects/[slug]`, and `/contact` routes do not need desktop interaction.
+## Interaction contract
 
-Narratives live in `data/projects.json`; verified provenance lives in `data/github-projects.json`. `lib/portfolio.ts` combines committed data with no runtime GitHub request. Featured status fails closed for unknown metadata, forks and archived repositories. Non-fork status alone is not proof of authorship. No unverified contribution or impact metrics are claimed.
+The homepage always opens the Kali/Linux operating-system clone. There is no
+portfolio landing page or mode-selection detour. The brief existing boot and
+return-visit behavior, wallpaper, launcher, dock, window chrome, settings and app
+registry remain. About Alex opens in a normal window as before.
 
-`public/projects.json` is a generated compatibility mirror. Run `node scripts/sync-portfolio.mjs` after editing narratives; pass `--check` to detect drift. ProjectCatalog is shared between reading routes and the main desktop gallery. Legacy About project renderers still need consolidation.
+About → Projects and Project Gallery share one catalog. Selecting a project opens
+its details **inside that window**; Back restores the search/filter state and
+keyboard focus. `/about`, `/projects`, `/projects/[slug]` and `/contact` also mount
+the same OS and open the relevant app. Their semantic `noscript` content is a
+fallback for visitors without JavaScript, not a separate default interface.
 
-Hydra, John, radare2, Mimikatz and NSE APIs are bounded educational fixtures with no command execution, target connections or saved input files. Reviewed Nessus, Recon-ng and Wireshark changes remove live scanner and capture connections. This is not an official Kali product.
+## Responsive windows
 
-Telemetry SDKs require the explicit `NEXT_PUBLIC_ANALYTICS_ENABLED=true` deployment opt-in; Speed Insights additionally requires `NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS=true`. This is deployment-level opt-in, not a new visitor consent mechanism. Preview builds do not register the production service worker.
+Phones below 640 CSS pixels, and touch landscape viewports below 1024 × 500, use
+full-work-area app windows. The navbar, minimize/close controls and task switching
+remain accessible. Dragging/resizing and redundant maximize controls are disabled
+only in this compact presentation. Tablet and desktop windows remain movable and
+resizable. Visual viewport changes, including the on-screen keyboard, update the
+work area. Temporary phone bounds never overwrite saved desktop geometry.
 
-Core checks: `yarn install --immutable`, `yarn lint`, `yarn typecheck`, `yarn test --coverage --maxWorkers=2`, `yarn build`, `yarn export`, `yarn dedupe:check`, `yarn npm audit --severity high`. Browser gate: `yarn playwright install chromium`, `yarn build`, `yarn playwright test --config=playwright.portfolio.config.ts`. The browser suite captures eight viewport sizes, tests reading without JavaScript, project search/provenance, contact, keyboard skip links, axe checks, desktop entry preference and reduced motion. Artifacts contain actual screenshots and failures; passing coverage must not be inferred from their existence.
+The window adapter passes `(id, width, height)` exactly once, and forwards position
+updates. Focusing a window does not steal focus from an input inside it. Titlebar
+controls are not nested inside a button role. The test-only native MessageChannel
+polyfill is closed at suite teardown rather than forcing Jest to exit.
 
-CI gates run independently. Vercel Git integration owns previews. Production is unchanged. This branch remains draft until its own checks, browser QA and a READY preview are verified. Baseline blockers include lockfile deduplication, dependency audit findings and Vercel resource-provisioning failures before compilation; changing Actions is not claimed to repair provisioning.
+## Data and safety
+
+Narratives live in `data/projects.json`; repository provenance lives in
+`data/github-projects.json`. `lib/portfolio.ts` combines committed data without a
+GitHub request on page views. Featured status fails closed for unknown metadata,
+forks and archived repositories. Non-fork status alone is not proof of authorship.
+No unverified contributions, star counts or impact metrics are claimed.
+
+Run `node scripts/sync-portfolio.mjs` after narrative changes; `--check` detects
+compatibility-mirror drift in `public/projects.json`. About and the gallery now
+use the same catalog instead of independent project lists.
+
+Security applications remain educational fixtures, not operational scanners or
+credential attacks. No tool binaries or arbitrary-target connections are added.
+The site is independent, not an official Kali Linux product. Analytics remain
+opt-in. Preview builds do not register the production service worker.
+
+## Reproducing validation
+
+Use Node 24 and the committed Yarn 4.9.2 release via Corepack:
+
+```sh
+corepack enable
+yarn install --immutable
+yarn dedupe:check
+yarn lint
+yarn typecheck
+yarn test --coverage --maxWorkers=2
+yarn npm audit --severity high
+yarn build
+yarn export
+yarn playwright install chromium
+yarn playwright test --config=playwright.portfolio.config.ts
+```
+
+The browser suite tests the real OS at eight viewport sizes, application search,
+project navigation, window controls, resizing, input focus, mobile work areas,
+native contact/settings, keyboard launcher, scoped axe checks, no-JavaScript
+fallbacks and 404 status. Screenshots, traces and failures are CI artifacts.
+Passing one suite is not evidence that every game or simulation has been fully
+exercised. The existing broad smoke and a11y scripts remain separate audits.
+
+CI gates run independently and Vercel Git integration owns preview deployment.
+Use the final commit's checks and preview, not earlier PR text, for release
+approval. A READY state alone does not establish application runtime health.

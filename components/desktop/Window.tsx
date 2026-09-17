@@ -84,9 +84,9 @@ const DesktopWindow = React.memo(
       );
 
       const handleSizeChange = useCallback(
-        (width: number, height: number) => {
+        (targetId: string, width: number, height: number) => {
           if (typeof onSizeChange === "function") {
-            onSizeChange(id, width, height);
+            onSizeChange(targetId ?? id, width, height);
           }
         },
         [id, onSizeChange],
@@ -95,6 +95,8 @@ const DesktopWindow = React.memo(
       const clampToViewport = useCallback(() => {
         if (typeof window === "undefined") return;
         const instance = innerRef.current;
+        // Phone bounds are a presentation layer, never a saved desktop layout.
+        if (instance?.isCompactViewport()) return;
         const node = instance && typeof instance.getWindowNode === "function"
           ? instance.getWindowNode()
           : null;
@@ -202,6 +204,7 @@ const DesktopWindow = React.memo(
           isFocused={isFocused}
           zIndex={computedZIndex}
           onSizeChange={handleSizeChange}
+          onPositionChange={onPositionChange}
         />
       );
     },

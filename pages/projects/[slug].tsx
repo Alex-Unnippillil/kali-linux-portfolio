@@ -6,7 +6,7 @@ import { projects, projectKind, type Project } from '../../lib/portfolio';
 import styles from '../../components/portfolio/portfolio.module.css';
 export default function ProjectPage({ project }: { project: Project }) {
   return <><Meta title={`${project.title} | Alex Unnippillil`} description={project.description} path={`/projects/${project.slug}`} />
-    <PortfolioFrame active="projects" title={`Projects / ${project.slug}`}><div className={styles.prose}>
+    <PortfolioFrame projectSlug={project.slug} active="projects" title={`Projects / ${project.slug}`}><div className={styles.prose}>
       <Link href="/projects" prefetch={false}>← All projects</Link><p className={styles.eyebrow}>{projectKind(project)}</p>
       <h1 className={styles.pageTitle}>{project.title}</h1><p>{project.description}</p>
       {project.isFork && <p className={styles.notice}>This is an upstream fork, not an original project or a verified contribution.</p>}
