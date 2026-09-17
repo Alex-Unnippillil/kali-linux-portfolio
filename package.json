@@ -66,7 +66,7 @@
     "jspdf": "^4.0.2",
     "jsqr": "^1.4.0",
     "marked": "^16.2.1",
-    "mathjs": "^14.6.0",
+    "mathjs": "^15.2.0",
     "matter-js": "0.20.0",
     "monaco-editor": "^0.52.2",
     "next": "15.5.25",
@@ -128,7 +128,7 @@
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.1",
     "playwright-core": "^1.55.0",
-    "sharp": "^0.34.3",
+    "sharp": "^0.35.4",
     "test-exclude": "7.0.1",
     "undici": "^7.16.0",
     "wait-on": "^8.0.4",
@@ -143,7 +143,9 @@
     "webpack": "^5.92.0",
     "glob@npm:^7.1.6": "npm:glob@^9.3.5",
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1",
-    "three-bmfont-text": "2.3.0"
+    "three-bmfont-text": "2.3.0",
+    "postcss": "^8.5.18",
+    "serialize-javascript": "^7.0.3"
   },
   "packageManager": "yarn@4.9.2"
 }
