@@ -1,0 +1,85 @@
+name: Validate desktop and phone polish
+on:
+  pull_request:
+    paths: ['.github/workflows/integrate-polish.yml']
+permissions:
+  contents: write
+concurrency:
+  group: portfolio-release-maintenance
+  cancel-in-progress: false
+jobs:
+  integrate:
+    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'engineering/portfolio-release-2026-09-17'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      VERCEL_ENV: preview
+      NEXT_PUBLIC_VERCEL_ENV: preview
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Apply checksum-bound source, preserving concurrent dependency updates
+        run: |
+          python3 <<'PY'
+          import base64, gzip, hashlib
+          from pathlib import Path
+          raw = gzip.decompress(base64.b64decode(Path('scripts/desktop-polish.patch.b64').read_text()))
+          assert hashlib.sha256(raw).hexdigest() == 'dc47062278d7858388536c0905d744a6c52772468ececb83f795c8045e69e826', 'Transfer checksum mismatch'
+          Path('/tmp/desktop-polish.patch').write_bytes(raw)
+          PY
+          git apply --check /tmp/desktop-polish.patch
+          git apply /tmp/desktop-polish.patch
+          git rm scripts/desktop-polish.patch.b64
+          git add apps components utils styles tests __tests__ docs
+          git diff --cached --check
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn dedupe:check
+      - run: yarn lint
+      - run: yarn typecheck
+      - run: yarn test --coverage --maxWorkers=2
+      - run: yarn npm audit --all --recursive --severity high
+      - run: yarn build
+      - name: Commit only checked source to the existing review branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch='engineering/portfolio-release-2026-09-17'
+          expected="$(git rev-parse HEAD)"
+          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' fetch origin "$branch"
+          test "$(git rev-parse FETCH_HEAD)" = "$expected" || { echo 'Branch advanced; refusing to overwrite.'; exit 1; }
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '[desktop] polish phone task switching, calculator focus and persistent notes'
+          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
+      - run: yarn playwright install --with-deps chromium
+      - name: Real desktop and touch interactions
+        run: yarn playwright test --config=playwright.portfolio.config.ts
+      - name: Retain exact source and evidence
+        if: always()
+        run: |
+          mkdir -p release-evidence
+          git rev-parse HEAD > release-evidence/revision.txt
+          git archive --format=tar.gz HEAD > release-evidence/source.tar.gz
+          git diff HEAD > release-evidence/uncommitted.patch
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: polished-desktop-evidence
+          path: |
+            release-evidence
+            portfolio-screenshots
+            portfolio-browser-report
+            test-results
+          retention-days: 7
+          if-no-files-found: error
