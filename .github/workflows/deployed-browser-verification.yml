@@ -1,0 +1,60 @@
+name: Exact Vercel browser verification
+on:
+  pull_request:
+    paths: ['.github/workflows/deployed-browser-verification.yml']
+permissions:
+  contents: read
+  deployments: read
+jobs:
+  deployed:
+    if: github.head_ref == 'qa/deployed-kali-2026-09-17'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      BASE_URL: https://kali-linux-alex-unnippillil-dhljqbmph.vercel.app
+      EXPECTED_REVISION: 9cd5a8de69ac13c5d3a5a8aacea33d8b458ac2fe
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: yarn playwright install --with-deps chromium
+      - name: Verify deployed revision through a normal browser
+        run: |
+          mkdir -p deployed-evidence
+          node <<'JS'
+          const {chromium}=require('playwright');
+          const fs=require('node:fs');
+          (async()=>{
+            const browser=await chromium.launch();
+            const page=await browser.newPage({viewport:{width:1440,height:900}});
+            const evidence={expectedRevision:process.env.EXPECTED_REVISION,url:process.env.BASE_URL};
+            try {
+              const response=await page.goto(process.env.BASE_URL,{waitUntil:'domcontentloaded'});
+              evidence.initialStatus=response.status();
+              await page.locator('#desktop').waitFor({state:'visible',timeout:45000});
+              evidence.actualRevision=await page.evaluate(()=>window.__NEXT_DATA__?.buildId);
+              if(evidence.actualRevision!==evidence.expectedRevision)throw new Error('Deployment revision mismatch');
+              await page.locator('#about').waitFor({state:'visible'});
+              evidence.verified=true;
+            } catch(error) { evidence.error=error.message; process.exitCode=1; }
+            finally {
+              evidence.title=await page.title();
+              fs.writeFileSync('deployed-evidence/result.json',JSON.stringify(evidence,null,2));
+              await page.screenshot({path:'deployed-evidence/deployed.png'});
+              await browser.close();
+              console.log(JSON.stringify(evidence,null,2));
+            }
+          })().catch(error=>{console.error(error);process.exitCode=1;});
+          JS
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: deployed-browser-evidence
+          path: deployed-evidence
+          retention-days: 7
