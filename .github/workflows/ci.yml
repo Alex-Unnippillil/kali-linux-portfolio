@@ -2,10 +2,31 @@ name: CI
 
 on:
   pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  PUPPETEER_SKIP_DOWNLOAD: 'true'
+  NODE_OPTIONS: --max-old-space-size=4096
 
 jobs:
-  lint:
+  checks:
+    name: ${{ matrix.check }}
     runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        check: [lint, typecheck, test, build, security]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -13,87 +34,42 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-          cache: yarn
+      # Enable the checked-in Yarn release before any Yarn cache discovery.
       - run: corepack enable
-      - run: corepack prepare yarn@4.9.2 --activate
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn --version
       - run: yarn install --immutable
-      - run: yarn dedupe --check
-      - run: yarn lint
+      - run: yarn dedupe:check
+      - if: matrix.check == 'lint'
+        run: yarn lint
+      - if: matrix.check == 'typecheck'
+        run: yarn typecheck
+      - if: matrix.check == 'test'
+        run: yarn test --coverage --maxWorkers=2
+      - if: matrix.check == 'security'
+        run: yarn npm audit --severity high
+      - if: matrix.check == 'build'
+        run: yarn build
+      - if: matrix.check == 'build'
+        run: yarn export
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.check == 'test'
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: matrix.check == 'build'
+        with:
+          name: static-export
+          path: out
+          if-no-files-found: error
+          retention-days: 1
 
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: yarn
-      - run: corepack enable
-      - run: corepack prepare yarn@4.9.2 --activate
-      - run: yarn --version
-      - run: yarn install --immutable
-      - run: yarn dedupe --check
-      - run: yarn tsc --noEmit
-
-  test:
-    runs-on: ubuntu-latest
-    env:
-      NODE_OPTIONS: --max-old-space-size=4096
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: yarn
-      - run: corepack enable
-      - run: corepack prepare yarn@4.9.2 --activate
-      - run: yarn --version
-      - run: yarn install --immutable
-      - run: yarn dedupe --check
-      - run: yarn test --coverage --maxWorkers=2 --forceExit
-
-  security:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: yarn
-      - run: corepack enable
-      - run: corepack prepare yarn@4.9.2 --activate
-      - run: yarn --version
-      - run: yarn install --immutable
-      - run: yarn dedupe --check
-      - run: yarn npm audit --severity high
-
-  vercel-preview:
-    runs-on: ubuntu-latest
-    if: ${{ !github.event.pull_request.head.repo.fork && secrets.VERCEL_TOKEN != '' && secrets.VERCEL_ORG_ID != '' && secrets.VERCEL_PROJECT_ID != '' }}
-    env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-          cache: yarn
-      - run: corepack enable
-      - run: corepack prepare yarn@4.9.2 --activate
-      - run: yarn --version
-      - run: yarn install --immutable
-      - run: yarn dedupe --check
-      - run: yarn dlx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-      - run: yarn dlx vercel build --token=${{ secrets.VERCEL_TOKEN }}
-      - run: yarn dlx vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+# Vercel's existing Git integration owns preview deployments. Running a second
+# CLI deployment here duplicated builds and required an invalid job-level
+# secrets condition. No production deployment or secret is used by this CI.
