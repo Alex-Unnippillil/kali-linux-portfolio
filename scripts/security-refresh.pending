@@ -1,0 +1,1 @@
+Review current high-severity dependency advisories, refresh affected compatible ranges with Yarn, validate and retain the candidate on the draft review branch only. Removed after the guarded commit.
