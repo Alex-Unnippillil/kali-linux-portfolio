@@ -1,0 +1,111 @@
+name: Release maintenance
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: ['.github/workflows/release-maintenance.yml']
+permissions:
+  contents: write
+concurrency:
+  group: portfolio-release-maintenance
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'engineering/portfolio-release-2026-09-17'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - name: Read-only Vercel integration diagnostics, never export secrets
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          mkdir -p /tmp/release-maintenance
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const token = process.env.VERCEL_TOKEN;
+          const evidence = { credentialAvailable: Boolean(token), projectId: 'prj_UiPM1alzUPGH0LcZIx0LJNg6tbYs' };
+          const team = 'team_VQhIbhrweakRT0et6p2YDN5F';
+          async function get(path) {
+            const response = await fetch(`https://api.vercel.com${path}${path.includes('?') ? '&' : '?'}teamId=${team}`, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
+            if (!response.ok) return { httpStatus: response.status };
+            return response.json();
+          }
+          if (token) {
+            try {
+              const project = await get(`/v9/projects/${evidence.projectId}`);
+              evidence.project = { id: project.id, nodeVersion: project.nodeVersion, framework: project.framework, httpStatus: project.httpStatus };
+              const deployment = await get('/v13/deployments/dpl_9dZZqEi3vSBdsqKo4RxX3huBqySR');
+              evidence.deployment = { id: deployment.id, readyState: deployment.readyState, readyStateReason: deployment.readyStateReason, errorCode: deployment.errorCode, errorMessage: deployment.errorMessage, httpStatus: deployment.httpStatus };
+              const configurations = await get('/v1/integrations/configurations');
+              const list = Array.isArray(configurations) ? configurations : configurations.configurations || [];
+              evidence.integrations = list.filter(c => !c.projects || c.projects.includes(evidence.projectId)).map(c => ({ id: c.id, slug: c.slug || c.integration?.slug, disabled: c.disabled, disabledAt: c.disabledAt, completedAt: c.completedAt }));
+              evidence.integrationsHttpStatus = configurations.httpStatus;
+            } catch { evidence.error = 'Read-only Vercel diagnostics did not complete; no response or credential contents were logged.'; }
+          }
+          fs.writeFileSync('/tmp/release-maintenance/vercel-diagnostics.json', JSON.stringify(evidence, null, 2));
+          NODE
+      - name: Update only the verified patch lines and runtime
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.engines.node = '24.x';
+          pkg.dependencies.next = '15.5.25';
+          pkg.dependencies.react = '19.2.8';
+          pkg.dependencies['react-dom'] = '19.2.8';
+          pkg.devDependencies['@next/bundle-analyzer'] = '15.5.25';
+          pkg.devDependencies['eslint-config-next'] = '15.5.25';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+          fs.writeFileSync('.nvmrc', '24\n');
+          // Next.js owns API route runtimes. Do not pin a legacy builder as a custom runtime.
+          const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+          delete vercel.functions;
+          fs.writeFileSync('vercel.json', JSON.stringify(vercel, null, 2) + '\n');
+          NODE
+          YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
+          YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn dedupe
+          yarn install --immutable
+          yarn dedupe:check
+          git diff --check
+      - name: Commit generated lockfile without overwriting concurrent work
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch='engineering/portfolio-release-2026-09-17'
+          expected="$(git rev-parse HEAD)"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json yarn.lock .nvmrc vercel.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m '[deps] patch Next and React, deduplicate Yarn and select Node 24'
+          # The token is used by the credential helper, never stored in an artifact or URL.
+          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' fetch origin "$branch"
+          test "$(git rev-parse FETCH_HEAD)" = "$expected" || { echo 'Branch advanced; refusing to overwrite concurrent changes.'; exit 1; }
+          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
+      - name: Capture the exact repaired environment for local validation
+        run: |
+          git archive --format=tar.gz HEAD > /tmp/release-maintenance/source.tar.gz
+          git rev-parse HEAD > /tmp/release-maintenance/revision.txt
+          tar -czf /tmp/release-maintenance/dependencies.tar.gz node_modules .yarn/install-state.gz
+          cp "$(command -v node)" /tmp/release-maintenance/node
+          gzip /tmp/release-maintenance/node
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-maintenance-evidence
+          path: /tmp/release-maintenance
+          retention-days: 1
+          compression-level: 0
+          if-no-files-found: error
