@@ -1,68 +1,14 @@
-import { execFile } from 'child_process';
-import fs from 'fs';
-import os from 'os';
-import path from 'path';
-import { promisify } from 'util';
-
-const execFileAsync = promisify(execFile);
-
+import { boundedText, postOnly } from '../../lib/simulation-response';
 export default async function handler(req, res) {
-  if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
-    res.status(501).json({ error: 'Not implemented' });
-    return;
-  }
-  // Radare2 utilities are optional; this endpoint may be stubbed when the
-  // binaries are unavailable.
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+  if (!postOnly(req, res)) return;
   const { action, hex, file } = req.body || {};
-
-  try {
-    if (action === 'disasm' && hex) {
-      try {
-        await execFileAsync('which', ['rasm2']);
-      } catch {
-        return res.status(500).json({ error: 'radare2 not installed' });
-      }
-      try {
-        const { stdout } = await execFileAsync('rasm2', ['-d', hex], {
-          timeout: 1000 * 60,
-        });
-        return res.status(200).json({ result: stdout });
-      } catch (error) {
-        const msg = error.stderr?.toString() || error.message;
-        return res.status(500).json({ error: msg });
-      }
-    }
-
-    if (action === 'analyze' && file) {
-      try {
-        await execFileAsync('which', ['rabin2']);
-      } catch {
-        return res.status(500).json({ error: 'radare2 not installed' });
-      }
-      const buffer = Buffer.from(file, 'base64');
-      const tmpPath = path.join(os.tmpdir(), `radare2-${Date.now()}`);
-      fs.writeFileSync(tmpPath, buffer);
-      try {
-        const { stdout } = await execFileAsync('rabin2', ['-I', tmpPath], {
-          timeout: 1000 * 60,
-        });
-        fs.unlink(tmpPath, () => {});
-        return res.status(200).json({ result: stdout });
-      } catch (error) {
-        fs.unlink(tmpPath, () => {});
-        const msg = error.stderr?.toString() || error.message;
-        return res.status(500).json({ error: msg });
-      }
-    }
-
-    return res.status(400).json({ error: 'Invalid request' });
-  } catch (e) {
-    return res.status(500).json({ error: e.message });
+  if (action === 'disasm') {
+    if (!boundedText(hex) || !/^(?:[0-9a-fA-F]{2})+$/.test(hex)) return res.status(400).json({ error: 'Use an even number of hexadecimal digits, at most 8192.' });
+    return res.status(200).json({ simulated: true, result: `[demo] Received ${hex.length / 2} bytes. Fixture: 90 = nop; c3 = ret (x86 examples). This is not disassembly of the supplied bytes. No native binary ran.` });
   }
+  if (action === 'analyze') {
+    if (!boundedText(file, 65536) || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file)) return res.status(400).json({ error: 'Use valid base64 text, at most 65536 characters.' });
+    return res.status(200).json({ simulated: true, result: '[demo] Binary-analysis workflow fixture. No file was written, opened or executed. A real analysis would inspect format, sections, imports and symbols; those results are not inferred here.' });
+  }
+  return res.status(400).json({ error: 'Choose the disasm or analyze demonstration.' });
 }
-

@@ -4,6 +4,7 @@ import PluginFeedViewer from './PluginFeedViewer';
 import ScanComparison from './ScanComparison';
 import PluginScoreHeatmap from './PluginScoreHeatmap';
 import FormError from '../../ui/FormError';
+import SimulationBanner from '../SimulationBanner';
 
 // helpers for persistent storage of jobs and false positives
 export const loadJobDefinitions = () => {
@@ -75,9 +76,6 @@ export const recordFalsePositive = (findingId, reason) =>
 const findingKeyFor = (finding) => `${finding.host}::${finding.id}`;
 
 const Nessus = () => {
-  const [url, setUrl] = useState('https://localhost:8834');
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [scans, setScans] = useState([]);
   const [error, setError] = useState('');
@@ -218,39 +216,15 @@ const Nessus = () => {
     URL.revokeObjectURL(url);
   };
 
-  const login = async (e) => {
+  const login = (e) => {
     e.preventDefault();
     setError('');
-    try {
-      const res = await fetch(`${url}/session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-      if (!res.ok) throw new Error('Authentication failed');
-      const data = await res.json();
-      setToken(data.token);
-      fetchScans(data.token, url);
-    } catch (err) {
-      setError(err.message);
-    }
+    setToken('demo-offline-session');
+    setScans([]);
   };
 
-  const fetchScans = async (tkn = token, baseUrl = url) => {
-    try {
-      const res = await fetch(`${baseUrl}/scans`, {
-        headers: {
-          'X-Cookie': `token=${tkn}`,
-          'Content-Type': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      if (!res.ok) throw new Error('Unable to fetch scans');
-      const data = await res.json();
-      setScans(data.scans || []);
-    } catch (err) {
-      setError(err.message);
-    }
+  const fetchScans = () => {
+    setError('Live Nessus connections are disabled; import a report or use bundled fixtures.');
   };
 
   const addJob = (e) => {
@@ -291,50 +265,16 @@ const Nessus = () => {
   if (!token) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-kali-surface/95 text-kali-text">
-        <form onSubmit={login} className="w-64 space-y-2 p-4">
-          <label htmlFor="nessus-url" className="block text-sm">
-            Nessus URL
-          </label>
-          <input
-            id="nessus-url"
-            className="w-full p-2 rounded text-black"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-            placeholder="https://nessus:8834"
-            aria-label="Nessus URL"
-          />
-          <label htmlFor="nessus-username" className="block text-sm">
-            Username
-          </label>
-          <input
-            id="nessus-username"
-            className="w-full p-2 rounded text-black"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-            aria-label="Username"
-          />
-          <label htmlFor="nessus-password" className="block text-sm">
-            Password
-          </label>
-          <input
-            id="nessus-password"
-            type="password"
-            className="w-full p-2 rounded text-black"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? 'nessus-error' : undefined}
-            aria-label="Password"
-          />
+        <form onSubmit={login} className="w-80 space-y-3 p-4">
+          <SimulationBanner message="Nessus runs in offline demo mode. No scanner login or network requests are performed." />
+          <p className="text-sm text-kali-muted">
+            Start a local demo session, then import a sample report or explore the bundled fixtures.
+          </p>
           <button
             type="submit"
             className="w-full rounded bg-kali-primary py-2 text-kali-inverse transition hover:bg-kali-primary/90"
           >
-            Login
+            Start offline demo
           </button>
           {error && <FormError id="nessus-error">{error}</FormError>}
         </form>

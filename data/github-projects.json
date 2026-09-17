@@ -1,0 +1,7 @@
+{
+  "Alex-Unnippillil/kali-linux-portfolio": {"fork": false, "archived": false, "language": "TypeScript", "verifiedAt": "2026-09-17", "upstream": null},
+  "Alex-Unnippillil/web-crawler": {"fork": false, "archived": false, "language": "TypeScript", "verifiedAt": "2026-09-17", "upstream": null},
+  "Alex-Unnippillil/webflyx-rag-studio": {"fork": false, "archived": false, "language": "Python", "verifiedAt": "2026-09-17", "upstream": null},
+  "Alex-Unnippillil/ISS-Hardener-PowerShell": {"fork": false, "archived": false, "language": "PowerShell", "verifiedAt": "2026-09-17", "upstream": null},
+  "Alex-Unnippillil/gpt-researcher": {"fork": true, "archived": false, "language": null, "verifiedAt": "2026-09-17", "upstream": "https://github.com/assafelovic/gpt-researcher"}
+}

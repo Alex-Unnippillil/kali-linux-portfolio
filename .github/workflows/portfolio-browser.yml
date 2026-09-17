@@ -1,0 +1,43 @@
+name: Portfolio browser QA
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: portfolio-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NEXT_PUBLIC_VERCEL_ENV: preview
+      VERCEL_ENV: preview
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - run: yarn playwright install --with-deps chromium
+      - run: yarn build
+      - run: yarn playwright test --config=playwright.portfolio.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: portfolio-browser-evidence
+          path: |
+            portfolio-screenshots
+            portfolio-browser-report
+            test-results
+          if-no-files-found: warn
+          retention-days: 7

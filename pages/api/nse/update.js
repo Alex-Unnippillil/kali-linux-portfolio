@@ -1,25 +1,9 @@
-import { readFile } from 'fs/promises';
-import path from 'path';
-
-export default async function handler(_req, res) {
-  try {
-    const versionPath = path.join(process.cwd(), 'public', 'demo-data', 'nmap', 'script-db-version.json');
-    const raw = await readFile(versionPath, 'utf8');
-    const { sha: current } = JSON.parse(raw);
-
-    const apiUrl = 'https://api.github.com/repos/nmap/nmap/commits?path=scripts/script.db&per_page=1';
-    const response = await fetch(apiUrl, {
-      headers: { 'User-Agent': 'kali-linux-portfolio' },
-    });
-    if (!response.ok) {
-      res.status(502).json({ error: 'Failed to query script repository' });
-      return;
-    }
-    const json = await response.json();
-    const latest = json[0]?.sha || '';
-
-    res.status(200).json({ updateAvailable: current !== latest, current, latest });
-  } catch (e) {
-    res.status(500).json({ error: 'Unable to check script versions' });
+import snapshot from '../../../public/demo-data/nmap/script-db-version.json';
+export default async function handler(req, res) {
+  if (!['GET', 'POST'].includes(req.method)) {
+    res.setHeader('Allow', ['GET', 'POST']);
+    return res.status(405).json({ error: 'Method not allowed' });
   }
+  const current = snapshot.sha || 'bundled-fixture';
+  return res.status(200).json({ simulated: true, updateAvailable: false, current, latest: current, message: 'Bundled educational snapshot only. No upstream repository was queried or updated.' });
 }

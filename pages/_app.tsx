@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect } from 'react';
 import type { ReactElement } from 'react';
 import type { AppProps } from 'next/app';
@@ -20,226 +19,88 @@ import { reportWebVitals as reportWebVitalsUtil } from '../utils/reportWebVitals
 import { Rajdhani } from 'next/font/google';
 import type { BeforeSendEvent } from '@vercel/analytics';
 
-type PeriodicSyncPermissionDescriptor = PermissionDescriptor & {
-  name: 'periodic-background-sync';
-};
-
+type PeriodicSyncPermissionDescriptor = PermissionDescriptor & { name: 'periodic-background-sync' };
 declare global {
-  interface Window {
-    manualRefresh?: () => Promise<void>;
-  }
-
-  interface ServiceWorkerRegistration {
-    periodicSync?: {
-      register: (tag: string, options: { minInterval: number }) => Promise<void>;
-    };
-  }
+  interface Window { manualRefresh?: () => Promise<void>; }
+  interface ServiceWorkerRegistration { periodicSync?: { register: (tag: string, options: { minInterval: number }) => Promise<void> }; }
 }
-
 const resolveServiceWorkerPath = (): string => {
-  const buildPath = (raw?: string | null): string | undefined => {
-    if (!raw) return undefined;
-    const trimmed = raw.trim();
-    if (!trimmed) return undefined;
-
-    const withScheme = /^(https?:)?\/\//i.test(trimmed);
-    const normalized = trimmed.endsWith('/') && trimmed !== '/' ? trimmed.replace(/\/+$/, '') : trimmed;
-
-    if (withScheme) {
-      return `${normalized}/sw.js`;
-    }
-
-    const prefixed = normalized.startsWith('/') ? normalized : `/${normalized}`;
-    if (prefixed === '/' || prefixed === '') {
-      return '/sw.js';
-    }
-
-    return `${prefixed}/sw.js`;
-  };
-
-  const assetPrefix =
-    typeof window !== 'undefined'
-      ? (window as typeof window & { __NEXT_DATA__?: { assetPrefix?: string } }).__NEXT_DATA__?.assetPrefix
-      : undefined;
-
-  return (
-    buildPath(process.env.NEXT_PUBLIC_BASE_PATH ?? process.env.BASE_PATH) ??
-    buildPath(assetPrefix) ??
-    '/sw.js'
-  );
+  const raw = process.env.NEXT_PUBLIC_BASE_PATH ?? process.env.BASE_PATH ?? '';
+  const base = raw.trim().replace(/\/+$/, '');
+  return `${base ? (base.startsWith('/') ? base : `/${base}`) : ''}/sw.js`;
 };
-
-interface MyAppProps extends AppProps { }
-
-type AnalyticsEventWithMetadata = BeforeSendEvent & {
-  metadata?: (Record<string, unknown> & { email?: unknown }) | undefined;
-};
-
-const kaliSans = Rajdhani({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-});
-
-const isSpeedInsightsEnabled =
-  process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true' &&
-  (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true');
-
-const scheduleWhenIdle = (cb: () => void, timeout = 1200): (() => void) => {
-  if (typeof window === 'undefined') return () => undefined;
+type AnalyticsEventWithMetadata = BeforeSendEvent & { metadata?: Record<string, unknown> & { email?: unknown } };
+const kaliSans = Rajdhani({ subsets: ['latin'], weight: ['300', '400', '500', '600', '700'] });
+// Production alone is not consent to enable telemetry. Preserve the explicit deployment opt-in.
+const analyticsEnabled = process.env.NEXT_PUBLIC_ANALYTICS_ENABLED === 'true' && process.env.NEXT_PUBLIC_STATIC_EXPORT !== 'true';
+const speedInsightsEnabled = analyticsEnabled && process.env.NEXT_PUBLIC_ENABLE_SPEED_INSIGHTS === 'true';
+const scheduleWhenIdle = (callback: () => void): (() => void) => {
   if (typeof window.requestIdleCallback === 'function') {
-    const id = window.requestIdleCallback(cb, { timeout });
+    const id = window.requestIdleCallback(callback, { timeout: 1200 });
     return () => window.cancelIdleCallback?.(id);
   }
-  const id = window.setTimeout(cb, 0);
+  const id = window.setTimeout(callback, 0);
   return () => window.clearTimeout(id);
 };
-
-function MyApp({ Component, pageProps }: MyAppProps): ReactElement {
+function MyApp({ Component, pageProps }: AppProps): ReactElement {
   useEffect(() => {
-    // In dev, a previously-registered service worker (e.g. from a production run on localhost)
-    // can keep serving stale cached `_next/static/*` assets, causing `ChunkLoadError`.
-    // Proactively unregister + clear SW caches once per tab session.
-    if (process.env.NODE_ENV !== 'production' && 'serviceWorker' in navigator) {
-      const cleanupKey = '__kali_dev_sw_cleanup_done__';
-      const alreadyCleaned =
-        typeof window !== 'undefined' && window.sessionStorage?.getItem(cleanupKey) === 'true';
-
-      if (!alreadyCleaned) {
+    if (!('serviceWorker' in navigator)) return;
+    const preview = process.env.NEXT_PUBLIC_VERCEL_ENV === 'preview';
+    if (process.env.NODE_ENV !== 'production' || preview) {
+      const cleanup = async () => {
         try {
-          window.sessionStorage?.setItem(cleanupKey, 'true');
-        } catch {
-          // ignore storage failures
-        }
-
-        const cleanup = async (): Promise<void> => {
-          try {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map((reg) => reg.unregister()));
-          } catch (err) {
-            console.warn('Dev service worker cleanup failed', err);
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          // Only remove this application's worker, not unrelated same-origin registrations.
+          await Promise.all(registrations.filter((registration) => {
+            const worker = registration.active ?? registration.waiting ?? registration.installing;
+            return worker && new URL(worker.scriptURL).pathname === resolveServiceWorkerPath();
+          }).map((registration) => registration.unregister()));
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.filter((key) => /(workbox|next-pwa|kali-portfolio|_next)/i.test(key)).map((key) => caches.delete(key)));
           }
-
-          try {
-            if ('caches' in window) {
-              const keys = await caches.keys();
-              const toDelete = keys.filter((key) =>
-                /(workbox|next-pwa|kali-portfolio|_next)/i.test(key)
-              );
-              await Promise.all(toDelete.map((key) => caches.delete(key)));
-            }
-          } catch (err) {
-            console.warn('Dev cache cleanup failed', err);
-          }
-
-          // Service worker has been unregistered, no need to reload
-          // The controller will naturally be released on next navigation
-        };
-
-        void cleanup();
-      }
+        } catch (error) { console.warn('Development/preview worker cleanup failed', error); }
+      };
+      void cleanup();
+      return;
     }
-
-    if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
-      const swPath = resolveServiceWorkerPath();
-      const register = async (): Promise<void> => {
-        try {
-          const registration = await navigator.serviceWorker.register(swPath);
-
-          window.manualRefresh = async () => {
-            try {
-              const existingRegistration = await navigator.serviceWorker.getRegistration(swPath);
-              const activeRegistration = existingRegistration ?? (await navigator.serviceWorker.register(swPath));
-              await activeRegistration.update();
-            } catch (manualRefreshError) {
-              console.error('Service worker manual refresh failed', manualRefreshError);
-            }
-          };
-
-          if ('periodicSync' in registration && registration.periodicSync) {
-            try {
-              const status = await navigator.permissions.query({
-                name: 'periodic-background-sync',
-              } as PeriodicSyncPermissionDescriptor);
-              if (status.state === 'granted') {
-                await registration.periodicSync.register('content-sync', {
-                  minInterval: 24 * 60 * 60 * 1000,
-                });
-              } else {
-                await registration.update();
-              }
-            } catch {
-              await registration.update();
-            }
-          } else {
-            await registration.update();
-          }
-        } catch (err) {
-          console.error('Service worker registration failed', err);
+    let cancelled = false;
+    const register = async (): Promise<void> => {
+      try {
+        const registration = await navigator.serviceWorker.register(resolveServiceWorkerPath());
+        if (cancelled) return;
+        window.manualRefresh = async () => { await registration.update(); };
+        if (registration.periodicSync) {
+          try {
+            const status = await navigator.permissions.query({ name: 'periodic-background-sync' } as PeriodicSyncPermissionDescriptor);
+            if (status.state === 'granted') await registration.periodicSync.register('content-sync', { minInterval: 24 * 60 * 60 * 1000 });
+          } catch { /* Periodic sync is optional; ordinary update remains available. */ }
         }
-      };
-
-      const runRegistration = (): void => {
-        void register().catch((err) => {
-          console.error('Service worker setup failed', err);
-        });
-      };
-
-      let cleanupIdleTask: (() => void) | null = null;
-      const scheduleRegistration = () => {
-        cleanupIdleTask = scheduleWhenIdle(runRegistration);
-      };
-
-      if (document.readyState === 'complete') {
-        scheduleRegistration();
-      } else {
-        window.addEventListener('load', scheduleRegistration, { once: true });
-      }
-
-      return () => {
-        cleanupIdleTask?.();
-        window.removeEventListener('load', scheduleRegistration);
-      };
-    }
-
+        await registration.update();
+      } catch (error) { console.error('Service worker registration failed', error); }
+    };
+    let cancelIdle: (() => void) | undefined;
+    const schedule = () => { cancelIdle = scheduleWhenIdle(() => { void register(); }); };
+    if (document.readyState === 'complete') schedule();
+    else window.addEventListener('load', schedule, { once: true });
+    return () => { cancelled = true; cancelIdle?.(); window.removeEventListener('load', schedule); delete window.manualRefresh; };
   }, []);
-
-
-
-  return (
-    <ErrorBoundary>
-      <div className={kaliSans.className}>
-        <a
-          href="#app-grid"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black"
-        >
-          Skip to app grid
-        </a>
-        <SettingsProvider>
-          <NotificationCenter>
-            <PipPortalProvider>
-              <div aria-live="polite" id="live-region" />
-              <Component {...pageProps} />
-              <ShortcutOverlay />
-              <Analytics
-                beforeSend={(event) => {
-                  if (event.url.includes('/admin') || event.url.includes('/private')) return null;
-                  const evt = event as AnalyticsEventWithMetadata;
-                  if (evt.metadata && 'email' in evt.metadata) {
-                    delete evt.metadata.email;
-                  }
-                  return evt;
-                }}
-              />
-
-              {isSpeedInsightsEnabled && <SpeedInsights />}
-            </PipPortalProvider>
-          </NotificationCenter>
-        </SettingsProvider>
-      </div>
-    </ErrorBoundary>
-  );
+  return <ErrorBoundary><div className={kaliSans.className}>
+    <a href="#application-content" className="sr-only focus:not-sr-only focus:absolute focus:top-0 focus:left-0 focus:z-50 focus:p-2 focus:bg-white focus:text-black">Skip to application content</a>
+    <SettingsProvider><NotificationCenter><PipPortalProvider>
+      <div aria-live="polite" id="live-region" />
+      <div id="application-content" tabIndex={-1}><Component {...pageProps} /></div>
+      <ShortcutOverlay />
+      {analyticsEnabled && <Analytics beforeSend={(event) => {
+        if (event.url.includes('/admin') || event.url.includes('/private')) return null;
+        const safe = event as AnalyticsEventWithMetadata;
+        if (!safe.metadata) return safe;
+        const metadata = { ...safe.metadata }; delete metadata.email;
+        return { ...safe, metadata };
+      }} />}
+      {speedInsightsEnabled && <SpeedInsights />}
+    </PipPortalProvider></NotificationCenter></SettingsProvider>
+  </div></ErrorBoundary>;
 }
-
 export default MyApp;
-
 export { reportWebVitalsUtil as reportWebVitals };
