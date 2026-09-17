@@ -11,8 +11,8 @@ jobs:
     timeout-minutes: 10
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-      BASE_URL: https://kali-linux-alex-unnippillil-dhljqbmph.vercel.app
-      EXPECTED_REVISION: 9cd5a8de69ac13c5d3a5a8aacea33d8b458ac2fe
+      BASE_URL: https://kali-linux-alex-unnippillil-ic3wyrjur.vercel.app
+      EXPECTED_REVISION: dd4acf1ee3ffb1fcf1e3cf1708d105facb17caaa
     steps:
       - uses: actions/checkout@v4
         with:
@@ -40,9 +40,13 @@ jobs:
               const response=await page.goto(process.env.BASE_URL,{waitUntil:'domcontentloaded'});
               evidence.initialStatus=response.status();
               await page.locator('#desktop').waitFor({state:'visible',timeout:45000});
-              evidence.actualRevision=await page.evaluate(()=>window.__NEXT_DATA__?.buildId);
+              evidence.actualRevision=await page.locator('meta[name="kali-build-revision"]').getAttribute('content');
               if(evidence.actualRevision!==evidence.expectedRevision)throw new Error('Deployment revision mismatch');
               await page.locator('#about').waitFor({state:'visible'});
+              await page.screenshot({path:'deployed-evidence/desktop.png'});
+              await page.setViewportSize({width:390,height:844});
+              await page.waitForFunction(()=>document.querySelector('#about')?.getAttribute('data-window-compact')==='true');
+              await page.screenshot({path:'deployed-evidence/mobile.png'});
               evidence.verified=true;
             } catch(error) { evidence.error=error.message; process.exitCode=1; }
             finally {
