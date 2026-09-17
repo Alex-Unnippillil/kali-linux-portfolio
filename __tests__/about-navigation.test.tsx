@@ -2,8 +2,8 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { AboutAlex } from '../components/apps/alex';
 
-jest.mock('../components/apps/certs', () => () => <div>Certificates</div>);
-jest.mock('react-activity-calendar', () => () => <div>Activity</div>);
+jest.mock('../components/apps/certs', () => function CertificatesMock() { return <div>Certificates</div>; });
+jest.mock('react-activity-calendar', () => function ActivityMock() { return <div>Activity</div>; });
 afterEach(() => localStorage.clear());
 
 test('About sections do not duplicate the native window ID, including the mobile menu', () => {
