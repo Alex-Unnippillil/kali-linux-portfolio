@@ -3,16 +3,17 @@
 import { isBrowser } from '../../utils/env';
 import { getDb } from '../../utils/safeIDB';
 
-let notesContainer = null;
-let addNoteBtn = null;
-
-function initDom() {
-  if (!isBrowser) return;
-  notesContainer = document.getElementById('notes');
-  addNoteBtn = document.getElementById('add-note');
-}
-
-initDom();
+// Each app window owns its DOM and listeners. Reopening must initialize again.
+export function mountStickyNotes(root) {
+const notesContainer = root.querySelector('#notes');
+const addNoteBtn = root.querySelector('#add-note');
+const status = root.querySelector('#notes-status');
+const undoBtn = root.querySelector('#undo-note');
+let disposed = false;
+let undoNote = null;
+const cleanups = [];
+const deletedIds = new Set();
+const report = (message) => { if (!disposed && status) status.textContent = message; };
 
 const DEFAULT_NOTE_COLOR_TOKEN = '--sticky-note-surface';
 const LEGACY_DEFAULT_COLOR = '#fffa65';
@@ -183,26 +184,38 @@ function getDB() {
 }
 
 let notes = [];
+const pendingSaves = new Set();
+function saveNotes() {
+  const pending = persistNotes();
+  pendingSaves.add(pending);
+  void pending.finally(() => pendingSaves.delete(pending));
+  return pending;
+}
 
-async function saveNotes() {
+async function persistNotes() {
   try {
     const dbp = getDB();
-    if (!dbp) return;
+    if (!dbp) { report('Storage unavailable. Keep this window open to retain your notes.'); return; }
+    const snapshot = notes.map((note) => ({ ...note }));
+    const removals = [...deletedIds];
     const db = await dbp;
     const tx = db.transaction(STORE_NAME, 'readwrite');
-    await tx.store.clear();
-    for (const note of notes) {
+    for (const id of removals) await tx.store.delete(id);
+    for (const note of snapshot) {
       normalizeNote(note);
       await tx.store.put(note);
     }
     await tx.done;
+    removals.forEach((id) => deletedIds.delete(id));
+    report('Saved on this device');
   } catch (err) {
+    report('Could not save. Keep this window open and copy important notes.');
     console.error('Failed to save notes', err);
   }
 }
 
 function createNoteElement(note) {
-  if (!notesContainer) return;
+  if (disposed || !notesContainer) return;
   normalizeNote(note);
   const el = document.createElement('div');
   el.className = 'note';
@@ -240,7 +253,11 @@ function createNoteElement(note) {
   const deleteBtn = document.createElement('button');
   deleteBtn.textContent = 'Delete';
   deleteBtn.className = 'delete-note';
+  deleteBtn.setAttribute('aria-label', 'Delete note');
   deleteBtn.addEventListener('click', () => {
+    undoNote = { ...note };
+    if (undoBtn) undoBtn.hidden = false;
+    deletedIds.add(note.id);
     notes = notes.filter((n) => n.id !== note.id);
     el.remove();
     void saveNotes();
@@ -251,6 +268,8 @@ function createNoteElement(note) {
   el.appendChild(controls);
 
   const textarea = document.createElement('textarea');
+  textarea.setAttribute('aria-label', 'Note text');
+  textarea.placeholder = 'Write a note…';
   textarea.value = note.content;
   textarea.addEventListener('input', (e) => {
     note.content = e.target.value;
@@ -270,10 +289,10 @@ function createNoteElement(note) {
 function addNote(content = '') {
   const defaultColor = getDefaultNoteColor();
   const note = {
-    id: Date.now(),
+    id: Date.now() + Math.random(),
     content,
-    x: 50,
-    y: 50,
+    x: 16 + (notes.length % 4) * 24,
+    y: 16 + (notes.length % 4) * 32,
     color: defaultColor,
     colorToken: DEFAULT_NOTE_COLOR_TOKEN,
     width: 200,
@@ -292,10 +311,11 @@ function enableDrag(el, note) {
     offsetY = e.clientY - el.offsetTop;
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup', onMouseUp);
+    e.preventDefault();
   }
   function onMouseMove(e) {
-    note.x = e.clientX - offsetX;
-    note.y = e.clientY - offsetY;
+    note.x = Math.max(0, Math.min(notesContainer.clientWidth - el.offsetWidth, e.clientX - offsetX));
+    note.y = Math.max(0, e.clientY - offsetY);
     el.style.left = note.x + 'px';
     el.style.top = note.y + 'px';
   }
@@ -305,14 +325,20 @@ function enableDrag(el, note) {
     void saveNotes();
   }
   el.addEventListener('mousedown', onMouseDown);
+  cleanups.push(() => {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  });
 }
 async function init() {
   try {
     const dbp = getDB();
-    if (!dbp) return;
+    if (!dbp) { report('Storage unavailable. Keep this window open to retain your notes.'); return; }
     const db = await dbp;
+    if (disposed) return;
     notes = (await db.getAll(STORE_NAME)) ?? [];
 
+    if (disposed) return;
     let migrated = false;
     let shouldClearLegacy = false;
     notes = notes.map((note) => {
@@ -346,14 +372,17 @@ async function init() {
     }
 
     notes.forEach(createNoteElement);
+    report(notes.length ? 'Saved on this device' : 'Add your first note. Notes stay on this device.');
 
     const params = new URLSearchParams(location.search);
     const sharedText = params.get('text');
     if (sharedText) {
       addNote(sharedText);
-      history.replaceState(null, '', location.pathname);
+      params.delete('text');
+      history.replaceState(history.state, '', location.pathname + (params.size ? `?${params}` : '') + location.hash);
     }
   } catch (err) {
+    report('Could not load saved notes. Existing saved data has not been erased.');
     console.error('Failed to load notes', err);
     try {
       notes = JSON.parse(localStorage.getItem('stickyNotes') || '[]') || [];
@@ -368,7 +397,29 @@ async function init() {
   }
 }
 
+const onAdd = () => addNote('');
+const onUndo = () => {
+  if (!undoNote) return;
+  deletedIds.delete(undoNote.id);
+  notes.push(undoNote);
+  createNoteElement(undoNote);
+  undoNote = null;
+  if (undoBtn) undoBtn.hidden = true;
+  void saveNotes();
+};
 if (isBrowser && addNoteBtn) {
-  addNoteBtn.addEventListener('click', addNote);
-  void init();
+  // Do not allow a click to race the initial database read.
+  addNoteBtn.disabled = true;
+  addNoteBtn.addEventListener('click', onAdd);
+  undoBtn?.addEventListener('click', onUndo);
+  void init().finally(() => { if (!disposed) addNoteBtn.disabled = false; });
+}
+return () => {
+  disposed = true;
+  addNoteBtn?.removeEventListener('click', onAdd);
+  undoBtn?.removeEventListener('click', onUndo);
+  cleanups.forEach((cleanup) => cleanup());
+  void Promise.allSettled([...pendingSaves]).then(() => dbPromise).then((db) => db?.close()).catch(() => {});
+  notesContainer?.replaceChildren();
+};
 }

@@ -832,3 +832,9 @@ html {
   animation: none !important;
   transition: none !important;
 }
+/* The phone taskbar replaces floating desktop shelves, avoiding content overlap. */
+@media (max-width: 639px), (pointer: coarse) and (max-width: 1023px) and (max-height: 499px) {
+  .desktop-window-shelf { display: none; }
+  [data-window-compact="true"] input:not([type="checkbox"]):not([type="radio"]),
+  [data-window-compact="true"] textarea, [data-window-compact="true"] select { font-size: max(16px, 1em); }
+}

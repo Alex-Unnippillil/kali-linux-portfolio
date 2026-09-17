@@ -12,6 +12,7 @@ const BackgroundImage =
 import apps, { games, displayDesktopFolder } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
+import MobileTaskbar from '../desktop/MobileTaskbar';
 import UbuntuApp from '../base/ubuntu_app';
 import SystemOverlayWindow from '../base/SystemOverlayWindow';
 import AllApplications from '../screen/all-applications'
@@ -6089,6 +6090,11 @@ export class Desktop extends Component {
                         emptyLabel="No recently closed apps"
                     />
                 ) : null}
+
+                <MobileTaskbar apps={this.getRunningAppSummaries()} onOpen={(id) => {
+                    if (this.isOverlayId(id)) this.openOverlay(id, { transitionState: 'entered' });
+                    else this.openApp(id);
+                }} onApplications={this.showAllApps} />
 
                 {this.renderOverlayWindows()}
 
