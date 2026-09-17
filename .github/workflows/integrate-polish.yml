@@ -24,7 +24,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - name: Apply checksum-bound source, preserving concurrent dependency updates
+      - name: Apply checksum-bound source and normalize reviewed line endings
         run: |
           python3 <<'PY'
           import base64, gzip, hashlib
@@ -35,6 +35,16 @@ jobs:
           PY
           git apply --check /tmp/desktop-polish.patch
           git apply /tmp/desktop-polish.patch
+          python3 <<'PY'
+          from pathlib import Path
+          import hashlib
+          path = Path('components/desktop/WindowStateShelf.tsx')
+          old = path.read_bytes()
+          assert hashlib.sha256(old).hexdigest() == 'fdc634eed84b0b5f23af47f1daeced77ca7a560326f8c61f7d863aed490aebf8'
+          new = old.replace(b'\r\n', b'\n')
+          assert hashlib.sha256(new).hexdigest() == '272653670e48fd520210033705cc519c95810ddece532320d4a28199e18c974a'
+          path.write_bytes(new)
+          PY
           git rm scripts/desktop-polish.patch.b64
           git add apps components utils styles tests __tests__ docs
           git diff --cached --check
@@ -49,7 +59,7 @@ jobs:
       - run: yarn test --coverage --maxWorkers=2
       - run: yarn npm audit --all --recursive --severity high
       - run: yarn build
-      - name: Commit only checked source to the existing review branch
+      - name: Commit checked source on the review branch without overwriting changes
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
