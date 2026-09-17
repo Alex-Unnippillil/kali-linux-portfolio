@@ -4,7 +4,6 @@ on:
     paths: ['.github/workflows/deployed-browser-verification.yml']
 permissions:
   contents: read
-  deployments: read
 jobs:
   deployed:
     if: github.head_ref == 'qa/deployed-kali-2026-09-17'
@@ -24,16 +23,19 @@ jobs:
       - run: corepack enable
       - run: yarn install --immutable
       - run: yarn playwright install --with-deps chromium
-      - name: Verify deployed revision through a normal browser
+      - name: Verify exact deployment without changing security settings
+        env:
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |
           mkdir -p deployed-evidence
-          node <<'JS'
+          xvfb-run -a node <<'JS'
           const {chromium}=require('playwright');
           const fs=require('node:fs');
           (async()=>{
-            const browser=await chromium.launch();
-            const page=await browser.newPage({viewport:{width:1440,height:900}});
-            const evidence={expectedRevision:process.env.EXPECTED_REVISION,url:process.env.BASE_URL};
+            const secret=process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+            const browser=await chromium.launch({headless:false});
+            const page=await browser.newPage({viewport:{width:1440,height:900},extraHTTPHeaders:secret?{'x-vercel-protection-bypass':secret,'x-vercel-set-bypass-cookie':'true'}:undefined});
+            const evidence={expectedRevision:process.env.EXPECTED_REVISION,url:process.env.BASE_URL,credentialAvailable:Boolean(secret)};
             try {
               const response=await page.goto(process.env.BASE_URL,{waitUntil:'domcontentloaded'});
               evidence.initialStatus=response.status();
