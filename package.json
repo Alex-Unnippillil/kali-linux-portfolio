@@ -145,7 +145,8 @@
     "workbox-build@npm:7.1.0": "npm:workbox-build@7.1.1",
     "three-bmfont-text": "2.3.0",
     "postcss": "^8.5.18",
-    "serialize-javascript": "^7.0.3"
+    "serialize-javascript": "^7.0.3",
+    "puppeteer": "^25.8.0"
   },
   "packageManager": "yarn@4.9.2"
 }
