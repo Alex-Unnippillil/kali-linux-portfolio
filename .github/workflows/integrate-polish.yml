@@ -5,7 +5,7 @@ on:
 permissions:
   contents: write
 concurrency:
-  group: portfolio-release-maintenance
+  group: desktop-polish-source-integration
   cancel-in-progress: false
 jobs:
   integrate:
