@@ -26,6 +26,7 @@ jobs:
           persist-credentials: false
       - name: Apply checksum-bound source and normalize reviewed line endings
         run: |
+          mkdir -p release-evidence
           python3 <<'PY'
           import base64, gzip, hashlib
           from pathlib import Path
@@ -55,10 +56,23 @@ jobs:
       - run: yarn install --immutable
       - run: yarn dedupe:check
       - run: yarn lint
-      - run: yarn typecheck
-      - run: yarn test --coverage --maxWorkers=2
-      - run: yarn npm audit --all --recursive --severity high
-      - run: yarn build
+      - name: Clean compiler check with original output
+        run: |
+          set -o pipefail
+          node --version > release-evidence/node-version.txt
+          yarn tsc --noEmit --incremental false --pretty false 2>&1 | tee release-evidence/typecheck.log
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          yarn test --coverage --maxWorkers=2 2>&1 | tee release-evidence/tests.log
+      - name: Dependency audit
+        run: |
+          set -o pipefail
+          yarn npm audit --all --recursive --severity high 2>&1 | tee release-evidence/audit.log
+      - name: Production build
+        run: |
+          set -o pipefail
+          yarn build 2>&1 | tee release-evidence/build.log
       - name: Commit checked source on the review branch without overwriting changes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -74,7 +88,9 @@ jobs:
           git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
       - run: yarn playwright install --with-deps chromium
       - name: Real desktop and touch interactions
-        run: yarn playwright test --config=playwright.portfolio.config.ts
+        run: |
+          set -o pipefail
+          yarn playwright test --config=playwright.portfolio.config.ts 2>&1 | tee release-evidence/browser.log
       - name: Retain exact source and evidence
         if: always()
         run: |
@@ -82,6 +98,7 @@ jobs:
           git rev-parse HEAD > release-evidence/revision.txt
           git archive --format=tar.gz HEAD > release-evidence/source.tar.gz
           git diff HEAD > release-evidence/uncommitted.patch
+          git ls-files apps components utils tests __tests__ | xargs sha256sum > release-evidence/source-hashes.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
