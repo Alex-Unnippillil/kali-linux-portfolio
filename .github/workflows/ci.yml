@@ -1,32 +1,27 @@
 name: CI
-
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 env:
   NEXT_TELEMETRY_DISABLED: '1'
   PUPPETEER_SKIP_DOWNLOAD: 'true'
   NODE_OPTIONS: --max-old-space-size=4096
-
 jobs:
   checks:
     name: ${{ matrix.check }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        check: [lint, typecheck, test, build, security]
+        check: [lockfile, lint, typecheck, test, build, security]
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +29,6 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
-      # Enable the checked-in Yarn release before any Yarn cache discovery.
       - run: corepack enable
       - uses: actions/cache@v4
         with:
@@ -42,7 +36,8 @@ jobs:
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn --version
       - run: yarn install --immutable
-      - run: yarn dedupe:check
+      - if: matrix.check == 'lockfile'
+        run: yarn dedupe:check
       - if: matrix.check == 'lint'
         run: yarn lint
       - if: matrix.check == 'typecheck'
@@ -69,7 +64,5 @@ jobs:
           path: out
           if-no-files-found: error
           retention-days: 1
-
-# Vercel's existing Git integration owns preview deployments. Running a second
-# CLI deployment here duplicated builds and required an invalid job-level
-# secrets condition. No production deployment or secret is used by this CI.
+# Keep every gate independent: a lockfile failure must not hide compiler,
+# test, lint, security, or build failures. Vercel Git integration owns previews.
