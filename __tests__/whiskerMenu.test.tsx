@@ -75,3 +75,23 @@ describe('WhiskerMenu focus management', () => {
     });
   });
 });
+
+describe('WhiskerMenu dismissal', () => {
+  it('retains the menu during a transient focus loss and still closes on Escape', async () => {
+    render(<WhiskerMenu />);
+    fireEvent.keyDown(window, { key: 'F1', altKey: true });
+    await screen.findByTestId('whisker-menu-dropdown');
+    const search = screen.getByRole('searchbox', { name: 'Search applications' });
+    fireEvent.blur(search, { relatedTarget: null });
+    expect(screen.getByTestId('whisker-menu-dropdown')).toHaveClass('opacity-100');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByTestId('whisker-menu-dropdown')).not.toBeInTheDocument());
+  });
+  it('still dismisses when the pointer presses outside the launcher', async () => {
+    render(<WhiskerMenu />);
+    fireEvent.keyDown(window, { key: 'F1', altKey: true });
+    await screen.findByTestId('whisker-menu-dropdown');
+    fireEvent.mouseDown(document.body);
+    await waitFor(() => expect(screen.queryByTestId('whisker-menu-dropdown')).not.toBeInTheDocument());
+  });
+});

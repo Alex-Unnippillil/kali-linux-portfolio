@@ -559,11 +559,6 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
             }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              hideMenu();
-            }
-          }}
         >
           <div className="order-2 flex flex-1 flex-col bg-transparent">
             <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">

@@ -35,12 +35,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
       await expect(notes.getByRole('status')).toHaveText('Saved on this device');
       await notes.getByRole('button', { name: 'Delete note', exact: true }).click();
       await notes.getByRole('button', { name: 'Undo delete', exact: true }).click();
-      await expect(notes.getByRole('textbox')).toHaveValue('A copy costs 7 dollars.');
+      await expect(notes.getByRole('textbox', { name: 'Note text', exact: true })).toHaveValue('A copy costs 7 dollars.');
       await expect(notes.getByRole('status')).toHaveText('Saved on this device');
       await notes.getByRole('button', { name: 'Window close', exact: true }).click();
       await expect(notes).toHaveCount(0);
       await openApp(page, 'Sticky Notes', 'sticky_notes');
-      await expect(notes.getByRole('textbox')).toHaveValue('A copy costs 7 dollars.');
+      await expect(notes.getByRole('textbox', { name: 'Note text', exact: true })).toHaveValue('A copy costs 7 dollars.');
       if (phone) {
         const bar = page.getByRole('navigation', { name: 'Phone taskbar' });
         await expect(bar).toBeVisible();
