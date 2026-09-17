@@ -30,27 +30,11 @@ if (typeof global.WritableStream === 'undefined') {
   global.WritableStream = WritableStream;
 }
 
-const { MessageChannel: NodeMessageChannel, MessagePort } = require('worker_threads');
-// jsdom has no MessageChannel. Track the native channels provided by this test
-// polyfill so React's scheduler cannot keep a completed Jest worker alive.
-const testChannels = new Set<InstanceType<typeof NodeMessageChannel>>();
-class TestMessageChannel extends NodeMessageChannel {
-  constructor() { super(); testChannels.add(this); }
-}
-afterAll(() => {
-  for (const channel of testChannels) { channel.port1.close(); channel.port2.close(); }
-  testChannels.clear();
-});
-// @ts-ignore
-if (typeof global.MessageChannel === 'undefined') {
-  // @ts-ignore
-  global.MessageChannel = TestMessageChannel;
-}
-// @ts-ignore
-if (typeof global.MessagePort === 'undefined') {
-  // @ts-ignore
-  global.MessagePort = MessagePort;
-}
+// The jsdom environment owns MessageChannel/MessagePort and closes native ports
+// even when an entire suite is skipped. Node-only suites already provide them.
+const { MessageChannel, MessagePort } = require('node:worker_threads');
+if (typeof global.MessageChannel === 'undefined') global.MessageChannel = MessageChannel;
+if (typeof global.MessagePort === 'undefined') global.MessagePort = MessagePort;
 
 // Undici expects these globals to be present; load it after the polyfills are applied.
 const { fetch: undiciFetch, Headers, Request, Response } = require('undici');

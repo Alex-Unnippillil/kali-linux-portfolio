@@ -45,11 +45,20 @@ jobs:
       - if: matrix.check == 'test'
         run: yarn test --coverage --maxWorkers=2
       - if: matrix.check == 'security'
-        run: yarn npm audit --severity high
+        run: |
+          set -o pipefail
+          yarn npm audit --all --recursive --severity high 2>&1 | tee dependency-audit.log
       - if: matrix.check == 'build'
         run: yarn build
       - if: matrix.check == 'build'
         run: yarn export
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.check == 'security'
+        with:
+          name: dependency-audit
+          path: dependency-audit.log
+          retention-days: 7
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         if: always() && matrix.check == 'test'
         with:
@@ -64,5 +73,5 @@ jobs:
           path: out
           if-no-files-found: error
           retention-days: 1
-# Keep every gate independent: a lockfile failure must not hide compiler,
-# test, lint, security, or build failures. Vercel Git integration owns previews.
+# Independent gates prevent a lockfile failure hiding compiler or browser failures.
+# Vercel Git integration owns preview deployments.

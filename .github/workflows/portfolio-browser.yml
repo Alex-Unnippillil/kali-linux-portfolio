@@ -1,4 +1,4 @@
-name: Portfolio browser QA
+name: Kali desktop browser QA
 on:
   pull_request:
   workflow_dispatch:

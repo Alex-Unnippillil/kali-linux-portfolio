@@ -1,106 +1,31 @@
-name: Integrate verified portfolio hardening
+name: Manual release dependency audit
+# The one-time source integrations are complete. Never replay old patches on
+# every PR synchronization; their history remains available for review.
 on:
-  pull_request:
-    paths: ['scripts/portfolio-hardening.b64']
+  workflow_dispatch:
 permissions:
-  contents: write
-concurrency:
-  group: portfolio-release-maintenance
-  cancel-in-progress: false
+  contents: read
 jobs:
-  integrate:
-    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'engineering/portfolio-release-2026-09-17'
+  audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     env:
-      NEXT_TELEMETRY_DISABLED: '1'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-      NODE_OPTIONS: --max-old-space-size=4096
-      VERCEL_ENV: preview
-      NEXT_PUBLIC_VERCEL_ENV: preview
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
       - run: corepack enable
       - run: yarn install --immutable
-      - name: Apply checksum-bound local source changes
-        run: |
-          python3 <<'PY'
-          import base64, gzip, hashlib, json
-          from pathlib import Path
-          raw = gzip.decompress(base64.b64decode(Path('scripts/portfolio-hardening.b64').read_text()))
-          assert hashlib.sha256(raw).hexdigest() == '9887c7a16962f28b9901bef473af500bb7cd0cb2b621d864414e0922020a5c3d', 'Transport checksum mismatch'
-          staged = []
-          for change in json.loads(raw):
-              path = Path(change['path'])
-              assert not path.is_absolute() and '..' not in path.parts
-              if 'new' in change:
-                  assert not path.exists(), f'New path already exists: {path}'
-                  content = change['new']
-              else:
-                  old = path.read_bytes()
-                  assert hashlib.sha256(old).hexdigest() == change['sha256'], f'Source changed: {path}'
-                  content = old.decode()
-                  for edit in reversed(change['edits']):
-                      content = content[:edit['start']] + edit['text'] + content[edit['end']:]
-              staged.append((path, content))
-          for path, content in staged:
-              path.parent.mkdir(parents=True, exist_ok=True)
-              path.write_bytes(content.encode())
-          print(f'Applied {len(staged)} verified source files')
-          PY
-          git rm --ignore-unmatch public/sw.js public/workbox-59c06b74.js
-          git rm scripts/portfolio-hardening.b64 .github/workflows/release-maintenance.yml
-          git add -A
-          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --cached --check
-      - run: yarn dedupe:check
-      - run: yarn lint
-      - run: yarn typecheck
-      - run: yarn test --maxWorkers=2
-      - run: yarn build
-      - name: Commit verified changes without overwriting concurrent edits
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          branch='engineering/portfolio-release-2026-09-17'
-          expected="$(git rev-parse HEAD)"
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m '[portfolio] harden mobile windows, keyboard focus, shared projects, lazy runtime and PWA'
-          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' fetch origin "$branch"
-          test "$(git rev-parse FETCH_HEAD)" = "$expected" || { echo 'Branch advanced; refusing to overwrite concurrent work.'; exit 1; }
-          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
-      - run: yarn playwright install --with-deps chromium
-      - name: Exercise actual desktop and mobile applications
-        run: yarn playwright test --config=playwright.portfolio.config.ts
-      - name: Dependency audit, including transitive packages
-        if: always()
-        run: |
-          mkdir -p release-validation
+      - run: |
           set -o pipefail
-          yarn npm audit --severity high --recursive 2>&1 | tee release-validation/dependency-audit.txt
-      - name: Save inspectable source and browser evidence
-        if: always()
-        run: |
-          mkdir -p release-validation
-          git rev-parse HEAD > release-validation/revision.txt
-          git archive --format=tar.gz HEAD > release-validation/source.tar.gz
-          test ! -f .next/build-manifest.json || cp .next/build-manifest.json release-validation/build-manifest.json
+          yarn npm audit --all --recursive --severity high 2>&1 | tee dependency-audit.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: integrated-portfolio-evidence
-          path: |
-            release-validation
-            portfolio-screenshots
-            portfolio-browser-report
-            test-results
+          name: dependency-audit
+          path: dependency-audit.log
           retention-days: 7
-          if-no-files-found: error
