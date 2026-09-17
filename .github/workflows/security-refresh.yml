@@ -1,66 +1,17 @@
-name: Review security dependency refresh
+name: Resolve browser tooling audit
 on:
   pull_request:
-    paths: ['scripts/security-refresh.pending', 'scripts/window-fixes.pending.json']
+    paths: ['.github/workflows/security-refresh.yml']
 permissions:
   contents: write
 concurrency:
   group: portfolio-release-maintenance
   cancel-in-progress: false
 jobs:
-  interface:
-    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'engineering/portfolio-release-2026-09-17'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      revision: ${{ steps.apply.outputs.revision }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-          persist-credentials: false
-      - id: apply
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          expected="$(git rev-parse HEAD)"
-          if test -f scripts/window-fixes.pending.json; then
-            python3 - <<'PYCODE'
-          from pathlib import Path
-          import hashlib, json
-          outputs = []
-          for change in json.loads(Path('scripts/window-fixes.pending.json').read_text()):
-              path = Path(change['path'])
-              assert str(path) in ('components/apps/alex.js', 'pages/apps/index.jsx')
-              old = path.read_bytes()
-              assert hashlib.sha256(old).hexdigest() == change['sha256'], str(path)
-              result = old.decode()
-              for before, after in change['replacements']:
-                  assert result.count(before) == 1, str(path)
-                  result = result.replace(before, after)
-              assert hashlib.sha256(result.encode()).hexdigest() == change['after'], str(path)
-              outputs.append((path, result.encode()))
-          for path, data in outputs: path.write_bytes(data)
-          PYCODE
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add components/apps/alex.js pages/apps/index.jsx
-            git rm scripts/window-fixes.pending.json
-            git diff --cached --check
-            git commit -m '[desktop] fix duplicate section IDs and mobile sidebar cascade'
-            branch='engineering/portfolio-release-2026-09-17'
-            git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' fetch origin "$branch"
-            test "$(git rev-parse FETCH_HEAD)" = "$expected"
-            git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
-          fi
-          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
   refresh:
-    needs: interface
     if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'engineering/portfolio-release-2026-09-17'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
       NEXT_TELEMETRY_DISABLED: '1'
@@ -70,53 +21,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.interface.outputs.revision }}
+          ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - id: requested
-        run: |
-          if test -f scripts/security-refresh.pending; then echo 'active=true' >> "$GITHUB_OUTPUT"; fi
       - uses: actions/setup-node@v6
-        if: steps.requested.outputs.active == 'true'
         with:
           node-version-file: .nvmrc
-      - if: steps.requested.outputs.active == 'true'
-        run: corepack enable
-      - name: Capture findings and refresh affected packages with Yarn
-        if: steps.requested.outputs.active == 'true'
+      - run: corepack enable
+      - name: Refresh supported dependency ranges
         env:
           YARN_ENABLE_IMMUTABLE_INSTALLS: 'false'
         run: |
           set -euo pipefail
-          mkdir -p /tmp/dependency-review
-          yarn install --immutable
-          yarn npm audit --all --recursive --json > /tmp/dependency-review/before.json || test "$?" = 1
+          mkdir -p /tmp/final-dependencies
           node <<'JS'
           const fs = require('node:fs');
           const p = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          // Security fixes require these range changes. Preserve other direct constraints.
-          p.dependencies.mathjs = '^15.2.0';
-          p.devDependencies.sharp = '^0.35.4';
-          p.resolutions.postcss = '^8.5.18';
-          p.resolutions['serialize-javascript'] = '^7.0.3';
+          // pa11y 9's old browser installer includes extract-zip without a fix.
+          // Puppeteer 25 removes it. Node 24 supports its ESM interoperability.
+          p.resolutions.puppeteer = '^25.8.0';
           fs.writeFileSync('package.json', JSON.stringify(p, null, 2) + '\n');
           JS
-          yarn up --recursive '@babel/plugin-transform-modules-systemjs' axios basic-ftp brace-expansion browserslist fast-uri fast-xml-parser flatted form-data ip-address js-yaml jsonpath jspdf lodash lodash-es mathjs minimatch nanoid picomatch postcss rollup serialize-javascript sharp tar underscore undici ws pa11y bfj '@puppeteer/browsers' puppeteer
+          yarn install
+          yarn up --recursive dompurify '@babel/core' '@humanfs/node' '@ungap/structured-clone' ajv fflate joi postcss-selector-parser
           yarn dedupe
           yarn install --immutable
           yarn dedupe:check
-          yarn npm audit --all --recursive --json > /tmp/dependency-review/after.json || test "$?" = 1
-          cp package.json yarn.lock /tmp/dependency-review/
-          git diff -- package.json yarn.lock > /tmp/dependency-review/refresh.patch
-      - name: Compile and test candidate before committing to the draft branch
-        if: steps.requested.outputs.active == 'true'
+          yarn npm audit --all --recursive --severity high
+          node -e "require('pa11y'); console.log('pa11y and Puppeteer load on Node', process.version)"
+      - name: Validate generated dependency graph
         run: |
           set -euo pipefail
-          yarn typecheck 2>&1 | tee /tmp/dependency-review/typecheck.log
-          yarn test --maxWorkers=2 2>&1 | tee /tmp/dependency-review/test.log
-          yarn build 2>&1 | tee /tmp/dependency-review/build.log
-      - name: Retain candidate without overwriting concurrent source work
-        if: steps.requested.outputs.active == 'true'
+          yarn typecheck
+          yarn test --maxWorkers=2
+          yarn build
+      - name: Commit on review branch without overwriting concurrent changes
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -124,60 +63,25 @@ jobs:
           branch='engineering/portfolio-release-2026-09-17'
           expected="$(git rev-parse HEAD)"
           git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' fetch origin "$branch"
-          test "$(git rev-parse FETCH_HEAD)" = "$expected" || { echo 'Branch advanced; the artifact is retained for reconciliation.'; exit 1; }
+          test "$(git rev-parse FETCH_HEAD)" = "$expected"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add package.json yarn.lock
-          git rm scripts/security-refresh.pending
-          git commit -m '[deps] refresh audited packages and patched math, PDF and image tooling'
+          git diff --cached --check
+          git commit -m '[deps] remove extract-zip and refresh DOM sanitization dependencies'
           git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
-      - name: Check the resulting dependency graph (do not ignore findings)
-        if: steps.requested.outputs.active == 'true'
-        run: yarn npm audit --all --recursive --severity high
-      - name: Retain reproducible candidate and evidence
-        if: always() && steps.requested.outputs.active == 'true'
+      - name: Capture candidate and exact source
+        if: always()
         run: |
-          mkdir -p /tmp/dependency-review
-          git rev-parse HEAD > /tmp/dependency-review/revision.txt
-          cp package.json yarn.lock /tmp/dependency-review/
-          tar -czf /tmp/dependency-review/dependencies.tar.gz node_modules .yarn/install-state.gz
-      - uses: actions/upload-artifact@v4
-        if: always() && steps.requested.outputs.active == 'true'
-        with:
-          name: security-dependency-review
-          path: /tmp/dependency-review
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
-  browser:
-    needs: interface
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    env:
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
-      NEXT_TELEMETRY_DISABLED: '1'
-      VERCEL_ENV: preview
-      NEXT_PUBLIC_VERCEL_ENV: preview
-      NODE_OPTIONS: --max-old-space-size=4096
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.interface.outputs.revision }}
-          persist-credentials: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-      - run: corepack enable
-      - run: yarn install --immutable
-      - run: yarn playwright install --with-deps chromium
-      - run: yarn build
-      - run: yarn playwright test --config=playwright.portfolio.config.ts
+          mkdir -p /tmp/final-dependencies
+          cp package.json yarn.lock /tmp/final-dependencies/
+          git rev-parse HEAD > /tmp/final-dependencies/revision.txt
+          git archive --format=tar.gz HEAD > /tmp/final-dependencies/source.tar.gz
+          tar -czf /tmp/final-dependencies/dependencies.tar.gz node_modules .yarn/install-state.gz
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: desktop-regression-evidence
-          path: |
-            portfolio-screenshots
-            portfolio-browser-report
-            test-results
-          retention-days: 7
+          name: final-dependencies
+          path: /tmp/final-dependencies
+          retention-days: 1
+          compression-level: 0
