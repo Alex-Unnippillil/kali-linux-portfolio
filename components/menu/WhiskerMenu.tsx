@@ -214,6 +214,9 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
       if (!input) return;
       const menu = menuRef.current;
       const activeElement = document.activeElement;
+      // The delayed autofocus retry must not collapse an active selection or
+      // move the caret while a visitor is replacing or editing the query.
+      if (activeElement === input) return;
       if (
         menu &&
         activeElement instanceof HTMLElement &&
