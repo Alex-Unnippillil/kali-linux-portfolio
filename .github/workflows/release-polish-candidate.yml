@@ -1,0 +1,44 @@
+name: Stage tested release polish
+on:
+  push:
+    branches: [qa/deployed-kali-2026-09-17]
+    paths: [qa/release-polish.patch.b64, .github/workflows/release-polish-candidate.yml]
+permissions:
+  contents: write
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: payload
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 3f5981a58d9b15b8bf8718ea574ed3bf563f7144
+          path: source
+      - name: Verify exact tested patch and allowed paths
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, lzma, pathlib, subprocess
+          raw = lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/release-polish.patch.b64').read_text()))
+          assert hashlib.sha256(raw).hexdigest() == '134abaa219b97b02c2701f7d7faa47cc6f23867ca04f548fae9cb987e92b27bc', 'Patch checksum mismatch'
+          pathlib.Path('/tmp/release.patch').write_bytes(raw)
+          assert subprocess.check_output(['git', '-C', 'source', 'rev-parse', 'HEAD']).decode().strip() == '3f5981a58d9b15b8bf8718ea574ed3bf563f7144'
+          allowed = {'__tests__/embed-controls.test.tsx', '__tests__/launcher-activation.test.tsx', '__tests__/youtube-library.test.ts', '__tests__/youtube.test.tsx', 'components/EmbedFrame.tsx', 'components/apps/youtube/VideoIcon.tsx', 'components/apps/youtube/index.tsx', 'components/apps/youtube/youtube.module.css', 'components/base/window.module.css', 'components/screen/all-applications.js', 'hooks/useYouTubeLibrary.ts', 'styles/globals.css', 'tests/portfolio/app-polish.spec.ts', 'tests/portfolio/youtube-responsive.spec.ts', 'utils/youtube-library.ts'}
+          paths = {line.split('\t')[-1] for line in subprocess.check_output(['git', '-C', 'source', 'apply', '--numstat', '/tmp/release.patch']).decode().splitlines()}
+          assert paths == allowed, 'Unexpected file set'
+          subprocess.run(['git', '-C', 'source', 'apply', '--check', '/tmp/release.patch'], check=True)
+          subprocess.run(['git', '-C', 'source', 'apply', '/tmp/release.patch'], check=True)
+          PY
+      - name: Stage candidate without changing main
+        working-directory: source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git diff --cached --check
+          git commit -m 'fix(desktop): reliable launcher activation and responsive curated playback' -m 'Preserve the OS clone; keep playlist navigation accessible and official video controls unobstructed. Validate API payloads and reduce full-window compositing. Locally validated: build, lint, typecheck, 276 suites and 985 tests. Browser validation remains mandatory before main.'
+          git push origin HEAD:refs/heads/qa/release-polish-134abaa
+          git rev-parse HEAD
