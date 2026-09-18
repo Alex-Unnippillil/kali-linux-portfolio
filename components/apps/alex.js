@@ -102,7 +102,7 @@ export class AboutAlex extends Component {
                         {this.renderNavLinks()}
                     </nav>}
                 </div>
-                <div className="flex min-w-0 flex-col w-full md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+                <div className="flex min-w-0 flex-col w-full md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen [&>*]:shrink-0">
                     {this.state.screen}
                 </div>
             </div>
