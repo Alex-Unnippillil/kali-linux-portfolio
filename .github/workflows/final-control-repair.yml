@@ -1,0 +1,128 @@
+name: Integrate final window control repair
+on:
+  pull_request:
+    paths: ['.github/workflows/final-control-repair.yml']
+permissions:
+  contents: write
+concurrency:
+  group: final-window-control-repair
+  cancel-in-progress: false
+jobs:
+  repair:
+    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'engineering/portfolio-release-2026-09-17'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - name: Add regression proving pointer targets survive pressed-state renders
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          for folder in ['components', 'components/base', '__tests__', '.github', '.github/workflows']:
+              instructions = Path(folder, 'AGENTS.md')
+              if instructions.exists():
+                  raise SystemExit(f'Review nested instructions before proceeding: {instructions}\n{instructions.read_text()}')
+          test = Path('__tests__/window-control-dom.test.tsx')
+          assert not test.exists()
+          test.write_text('''import React from 'react';
+          import { fireEvent, render, screen } from '@testing-library/react';
+          import { WindowEditButtons } from '../components/base/window';
+
+          describe.each(['mouse', 'touch', 'pen'])('window control DOM stability with %s', (pointerType) => {
+            test.each([
+              ['Window minimize', false],
+              ['Window maximize', false],
+              ['Restore window size', true],
+              ['Window close', false],
+            ] as const)('%s keeps its native click target throughout a press', (name, isMaximised) => {
+              const action = jest.fn();
+              render(<WindowEditButtons id="stable" isMaximised={isMaximised} minimize={action} maximize={action} close={action} />);
+              const button = screen.getByRole('button', { name, exact: true });
+              const icon = button.querySelector('svg')!;
+              const shape = icon.firstElementChild!;
+              const pointer = { pointerId: 1, pointerType, button: 0, isPrimary: true };
+              fireEvent.pointerDown(shape, pointer);
+              expect(button.querySelector('svg')).toBe(icon);
+              expect(shape.isConnected).toBe(true);
+              expect(action).not.toHaveBeenCalled();
+              fireEvent.pointerUp(shape, pointer);
+              expect(button.querySelector('svg')).toBe(icon);
+              expect(shape.isConnected).toBe(true);
+              fireEvent.click(shape);
+              expect(action).toHaveBeenCalledTimes(1);
+            });
+          });
+          ''')
+          PY
+      - name: Confirm regression fails against the old controls
+        run: |
+          if yarn jest __tests__/window-control-dom.test.tsx --runInBand; then
+            echo 'Regression unexpectedly passed; do not apply an unproven repair.'
+            exit 1
+          fi
+      - name: Hoist decorative icon components and keep buttons as hit targets
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import hashlib
+          def blob_sha(data):
+              return hashlib.sha1(f'blob {len(data)}\0'.encode() + data).hexdigest()
+          source = Path('components/base/window.js')
+          original = source.read_bytes()
+          assert blob_sha(original) == '055c0aa504c49c056bb4a29bb8586ff5ecef9900'
+          start = original.index(b'    const iconProps = {')
+          end = original.index(b'    const resetPressedControl =', start)
+          block = original[start:end]
+          for name in [b'MinimizeIcon', b'MaximizeIcon', b'RestoreIcon', b'CloseIcon']:
+              assert block.count(b'const ' + name + b' =') == 1
+          hoisted = b''.join(line[4:] if line.startswith(b'    ') else line for line in block.splitlines(keepends=True))
+          modified = original[:start] + original[end:]
+          anchor = b"// Window's Edit Buttons"
+          assert modified.count(anchor) == 1
+          comment = b'// Stable component types keep the pressed SVG mounted until the native click.\n'
+          source.write_bytes(modified.replace(anchor, comment + hoisted + anchor, 1))
+          css = Path('components/base/window.module.css')
+          original_css = css.read_bytes()
+          assert blob_sha(original_css) == 'd8e1be33adaf548a9997eae73ca14a5cbccb566f'
+          anchor = b'.windowControlIcon {'
+          start = original_css.index(anchor) + len(anchor)
+          newline = b'\r\n' if original_css[start:start + 2] == b'\r\n' else b'\n'
+          css.write_bytes(original_css[:start] + newline + b'  pointer-events: none;' + original_css[start:])
+          PY
+      - name: Verify source and regression checks on Node 24
+        run: |
+          node --version
+          yarn jest __tests__/window-control-dom.test.tsx __tests__/window-controls-activation.test.tsx __tests__/window.test.tsx --runInBand
+          yarn eslint components/base/window.js __tests__/window-control-dom.test.tsx --max-warnings=0
+          yarn typecheck
+          git diff --check
+      - name: Commit reviewed repair and remove this one-time workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch='engineering/portfolio-release-2026-09-17'
+          expected="$(git rev-parse HEAD)"
+          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' fetch origin "$branch"
+          test "$(git rev-parse FETCH_HEAD)" = "$expected"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/final-control-repair.yml
+          git add components/base/window.js components/base/window.module.css __tests__/window-control-dom.test.tsx
+          git commit -m '[desktop] preserve window control DOM targets through native pointer clicks'
+          git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
