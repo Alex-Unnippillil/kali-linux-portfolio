@@ -8,20 +8,31 @@ permissions:
 jobs:
   source:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
           ref: engineering/portfolio-release-2026-09-17
           persist-credentials: false
-      - name: Record exact source revision
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: yarn install --immutable
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+      - name: Bundle source and validation dependencies
         run: |
-          git rev-parse HEAD | tee /tmp/review-revision.txt
-          wc -l components/apps/youtube/index.tsx
+          git rev-parse HEAD > /tmp/review-revision.txt
           git archive --format=tar.gz HEAD > /tmp/review-source.tar.gz
+          cp "$(command -v node)" /tmp/review-node
+          tar -czf /tmp/review-dependencies.tar.gz node_modules .yarn/install-state.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: review-source-current
+          name: review-validation-environment
           path: |
-            /tmp/review-source.tar.gz
             /tmp/review-revision.txt
+            /tmp/review-source.tar.gz
+            /tmp/review-node
+            /tmp/review-dependencies.tar.gz
           retention-days: 1
