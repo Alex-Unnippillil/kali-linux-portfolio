@@ -1,0 +1,48 @@
+name: Stage reviewed native app repairs
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-apps-reviewed-repairs.yml]
+permissions:
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: payload
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 9fcbfa83b93fe3f7dbe5570e6560b165ac887c1d
+          path: source
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Apply checksum-verified repair and generate tracked-file allowlist
+        run: |
+          python3 - <<'PY'
+          import pathlib,base64,lzma,hashlib,subprocess
+          raw=lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/native-final-code-fd38c5be.b64').read_text(),validate=True))
+          assert hashlib.sha256(raw).hexdigest()=='fd38c5bed196ee2c65ed370a58a6e774c3a187dc31dfcfde6766b640e706245c'
+          pathlib.Path('/tmp/native-repairs.patch').write_bytes(raw)
+          pathlib.Path('source/.git/info/attributes').write_text('* -text\n')
+          subprocess.run(['git','-C','source','apply','--check','/tmp/native-repairs.patch'],check=True)
+          subprocess.run(['git','-C','source','apply','/tmp/native-repairs.patch'],check=True)
+          subprocess.run(['git','-C','source','add','--update'],check=True)
+          subprocess.run(['node','scripts/generate-repository-snapshot.mjs','--catalog'],cwd='source',check=True)
+          subprocess.run(['git','-C','source','add','data/repository-source-catalog.json'],check=True)
+          assert subprocess.check_output(['git','-C','source','write-tree']).decode().strip()=='3deb33e47959520da5c380750ec099cb9f07d328'
+          PY
+      - name: Store source objects on isolated review branch only
+        working-directory: source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          git commit -m 'fix(apps): stage reviewed close, focus, retry and source-catalog repairs'
+          git push origin HEAD:refs/heads/qa/native-validated-3deb33e
+          git rev-parse HEAD
+          git rev-parse HEAD^{tree}
