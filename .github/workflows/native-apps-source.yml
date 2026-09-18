@@ -1,0 +1,50 @@
+name: Native apps source evidence
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-apps-source.yml]
+permissions:
+  contents: read
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 62f370c8b017906b18ff941fbe5bc392238b0de0
+          persist-credentials: false
+      - name: Package exact public source
+        run: |
+          mkdir -p /tmp/native-apps-evidence
+          git rev-parse HEAD > /tmp/native-apps-evidence/revision.txt
+          git rev-parse HEAD^{tree} > /tmp/native-apps-evidence/tree.txt
+          git archive --format=tar.gz -o /tmp/native-apps-evidence/source.tar.gz HEAD
+      - name: Inspect the official public profile embed once
+        run: |
+          python3 - <<'PY'
+          import urllib.request, urllib.error, pathlib, json
+          root = pathlib.Path('/tmp/native-apps-evidence')
+          url = 'https://syndication.twitter.com/srv/timeline-profile/screen-name/AUnnippillil'
+          req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0', 'Accept': 'text/html'})
+          try:
+              with urllib.request.urlopen(req, timeout=25) as response:
+                  status = response.status
+                  body = response.read(2_000_001)
+                  if len(body) > 2_000_000:
+                      raise ValueError('Public profile response exceeded evidence limit')
+                  (root / 'public-profile.html').write_bytes(body)
+          except urllib.error.HTTPError as exc:
+              status = exc.code
+              (root / 'public-profile.html').write_bytes(exc.read(100_000))
+          except Exception as exc:
+              status = type(exc).__name__
+          (root / 'public-profile-source.json').write_text(json.dumps({'source': url, 'status': status}))
+          print('Official public-profile response status:', status)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-apps-source-evidence
+          path: /tmp/native-apps-evidence
+          retention-days: 7
+          if-no-files-found: error
