@@ -1,0 +1,58 @@
+name: Public X media evidence
+on:
+  push:
+    branches: [qa/native-apps-2026-09-18]
+    paths: [.github/workflows/native-x-media.yml]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  media:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-x-public-source
+          run-id: 35400194480
+          github-token: ${{ github.token }}
+          path: source
+      - name: Capture only public owner media
+        run: |
+          python3 - <<'PY'
+          import pathlib,json,urllib.request,urllib.parse,hashlib
+          root=pathlib.Path('evidence');root.mkdir()
+          profile=json.loads(pathlib.Path('source/profile.json').read_text())['user']
+          assert profile['screen_name'].lower()=='aunnippillil' and profile['protected'] is False
+          posts=[p for p in json.loads(pathlib.Path('source/statuses.json').read_text())['results'] if p.get('author',{}).get('id')==profile['id'] and p.get('author',{}).get('protected') is False and not p.get('reposted_by')]
+          urls={profile['avatar_url'].replace('_normal.','_400x400.'),profile['banner_url']}
+          for p in posts:
+            for m in p.get('media',{}).get('all',[]):
+              url=m.get('url') if m.get('type')=='photo' else m.get('thumbnail_url')
+              if url:urls.add(url)
+          results=[]
+          for url in sorted(urls):
+            if urllib.parse.urlparse(url).hostname!='pbs.twimg.com': continue
+            try:
+              with urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'PortfolioPublicShowcase/1.0'}),timeout=20) as r:
+                assert urllib.parse.urlparse(r.url).hostname=='pbs.twimg.com'
+                data=r.read(5000001);assert len(data)<=5000000
+                kind=r.headers.get_content_type();assert kind in ['image/jpeg','image/png','image/webp']
+                name=hashlib.sha256(url.encode()).hexdigest()[:24]+{'image/jpeg':'.jpg','image/png':'.png','image/webp':'.webp'}[kind]
+                (root/name).write_bytes(data)
+                results.append({'url':url,'file':name,'sha256':hashlib.sha256(data).hexdigest()})
+            except Exception as e:results.append({'url':url,'error':type(e).__name__})
+          (root/'media.json').write_text(json.dumps(results,indent=2))
+          for p in posts[:2]:
+            url='https://publish.twitter.com/oembed?omit_script=true&dnt=true&url='+urllib.parse.quote(p['url'],safe='')
+            try:
+              with urllib.request.urlopen(url,timeout=15) as r:data=json.load(r)
+              (root/('oembed-'+p['id']+'.json')).write_text(json.dumps(data,indent=2))
+            except Exception as e:print('Original attribution check:',p['id'],type(e).__name__)
+          print('Owned posts:',len(posts),'Media results:',len(results))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-x-media
+          path: evidence/
+          retention-days: 3
