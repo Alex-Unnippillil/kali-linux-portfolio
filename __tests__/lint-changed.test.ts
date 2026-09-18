@@ -91,3 +91,31 @@ it("omits deleted files and non-code documentation", () => {
   fs.writeFileSync(path.join(dir, "notes.md"), "notes");
   expect(scope({ GITHUB_BASE_REF: "main" })).toEqual(["changed.ts"]);
 });
+
+it("does not mistake a shallow checkout for a root commit", () => {
+  commit("legacy.js");
+  commit("release.ts");
+  const upstream = dir;
+  const shallow = path.join(upstream, "shallow-checkout");
+  const clone = spawnSync(
+    "git",
+    ["clone", "--quiet", "--depth=1", pathToFileURL(upstream).href, shallow],
+    { encoding: "utf8" },
+  );
+  if (clone.status !== 0) throw new Error(clone.stderr);
+  dir = shallow;
+  try {
+    expect(git("rev-parse", "--is-shallow-repository")).toBe("true");
+    expect(() => scope()).toThrow("Shallow checkout has no lint base");
+    git("fetch", "--quiet", "--unshallow");
+    expect(scope()).toEqual(["release.ts"]);
+  } finally {
+    dir = upstream;
+  }
+});
+it("fetches full history before changed-file lint in the Pages workflow", () => {
+  const workflow = fs.readFileSync(".github/workflows/gh-deploy.yml", "utf8");
+  expect(workflow).toMatch(
+    /uses: actions\/checkout@v4\s+with:\s+fetch-depth: 0/,
+  );
+});

@@ -46,7 +46,13 @@ export function collectChangedFiles(cwd = process.cwd(), env = process.env) {
     }
   }
   if (!base) base = git(["rev-parse", "HEAD^"]).trim();
-  if (!base) base = git(["hash-object", "-t", "tree", "--stdin"], true).trim();
+  if (!base) {
+    if (git(["rev-parse", "--is-shallow-repository"], true).trim() === "true")
+      throw new Error(
+        "Shallow checkout has no lint base; fetch sufficient history before linting.",
+      );
+    base = git(["hash-object", "-t", "tree", "--stdin"], true).trim();
+  }
   const files = new Set([
     ...git(
       ["diff", "--name-only", "-z", "--diff-filter=ACMRTUXB", base, "HEAD"],
