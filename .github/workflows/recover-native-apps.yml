@@ -1,0 +1,37 @@
+name: Recover native apps candidate
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/recover-native-apps.yml]
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Archive staged parts and recover available patch bytes
+        run: |
+          mkdir -p /tmp/recovery
+          python3 - <<'PY'
+          import base64, hashlib, json, lzma, pathlib
+          root=pathlib.Path('qa/native-apps-source')
+          parts=sorted(root.glob('*.b64'))
+          text=''.join(p.read_text().strip() for p in parts)
+          raw=base64.b64decode(text)
+          d=lzma.LZMADecompressor()
+          recovered=d.decompress(raw)
+          pathlib.Path('/tmp/recovery/recovered.patch').write_bytes(recovered)
+          for p in parts:
+              pathlib.Path('/tmp/recovery',p.name).write_bytes(p.read_bytes())
+          pathlib.Path('/tmp/recovery/report.json').write_text(json.dumps({'parts':[p.name for p in parts], 'complete':d.eof, 'bytes':len(recovered),'sha256':hashlib.sha256(recovered).hexdigest()},indent=2))
+          print('Recovered',len(recovered),'bytes; complete stream:',d.eof)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-apps-recovery
+          path: /tmp/recovery/
+          retention-days: 3
