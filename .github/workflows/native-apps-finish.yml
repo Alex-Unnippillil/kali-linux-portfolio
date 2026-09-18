@@ -1,0 +1,73 @@
+name: Finish native apps review candidate
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-apps-finish.yml]
+permissions:
+  contents: write
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: payload
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 4d030877afeb6fe4002b9d19ceba8be2ed84e92a
+          path: source
+      - name: Verify exact finishing changes
+        run: |
+          python3 - <<'PY'
+          import pathlib, base64, lzma, hashlib, subprocess
+          raw=lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/native-followup-7c81e848.b64').read_text(),validate=True))
+          assert hashlib.sha256(raw).hexdigest()=='7c81e84806c9fa6cf8bef6c015b777084eba2a9c344f940f408b0402b9c88542'
+          pathlib.Path('/tmp/finish.patch').write_bytes(raw)
+          pathlib.Path('source/.git/info/attributes').write_text('* -text\n')
+          subprocess.run(['git','-C','source','apply','--check','/tmp/finish.patch'],check=True)
+          subprocess.run(['git','-C','source','apply','/tmp/finish.patch'],check=True)
+          subprocess.run(['git','-C','source','add','--all'],check=True)
+          assert subprocess.check_output(['git','-C','source','write-tree']).decode().strip()=='79228b0c1a8e5b2649dbd15f7d5dd69a251f2602'
+          PY
+      - name: Update existing feature branch, never main
+        working-directory: source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          git commit -m 'fix(apps): validate authentic saved posts and finish direct-open experience' -m 'Test production X posts and hashed local images rather than synthetic feed fixtures. Keep snapshots independent of API credentials and refresh. Preserve complete portrait media and visible saved status. Restore unrelated dev-script formatting. Focused unit tests and strict changed-file lint passed locally; hosted browser and full CI gates remain required.'
+          git push origin HEAD:refs/heads/feat/native-x-repository-editor-2026-09-18
+          git rev-parse HEAD
+  font-inputs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Retrieve exact public Google Fonts build resources for isolated local review
+        run: |
+          mkdir -p /tmp/font-inputs
+          python3 - <<'PY'
+          import pathlib,urllib.request,urllib.parse,re,json,hashlib
+          root=pathlib.Path('/tmp/font-inputs')
+          url='https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap'
+          req=urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36'})
+          with urllib.request.urlopen(req,timeout=30) as r: css=r.read(100000).decode()
+          manifest={'url':url,'css':css,'fonts':{}}
+          for font in set(re.findall(r'url\((https://fonts.gstatic.com/[^)]+)\)',css)):
+              assert urllib.parse.urlparse(font).hostname=='fonts.gstatic.com'
+              with urllib.request.urlopen(font,timeout=30) as r: data=r.read(500000)
+              name=hashlib.sha256(data).hexdigest()+'.woff2'
+              (root/name).write_bytes(data)
+              manifest['fonts'][font]=name
+          assert manifest['fonts']
+          (root/'manifest.json').write_text(json.dumps(manifest))
+          print('Collected',len(manifest['fonts']),'public font build inputs; no application source changed')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: isolated-font-inputs
+          path: /tmp/font-inputs/
+          retention-days: 1
