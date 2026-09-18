@@ -1,0 +1,60 @@
+name: Stage checksum-verified X profile candidate
+on:
+  push:
+    branches: [qa/x-profile-2026-09-18]
+    paths: ['qa/x-profile-source/**', '.github/workflows/x-profile-candidate.yml']
+permissions:
+  contents: write
+jobs:
+  candidate:
+    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: payload
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 8063d70d63da9bb73654c9adb08f71c3afff94d7
+          path: source
+      - name: Verify reviewed source and exact change scope
+        run: |
+          python3 <<'PY'
+          import base64, hashlib, json, lzma, pathlib, subprocess
+          root = pathlib.Path('source')
+          assert subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD']).decode().strip() == '8063d70d63da9bb73654c9adb08f71c3afff94d7'
+          encoded = ''.join(pathlib.Path(f'payload/qa/x-profile-source/{i}.b64').read_text().strip() for i in range(1, 6))
+          raw = lzma.decompress(base64.b64decode(encoded, validate=True))
+          assert hashlib.sha256(raw).hexdigest() == '6b4a74a2115d8b066fcb07a43f87badf3b101c398599760116af0271b66bef51', 'Source checksum mismatch'
+          payload = json.loads(raw)
+          assert set(payload) == {'files', 'patch'}
+          allowed = {'__tests__/lint-changed.test.ts', '__tests__/x-profile-api.test.ts', '__tests__/x-profile-app.test.tsx', '__tests__/x-profile-normalization.test.ts', '__tests__/x-profile-server.test.ts', 'apps/x/index.tsx', 'apps/x/profile.module.css', 'components/apps/x.js', 'docs/x-profile-showcase.md', 'hooks/useXProfile.ts', 'lib/x-profile.server.ts', 'pages/api/x/profile.ts', 'scripts/changed-files.mjs', 'scripts/lint-changed.mjs', 'tests/fixtures/x-profile.ts', 'tests/portfolio/x-profile.spec.ts', 'utils/x-profile.ts'}
+          assert set(payload['files']) == allowed
+          for path, text in payload['files'].items():
+              assert isinstance(text, str)
+              destination = root / path
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              destination.write_text(text, encoding='utf-8')
+          patch = pathlib.Path('/tmp/x-profile.patch')
+          patch.write_text(payload['patch'], encoding='utf-8')
+          patched = {line.split('\t')[-1] for line in subprocess.check_output(['git', '-C', str(root), 'apply', '--numstat', str(patch)]).decode().splitlines()}
+          assert patched == {'README.md', 'apps.config.js', 'next.config.js', 'playwright.portfolio.config.ts'}
+          subprocess.run(['git', '-C', str(root), 'apply', '--check', str(patch)], check=True)
+          subprocess.run(['git', '-C', str(root), 'apply', str(patch)], check=True)
+          subprocess.run(['git', '-C', str(root), 'add', '--all'], check=True)
+          tree = subprocess.check_output(['git', '-C', str(root), 'write-tree']).decode().strip()
+          assert tree == 'f6e7eb173186b7f19481e035125030ec2999ea43', f'Unexpected source tree: {tree}'
+          print(f'Exact tested source tree: {tree}')
+          PY
+      - name: Commit isolated release candidate without changing main
+        working-directory: source
+        run: |
+          set -euo pipefail
+          git diff --cached --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m '[x] rebuild read-only public profile showcase' -m 'Unify native and standalone X screens; add fixed-profile server-side timeline retrieval, bounded signed pagination, consent-aware UI, safe media/text rendering, and explicit configuration failures. Repair changed-file lint base detection without relaxing strict lint checks. No credentials included. Locally validated 1070 passing tests, strict changed-file lint, typecheck, and production build with offline font assets; hosted browser and full CI gates remain mandatory before main.'
+          git push origin HEAD:refs/heads/feat/x-profile-showcase-2026-09-18
+          git rev-parse HEAD
