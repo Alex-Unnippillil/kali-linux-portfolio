@@ -29,17 +29,19 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Add regression proving pointer targets survive pressed-state renders
+      - name: Create native click-target regression
         run: |
           python3 <<'PY'
           from pathlib import Path
+          from textwrap import dedent
           for folder in ['components', 'components/base', '__tests__', '.github', '.github/workflows']:
               instructions = Path(folder, 'AGENTS.md')
               if instructions.exists():
-                  raise SystemExit(f'Review nested instructions before proceeding: {instructions}\n{instructions.read_text()}')
+                  raise SystemExit(f'Review nested instructions: {instructions}')
           test = Path('__tests__/window-control-dom.test.tsx')
           assert not test.exists()
-          test.write_text('''import React from 'react';
+          test.write_text(dedent('''\
+          import React from 'react';
           import { fireEvent, render, screen } from '@testing-library/react';
           import { WindowEditButtons } from '../components/base/window';
 
@@ -49,7 +51,7 @@ jobs:
               ['Window maximize', false],
               ['Restore window size', true],
               ['Window close', false],
-            ] as const)('%s keeps its native click target throughout a press', (name, isMaximised) => {
+            ] as const)('%s preserves the native click target', (name, isMaximised) => {
               const action = jest.fn();
               render(<WindowEditButtons id="stable" isMaximised={isMaximised} minimize={action} maximize={action} close={action} />);
               const button = screen.getByRole('button', { name, exact: true });
@@ -67,15 +69,15 @@ jobs:
               expect(action).toHaveBeenCalledTimes(1);
             });
           });
-          ''')
+          '''))
           PY
-      - name: Confirm regression fails against the old controls
+      - name: Prove old controls fail the new regression
         run: |
           if yarn jest __tests__/window-control-dom.test.tsx --runInBand; then
-            echo 'Regression unexpectedly passed; do not apply an unproven repair.'
+            echo 'Regression unexpectedly passed; refusing an unproven repair.'
             exit 1
           fi
-      - name: Hoist decorative icon components and keep buttons as hit targets
+      - name: Apply checksum-bound stable icon repair
         run: |
           python3 <<'PY'
           from pathlib import Path
@@ -90,28 +92,29 @@ jobs:
           block = original[start:end]
           for name in [b'MinimizeIcon', b'MaximizeIcon', b'RestoreIcon', b'CloseIcon']:
               assert block.count(b'const ' + name + b' =') == 1
-          hoisted = b''.join(line[4:] if line.startswith(b'    ') else line for line in block.splitlines(keepends=True)).replace(b'\r\n', b'\n')
+          hoisted = b''.join(line[4:] if line.startswith(b'    ') else line for line in block.splitlines(keepends=True))
           modified = original[:start] + original[end:]
           anchor = b"// Window's Edit Buttons"
           assert modified.count(anchor) == 1
-          comment = b'// Stable component types keep the pressed SVG mounted until the native click.\n'
-          source.write_bytes(modified.replace(anchor, comment + hoisted + anchor, 1).replace(b'\r\n', b'\n'))
+          source.write_bytes(modified.replace(anchor, b'// Stable icon types preserve the native click target.\n' + hoisted + anchor, 1))
           css = Path('components/base/window.module.css')
           original_css = css.read_bytes()
           assert blob_sha(original_css) == 'd8e1be33adaf548a9997eae73ca14a5cbccb566f'
           anchor = b'.windowControlIcon {'
-          start = original_css.index(anchor) + len(anchor)
-          newline = b'\r\n' if original_css[start:start + 2] == b'\r\n' else b'\n'
-          css.write_bytes(original_css[:start] + newline + b'  pointer-events: none;' + original_css[start:])
+          assert original_css.count(anchor) == 1
+          css.write_bytes(original_css.replace(anchor, anchor + b'\n  pointer-events: none;', 1))
+          for path in [source, css]:
+              path.write_bytes(bytes([10]).join(path.read_bytes().splitlines()) + bytes([10]))
           PY
-      - name: Verify source and regression checks on Node 24
+      - name: Validate repaired source on Node 24
         run: |
+          set -euo pipefail
           node --version
           yarn jest __tests__/window-control-dom.test.tsx __tests__/window-controls-activation.test.tsx __tests__/window.test.tsx --runInBand
           yarn eslint components/base/window.js __tests__/window-control-dom.test.tsx --max-warnings=0
           yarn typecheck
-          git diff --check
-      - name: Commit reviewed repair and remove this one-time workflow
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check
+      - name: Publish checked repair to review branch only
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -124,5 +127,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/final-control-repair.yml
           git add components/base/window.js components/base/window.module.css __tests__/window-control-dom.test.tsx
-          git commit -m '[desktop] preserve window control DOM targets through native pointer clicks'
+          git commit -m '[desktop] preserve native pointer targets in window controls'
           git -c credential.helper='!f() { echo username=x-access-token; echo password="$GH_TOKEN"; }; f' push origin "HEAD:refs/heads/$branch"
