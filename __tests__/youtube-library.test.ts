@@ -115,3 +115,58 @@ test("malformed optional metadata does not crash video cards or descriptions", (
     thumbnail: "",
   });
 });
+
+describe("remote directory validation", () => {
+  const { normalizePlaylistDirectory } = require("../utils/youtube-library");
+  test("normalizes optional fields and ignores invalid, duplicate and non-public entries", () => {
+    const result = normalizePlaylistDirectory({
+      playlists: [
+        null,
+        { id: "a", title: "First" },
+        { id: "a", title: "Duplicate" },
+        { id: "hidden", title: "Private", privacyStatus: "private" },
+        { id: "bad", title: {} },
+      ],
+      sections: { invalid: true },
+    });
+    expect(result.playlists).toEqual([
+      {
+        id: "a",
+        title: "First",
+        description: "",
+        thumbnail: "",
+        publishedAt: "",
+        itemCount: 0,
+        privacyStatus: "public",
+      },
+    ]);
+    expect(result.sections).toEqual([]);
+  });
+  test("category entries can only reference validated public playlists", () => {
+    const result = normalizePlaylistDirectory({
+      playlists: [{ id: "a", title: "First" }],
+      sections: [
+        null,
+        {
+          sectionId: "one",
+          sectionTitle: {},
+          playlists: [null, { id: "a" }, { id: "a" }, { id: "missing" }],
+        },
+        { sectionId: "one", playlists: [{ id: "a" }] },
+      ],
+    });
+    expect(result.sections).toEqual([
+      {
+        sectionId: "one",
+        sectionTitle: "Collections",
+        playlists: result.playlists,
+      },
+    ]);
+  });
+  test("a malformed top-level response becomes a retryable error", () => {
+    expect(() => normalizePlaylistDirectory(null)).toThrow(/unavailable/);
+    expect(() => normalizePlaylistDirectory({ playlists: {} })).toThrow(
+      /unavailable/,
+    );
+  });
+});

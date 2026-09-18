@@ -84,6 +84,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
   const playerRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const videosRef = useRef<HTMLElement>(null);
+  const collectionsRef = useRef<HTMLElement>(null);
   const userSelected = useRef(false);
   const id = useId();
   const playlists = useMemo(() => directory?.playlists ?? [], [directory]);
@@ -138,8 +139,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
       if (
         !ids ||
         seen.has(ids) ||
-        (directory!.sections.length > 1 &&
-          section.playlists.length === playlists.length)
+        section.playlists.length === playlists.length
       )
         return false;
       seen.add(ids);
@@ -401,6 +401,68 @@ function CuratedYouTube({ channel }: { channel: string }) {
           <VideoIcon name="refresh" />
         </button>
       </header>
+      <nav className={styles.libraryNav} aria-label="Library navigation">
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Back to selected video"
+          title="Back to selected video"
+          disabled={!playing}
+          onClick={() => {
+            playerRef.current?.scrollIntoView?.({ block: "start" });
+            headingRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <VideoIcon name="play" />
+        </button>
+        <label className={styles.playlistPicker}>
+          <span className={styles.srOnly}>Choose a playlist</span>
+          <VideoIcon name="playlist" />
+          <select
+            aria-label="Choose a playlist"
+            value={playlistId}
+            disabled={!playlists.length}
+            onChange={(event) => {
+              setCategory("all");
+              choosePlaylist(event.target.value);
+            }}
+          >
+            <option value={ALL_PLAYLIST_ID}>All collections</option>
+            {playlists.map((playlist) => (
+              <option key={playlist.id} value={playlist.id}>
+                {playlist.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Browse playlist collections"
+          title="Browse playlist collections"
+          onClick={() =>
+            collectionsRef.current?.scrollIntoView?.({ block: "start" })
+          }
+        >
+          <VideoIcon name="grid" />
+        </button>
+        <button
+          type="button"
+          className={styles.button}
+          aria-pressed={showSaved}
+          onClick={() => {
+            setShowSaved((value) => !value);
+            setQuery("");
+            videosRef.current?.scrollIntoView?.({ block: "start" });
+          }}
+        >
+          <VideoIcon name="clock" />
+          Watch later
+          {savedVideos.length > 0 && (
+            <span className={styles.count}>{savedVideos.length}</span>
+          )}
+        </button>
+      </nav>
       <main className={styles.main} aria-label="YouTube library">
         <div className={styles.intro}>
           <div>
@@ -466,7 +528,10 @@ function CuratedYouTube({ channel }: { channel: string }) {
                   containerClassName={styles.embedContainer}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
                   fallbackLabel="Open on YouTube"
-                  openInNewTabLabel="Open on YouTube"
+                  externalUrl={watchUrl(playing.videoId)}
+                  showExternalLink={false}
+                  loading="eager"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-presentation"
                   loadingLabel="Loading YouTube player…"
                 />
               ) : (
@@ -619,6 +684,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
           </aside>
         </section>
         <section
+          ref={collectionsRef}
           className={styles.collections}
           aria-label="Playlist collections"
         >
@@ -627,22 +693,6 @@ function CuratedYouTube({ channel }: { channel: string }) {
               <p className={styles.eyebrow}>FIND YOUR NEXT INTEREST</p>
               <h2>Browse collections</h2>
             </div>
-            <button
-              type="button"
-              className={styles.button}
-              aria-pressed={showSaved}
-              onClick={() => {
-                setShowSaved((value) => !value);
-                setQuery("");
-              }}
-            >
-              {" "}
-              <VideoIcon name="clock" />
-              Watch later
-              {savedVideos.length > 0 && (
-                <span className={styles.count}>{savedVideos.length}</span>
-              )}
-            </button>
           </div>
           <nav className={styles.chips} aria-label="Collection categories">
             <button

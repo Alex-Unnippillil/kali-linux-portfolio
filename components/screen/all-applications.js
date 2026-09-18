@@ -304,6 +304,8 @@ class AllApplications extends React.Component {
     };
 
     handleKeyDown = (event) => {
+        // Tiles handle Enter/Space themselves; favorite buttons retain native activation.
+        if (event.defaultPrevented || event.target?.closest?.('button')) return;
         const { apps, focusedIndex, columnCount } = this.state;
         if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter'].includes(event.key)) return;
 
@@ -407,6 +409,8 @@ class AllApplications extends React.Component {
                     icon={app.icon}
                     openApp={() => this.openApp(app.id)}
                     disabled={app.disabled}
+                    launchOnClick
+                    draggable={false}
                     displayName={displayName}
                     isSelected={this.state.focusedIndex === index}
                     onFocus={() => {

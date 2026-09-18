@@ -137,7 +137,7 @@ for (const viewport of [
       ).toBe(true);
       await mkdir("portfolio-screenshots", { recursive: true });
       await page.screenshot({
-        path: `portfolio-screenshots/polished-apps-${viewport.width}.png`,
+        path: `portfolio-screenshots/${browserName}-polished-apps-${viewport.width}.png`,
         animations: "disabled",
       });
       expect(errors).toEqual([]);

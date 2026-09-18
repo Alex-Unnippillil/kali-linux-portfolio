@@ -298,3 +298,20 @@ test("disabling network removes an already selected player", async () => {
   rerender(<YouTubeApp />);
   expect(screen.queryByTitle(/YouTube player/)).not.toBeInTheDocument();
 });
+
+test("persistent playlist navigation changes the collection without replacing the selected player", async () => {
+  render(<YouTubeApp />);
+  const frame = await screen.findByTitle("YouTube player for First Lab Video");
+  const nav = screen.getByRole("navigation", { name: "Library navigation" });
+  fireEvent.change(
+    within(nav).getByRole("combobox", { name: "Choose a playlist" }),
+    { target: { value: "PL_TUTORIALS" } },
+  );
+  expect(
+    await screen.findByRole("button", { name: "Watch First Tutorial Video" }),
+  ).toBeInTheDocument();
+  expect(screen.getByTitle("YouTube player for First Lab Video")).toBe(frame);
+  expect(
+    within(nav).getByRole("button", { name: "Back to selected video" }),
+  ).toBeEnabled();
+});

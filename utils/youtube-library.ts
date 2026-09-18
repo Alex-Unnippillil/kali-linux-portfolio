@@ -1,4 +1,8 @@
-import type { YouTubePlaylistSummary, YouTubePlaylistVideo } from "./youtube";
+import type {
+  YouTubePlaylistSummary,
+  YouTubePlaylistVideo,
+  YouTubePlaylistDirectory,
+} from "./youtube";
 
 export const ALL_PLAYLIST_ID = "all-videos";
 export type VideoSortMode = "newest" | "oldest" | "title" | "playlist";
@@ -138,4 +142,62 @@ export function firstAvailableVideo(
     if (page.items.length) return page.items[0];
   }
   return undefined;
+}
+
+/** Treat remote JSON as untrusted data before rendering React children or mapping sections. */
+export function normalizePlaylistDirectory(
+  value: unknown,
+): YouTubePlaylistDirectory {
+  const record = (item: unknown): Record<string, unknown> =>
+    item !== null && typeof item === "object"
+      ? (item as Record<string, unknown>)
+      : {};
+  const text = (item: unknown) => (typeof item === "string" ? item : "");
+  const source = record(value);
+  if (!Array.isArray(source.playlists))
+    throw new Error("The playlist directory is unavailable. Please refresh.");
+  const playlists = new Map<string, YouTubePlaylistSummary>();
+  for (const item of source.playlists) {
+    const entry = record(item);
+    const id = text(entry.id).trim();
+    const title = text(entry.title).trim();
+    if (!id || !title || playlists.has(id)) continue;
+    const privacy = text(entry.privacyStatus);
+    if (privacy && privacy !== "public") continue;
+    playlists.set(id, {
+      id,
+      title,
+      description: text(entry.description),
+      thumbnail: text(entry.thumbnail),
+      publishedAt: text(entry.publishedAt),
+      itemCount:
+        typeof entry.itemCount === "number" && Number.isFinite(entry.itemCount)
+          ? Math.max(0, Math.floor(entry.itemCount))
+          : 0,
+      privacyStatus: "public",
+    });
+  }
+  const sections: YouTubePlaylistDirectory["sections"] = [];
+  const seen = new Set<string>();
+  for (const item of Array.isArray(source.sections) ? source.sections : []) {
+    const entry = record(item);
+    const sectionId = text(entry.sectionId).trim();
+    if (!sectionId || seen.has(sectionId) || !Array.isArray(entry.playlists))
+      continue;
+    const ids = new Set(
+      entry.playlists.map((playlist) => text(record(playlist).id)),
+    );
+    const members = Array.from(ids).flatMap((id) => {
+      const playlist = playlists.get(id);
+      return playlist ? [playlist] : [];
+    });
+    if (!members.length) continue;
+    seen.add(sectionId);
+    sections.push({
+      sectionId,
+      sectionTitle: text(entry.sectionTitle).trim() || "Collections",
+      playlists: members,
+    });
+  }
+  return { playlists: Array.from(playlists.values()), sections };
 }

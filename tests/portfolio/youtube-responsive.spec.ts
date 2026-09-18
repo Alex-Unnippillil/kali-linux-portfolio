@@ -159,6 +159,32 @@ for (const viewport of [
           .getByRole("button", { name: "Window maximize", exact: true })
           .click();
       }
+      const navigation = app.getByRole("navigation", {
+        name: "Library navigation",
+      });
+      await expect(navigation).toBeVisible();
+      await expect(
+        navigation.getByRole("combobox", { name: "Choose a playlist" }),
+      ).toBeEnabled();
+      await expect(app.locator("iframe")).toHaveAttribute("loading", "eager");
+      await expect(app.locator("iframe")).toHaveAttribute(
+        "referrerpolicy",
+        "strict-origin-when-cross-origin",
+      );
+      // Player controls must remain unobscured by custom links or overlays.
+      await expect(
+        app.locator("iframe").locator("..").getByRole("link"),
+      ).toHaveCount(0);
+      if (viewport.width >= 1000) {
+        await expect(page.locator("#youtube")).toHaveAttribute(
+          "data-window-state",
+          "maximized",
+        );
+      }
+      const dimensions = await app.locator("iframe").boundingBox();
+      expect(dimensions!.height).toBeLessThanOrEqual(
+        Math.max(201, (dimensions!.width * 9) / 16 + 2),
+      );
       await noHorizontalOverflow(page);
       await activate(
         app.getByRole("button", {
@@ -200,14 +226,14 @@ for (const viewport of [
       ).toHaveCount(1);
       await mkdir("portfolio-screenshots", { recursive: true });
       await page.screenshot({
-        path: `portfolio-screenshots/youtube-library-${viewport.width}.png`,
+        path: `portfolio-screenshots/${browserName}-youtube-library-${viewport.width}.png`,
         animations: "disabled",
       });
       await app
         .getByRole("main", { name: "YouTube library" })
         .evaluate((node) => node.scrollTo(0, 0));
       await page.screenshot({
-        path: `portfolio-screenshots/youtube-overview-${viewport.width}.png`,
+        path: `portfolio-screenshots/${browserName}-youtube-overview-${viewport.width}.png`,
         animations: "disabled",
       });
       await activate(
@@ -238,7 +264,7 @@ for (const viewport of [
       await app.getByRole("searchbox").fill("");
       await noHorizontalOverflow(page);
       await page.screenshot({
-        path: `portfolio-screenshots/youtube-watch-${viewport.width}.png`,
+        path: `portfolio-screenshots/${browserName}-youtube-watch-${viewport.width}.png`,
         animations: "disabled",
       });
       if (touch) {

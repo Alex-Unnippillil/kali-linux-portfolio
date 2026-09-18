@@ -10,6 +10,7 @@ import {
 } from "../utils/youtube";
 import {
   mapConcurrent,
+  normalizePlaylistDirectory,
   mergeUniqueVideos,
   nextPlaylistCursor,
   type PlaylistItemsState,
@@ -128,16 +129,22 @@ export default function useYouTubeLibrary(
             ]);
             payload = { summary: channel, directory: listings };
           }
-          if (!Array.isArray(payload.directory?.playlists))
-            throw new Error(
-              "The playlist directory is unavailable. Please refresh.",
-            );
+          const normalized = normalizePlaylistDirectory(payload.directory);
           if (controller.signal.aborted || generation.current !== epoch) return;
-          setSummary(payload.summary);
-          setDirectory({
-            ...payload.directory,
-            sections: payload.directory.sections ?? [],
-          });
+          const info = payload.summary;
+          setSummary(
+            info &&
+              typeof info.id === "string" &&
+              typeof info.title === "string"
+              ? {
+                  id: info.id,
+                  title: info.title,
+                  thumbnail:
+                    typeof info.thumbnail === "string" ? info.thumbnail : "",
+                }
+              : null,
+          );
+          setDirectory(normalized);
         } catch (error) {
           if (!controller.signal.aborted && generation.current === epoch)
             setDirectoryError(errorText(error));
