@@ -6,6 +6,7 @@ import apps from '../../apps.config';
 import { safeLocalStorage } from '../../utils/safeStorage';
 import { readRecentAppIds } from '../../utils/recentStorage';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { isCompactWindowViewport } from '../../utils/compactWindow';
 
 type AppMeta = {
   id: string;
@@ -449,12 +450,19 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
         return;
       }
 
+      const rect = trigger.getBoundingClientRect();
+      const viewport = window.visualViewport;
+      const visibleBottom = viewport ? viewport.offsetTop + viewport.height : window.innerHeight;
+      const compact = isCompactWindowViewport(window.innerWidth, window.innerHeight, window.matchMedia('(any-pointer: coarse)').matches);
+      const safeBottom = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-bottom')) || 0;
+      // Keep scrollable results above the phone taskbar, including landscape
+      // and the software keyboard. Raising z-index alone leaves rows offscreen.
+      const maxHeight = `${Math.max(0, visibleBottom - rect.bottom - 24 - (compact ? 58 + safeBottom : 0))}px`;
       if (window.innerWidth >= 640) {
-        setMenuStyle({});
+        setMenuStyle({ maxHeight });
         return;
       }
 
-      const rect = trigger.getBoundingClientRect();
       const desiredWidth = Math.min(window.innerWidth - 24, 680);
       const rootStyle = getComputedStyle(document.documentElement);
       const parseInset = (value: string) => {
@@ -471,6 +479,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
       const clampedLeft = Math.min(Math.max(centeredLeft, safeAreaLeft), maxLeft);
 
       setMenuStyle({
+        maxHeight,
         width: `${width}px`,
         left: `${clampedLeft}px`,
         top: `${rect.bottom + 12}px`,
@@ -479,8 +488,12 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
 
     updateMenuPosition();
     window.addEventListener('resize', updateMenuPosition);
+    window.visualViewport?.addEventListener('resize', updateMenuPosition);
+    window.visualViewport?.addEventListener('scroll', updateMenuPosition);
     return () => {
       window.removeEventListener('resize', updateMenuPosition);
+      window.visualViewport?.removeEventListener('resize', updateMenuPosition);
+      window.visualViewport?.removeEventListener('scroll', updateMenuPosition);
     };
   }, [isVisible]);
 
@@ -564,7 +577,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
         >
-          <div className="order-2 flex flex-1 flex-col bg-transparent">
+          <div className="order-2 flex min-h-0 min-w-0 flex-1 flex-col bg-transparent">
             <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
               <div className="group/search relative mb-4">
                 <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-white/40 transition-colors duration-200 group-focus-within/search:text-cyan-400">
@@ -607,7 +620,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
                 ))}
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-2 sm:px-3">
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-2 sm:px-3">
               {currentApps.length === 0 ? (
                 <div className="flex h-full flex-col items-center justify-center gap-3 py-8 text-sm text-white/40">
                   <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/[0.04] text-cyan-400/50">

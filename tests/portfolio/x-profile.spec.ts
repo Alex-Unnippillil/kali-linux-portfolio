@@ -63,6 +63,28 @@ async function intactLayout(page: Page) {
       }),
     )
     .toBe(true);
+  const taskbar = page.getByRole("navigation", { name: "Phone taskbar" });
+  if (await taskbar.isVisible()) {
+    await expect
+      .poll(async () => {
+        const bar = await taskbar.boundingBox();
+        const help = await page
+          .getByRole("button", { name: "Desktop tips", exact: true })
+          .boundingBox();
+        const running = await taskbar
+          .getByLabel("Running applications")
+          .boundingBox();
+        return Boolean(
+          bar &&
+          help &&
+          running &&
+          help.y >= bar.y &&
+          help.y + help.height <= bar.y + bar.height + 1 &&
+          running.x + running.width <= help.x,
+        );
+      })
+      .toBe(true);
+  }
 }
 for (const viewport of [
   { width: 390, height: 844 },
@@ -159,6 +181,16 @@ for (const viewport of [
       await menu
         .getByRole("searchbox", { name: "Search applications" })
         .fill("X");
+      const taskbar = page.getByRole("navigation", { name: "Phone taskbar" });
+      if (await taskbar.isVisible()) {
+        await expect
+          .poll(async () => {
+            const bounds = await menu.boundingBox();
+            const bar = await taskbar.boundingBox();
+            return Boolean(bounds && bar && bounds.y + bounds.height <= bar.y);
+          })
+          .toBe(true);
+      }
       await menu
         .getByTestId("whisker-menu-app-list")
         .getByRole("button", { name: "X", exact: true })

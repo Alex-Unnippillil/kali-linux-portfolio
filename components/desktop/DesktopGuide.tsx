@@ -3,6 +3,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import useIsTouchDevice from '../../hooks/useIsTouchDevice';
 import styles from './DesktopGuide.module.css';
+import { isCompactWindowViewport } from '../../utils/compactWindow';
 
 const SEEN_KEY = 'kali:desktop-guide:v1';
 
@@ -10,6 +11,8 @@ const SEEN_KEY = 'kali:desktop-guide:v1';
 export default function DesktopGuide() {
   const [open, setOpen] = useState(false);
   const [firstVisit, setFirstVisit] = useState(false);
+  const [compact, setCompact] = useState(false);
+  const [bottom, setBottom] = useState(0);
   const touchAvailable = useIsTouchDevice();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -19,6 +22,23 @@ export default function DesktopGuide() {
     setFirstVisit(false);
     try { window.localStorage.setItem(SEEN_KEY, 'seen'); } catch { /* Private browsing still works. */ }
   };
+
+  useEffect(() => {
+    const update = () => {
+      setCompact(isCompactWindowViewport(window.innerWidth, window.innerHeight, window.matchMedia('(any-pointer: coarse)').matches));
+      const viewport = window.visualViewport;
+      setBottom(viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0);
+    };
+    update();
+    window.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
+    };
+  }, []);
 
   useEffect(() => {
     try { setFirstVisit(window.localStorage.getItem(SEEN_KEY) !== 'seen'); } catch { /* No persistence required. */ }
@@ -34,7 +54,7 @@ export default function DesktopGuide() {
   }, [open]);
 
   const dismiss = () => { setOpen(false); remember(); trigger.current?.focus({ preventScroll: true }); };
-  return <div ref={root} className={styles.guide} onKeyDown={(event) => {
+  return <div ref={root} className={`${styles.guide} ${compact ? styles.compact : ''}`} data-guide-compact={compact} style={compact ? { bottom: `calc(${bottom + 7}px + env(safe-area-inset-bottom, 0px))` } : undefined} onKeyDown={(event) => {
     if (event.key === 'Escape' && open) { event.preventDefault(); event.stopPropagation(); dismiss(); }
   }}>
     {open && <aside id={id} className={styles.panel} aria-label="Using this desktop">
@@ -46,6 +66,6 @@ export default function DesktopGuide() {
       <p className={styles.note}>This is a portfolio OS simulation. Browser permissions stay in your control, and security tools are learning environments.</p>
       <button type="button" className={styles.done} onClick={dismiss}>Explore the desktop</button>
     </aside>}
-    <div className={styles.controls}><button ref={trigger} type="button" className={styles.trigger} aria-label="Desktop tips" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => { remember(); setOpen((value) => !value); }}><span className={styles.question} aria-hidden="true">?</span><span className={!firstVisit && !open ? styles.compactLabel : undefined}>{firstVisit ? 'New here? Desktop tips' : 'Desktop tips'}</span></button>{firstVisit && !open && <button type="button" className={styles.dismissHint} aria-label="Dismiss desktop hint" onClick={remember}>×</button>}</div>
+    <div className={styles.controls}><button ref={trigger} type="button" className={styles.trigger} aria-label="Desktop tips" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => { remember(); setOpen((value) => !value); }}><span className={styles.question} aria-hidden="true">?</span><span className={compact || (!firstVisit && !open) ? styles.compactLabel : undefined}>{firstVisit ? 'New here? Desktop tips' : 'Desktop tips'}</span></button>{firstVisit && !open && !compact && <button type="button" className={styles.dismissHint} aria-label="Dismiss desktop hint" onClick={remember}>×</button>}</div>
   </div>;
 }

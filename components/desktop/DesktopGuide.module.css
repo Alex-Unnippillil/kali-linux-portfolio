@@ -20,3 +20,10 @@
 @media (max-width: 639px) { .guide { right: max(12px, env(safe-area-inset-right)); bottom: calc(78px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); } .compactLabel { display: none; } .trigger { padding-right: 9px; } .panel { max-height: calc(100dvh - 160px); } }
 @media (max-height: 500px) { .guide { bottom: calc(60px + env(safe-area-inset-bottom)); } .panel { max-height: calc(100dvh - 140px); } }
 @media (forced-colors: active) { .controls, .panel, .question, .done { border: 1px solid ButtonText; } }
+
+/* The compact help control occupies the taskbar's reserved right slot,
+   not application content. The panel opens above it only on request. */
+.guide.compact { position: fixed; right: max(8px, env(safe-area-inset-right)); z-index: 310; }
+.compact .controls { width: 44px; height: 44px; justify-content: center; }
+.compact .trigger { width: 44px; height: 44px; padding: 0; justify-content: center; }
+.compact .compactLabel { display: none; }
