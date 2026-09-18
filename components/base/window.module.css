@@ -295,6 +295,7 @@
 }
 
 .windowControlIcon {
+  pointer-events: none;
   width: clamp(12px, 3.2vw, 14px);
   height: clamp(12px, 3.2vw, 14px);
   display: block;

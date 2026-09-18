@@ -2388,6 +2388,67 @@ export function WindowCornerHandle({ direction, onResizeStart, active }) {
     );
 }
 
+// Stable icon types preserve the native click target.
+const iconProps = {
+    className: styles.windowControlIcon,
+    viewBox: '0 0 16 16',
+    'aria-hidden': true,
+    focusable: 'false',
+};
+
+const MinimizeIcon = () => (
+    <svg {...iconProps}>
+        <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+);
+
+const MaximizeIcon = () => (
+    <svg {...iconProps}>
+        <rect
+            x="3"
+            y="3"
+            width="10"
+            height="10"
+            rx="1.6"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            fill="none"
+        />
+    </svg>
+);
+
+const RestoreIcon = () => (
+    <svg {...iconProps}>
+        <rect
+            x="5"
+            y="3"
+            width="8"
+            height="6.5"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            fill="none"
+        />
+        <rect
+            x="3"
+            y="6.5"
+            width="8"
+            height="6.5"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            fill="none"
+        />
+    </svg>
+);
+
+const CloseIcon = () => (
+    <svg {...iconProps}>
+        <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+);
+
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const allowMaximize = props.allowMaximize !== false;
@@ -2431,66 +2492,6 @@ export function WindowEditButtons(props) {
             titlebar.style.removeProperty('--window-controls-width');
         };
     }, []);
-
-    const iconProps = {
-        className: styles.windowControlIcon,
-        viewBox: '0 0 16 16',
-        'aria-hidden': true,
-        focusable: 'false',
-    };
-
-    const MinimizeIcon = () => (
-        <svg {...iconProps}>
-            <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-    );
-
-    const MaximizeIcon = () => (
-        <svg {...iconProps}>
-            <rect
-                x="3"
-                y="3"
-                width="10"
-                height="10"
-                rx="1.6"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                fill="none"
-            />
-        </svg>
-    );
-
-    const RestoreIcon = () => (
-        <svg {...iconProps}>
-            <rect
-                x="5"
-                y="3"
-                width="8"
-                height="6.5"
-                rx="1.4"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-            />
-            <rect
-                x="3"
-                y="6.5"
-                width="8"
-                height="6.5"
-                rx="1.4"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-            />
-        </svg>
-    );
-
-    const CloseIcon = () => (
-        <svg {...iconProps}>
-            <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-    );
 
     const resetPressedControl = useCallback(() => {
         setPressedControl(null);
