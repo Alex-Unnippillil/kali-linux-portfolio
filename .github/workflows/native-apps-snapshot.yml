@@ -1,0 +1,94 @@
+name: Populate native X saved posts
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-apps-snapshot.yml]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 4d8851b2923418680022390dec5ba0b1f8ba6493
+          path: source
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-x-public-source
+          run-id: 35400194480
+          github-token: ${{ github.token }}
+          path: public-source
+      - name: Build fixed-account saved posts and first-party images
+        run: |
+          python3 - <<'PY'
+          import pathlib, json, hashlib, datetime, urllib.request, urllib.parse
+          root=pathlib.Path('source'); evidence=pathlib.Path('public-source')
+          profile=json.loads((evidence/'profile.json').read_text()); timeline=json.loads((evidence/'statuses.json').read_text()); retrieval=json.loads((evidence/'retrieval.json').read_text())
+          assert profile['code']==200 and timeline['code']==200
+          u=profile['user']; assert u['screen_name']=='AUnnippillil' and u['id']=='185897765' and u['protected'] is False
+          assets=root/'public/showcase/x-media'; assets.mkdir(parents=True,exist_ok=True)
+          sources=[]; total=0
+          def local_image(url):
+              global total
+              parsed=urllib.parse.urlparse(url)
+              assert parsed.scheme=='https' and parsed.hostname=='pbs.twimg.com' and not parsed.username
+              request=urllib.request.Request(url,headers={'User-Agent':'PortfolioPublicShowcase/1.0'})
+              with urllib.request.urlopen(request,timeout=25) as response:
+                  assert urllib.parse.urlparse(response.url).hostname=='pbs.twimg.com'
+                  content=response.read(8000001)
+              assert len(content)<=8000000
+              if content.startswith(b'\x89PNG\r\n\x1a\n'): ext='png'
+              elif content.startswith(b'\xff\xd8\xff'): ext='jpg'
+              elif content[:6] in [b'GIF87a',b'GIF89a']: ext='gif'
+              elif content[:4]==b'RIFF' and content[8:12]==b'WEBP': ext='webp'
+              else: raise ValueError('Unexpected image format')
+              total+=len(content); assert total<=20000000
+              name=hashlib.sha256(content).hexdigest()+'.'+ext
+              (assets/name).write_bytes(content)
+              sources.append({'source':url,'asset':'/showcase/x-media/'+name,'bytes':len(content)})
+              return '/showcase/x-media/'+name
+          def iso(value): return datetime.datetime.strptime(value,'%a %b %d %H:%M:%S %z %Y').isoformat().replace('+00:00','Z')
+          p={'id':u['id'],'username':u['screen_name'],'name':u['name'],'description':u['description'],'location':u['location'],'joined':iso(u['joined']),'followers':u['followers'],'following':u['following'],'posts':u['statuses'],'avatar':local_image(u['avatar_url'].replace('_normal','_400x400')),'banner':local_image(u['banner_url'])}
+          posts=[]; seen=set()
+          for r in timeline['results']:
+              author=r.get('author',{})
+              if r.get('type')!='status' or author.get('id')!=u['id'] or author.get('screen_name')!=u['screen_name'] or author.get('protected') is not False: continue
+              assert r['id'].isdigit() and len(r['id'])<=19 and r['url']=='https://x.com/AUnnippillil/status/'+r['id'] and r['id'] not in seen
+              seen.add(r['id'])
+              post={'id':r['id'],'text':r['text'],'createdAt':iso(r['created_at']),'sensitive':r.get('possibly_sensitive') is True,'urls':[],'media':[],'metrics':{k:r[k] for k in ['replies','reposts','likes'] if isinstance(r.get(k),int) and r[k]>=0}}
+              if r.get('replying_to',{}): post['replyTo']=r['replying_to']['status']
+              for m in (r.get('media') or {}).get('all',[])[:4]:
+                  if m['type']!='photo': continue
+                  post['media'].append({'key':m['id'],'type':'photo','src':local_image(m['url'].replace('name=orig','name=large')),'alt':m.get('altText') or 'Image attached to the original post by Alex Unnippillil'})
+              if not post['text'] and not post['media']: continue
+              posts.append(post)
+          posts.sort(key=lambda x:(x['createdAt'],int(x['id'])),reverse=True)
+          assert len(posts)==18
+          captured=retrieval['retrievedAt'].replace('+00:00','Z')
+          snapshot={'version':1,'source':'https://x.com/AUnnippillil','feed':{'profile':p,'posts':posts,'fetchedAt':captured,'limitReached':False}}
+          (root/'data/x-profile-snapshot.json').write_text(json.dumps(snapshot,ensure_ascii=False,indent=2)+'\n')
+          provenance={'profile':'https://x.com/AUnnippillil','provider':'FxEmbed public read API','retrievedAt':captured,'upstreamArtifact':10569539527,'sourceRun':35400194480,'sourceHashes':{f:hashlib.sha256((evidence/f).read_bytes()).hexdigest() for f in ['profile.json','statuses.json','retrieval.json']},'posts':[{'id':r['id'],'url':'https://x.com/AUnnippillil/status/'+r['id']} for r in posts],'excluded':'Two reposts authored by other accounts; no invented posts or engagement counts','images':sources}
+          (root/'data/x-profile-provenance.json').write_text(json.dumps(provenance,ensure_ascii=False,indent=2)+'\n')
+          print('Saved',len(posts),'original public posts and',len(sources),'first-party images,',total,'bytes')
+          PY
+      - name: Update feature branch only and package exact source
+        working-directory: source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/x-profile-snapshot.json data/x-profile-provenance.json public/showcase/x-media
+          git diff --cached --check
+          git commit -m 'feat(x): bundle 18 authentic public posts and first-party media' -m 'Use retrieved public responses for account 185897765 / @AUnnippillil, record source provenance, and exclude reposts authored by others. Saved posts render immediately without credentials, consent prompts, or third-party runtime requests.'
+          git push origin HEAD:refs/heads/feat/native-x-repository-editor-2026-09-18
+          mkdir -p /tmp/candidate
+          git rev-parse HEAD > /tmp/candidate/revision.txt
+          git rev-parse HEAD^{tree} > /tmp/candidate/tree.txt
+          git archive --format=tar.gz HEAD > /tmp/candidate/source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-apps-candidate
+          path: /tmp/candidate/
+          retention-days: 3
