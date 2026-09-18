@@ -21,7 +21,7 @@ jobs:
       - name: Verify tested control regressions and exact patch
         run: |
           python3 - <<'PY'
-          import base64, hashlib, lzma, pathlib, subprocess
+          import base64, difflib, hashlib, lzma, pathlib, subprocess
           raw = lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/window-controls.b64').read_text()))
           assert hashlib.sha256(raw).hexdigest() == '903411127e388b1c50c8880ea2a18ab2c1ead8cc7d44d4af238c43eba1fd5b25'
           pathlib.Path('/tmp/release.patch').write_bytes(raw)
@@ -31,6 +31,15 @@ jobs:
           assert paths == allowed
           subprocess.run(['git', '-C', 'source', 'apply', '--check', '/tmp/release.patch'], check=True)
           subprocess.run(['git', '-C', 'source', 'apply', '/tmp/release.patch'], check=True)
+          p = pathlib.Path('source/components/base/window.js')
+          old = subprocess.check_output(['git', '-C', 'source', 'show', 'HEAD:components/base/window.js']).decode().splitlines(keepends=True)
+          new = p.read_text().splitlines(keepends=True)
+          out = []
+          for tag,a,b,c,d in difflib.SequenceMatcher(a=[x.rstrip('\r\n') for x in old],b=[x.rstrip('\r\n') for x in new],autojunk=False).get_opcodes():
+              out.extend(old[a:b] if tag == 'equal' else new[c:d])
+          p.write_bytes(''.join(out).encode())
+          assert hashlib.sha256(p.read_bytes()).hexdigest() == '145890a3251c018d8a577d4969e4d5636b957f1fce315f261d8d205d4e86ef35'
+          assert hashlib.sha256(pathlib.Path('source/__tests__/window-controls-activation.test.tsx').read_bytes()).hexdigest() == '5b5ec9ded458502d1c1f8cfd202af28a00701745ee771c8c87ecedaeddf05551'
           PY
       - name: Stage native activation fix without changing main
         working-directory: source
