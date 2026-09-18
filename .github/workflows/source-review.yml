@@ -1,5 +1,6 @@
 name: Read-only source review bundle
 on:
+  pull_request:
   push:
     branches: [qa/deployed-kali-2026-09-17]
 permissions:
@@ -10,11 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: c59ecb5a3baf95280d0cfc5699ecc26aa1045310
+          ref: engineering/portfolio-release-2026-09-17
           persist-credentials: false
-      - run: git archive --format=tar.gz HEAD > /tmp/review-source.tar.gz
+      - name: Record exact source revision
+        run: |
+          git rev-parse HEAD | tee /tmp/review-revision.txt
+          wc -l components/apps/youtube/index.tsx
+          git archive --format=tar.gz HEAD > /tmp/review-source.tar.gz
       - uses: actions/upload-artifact@v4
         with:
-          name: review-source-c59ecb5
-          path: /tmp/review-source.tar.gz
+          name: review-source-current
+          path: |
+            /tmp/review-source.tar.gz
+            /tmp/review-revision.txt
           retention-days: 1
