@@ -1,0 +1,67 @@
+name: Stage About landscape layout correction
+on:
+  push:
+    branches: [qa/deployed-kali-2026-09-17]
+    paths: [.github/workflows/about-landscape-candidate.yml]
+permissions:
+  contents: write
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 29a9664c3ec54edbdd6808fd6f6c754a6e094ad2
+      - name: Apply the narrowly scoped layout correction and regression
+        run: |
+          python3 - <<'PY'
+          import pathlib, subprocess
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip() == '29a9664c3ec54edbdd6808fd6f6c754a6e094ad2'
+          path = pathlib.Path('components/apps/alex.js')
+          text = path.read_text()
+          old = 'items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen'
+          assert text.count(old) == 1, 'About layout source changed'
+          path.write_text(text.replace(old, old + ' [&>*]:shrink-0'))
+          test = pathlib.Path('tests/portfolio/about-layout.spec.ts')
+          assert not test.exists(), 'Do not overwrite an existing test'
+          test.write_text('''import { test, expect } from "@playwright/test";
+          import { mkdir } from "node:fs/promises";
+
+          for (const viewport of [
+            { width: 390, height: 844 },
+            { width: 844, height: 390 },
+            { width: 1440, height: 900 },
+          ]) {
+            test(`About portrait and introduction do not overlap at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+              await page.setViewportSize(viewport);
+              await page.goto("/");
+              const app = page.locator("#about");
+              await expect(app).toBeVisible();
+              const portrait = app.getByRole("img", { name: "Alex Unnippillil Logo", exact: true });
+              const introduction = app.getByText(/^My name is /).first();
+              await expect(portrait).toBeVisible();
+              await expect.poll(() => portrait.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0)).toBe(true);
+              // A flex column with scrollable overflow must not compress the image
+              // wrapper and paint the portrait behind the introduction on short screens.
+              await expect.poll(async () => {
+                const image = await portrait.boundingBox();
+                const text = await introduction.boundingBox();
+                return image && text ? text.y - (image.y + image.height) : -1;
+              }).toBeGreaterThanOrEqual(0);
+              await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+              await mkdir("portfolio-screenshots", { recursive: true });
+              await page.screenshot({ path: `portfolio-screenshots/about-layout-${viewport.width}x${viewport.height}.png`, animations: "disabled" });
+            });
+          }
+          ''')
+          PY
+      - name: Commit only reviewed source paths to an isolated candidate
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add components/apps/alex.js tests/portfolio/about-layout.spec.ts
+          git diff --cached --check
+          git commit -m 'fix(about): prevent portrait overlap in short landscape windows' -m 'Keep scroll-column children at their natural height. Add actual image/text geometry assertions and screenshots for portrait, landscape, and desktop. Full release gates must run before main.'
+          git push origin HEAD:refs/heads/qa/about-landscape-layout-2026-09-18
+          git rev-parse HEAD
