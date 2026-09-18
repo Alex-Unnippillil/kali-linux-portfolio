@@ -95,7 +95,7 @@ jobs:
           anchor = b"// Window's Edit Buttons"
           assert modified.count(anchor) == 1
           comment = b'// Stable component types keep the pressed SVG mounted until the native click.\n'
-          source.write_bytes(modified.replace(anchor, comment + hoisted + anchor, 1))
+          source.write_bytes(modified.replace(anchor, comment + hoisted + anchor, 1).replace(b'\r\n', b'\n'))
           css = Path('components/base/window.module.css')
           original_css = css.read_bytes()
           assert blob_sha(original_css) == 'd8e1be33adaf548a9997eae73ca14a5cbccb566f'
