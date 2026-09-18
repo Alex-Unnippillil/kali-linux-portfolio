@@ -1,0 +1,49 @@
+name: Audit exact published lint source
+on:
+  pull_request:
+    paths: ['.github/workflows/final-source-audit.yml']
+permissions:
+  contents: read
+jobs:
+  audit:
+    if: github.head_ref == 'qa/deployed-kali-2026-09-17' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      EXPECTED_REVISION: c432e9a9fe11a434548ea0f9c0e8e11d11924097
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_REVISION }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Bind evidence to exact published source
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_REVISION"
+          mkdir -p "$RUNNER_TEMP/main-lint-evidence"
+          git rev-parse HEAD HEAD^{tree} > "$RUNNER_TEMP/main-lint-evidence/revision.txt"
+          git for-each-ref --format='%(objectname) %(refname)' refs/remotes > "$RUNNER_TEMP/main-lint-evidence/refs.txt"
+          git archive --format=tar.gz HEAD > "$RUNNER_TEMP/main-lint-evidence/source.tar.gz"
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - name: Collect structured lint diagnostics without modifying source
+        run: |
+          set -euo pipefail
+          node --version > "$RUNNER_TEMP/main-lint-evidence/node-version.txt"
+          yarn lint --format json --output-file "$RUNNER_TEMP/main-lint-evidence/lint.json" 2>&1 | tee "$RUNNER_TEMP/main-lint-evidence/lint.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exact-main-lint-source
+          path: ${{ runner.temp }}/main-lint-evidence
+          retention-days: 1
+          if-no-files-found: error
