@@ -90,7 +90,7 @@ jobs:
           block = original[start:end]
           for name in [b'MinimizeIcon', b'MaximizeIcon', b'RestoreIcon', b'CloseIcon']:
               assert block.count(b'const ' + name + b' =') == 1
-          hoisted = b''.join(line[4:] if line.startswith(b'    ') else line for line in block.splitlines(keepends=True))
+          hoisted = b''.join(line[4:] if line.startswith(b'    ') else line for line in block.splitlines(keepends=True)).replace(b'\r\n', b'\n')
           modified = original[:start] + original[end:]
           anchor = b"// Window's Edit Buttons"
           assert modified.count(anchor) == 1
