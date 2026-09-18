@@ -12,12 +12,20 @@ request**. It works in the static export too. The interface labels the selection
 with its capture date and says it is not live. Original text, dates, IDs and
 links are retained. Unknown engagement counts are omitted, not invented.
 
-**Current data boundary:** no verified account post archive was available when
-this change was implemented. The checked-in snapshot has `feed: null`, not demo
-posts. This does not mean the X account has no posts. The attempted public
-profile endpoint was rate-limited. Real posts require a reviewed owner archive
-or the already-supported server connection. Tests use explicitly labeled
-fixtures under `tests/`; those are never production feed content.
+**Published selection:** 18 original public posts from account `185897765`
+(`@AUnnippillil`), captured on September 18, 2026 at 22:08 UTC through the
+FxEmbed public read API. The initial Posts view contains 17 posts; Replies
+contains one self-reply; Media contains three photo posts, including a photo-only
+post. Two timeline reposts authored by other accounts are excluded. No posts or
+engagement counts were invented. `data/x-profile-provenance.json` records original
+post links, capture time, retrieval hashes and the sources of all five local
+image assets (avatar, banner and three attached photos).
+
+The published app does not contact FxEmbed, X, an image CDN, or the optional
+live API when opened. It does not offer a live-refresh button for the saved
+selection. Images are served from this site; external original links require
+an explicit click. Tests exercise both this actual production snapshot and
+separately identified synthetic fixtures for optional API failure handling.
 
 ### Import an owner-reviewed X archive
 
@@ -72,8 +80,8 @@ response budgets, coalescing, a 15-minute cache, and error cooldowns. It rejects
 protected or withheld profiles. Browser API responses are not put into the
 service-worker cache. Static export never requests the unavailable API.
 
-Refreshing is optional. A failed refresh keeps a previously loaded or saved
-selection visible. Errors expose neither raw upstream responses nor secrets.
+The API-only fallback offers manual refresh; the saved showcase does not.
+A failed API refresh retains any previously loaded selection. Errors expose neither raw upstream responses nor secrets.
 Replies, Media and search filter loaded content locally. Engagement counts are
 informational; posting, liking, following, and replying happen on X through
 explicit original links. Sensitive media retains its individual reveal control.

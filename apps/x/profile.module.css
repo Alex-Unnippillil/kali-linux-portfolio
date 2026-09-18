@@ -489,6 +489,18 @@
   height: 100%;
   object-fit: cover;
 }
+/* Preserve portrait screenshots and photos rather than cropping away their content. */
+.mediaGrid[data-count="1"] .media {
+  aspect-ratio: auto;
+  min-height: 0;
+  background: #0b0d10;
+}
+.mediaGrid[data-count="1"] .media img {
+  display: block;
+  height: auto;
+  max-height: 560px;
+  object-fit: contain;
+}
 .mediaLabel {
   position: absolute;
   display: inline-flex;
@@ -767,7 +779,9 @@
     gap: 10px;
   }
   .readOnly {
-    display: none;
+    padding: 4px 7px;
+    font-size: 9px;
+    white-space: nowrap;
   }
   .toolbarLink {
     padding: 10px 12px;

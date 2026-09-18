@@ -405,19 +405,24 @@ export default function XProfileApp() {
         <span className={styles.readOnly}>
           {source === "saved" ? "Saved posts" : "Read-only"}
         </span>
-        <button
-          type="button"
-          className={styles.iconButton}
-          disabled={
-            Boolean(busy) || process.env.NEXT_PUBLIC_STATIC_EXPORT === "true"
-          }
-          onClick={() => {
-            void refresh();
-          }}
-          aria-label="Refresh posts"
-        >
-          <Icon name="refresh" className={busy ? styles.spinning : undefined} />
-        </button>
+        {source !== "saved" && (
+          <button
+            type="button"
+            className={styles.iconButton}
+            disabled={
+              Boolean(busy) || process.env.NEXT_PUBLIC_STATIC_EXPORT === "true"
+            }
+            onClick={() => {
+              void refresh();
+            }}
+            aria-label="Refresh posts"
+          >
+            <Icon
+              name="refresh"
+              className={busy ? styles.spinning : undefined}
+            />
+          </button>
+        )}
         <a
           className={styles.toolbarLink}
           href={X_PROFILE_URL}

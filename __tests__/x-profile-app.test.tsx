@@ -10,6 +10,11 @@ import {
 import XProfileApp from "../apps/x";
 import DesktopX from "../components/apps/x";
 import { makeXPost, xFeedFixture } from "../tests/fixtures/x-profile";
+jest.mock("../data/x-profile-snapshot.json", () => ({
+  version: 1,
+  source: "https://x.com/AUnnippillil",
+  feed: null,
+}));
 let mockAllowNetwork = true;
 const mockSetAllowNetwork = jest.fn();
 jest.mock("../hooks/useSettings", () => ({

@@ -1,6 +1,7 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import XProfileApp from "../apps/x";
+import useXProfile from "../hooks/useXProfile";
 
 // Test-only saved selection, not shipped account posts.
 jest.mock("../data/x-profile-snapshot.json", () => {
@@ -42,13 +43,31 @@ it("keeps saved posts available in the static edition, without a server", () => 
   const request = jest.spyOn(global, "fetch");
   render(<XProfileApp />);
   expect(screen.getByText(/Fixture: building an accessible/)).toBeVisible();
-  expect(screen.getByRole("button", { name: "Refresh posts" })).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "Refresh posts" }),
+  ).not.toBeInTheDocument();
   expect(request).not.toHaveBeenCalled();
 });
 it("does not discard the archive when optional API refresh fails", async () => {
   jest.spyOn(global, "fetch").mockRejectedValue(new Error("Network down"));
-  render(<XProfileApp />);
-  fireEvent.click(screen.getByRole("button", { name: "Refresh posts" }));
-  await screen.findByText("Posts are temporarily unavailable");
+  function RefreshHarness() {
+    const { feed, issue, refresh } = useXProfile();
+    return (
+      <>
+        <button
+          onClick={() => {
+            void refresh();
+          }}
+        >
+          Test optional API
+        </button>
+        <p>{issue}</p>
+        <p>{feed?.posts[0]?.text}</p>
+      </>
+    );
+  }
+  render(<RefreshHarness />);
+  fireEvent.click(screen.getByRole("button", { name: "Test optional API" }));
+  await screen.findByText("unavailable");
   expect(screen.getByText(/Fixture: building an accessible/)).toBeVisible();
 });
