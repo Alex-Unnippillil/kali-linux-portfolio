@@ -44,9 +44,13 @@ jobs:
           subprocess.run(['git', '-C', str(root), 'apply', '--check', str(patch)], check=True)
           subprocess.run(['git', '-C', str(root), 'apply', str(patch)], check=True)
           subprocess.run(['git', '-C', str(root), 'add', '--all'], check=True)
+          changed = set(subprocess.check_output(['git', '-C', str(root), 'diff', '--cached', '--name-only']).decode().splitlines())
+          assert changed == allowed | patched
           tree = subprocess.check_output(['git', '-C', str(root), 'write-tree']).decode().strip()
-          assert tree == 'f6e7eb173186b7f19481e035125030ec2999ea43', f'Unexpected source tree: {tree}'
-          print(f'Exact tested source tree: {tree}')
+          # Independently reconstructed locally, including three baseline files
+          # already tracked upstream despite being covered by .gitignore.
+          assert tree == 'd639bea45e83a0d15df9f485c6482a4ebabd7179', f'Unexpected source tree: {tree}'
+          print(f'Exact candidate source tree: {tree}')
           PY
       - name: Commit isolated release candidate without changing main
         working-directory: source
