@@ -1,0 +1,44 @@
+name: Isolated release review bundle
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/offline-review-bundle.yml'
+permissions:
+  contents: read
+jobs:
+  bundle:
+    if: github.head_ref == 'qa/deployed-kali-2026-09-17' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 3f5981a58d9b15b8bf8718ea574ed3bf563f7144
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      - run: yarn install --immutable
+      - name: Package tracked source and public dependencies only
+        shell: bash
+        run: |
+          mkdir -p review-runtime
+          git archive HEAD | tar -x -C review-runtime
+          cp -a node_modules review-runtime/node_modules
+          cp "$(command -v node)" review-runtime/node
+          printf '%s\n' "$(git rev-parse HEAD)" > review-runtime/REVIEW_REVISION
+          tar -czf review-runtime.tar.gz review-runtime
+      - uses: actions/upload-artifact@v4
+        with:
+          name: isolated-review-runtime
+          path: review-runtime.tar.gz
+          retention-days: 1
+          compression-level: 0
