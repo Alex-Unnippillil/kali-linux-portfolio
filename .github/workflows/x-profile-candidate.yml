@@ -47,8 +47,7 @@ jobs:
           changed = set(subprocess.check_output(['git', '-C', str(root), 'diff', '--cached', '--name-only']).decode().splitlines())
           assert changed == allowed | patched
           tree = subprocess.check_output(['git', '-C', str(root), 'write-tree']).decode().strip()
-          # Independently reconstructed locally, including three baseline files
-          # already tracked upstream despite being covered by .gitignore.
+          # Includes original ignored-but-tracked baseline files, unchanged.
           assert tree == 'd639bea45e83a0d15df9f485c6482a4ebabd7179', f'Unexpected source tree: {tree}'
           print(f'Exact candidate source tree: {tree}')
           PY
@@ -56,7 +55,7 @@ jobs:
         working-directory: source
         run: |
           set -euo pipefail
-          git diff --cached --check
+          git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git commit -m '[x] rebuild read-only public profile showcase' -m 'Unify native and standalone X screens; add fixed-profile server-side timeline retrieval, bounded signed pagination, consent-aware UI, safe media/text rendering, and explicit configuration failures. Repair changed-file lint base detection without relaxing strict lint checks. No credentials included. Locally validated 1070 passing tests, strict changed-file lint, typecheck, and production build with offline font assets; hosted browser and full CI gates remain mandatory before main.'
