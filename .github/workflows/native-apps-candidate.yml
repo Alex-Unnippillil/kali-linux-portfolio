@@ -1,0 +1,88 @@
+name: Stage verified native apps candidate
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-apps-candidate.yml]
+permissions:
+  contents: write
+jobs:
+  candidate:
+    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: payload
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 62f370c8b017906b18ff941fbe5bc392238b0de0
+          path: source
+          fetch-depth: 0
+      - name: Verify exact patch, scope and resulting source tree
+        run: |
+          python3 <<'PY'
+          import base64, hashlib, lzma, pathlib, subprocess
+          root = pathlib.Path('source')
+          def git(*args):
+              return subprocess.check_output(['git', '-C', str(root), *args]).decode().strip()
+          assert git('rev-parse', 'HEAD') == '62f370c8b017906b18ff941fbe5bc392238b0de0'
+          assert git('rev-parse', 'HEAD^{tree}') == 'fa17e765361f566e1f568cd6284f868ccba104b1'
+          encoded = ''.join(pathlib.Path(f'payload/qa/native-apps-source/{i}.b64').read_text().strip() for i in range(1, 4))
+          assert len(encoded) == 55148
+          patch = lzma.decompress(base64.b64decode(encoded, validate=True))
+          assert len(patch) == 164648
+          assert hashlib.sha256(patch).hexdigest() == 'f8edcd502248e5aaed72c84e65745b561eec97b9f42a860b068a102bbb99afd7'
+          pathlib.Path('/tmp/native-apps.patch').write_bytes(patch)
+          (root / '.git/info/attributes').write_text('* -text\n')
+          subprocess.run(['git', '-C', str(root), '-c', 'core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol', 'apply', '--check', '--whitespace=error', '/tmp/native-apps.patch'], check=True)
+          subprocess.run(['git', '-C', str(root), 'apply', '/tmp/native-apps.patch'], check=True)
+          expected = '''.gitignore
+          README.md
+          __tests__/repository-workspace.test.ts
+          __tests__/showcase-scripts.test.ts
+          __tests__/vscode.test.tsx
+          __tests__/x-profile-app.test.tsx
+          __tests__/x-profile-saved.test.tsx
+          apps/vscode/CodeEditor.tsx
+          apps/vscode/Icons.tsx
+          apps/vscode/index.tsx
+          apps/vscode/monaco.ts
+          apps/vscode/workspace.module.css
+          apps/x/index.tsx
+          apps/x/profile.module.css
+          components/apps/vscode.jsx
+          data/x-profile-snapshot.json
+          docs/repository-editor.md
+          docs/x-profile-showcase.md
+          hooks/useRepositoryWorkspace.ts
+          hooks/useXProfile.ts
+          next.config.js
+          package.json
+          pages/apps/vscode.jsx
+          playwright.portfolio.config.ts
+          scripts/dev.mjs
+          scripts/generate-repository-snapshot.mjs
+          scripts/import-x-showcase.mjs
+          tests/node/showcase-scripts.test.mjs
+          tests/portfolio/repository-editor.spec.ts
+          tests/portfolio/x-profile.spec.ts
+          utils/repository-workspace.ts
+          utils/x-profile.ts
+          utils/x-snapshot.ts'''.splitlines()
+          expected = sorted(p.strip() for p in expected)
+          subprocess.run(['git', '-C', str(root), 'add', '--all'], check=True)
+          actual = git('diff', '--cached', '--name-only').splitlines()
+          assert sorted(actual) == expected, (actual, expected)
+          assert git('write-tree') == '44313f421c184c4cb4dea6719b45e1fd85cafa65'
+          print('Verified all 33 paths and exact source tree 44313f421c184c4cb4dea6719b45e1fd85cafa65')
+          PY
+      - name: Publish new feature branch without changing main
+        working-directory: source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git checkout -b feat/native-x-repository-editor-2026-09-18
+          git commit -m 'feat(apps): replace blocked embeds with native X and repository workspaces' -m 'Open the actual repository in a first-party VS Code-style editor. Remove the X consent gate and support reviewed local archives with bounded optional API retrieval. Authentic X posts are not fabricated: the snapshot remains empty pending owner data. Preserve privacy controls in other applications. Includes focused regression and browser tests; full hosted release gates still required.'
+          git push origin HEAD:refs/heads/feat/native-x-repository-editor-2026-09-18
