@@ -1,0 +1,43 @@
+name: Stage reviewed curated-library candidate
+on:
+  push:
+    branches: [qa/deployed-kali-2026-09-17]
+    paths: [qa/curated-files.b64]
+permissions:
+  contents: write
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: payload
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: c59ecb5a3baf95280d0cfc5699ecc26aa1045310
+          path: source
+      - name: Verify and materialize reviewed source
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, lzma, pathlib, subprocess
+          raw = lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/curated-files.b64').read_text()))
+          assert hashlib.sha256(raw).hexdigest() == '40c68182516de05ed80860b5065f4fc210075e8d45796ac803779d81a028686f', 'Source checksum mismatch'
+          files = json.loads(raw)
+          allowed = {'__tests__/youtube-library-lifecycle.test.tsx', '__tests__/youtube-library.test.ts', '__tests__/youtube.test.tsx', 'components/apps/youtube/index.tsx', 'components/apps/youtube/youtube.module.css', 'components/desktop/MobileTaskbar.tsx', 'components/screen/all-applications.js', 'docs/adaptive-library-ux.md', 'hooks/useYouTubeLibrary.ts', 'playwright.portfolio.config.ts', 'tests/portfolio/app-polish.spec.ts', 'tests/portfolio/youtube-responsive.spec.ts', 'utils/youtube-library.ts'}
+          assert set(files) == allowed, 'Unexpected file set'
+          assert subprocess.check_output(['git', '-C', 'source', 'rev-parse', 'HEAD']).decode().strip() == 'c59ecb5a3baf95280d0cfc5699ecc26aa1045310'
+          for path, text in files.items():
+              pathlib.Path('source', path).write_text(text)
+          PY
+      - name: Create candidate without changing main or the review branch
+        working-directory: source
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git diff --cached --check
+          git commit -m 'feat(youtube): curate playlists around a persistent embedded player' -m 'Preserve the OS shell; repair launcher search semantics, bound stalled requests, and expand responsive browser coverage. Source was checksum-verified against the locally tested files.'
+          git push origin HEAD:refs/heads/qa/curated-candidate-40c6818
+          git rev-parse HEAD
