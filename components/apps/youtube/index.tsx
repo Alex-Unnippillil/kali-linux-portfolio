@@ -18,6 +18,7 @@ import {
   firstAvailableVideo,
   type VideoSortMode,
 } from "../../../utils/youtube-library";
+import { scrollWithinContainer } from "../../../utils/scrollWithinContainer";
 import VideoIcon from "./VideoIcon";
 import styles from "./youtube.module.css";
 
@@ -80,6 +81,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
   const [theatre, setTheatre] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const playerRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -115,7 +117,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
     // Automatic selection must never steal keyboard focus or scroll the desktop.
     if (!userSelected.current) return;
     userSelected.current = false;
-    playerRef.current?.scrollIntoView?.({ block: "start", behavior: "auto" });
+    scrollWithinContainer(mainRef.current, playerRef.current);
     headingRef.current?.focus({ preventScroll: true });
   }, [playing]);
   useEffect(() => {
@@ -246,7 +248,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
     userSelected.current = true;
     if (video.videoId === playing?.videoId) {
       userSelected.current = false;
-      playerRef.current?.scrollIntoView?.({ block: "start", behavior: "auto" });
+      scrollWithinContainer(mainRef.current, playerRef.current);
       headingRef.current?.focus({ preventScroll: true });
     } else setSelection({ channel, video });
   };
@@ -358,7 +360,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
           aria-label="YouTube library search"
           onSubmit={(event) => {
             event.preventDefault();
-            videosRef.current?.scrollIntoView?.({ block: "start" });
+            scrollWithinContainer(mainRef.current, videosRef.current);
           }}
         >
           <VideoIcon name="search" />
@@ -409,7 +411,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
           title="Back to selected video"
           disabled={!playing}
           onClick={() => {
-            playerRef.current?.scrollIntoView?.({ block: "start" });
+            scrollWithinContainer(mainRef.current, playerRef.current);
             headingRef.current?.focus({ preventScroll: true });
           }}
         >
@@ -441,7 +443,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
           aria-label="Browse playlist collections"
           title="Browse playlist collections"
           onClick={() =>
-            collectionsRef.current?.scrollIntoView?.({ block: "start" })
+            scrollWithinContainer(mainRef.current, collectionsRef.current)
           }
         >
           <VideoIcon name="grid" />
@@ -453,7 +455,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
           onClick={() => {
             setShowSaved((value) => !value);
             setQuery("");
-            videosRef.current?.scrollIntoView?.({ block: "start" });
+            scrollWithinContainer(mainRef.current, videosRef.current);
           }}
         >
           <VideoIcon name="clock" />
@@ -463,7 +465,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
           )}
         </button>
       </nav>
-      <main className={styles.main} aria-label="YouTube library">
+      <main ref={mainRef} className={styles.main} aria-label="YouTube library">
         <div className={styles.intro}>
           <div>
             <p className={styles.eyebrow}>CURATED BY ALEX UNNIPPILLIL</p>
@@ -676,7 +678,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
               type="button"
               className={styles.textButton}
               onClick={() =>
-                videosRef.current?.scrollIntoView?.({ block: "start" })
+                scrollWithinContainer(mainRef.current, videosRef.current)
               }
             >
               Explore all loaded videos <VideoIcon name="next" />

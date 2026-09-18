@@ -107,6 +107,26 @@ async function noHorizontalOverflow(page: Page) {
       .evaluate((node) => node.scrollWidth <= node.clientWidth + 1),
   ).toBe(true);
 }
+// Application scrolling must not move its fixed chrome or leave an empty window.
+async function intactWindowLayout(page: Page) {
+  const app = page.getByTestId("youtube-app");
+  await expect.poll(async () => app.evaluate((node) => {
+    const frame = node.closest(".opened-window")!;
+    const host = node.closest(".windowMainScreen")!;
+    const titlebar = frame.querySelector("[data-window-titlebar]")!;
+    const nav = node.querySelector('nav[aria-label="Library navigation"]')!;
+    const rect = node.getBoundingClientRect();
+    const hostRect = host.getBoundingClientRect();
+    const titleRect = titlebar.getBoundingClientRect();
+    const navRect = nav.getBoundingClientRect();
+    return {
+      chromeVisible: navRect.top >= titleRect.bottom - 1 && navRect.bottom <= hostRect.bottom + 1,
+      appFillsHost: Math.abs(rect.bottom - hostRect.bottom) <= 2 && Math.abs(rect.top - hostRect.top) <= 2,
+      hostNotScrolled: host.scrollTop === 0,
+      frameNotScrolled: frame.scrollTop === 0,
+    };
+  })).toEqual({ chromeVisible: true, appFillsHost: true, hostNotScrolled: true, frameNotScrolled: true });
+}
 for (const viewport of [
   { width: 390, height: 844 },
   { width: 820, height: 1180 },
@@ -186,6 +206,7 @@ for (const viewport of [
         Math.max(201, (dimensions!.width * 9) / 16 + 2),
       );
       await noHorizontalOverflow(page);
+      await intactWindowLayout(page);
       await activate(
         app.getByRole("button", {
           name: "Save Inside the engineering portfolio for later",
@@ -232,6 +253,7 @@ for (const viewport of [
       await app
         .getByRole("main", { name: "YouTube library" })
         .evaluate((node) => node.scrollTo(0, 0));
+      await intactWindowLayout(page);
       await page.screenshot({
         path: `portfolio-screenshots/${browserName}-youtube-overview-${viewport.width}.png`,
         animations: "disabled",
@@ -263,6 +285,7 @@ for (const viewport of [
       ).toBeVisible();
       await app.getByRole("searchbox").fill("");
       await noHorizontalOverflow(page);
+      await intactWindowLayout(page);
       await page.screenshot({
         path: `portfolio-screenshots/${browserName}-youtube-watch-${viewport.width}.png`,
         animations: "disabled",
@@ -274,6 +297,7 @@ for (const viewport of [
         });
         await expect(frame).toBeVisible();
         await noHorizontalOverflow(page);
+      await intactWindowLayout(page);
         await page.setViewportSize(viewport);
       } else {
         // A keyboard user can return to search without a global shortcut stealing other apps' input.
