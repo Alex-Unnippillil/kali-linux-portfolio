@@ -7,7 +7,6 @@ import React, {
 import dynamic from 'next/dynamic';
 import usePersistentState from '../../../hooks/usePersistentState';
 import ReportTemplates from './components/ReportTemplates';
-import { useSettings } from '../../../hooks/useSettings';
 
 const CytoscapeComponent = dynamic(
   async () => {
@@ -19,9 +18,7 @@ const CytoscapeComponent = dynamic(
   { ssr: false },
 );
 
-// Built-in modules with simple schemas and canned demo data. Each schema defines
-// the expected input type, a demo generator for offline usage, and an optional
-// fetchUrl function used when the user opts into live network requests.
+// Built-in modules with simple schemas and canned demo data. Network lookups stay disabled so the tool remains offline-only.
 const moduleSchemas = {
   'DNS Enumeration': {
     input: 'domain',
@@ -188,11 +185,9 @@ const deserializeWorkspaces = (storedWorkspaces = []) => {
 };
 
 const ReconNG = () => {
-  const { allowNetwork } = useSettings();
   const [selectedModule, setSelectedModule] = useState(modules[0]);
   const [target, setTarget] = useState('');
   const [output, setOutput] = useState('');
-  const [useLiveData, setUseLiveData] = useState(false);
   const [view, setView] = useState('run');
   const [marketplace, setMarketplace] = useState([]);
   const [scriptTags, setScriptTags] = usePersistentState('reconng-script-tags', {});
@@ -224,22 +219,6 @@ const ReconNG = () => {
       setActiveWs(safeActiveWs);
     }
   }, [activeWs, safeActiveWs, setActiveWs]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    if (allowNetwork) return undefined;
-    const originalFetch = window.fetch.bind(window);
-    window.fetch = (input, init) => {
-      const url = typeof input === 'string' ? input : input.url;
-      if (/^https?:/i.test(url) && !url.startsWith(window.location.origin) && !url.startsWith('/')) {
-        return Promise.reject(new Error('Outbound requests blocked'));
-      }
-      return originalFetch(input, init);
-    };
-    return () => {
-      window.fetch = originalFetch;
-    };
-  }, [allowNetwork]);
 
   useEffect(() => {
     fetch('/reconng-marketplace.json')
@@ -370,15 +349,7 @@ const ReconNG = () => {
   const executeModule = async (moduleName, input) => {
     const schema = moduleSchemas[moduleName];
     const demo = schema.demo(input);
-    let text = demo.output;
-    if (useLiveData && schema.fetchUrl) {
-      try {
-        const res = await fetch(schema.fetchUrl(input));
-        text = await res.text();
-      } catch {
-        text = `${demo.output}\n\n(Live fetch failed; showing demo data)`;
-      }
-    }
+    const text = `${demo.output}\n\nDemo mode: outbound reconnaissance requests are disabled; results come from deterministic local data.`;
     return { text, nodes: demo.nodes, edges: demo.edges };
   };
 
@@ -604,15 +575,11 @@ const ReconNG = () => {
               onChange={(e) => setTarget(e.target.value)}
               placeholder="Target"
               className="flex-1 bg-gray-800 px-2 py-1"
+              aria-label="Recon-ng target"
             />
-            <label className="flex items-center gap-1 text-xs">
-              <input
-                type="checkbox"
-                checked={useLiveData}
-                onChange={(e) => setUseLiveData(e.target.checked)}
-              />
-              Live fetch
-            </label>
+            <span className="rounded border border-emerald-400/30 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">
+              Offline demo data
+            </span>
             <button
               type="button"
               onClick={runModule}
@@ -701,6 +668,7 @@ const ReconNG = () => {
                   onChange={(e) => setApiKeys({ ...apiKeys, [m]: e.target.value })}
                   className="flex-1 bg-gray-800 px-2 py-1"
                   placeholder={`${m} API Key`}
+                  aria-label={`${m} API key`}
                 />
                 <button
                   type="button"

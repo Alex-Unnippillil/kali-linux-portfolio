@@ -1,80 +1,24 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import ProjectGallery from '../components/apps/project-gallery';
-
 describe('ProjectGallery', () => {
-  beforeEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
+  it('renders source-backed work and technology tags', () => {
+    render(<ProjectGallery />); expect(screen.getByText('Kali Linux Portfolio')).toBeInTheDocument(); expect(screen.getAllByText('TypeScript').length).toBeGreaterThan(0);
   });
-
-  it('renders project cards', async () => {
+  it('separates forks from featured work', () => {
+    render(<ProjectGallery />); fireEvent.click(screen.getByRole('button', { name: 'Featured' }));
+    expect(screen.queryByText('GPT Researcher · fork')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Open source' }));
+    expect(screen.getByText('GPT Researcher · fork')).toBeInTheDocument(); expect(screen.queryByText('Kali Linux Portfolio')).not.toBeInTheDocument();
+  });
+  it('supports search and recovery from no matches', () => {
+    render(<ProjectGallery />); fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'unmatched-string' } });
+    expect(screen.getByText('No matching projects')).toBeInTheDocument(); fireEvent.click(screen.getByRole('button', { name: 'Clear search and filters' }));
+    expect(screen.getByText('Web Crawler Studio')).toBeInTheDocument();
+  });
+  it('exposes architecture and actual source links', () => {
     render(<ProjectGallery />);
-    expect(await screen.findByText('Kali Linux Portfolio')).toBeInTheDocument();
-  });
-
-  it('filters projects by category', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-
-    // Click on Games category
-    fireEvent.click(screen.getByRole('tab', { name: /Games/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Flappy Bird')).toBeInTheDocument();
-      expect(screen.queryByText('Recipe App')).not.toBeInTheDocument();
-    });
-  });
-
-  it('shows all projects when All category is selected', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-
-    // First filter by category
-    fireEvent.click(screen.getByRole('tab', { name: /Games/i }));
-    await waitFor(() => {
-      expect(screen.queryByText('Recipe App')).not.toBeInTheDocument();
-    });
-
-    // Then click All
-    fireEvent.click(screen.getByRole('tab', { name: /All/i }));
-    await waitFor(() => {
-      expect(screen.getByText('Recipe App')).toBeInTheDocument();
-    });
-  });
-
-  it('opens demo in Firefox when demo button clicked', async () => {
-    const mockOpenApp = jest.fn();
-    render(<ProjectGallery openApp={mockOpenApp} />);
-
-    await screen.findByText('Kali Linux Portfolio');
-
-    // Find and click a demo button
-    const demoButtons = screen.getAllByRole('button', { name: /demo/i });
-    fireEvent.click(demoButtons[0]);
-
-    expect(mockOpenApp).toHaveBeenCalledWith('firefox');
-    expect(sessionStorage.getItem('firefox:start-url')).toBeTruthy();
-  });
-
-  it('shows featured badge on featured projects', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-
-    // Featured projects should have the featured badge
-    const featuredBadges = screen.getAllByText('⭐');
-    expect(featuredBadges.length).toBeGreaterThan(0);
-  });
-
-  it('displays technology stack tags', async () => {
-    render(<ProjectGallery />);
-    await screen.findByText('Kali Linux Portfolio');
-    // Check for featured star emoji
-    const featuredBadges = screen.getAllByText('⭐');
-    expect(featuredBadges.length).toBeGreaterThan(0);
-
-    // Should show stack tags
-    expect(screen.getAllByText('Next.js').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('TypeScript').length).toBeGreaterThan(0);
+    const link = screen.getByRole('link', { name: 'Web Crawler Studio source on GitHub (opens a new tab)' });
+    expect(link).toHaveAttribute('href', 'https://github.com/Alex-Unnippillil/web-crawler');
+    expect(screen.getAllByText('Architecture & tradeoffs')).toHaveLength(5);
   });
 });

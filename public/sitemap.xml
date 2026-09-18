@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://unnippillil.com/</loc>
-    <lastmod>2025-08-19</lastmod>
-  </url>
+  <url><loc>https://www.unnippillil.com/</loc></url>
+  <url><loc>https://www.unnippillil.com/about</loc></url>
+  <url><loc>https://www.unnippillil.com/projects</loc></url>
+  <url><loc>https://www.unnippillil.com/contact</loc></url>
+  <url><loc>https://www.unnippillil.com/projects/kali-linux-portfolio</loc></url>
+  <url><loc>https://www.unnippillil.com/projects/web-crawler</loc></url>
+  <url><loc>https://www.unnippillil.com/projects/webflyx-rag-studio</loc></url>
+  <url><loc>https://www.unnippillil.com/projects/iis-hardener</loc></url>
+  <url><loc>https://www.unnippillil.com/projects/gpt-researcher-fork</loc></url>
 </urlset>

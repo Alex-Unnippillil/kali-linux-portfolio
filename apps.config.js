@@ -265,7 +265,7 @@ const displayAboutAlex = createDisplay(AboutAlexApp);
 const displayQr = createDisplay(QrApp);
 const displayAsciiArt = createDisplay(AsciiArtApp);
 const displayQuote = createDisplay(QuoteApp);
-const displayProjectGallery = createDisplay(ProjectGalleryApp);
+const displayProjectGallery = (_addFolder, _openApp, context) => <ProjectGalleryApp initialProject={context?.projectSlug} />;
 const displayTrash = createDisplay(TrashApp);
 const displayStickyNotes = createDisplay(StickyNotesApp);
 const displayNotepad = createDisplay(NotepadApp);

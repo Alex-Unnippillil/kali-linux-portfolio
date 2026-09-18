@@ -1142,3 +1142,15 @@ describe('Window overlay inert behaviour', () => {
     document.body.removeChild(opener);
   });
 });
+
+describe('Window persistence callback contract', () => {
+  it('forwards numeric dimensions and the window ID exactly once', () => {
+    const onSizeChange = jest.fn();
+    const ref = React.createRef<any>();
+    renderWithOverlay(<Window ref={ref} id="geometry-test" title="Geometry" screen={() => <div>content</div>} focus={() => {}} hasMinimised={() => {}} closed={() => {}} openApp={() => {}} onSizeChange={onSizeChange} />);
+    onSizeChange.mockClear();
+    act(() => ref.current.notifySizeChange());
+    expect(onSizeChange).toHaveBeenCalledWith('geometry-test', expect.any(Number), expect.any(Number));
+    expect(onSizeChange.mock.calls[0]).toHaveLength(3);
+  });
+});

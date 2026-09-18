@@ -1,0 +1,11 @@
+.bar { position: fixed; z-index: 300; left: 0; right: 0; display: flex; height: calc(58px + env(safe-area-inset-bottom, 0px)); padding: 4px max(4px, env(safe-area-inset-right, 0px)) calc(4px + env(safe-area-inset-bottom, 0px)) max(4px, env(safe-area-inset-left, 0px)); gap: 4px; border-top: 1px solid var(--kali-blue, #1793d1); background: var(--kali-bg-solid, #0b121a); color: #f8fafc; box-sizing: border-box; }
+.bar button { display: flex; flex: 0 0 auto; min-height: 44px; min-width: 52px; align-items: center; justify-content: center; gap: 4px; border-radius: 4px; padding: 4px 8px; font-size: 12px; touch-action: manipulation; }
+.bar button:focus-visible { outline: 2px solid #7dd3fc; outline-offset: -2px; }
+.bar button[aria-pressed="true"] { background: #173e54; box-shadow: inset 0 -2px #7dd3fc; }
+.bar button:hover { background: #173e54; }
+.running { display: flex; min-width: 0; flex: 1; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; gap: 4px; }
+.running button { flex-direction: column; max-width: 120px; }
+.running button span { display: block; max-width: 104px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.launcher { flex-direction: column; border-right: 1px solid #334155; }
+.launcher > span:first-child { font-size: 21px; line-height: 20px; }
+.empty { font-size: 13px; align-self: center; padding: 0 8px; }

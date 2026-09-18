@@ -1,7 +1,8 @@
 import React, { Component } from 'react';
 import Image from 'next/image';
 import { logEvent, logPageView } from '../../utils/analytics';
-import GitHubStars from '../GitHubStars';
+import ProjectGallery from './project-gallery';
+import { safeLocalStorage } from '../../utils/safeStorage';
 import Certs from './certs';
 import data from './alex/data.json';
 import resumeData from './alex/resume.json';
@@ -25,11 +26,11 @@ export class AboutAlex extends Component {
             "education": <Education />,
             "skills": <Skills skills={data.skills} />,
             "certs": <Certs />,
-            "projects": <Projects projects={data.projects} />,
+            "projects": <Projects />,
             "resume": <Resume data={resumeData} />,
         }
 
-        let lastVisitedScreen = localStorage.getItem("about-section");
+        let lastVisitedScreen = safeLocalStorage?.getItem("about-section");
         if (!lastVisitedScreen || !this.screens[lastVisitedScreen]) {
             lastVisitedScreen = "about";
         }
@@ -44,14 +45,15 @@ export class AboutAlex extends Component {
         }
 
         // store this state
-        localStorage.setItem("about-section", screenId);
+        safeLocalStorage?.setItem("about-section", screenId);
 
         logPageView(`/${screenId}`, 'Custom Title');
 
 
         this.setState({
             screen: this.screens[screenId],
-            active_screen: screenId
+            active_screen: screenId,
+            navbar: false,
         });
     }
 
@@ -63,12 +65,13 @@ export class AboutAlex extends Component {
         return (
             <>
                 {data.sections.map((section) => (
-                    <div
+                    <button
+                        type="button"
+                        aria-label={section.label}
+                        aria-pressed={this.state.active_screen === section.id}
                         key={section.id}
-                        id={section.id}
-                        tabIndex="0"
-                        onFocus={this.changeScreen}
-                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default outline-none py-1.5 focus:outline-none duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
+                        onClick={() => this.changeScreen(section.id)}
+                        className={(this.state.active_screen === section.id ? " bg-ub-gedit-light bg-opacity-100 hover:bg-opacity-95" : " hover:bg-gray-50 hover:bg-opacity-5 ") + " w-28 md:w-full md:rounded-none rounded-sm cursor-default min-h-[44px] py-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300 duration-100 my-0.5 flex justify-start items-center pl-2 md:pl-2.5"}
                     >
                         <Image
                             className=" w-3 md:w-4"
@@ -79,7 +82,7 @@ export class AboutAlex extends Component {
                             sizes="16px"
                         />
                         <span className=" ml-1 md:ml-2 text-gray-50 ">{section.label}</span>
-                    </div>
+                    </button>
                 ))}
             </>
         );
@@ -88,18 +91,18 @@ export class AboutAlex extends Component {
     render() {
         return (
             <div className="w-full h-full flex bg-ub-cool-grey text-white select-none relative">
-                <div className="md:flex hidden flex-col w-1/4 md:w-1/5 text-sm overflow-y-auto windowMainScreen border-r border-black">
+                <div className="hidden md:flex flex-col w-1/5 text-sm overflow-y-auto border-r border-black">
                     {this.renderNavLinks()}
                 </div>
-                <div onClick={this.showNavBar} className="md:hidden flex flex-col items-center justify-center absolute bg-ub-cool-grey rounded w-6 h-6 top-1 left-1">
-                    <div className=" w-3.5 border-t border-white"></div>
-                    <div className=" w-3.5 border-t border-white" style={{ marginTop: "2pt", marginBottom: "2pt" }}></div>
-                    <div className=" w-3.5 border-t border-white"></div>
-                    <div className={(this.state.navbar ? " visible animateShow z-30 " : " invisible ") + " md:hidden text-xs absolute bg-ub-cool-grey py-0.5 px-1 rounded-sm top-full mt-1 left-0 shadow border-black border border-opacity-20"}>
+                <div className="md:hidden absolute top-1 left-1 z-30">
+                    <button type="button" onClick={this.showNavBar} aria-label="About Alex sections" aria-expanded={this.state.navbar} aria-controls="about-mobile-sections" className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded bg-ub-cool-grey focus-visible:outline focus-visible:outline-2 focus-visible:outline-sky-300">
+                        <span aria-hidden="true" className="w-4 border-t border-white" /><span aria-hidden="true" className="w-4 border-t border-white" /><span aria-hidden="true" className="w-4 border-t border-white" />
+                    </button>
+                    {this.state.navbar && <nav id="about-mobile-sections" aria-label="About Alex sections" className="absolute top-full left-0 max-h-[60dvh] overflow-y-auto rounded border border-black bg-ub-cool-grey p-1 text-xs shadow-lg" onKeyDown={(event) => { if (event.key === 'Escape') { this.setState({ navbar: false }); event.currentTarget.previousElementSibling?.focus(); } }}>
                         {this.renderNavLinks()}
-                    </div>
+                    </nav>}
                 </div>
-                <div className="flex flex-col w-3/4 md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
+                <div className="flex min-w-0 flex-col w-full md:w-4/5 justify-start items-center flex-grow bg-ub-grey overflow-y-auto windowMainScreen">
                     {this.state.screen}
                 </div>
             </div>
@@ -385,73 +388,9 @@ function Skills({ skills }) {
   )
 }
 
-function Projects({ projects }) {
-    const tag_colors = {
-        "javascript": "yellow-300",
-        "firebase": "red-600",
-        "firestore": "red-500",
-        "firebase auth": "red-400",
-        "chrome-extension": "yellow-400",
-        "flutter": "blue-400",
-        "dart": "blue-500",
-        "react-native": "purple-500",
-        "html5": "yellow-300",
-        "sass": "pink-400",
-        "tensorflow": "yellow-600",
-        "django": "green-600",
-        "python": "green-200",
-        "codeforces-api": "gray-300",
-        "tailwindcss": "blue-300",
-        "next.js": "purple-600"
-    };
-
-    return (
-        <>
-            <div className=" font-medium relative text-2xl mt-2 md:mt-4 mb-4">
-                Projects
-                <div className="absolute pt-px bg-white mt-px top-full w-full">
-                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 left-full"></div>
-                    <div className="bg-white absolute rounded-full p-0.5 md:p-1 top-0 transform -translate-y-1/2 right-full"></div>
-                </div>
-            </div>
-
-            {
-                projects.map((project, index) => {
-                    const projectNameFromLink = project.link.split('/');
-                    const projectName = projectNameFromLink[projectNameFromLink.length - 1];
-                    return (
-                        <div key={index} className="flex w-full flex-col px-4">
-                            <div className="w-full py-1 px-2 my-2 border border-gray-50 border-opacity-10 rounded hover:bg-gray-50 hover:bg-opacity-5">
-                                <div className="flex flex-wrap justify-between items-center">
-                                    <div className='flex justify-center items-center'>
-                                        <a href={project.link} target="_blank" rel="noopener noreferrer" className="text-base md:text-lg mr-2">{project.name.toLowerCase()}</a>
-                                        <GitHubStars user="alex-unnippillil" repo={projectName} />
-                                    </div>
-                                    <div className="text-gray-300 font-light text-sm">{project.date}</div>
-                                </div>
-                                <ul className=" tracking-normal leading-tight text-sm font-light ml-4 mt-1">
-                                    {project.description.map((desc, idx) => (
-                                        <li key={idx} className="list-disc mt-1 text-gray-100">{desc}</li>
-                                    ))}
-                                </ul>
-                                <div className="flex flex-wrap items-start justify-start text-xs py-2">
-                                    {project.domains ? project.domains.map((domain, idx) => {
-                                        const borderColorClass = `border-${tag_colors[domain]}`;
-                                        const textColorClass = `text-${tag_colors[domain]}`;
-                                        return (
-                                            <a key={idx} href={project.link} target="_blank" rel="noopener noreferrer" className={`px-1.5 py-0.5 w-max border ${borderColorClass} ${textColorClass} m-1 rounded-full`}>{domain}</a>
-                                        );
-                                    }) : null}
-                                </div>
-                            </div>
-                        </div>
-                    );
-                })
-            }
-        </>
-    )
+function Projects() {
+    return <ProjectGallery />;
 }
-
 
 function Resume({ data: resume }) {
     const [filter, setFilter] = React.useState('all');

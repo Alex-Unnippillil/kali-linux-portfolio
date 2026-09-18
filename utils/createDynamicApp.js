@@ -1,16 +1,29 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { logEvent } from './analytics';
 
-const buildErrorFallback = (title) => {
-  const ErrorFallback = () => (
-    <div className="h-full w-full flex items-center justify-center bg-ub-cool-grey text-white">
-      {`Unable to load ${title}`}
-    </div>
-  );
-
+const buildErrorFallback = (title, loader) => {
+  const ErrorFallback = (props) => {
+    const [Component, setComponent] = useState(null);
+    const [pending, setPending] = useState(false);
+    const mounted = useRef(true);
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+    const retry = async () => {
+      setPending(true);
+      try {
+        const mod = await loader();
+        if (mounted.current) setComponent(() => mod.default);
+      } catch { /* Keep the local recovery UI; never reload other unsaved apps. */ }
+      finally { if (mounted.current) setPending(false); }
+    };
+    if (Component) return <Component {...props} />;
+    return <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-ub-cool-grey p-4 text-center text-white">
+      <p role="alert">{`Unable to load ${title}`}</p>
+      <p className="text-sm text-gray-300">Check your connection, then try again. Other open apps are unaffected.</p>
+      <button type="button" onClick={retry} disabled={pending} className="min-h-[44px] rounded border border-sky-300 px-4 focus-visible:outline focus-visible:outline-2">{pending ? 'Retrying…' : 'Try again'}</button>
+    </div>;
+  };
   ErrorFallback.displayName = `${title}Error`;
-
   return ErrorFallback;
 };
 
@@ -23,8 +36,8 @@ const buildErrorFallback = (title) => {
  */
 export const createDynamicApp = (loader, title) => {
   const Loading = () => (
-    <div className="h-full w-full flex flex-col items-center justify-center gap-3 bg-ub-cool-grey text-white">
-      <span className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+    <div role="status" className="h-full w-full flex flex-col items-center justify-center gap-3 bg-ub-cool-grey text-white">
+      <span className="h-6 w-6 animate-spin motion-reduce:animate-none rounded-full border-2 border-white border-t-transparent" />
       <span>{`Loading ${title}...`}</span>
     </div>
   );
@@ -44,7 +57,7 @@ export const createDynamicApp = (loader, title) => {
         return mod.default;
       } catch (err) {
         console.error(`Failed to load ${title}`, err);
-        return buildErrorFallback(title);
+        return buildErrorFallback(title, loader);
       }
     },
     {

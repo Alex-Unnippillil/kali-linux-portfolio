@@ -10,6 +10,7 @@ import { logEvent, logPageView } from '../utils/analytics';
 import { safeLocalStorage } from '../utils/safeStorage';
 import NotificationCenter from './common/NotificationCenter';
 import SystemNotifications from './common/SystemNotifications';
+import DesktopGuide from './desktop/DesktopGuide';
 
 export default class Ubuntu extends Component {
         constructor() {
@@ -242,8 +243,9 @@ export default class Ubuntu extends Component {
                                         />
                                         <Navbar lockScreen={this.lockScreen} shutDown={this.shutDown} />
                                         {this.state.desktopMounted ? (
-                                                <Desktop bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
+                                                <Desktop initialApp={this.props.initialApp} initialContext={this.props.initialContext} bg_image_name={this.state.bg_image_name} changeBackgroundImage={this.changeBackgroundImage} />
                                         ) : null}
+                                        {this.state.desktopMounted && !this.state.booting_screen && !this.state.screen_locked && !this.state.shutDownScreen ? <DesktopGuide /> : null}
                                 </NotificationCenter>
                         </Layout>
                 );

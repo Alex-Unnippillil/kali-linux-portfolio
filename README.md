@@ -5,6 +5,19 @@ A desktop-style portfolio built with Next.js and Tailwind CSS that recreates the
 Live site: https://unnippillil.com/
 Repository: https://github.com/Alex-Unnippillil/kali-linux-portfolio
 
+## Desktop-first reliability update
+
+The homepage opens the **Kali/Linux desktop directly**, with About Alex in an app
+window. Portfolio content stays inside the OS: use About → Projects or Project
+Gallery, select a project to read its architecture, then go Back without losing
+your search. Direct project and contact URLs open the corresponding OS windows.
+There is no separate landing page or entry-mode preference.
+
+Phone windows fit the available work area, retain minimize/close and task
+switching, and adapt to the on-screen keyboard. Tablet/desktop windows keep
+normal dragging, resizing and snapping. Phone layout does not replace saved
+desktop positions. [Architecture and validation details](docs/portfolio-release.md).
+
 ## Table of contents
 
 - [Project goals](#project-goals)
@@ -274,7 +287,7 @@ A service worker is generated during `yarn build` and emitted to `public/sw.js`.
 
 ### Prerequisites
 
-- Node.js 20 (see `.nvmrc`)
+- Node.js 24 (see `.nvmrc`)
 - Yarn 4.9.2 via Corepack (see `package.json#packageManager`)
 
 ### Install
@@ -467,7 +480,7 @@ If you discover a security issue, open a GitHub Security Advisory or contact the
 
 ### Node version mismatch
 
-If installs or builds fail, ensure Node 20 is active:
+If installs or builds fail, ensure Node 24 is active:
 
 ```bash
 nvm install

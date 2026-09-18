@@ -1,941 +1,930 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import EmbedFrame from '../../EmbedFrame';
-import { useSettings } from '../../../hooks/useSettings';
-import type {
-  YouTubeChannelSummary,
-  YouTubePlaylistDirectory,
-  YouTubePlaylistSummary,
-  YouTubePlaylistVideo,
-} from '../../../utils/youtube';
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import EmbedFrame from "../../EmbedFrame";
+import useWatchLater from "../../../apps/youtube/state/watchLater";
+import { useSettings } from "../../../hooks/useSettings";
+import useYouTubeLibrary from "../../../hooks/useYouTubeLibrary";
 import {
-  fetchYouTubeChannelSummary,
-  fetchYouTubePlaylistItems,
-  fetchYouTubePlaylistDirectoryByChannelId,
   parseYouTubeChannelId,
-} from '../../../utils/youtube';
-import styles from './youtube.module.css';
+  type YouTubePlaylistVideo,
+} from "../../../utils/youtube";
+import {
+  ALL_PLAYLIST_ID,
+  filterDirectoryBySearch,
+  filterPlaylistVideos,
+  mergeUniqueVideos,
+  sortPlaylistVideos,
+  firstAvailableVideo,
+  type VideoSortMode,
+} from "../../../utils/youtube-library";
+import { scrollWithinContainer } from "../../../utils/scrollWithinContainer";
+import VideoIcon from "./VideoIcon";
+import styles from "./youtube.module.css";
 
-const YOUTUBE_CLIENT_API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-const DEFAULT_CHANNEL_ID = 'UCxPIJ3hw6AOwomUWh5B7SfQ';
-const ALL_PLAYLIST_ID = 'all-videos';
-const VIDEO_SORT_OPTIONS = ['newest', 'oldest', 'title'] as const;
-type VideoSortMode = (typeof VIDEO_SORT_OPTIONS)[number];
-
-export type PlaylistListing = {
-  sectionId: string;
-  sectionTitle: string;
-  playlists: YouTubePlaylistSummary[];
-};
-
-export type PlaylistItemsState = {
-  items: YouTubePlaylistVideo[];
-  nextPageToken?: string;
-  loading: boolean;
-  error?: string;
-};
-
-export function filterDirectoryBySearch(
-  directory: PlaylistListing[],
-  filter: string,
-  playlistItems: Record<string, PlaylistItemsState>,
-): PlaylistListing[] {
-  const term = filter.trim().toLowerCase();
-  if (!term) return directory;
-
-  const matchesSearch = (playlist: YouTubePlaylistSummary) => {
-    const haystack = `${playlist.title} ${playlist.description ?? ''}`.toLowerCase();
-    if (haystack.includes(term)) return true;
-
-    const items = playlistItems[playlist.id]?.items ?? [];
-    return items.some((video) => {
-      const videoHaystack = `${video.title} ${video.description ?? ''}`.toLowerCase();
-      return videoHaystack.includes(term);
-    });
-  };
-
-  return directory
-    .map((entry) => ({
-      ...entry,
-      playlists: entry.playlists.filter(matchesSearch),
-    }))
-    .filter((entry) => entry.playlists.length > 0);
-}
-
-interface Props {
-  channelId?: string;
-}
-
-function formatDate(value?: string) {
-  if (!value) return 'Unknown';
+export {
+  filterDirectoryBySearch,
+  filterPlaylistVideos,
+  sortPlaylistVideos,
+} from "../../../utils/youtube-library";
+export type {
+  PlaylistListing,
+  PlaylistItemsState,
+} from "../../../utils/youtube-library";
+const DEFAULT_CHANNEL_ID = "UCxPIJ3hw6AOwomUWh5B7SfQ";
+const watchUrl = (id: string) =>
+  `https://www.youtube.com/watch?v=${encodeURIComponent(id)}`;
+const dateLabel = (value: string) => {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : date.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+};
+
+export default function YouTubeApp({ channelId }: { channelId?: string }) {
+  const channel =
+    parseYouTubeChannelId(channelId ?? "") ??
+    parseYouTubeChannelId(process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID ?? "") ??
+    DEFAULT_CHANNEL_ID;
+  return <CuratedYouTube key={channel} channel={channel} />;
 }
 
-function playlistUrl(playlistId: string) {
-  return `https://www.youtube.com/playlist?list=${playlistId}`;
-}
-
-function channelUrl(channelId: string) {
-  return `https://www.youtube.com/channel/${channelId}`;
-}
-
-function videoUrl(videoId: string) {
-  return `https://www.youtube.com/watch?v=${videoId}`;
-}
-
-function sortVideosNewestFirst(videos: YouTubePlaylistVideo[]) {
-  return [...videos].sort((a, b) => {
-    const aTime = new Date(a.publishedAt ?? '').getTime();
-    const bTime = new Date(b.publishedAt ?? '').getTime();
-    const safeATime = Number.isNaN(aTime) ? 0 : aTime;
-    const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
-
-    if (safeATime === safeBTime) return 0;
-    return safeBTime - safeATime;
-  });
-}
-
-export function sortPlaylistVideos(videos: YouTubePlaylistVideo[], mode: VideoSortMode) {
-  if (mode === 'newest') return sortVideosNewestFirst(videos);
-  if (mode === 'oldest') return sortVideosNewestFirst(videos).reverse();
-
-  return [...videos].sort((a, b) => a.title.localeCompare(b.title));
-}
-
-export function filterPlaylistVideos(videos: YouTubePlaylistVideo[], filter: string) {
-  const term = filter.trim().toLowerCase();
-  if (!term) return videos;
-
-  return videos.filter((video) => {
-    const haystack = `${video.title} ${video.description ?? ''}`.toLowerCase();
-    return haystack.includes(term);
-  });
-}
-
-export default function YouTubeApp({ channelId }: Props) {
+function CuratedYouTube({ channel }: { channel: string }) {
   const { allowNetwork, setAllowNetwork } = useSettings();
-  const parsedChannelId = useMemo(() => {
-    const envChannel = process.env.NEXT_PUBLIC_YOUTUBE_CHANNEL_ID;
-    return (
-      parseYouTubeChannelId(channelId ?? '') ??
-      (envChannel ? parseYouTubeChannelId(envChannel) : null)
+  const {
+    directory,
+    summary,
+    pages,
+    loadingDirectory,
+    directoryError,
+    loadingAll,
+    loadPage,
+    loadAll,
+    retryErrors,
+    refresh,
+  } = useYouTubeLibrary(channel, allowNetwork);
+  const [saved, setSaved] = useWatchLater();
+  const [selection, setSelection] = useState<{
+    channel: string;
+    video: YouTubePlaylistVideo;
+  } | null>(null);
+  const [playlistId, setPlaylistId] = useState(ALL_PLAYLIST_ID);
+  const [category, setCategory] = useState("all");
+  const [showSaved, setShowSaved] = useState(false);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<VideoSortMode>("playlist");
+  const [expanded, setExpanded] = useState(false);
+  const [theatre, setTheatre] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const playerRef = useRef<HTMLElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const videosRef = useRef<HTMLElement>(null);
+  const collectionsRef = useRef<HTMLElement>(null);
+  const userSelected = useRef(false);
+  const id = useId();
+  const playlists = useMemo(() => directory?.playlists ?? [], [directory]);
+  const playing = selection?.channel === channel ? selection.video : null;
+
+  useEffect(() => {
+    setSelection(null);
+    setPlaylistId(ALL_PLAYLIST_ID);
+    setCategory("all");
+    setQuery("");
+  }, [channel]);
+  useEffect(() => {
+    if (!directory || !allowNetwork || loadingAll) return;
+    const missing = directory.playlists.some(
+      ({ id: key }) =>
+        !pages[key] ||
+        (!pages[key].loaded && !pages[key].loading && !pages[key].error),
     );
-  }, [channelId]);
-
-  const resolvedChannelId = parsedChannelId ?? DEFAULT_CHANNEL_ID;
-  const hasClientApiKey = Boolean(YOUTUBE_CLIENT_API_KEY);
-
-  const [channelSummary, setChannelSummary] = useState<YouTubeChannelSummary | null>(
-    null,
-  );
-  const [directory, setDirectory] = useState<PlaylistListing[]>([]);
-  const [playlistIndex, setPlaylistIndex] = useState<Map<string, YouTubePlaylistSummary>>(
-    () => new Map(),
-  );
-  const [playlistItems, setPlaylistItems] = useState<Record<string, PlaylistItemsState>>(
-    {},
-  );
-
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
-  const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
-  const [showFullDescription, setShowFullDescription] = useState(false);
-  const [filter, setFilter] = useState('');
-  const [videoFilter, setVideoFilter] = useState('');
-  const [videoSortMode, setVideoSortMode] = useState<VideoSortMode>('newest');
-
-  const [loadingDirectory, setLoadingDirectory] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [missingApiKeyHint, setMissingApiKeyHint] = useState(false);
-
-  const abortDirectoryRef = useRef<AbortController | null>(null);
-  const abortPlaylistRef = useRef<AbortController | null>(null);
-
-  const loadDirectory = useCallback(async () => {
-    const networkAllowed = allowNetwork || process.env.NODE_ENV === 'test';
-    if (!allowNetwork) {
-      setAllowNetwork(true);
-      setError('Network requests were disabled. Enabling network to load YouTube playlists…');
-      if (!networkAllowed) {
-        setLoadingDirectory(false);
-        return;
-      }
-    }
-    if (!resolvedChannelId) {
-      setError(
-        'Missing or invalid YouTube channel id. Set NEXT_PUBLIC_YOUTUBE_CHANNEL_ID or pass channelId prop.',
-      );
-      setLoadingDirectory(false);
-      return;
-    }
-
-    setLoadingDirectory(true);
-    setError(null);
-    setMissingApiKeyHint(false);
-    abortDirectoryRef.current?.abort();
-    const controller = new AbortController();
-    abortDirectoryRef.current = controller;
-
-    try {
-      const [summary, playlistDirectory] = await (async () => {
-        try {
-          const response = await fetch(
-            `/api/youtube/directory?channelId=${encodeURIComponent(resolvedChannelId)}`,
-            { signal: controller.signal },
-          );
-          if (!response.ok) {
-            const body = await response.json().catch(() => ({}));
-            throw new Error(
-              body?.error ||
-              `YouTube directory request failed (${response.status} ${response.statusText})`,
-            );
-          }
-          const payload = (await response.json()) as {
-            summary: YouTubeChannelSummary | null;
-            directory: YouTubePlaylistDirectory;
-          };
-          return [payload.summary, payload.directory] as const;
-        } catch (proxyError) {
-          if (!hasClientApiKey) throw proxyError;
-          return Promise.all([
-            fetchYouTubeChannelSummary(resolvedChannelId, YOUTUBE_CLIENT_API_KEY ?? '', controller.signal),
-            fetchYouTubePlaylistDirectoryByChannelId(
-              resolvedChannelId,
-              YOUTUBE_CLIENT_API_KEY ?? '',
-              controller.signal,
-            ),
-          ]);
-        }
-      })();
-
-      setChannelSummary(summary);
-      const map = new Map<string, YouTubePlaylistSummary>(
-        playlistDirectory.playlists.map((p) => [p.id, p]),
-      );
-      const aggregatedCount = playlistDirectory.playlists.reduce(
-        (sum, playlist) => sum + (playlist.itemCount ?? 0),
-        0,
-      );
-      const latestPublished = playlistDirectory.playlists.reduce<Date | null>(
-        (latest, playlist) => {
-          const current = new Date(playlist.publishedAt ?? '');
-          if (Number.isNaN(current.getTime())) return latest;
-          if (!latest) return current;
-          return current > latest ? current : latest;
-        },
-        null,
-      );
-      const fallbackThumbnail = playlistDirectory.playlists.find((p) => p.thumbnail)?.thumbnail;
-
-      const allVideosSummary: YouTubePlaylistSummary = {
-        id: ALL_PLAYLIST_ID,
-        title: 'All videos',
-        description: 'Combined feed of every playlist video.',
-        thumbnail: fallbackThumbnail ?? '',
-        itemCount: aggregatedCount,
-        publishedAt: latestPublished?.toISOString() ?? '',
-        privacyStatus: 'public',
-      };
-
-      map.set(ALL_PLAYLIST_ID, allVideosSummary);
-      setPlaylistIndex(map);
-
-      const playlistListings: PlaylistListing[] = playlistDirectory.sections.length
-        ? playlistDirectory.sections
-        : playlistDirectory.playlists.length
-          ? [{ sectionId: 'all', sectionTitle: 'Playlists', playlists: playlistDirectory.playlists }]
-          : [];
-
-      const listings: PlaylistListing[] = playlistListings.map((listing) =>
-        listing.sectionId === 'all'
-          ? {
-            ...listing,
-            playlists: [...listing.playlists, allVideosSummary],
-          }
-          : listing,
-      );
-
-      setDirectory(listings);
-      setError(null);
-
-      const defaultPlaylist = ALL_PLAYLIST_ID;
-      const firstPlaylist = listings[0]?.playlists[0]?.id;
-      setSelectedPlaylistId((prev) => prev ?? defaultPlaylist ?? firstPlaylist ?? null);
-    } catch (directoryError: unknown) {
-      const e = directoryError as Error;
-      if (e.name === 'AbortError') return;
-      console.error('YouTube directory load failed', e);
-      if (e.message?.toLowerCase().includes('api key')) {
-        setMissingApiKeyHint(true);
-      }
-      setError(
-        e.message?.includes('Failed to fetch')
-          ? 'Unable to reach the YouTube API. Check your network connection and API key.'
-          : e.message || 'Failed to load YouTube playlists.',
-      );
-      return;
-    } finally {
-      setLoadingDirectory(false);
-      abortDirectoryRef.current = null;
-    }
-  }, [allowNetwork, hasClientApiKey, resolvedChannelId, setAllowNetwork]);
-
+    if (missing) void loadAll();
+  }, [directory, allowNetwork, pages, loadingAll, loadAll]);
   useEffect(() => {
-    void loadDirectory();
-    return () => {
-      abortDirectoryRef.current?.abort();
-      abortPlaylistRef.current?.abort();
-    };
-  }, [loadDirectory]);
-
-  const loadPlaylistItems = useCallback(
-    async (playlistId: string, mode: 'replace' | 'append') => {
-      if (!playlistId) return;
-
-      setPlaylistItems((prev) => ({
-        ...prev,
-        [playlistId]: {
-          items: prev[playlistId]?.items ?? [],
-          nextPageToken: prev[playlistId]?.nextPageToken,
-          loading: true,
-          error: undefined,
-        },
-      }));
-
-      abortPlaylistRef.current?.abort();
-      const controller = new AbortController();
-      abortPlaylistRef.current = controller;
-
-      try {
-        const previous = playlistItems[playlistId];
-        const pageToken = mode === 'append' ? previous?.nextPageToken : undefined;
-
-        const fetchPlaylistPage = async (id: string) => {
-          const response = await (async () => {
-            try {
-              const query = new URLSearchParams({
-                playlistId: id,
-                maxResults: '50',
-              });
-              if (pageToken) query.set('pageToken', pageToken);
-              const resp = await fetch(`/api/youtube/playlist-items?${query.toString()}`, {
-                signal: controller.signal,
-              });
-              if (!resp.ok) {
-                const body = await resp.json().catch(() => ({}));
-                throw new Error(
-                  body?.error || `YouTube playlist request failed (${resp.status} ${resp.statusText})`,
-                );
-              }
-              return (await resp.json()) as Awaited<ReturnType<typeof fetchYouTubePlaylistItems>>;
-            } catch (proxyError) {
-              if (!hasClientApiKey) throw proxyError;
-              return fetchYouTubePlaylistItems(id, YOUTUBE_CLIENT_API_KEY ?? '', {
-                pageToken,
-                maxResults: 50,
-                signal: controller.signal,
-              });
-            }
-          })();
-
-          return response;
-        };
-
-        if (playlistId === ALL_PLAYLIST_ID) {
-          const availablePlaylists = Array.from(playlistIndex.keys()).filter(
-            (id) => id !== ALL_PLAYLIST_ID,
-          );
-          if (!availablePlaylists.length) {
-            throw new Error('No playlists available to build the combined feed.');
-          }
-
-          const results = await Promise.allSettled(
-            availablePlaylists.map((id) => fetchPlaylistPage(id)),
-          );
-          const successfulItems = results
-            .filter((result): result is PromiseFulfilledResult<Awaited<ReturnType<typeof fetchPlaylistPage>>> =>
-              result.status === 'fulfilled',
-            )
-            .flatMap((result) => result.value.items);
-
-          if (!successfulItems.length) {
-            const errorMessage = results.find((result) => result.status === 'rejected');
-            throw new Error(
-              errorMessage && 'reason' in errorMessage
-                ? (errorMessage.reason as Error)?.message || 'Failed to load any playlist videos.'
-                : 'Failed to load any playlist videos.',
-            );
-          }
-
-          const merged = sortVideosNewestFirst(successfulItems);
-          setPlaylistItems((prev) => ({
-            ...prev,
-            [playlistId]: {
-              items: merged,
-              nextPageToken: undefined,
-              loading: false,
-              error: undefined,
-            },
-          }));
-
-          setSelectedVideoId((prev) => {
-            const candidate = merged[0]?.videoId;
-            if (!candidate) return prev;
-            if (!prev || mode === 'replace') return prev ?? candidate;
-            return prev;
-          });
-
-          return;
-        }
-
-        const response = await fetchPlaylistPage(playlistId);
-
-        setPlaylistItems((prev) => {
-          const existing = prev[playlistId]?.items ?? [];
-          const merged = mode === 'append' ? [...existing, ...response.items] : response.items;
-          return {
-            ...prev,
-            [playlistId]: {
-              items: merged,
-              nextPageToken: response.nextPageToken,
-              loading: false,
-              error: undefined,
-            },
-          };
-        });
-
-        setSelectedVideoId((prev) => {
-          const candidate = response.items[0]?.videoId;
-          if (!candidate) return prev;
-          if (!prev || mode === 'replace') return prev ?? candidate;
-          return prev;
-        });
-      } catch (err: unknown) {
-        const e = err as Error;
-        if (e.name === 'AbortError') {
-          setPlaylistItems((prev) => ({
-            ...prev,
-            [playlistId]: {
-              items: prev[playlistId]?.items ?? [],
-              nextPageToken: prev[playlistId]?.nextPageToken,
-              loading: false,
-              error: undefined,
-            },
-          }));
-          return;
-        }
-        console.error('YouTube playlist items load failed', e);
-        if (e.message?.toLowerCase().includes('api key')) {
-          setMissingApiKeyHint(true);
-        }
-        setPlaylistItems((prev) => ({
-          ...prev,
-          [playlistId]: {
-            items: prev[playlistId]?.items ?? [],
-            nextPageToken: prev[playlistId]?.nextPageToken,
-            loading: false,
-            error: e.message || 'Failed to load playlist videos.',
-          },
-        }));
-      } finally {
-        abortPlaylistRef.current = null;
-      }
-    },
-    [hasClientApiKey, playlistIndex, playlistItems],
-  );
-
+    if (playing || !allowNetwork) return;
+    const first = firstAvailableVideo(playlists, pages);
+    if (first) setSelection({ channel, video: first });
+  }, [playing, allowNetwork, playlists, pages, channel]);
   useEffect(() => {
-    if (!selectedPlaylistId) return;
-    const current = playlistItems[selectedPlaylistId];
-    if (current?.items?.length || current?.loading) return;
-    void loadPlaylistItems(selectedPlaylistId, 'replace');
-  }, [selectedPlaylistId, playlistItems, loadPlaylistItems]);
-
-  const filteredDirectory = useMemo(
-    () => filterDirectoryBySearch(directory, filter, playlistItems),
-    [directory, filter, playlistItems],
-  );
-
+    setExpanded(false);
+    // Automatic selection must never steal keyboard focus or scroll the desktop.
+    if (!userSelected.current) return;
+    userSelected.current = false;
+    scrollWithinContainer(mainRef.current, playerRef.current);
+    headingRef.current?.focus({ preventScroll: true });
+  }, [playing]);
   useEffect(() => {
-    if (!filteredDirectory.length) {
-      setSelectedPlaylistId(null);
-      setSelectedVideoId(null);
-      return;
-    }
+    if (
+      directory &&
+      playlistId !== ALL_PLAYLIST_ID &&
+      !playlists.some(({ id: key }) => key === playlistId)
+    )
+      setPlaylistId(ALL_PLAYLIST_ID);
+  }, [directory, playlists, playlistId]);
 
-    const selectedPlaylistStillVisible = selectedPlaylistId
-      ? filteredDirectory.some((group) =>
-        group.playlists.some((playlist) => playlist.id === selectedPlaylistId),
+  const sections = useMemo(() => {
+    const seen = new Set<string>();
+    // Channel sections define categories; synthetic catch-all sections are represented by All collections.
+    return (directory?.sections ?? []).filter((section) => {
+      const ids = Array.from(
+        new Set(section.playlists.map((playlist) => playlist.id)),
       )
-      : false;
-
-    if (selectedPlaylistStillVisible) return;
-
-    const firstMatch = filteredDirectory[0]?.playlists[0];
-    setSelectedPlaylistId(firstMatch?.id ?? null);
-    setSelectedVideoId(null);
-  }, [filteredDirectory, selectedPlaylistId]);
-
-  // Reset expanded description when video changes
-  useEffect(() => {
-    setShowFullDescription(false);
-  }, [selectedVideoId]);
-
-  const selectedPlaylist = selectedPlaylistId
-    ? playlistIndex.get(selectedPlaylistId) ?? null
-    : null;
-
-  const selectedPlaylistVideos = useMemo(() => {
-    if (!selectedPlaylistId) return [];
-    const videos = playlistItems[selectedPlaylistId]?.items ?? [];
-    return sortPlaylistVideos(videos, videoSortMode);
-  }, [playlistItems, selectedPlaylistId, videoSortMode]);
-
-  const visiblePlaylistVideos = useMemo(
-    () => filterPlaylistVideos(selectedPlaylistVideos, videoFilter),
-    [selectedPlaylistVideos, videoFilter],
+        .sort()
+        .join("|");
+      if (
+        !ids ||
+        seen.has(ids) ||
+        section.playlists.length === playlists.length
+      )
+        return false;
+      seen.add(ids);
+      return true;
+    });
+  }, [directory, playlists.length]);
+  const categoryPlaylists =
+    category === "all"
+      ? playlists
+      : (sections.find((section) => section.sectionId === category)
+          ?.playlists ?? playlists);
+  const visiblePlaylists = useMemo(
+    () =>
+      filterDirectoryBySearch(
+        [
+          {
+            sectionId: "visible",
+            sectionTitle: "Collections",
+            playlists: categoryPlaylists,
+          },
+        ],
+        query,
+        pages,
+      )[0]?.playlists ?? [],
+    [categoryPlaylists, query, pages],
   );
-
-  const selectedVideo = useMemo(() => {
-    if (!selectedVideoId) return null;
-    return selectedPlaylistVideos.find((v) => v.videoId === selectedVideoId) ?? null;
-  }, [selectedPlaylistVideos, selectedVideoId]);
-
-  const activeVideoIndex = useMemo(
-    () => visiblePlaylistVideos.findIndex((video) => video.videoId === selectedVideoId),
-    [visiblePlaylistVideos, selectedVideoId],
+  const allVideos = useMemo(
+    () =>
+      mergeUniqueVideos(
+        ...playlists.map((playlist) => pages[playlist.id]?.items ?? []),
+      ),
+    [playlists, pages],
   );
-
-  const playlistState = selectedPlaylistId ? playlistItems[selectedPlaylistId] : undefined;
-  const playlistCount = filteredDirectory.reduce(
-    (sum, group) => sum + group.playlists.length,
-    0,
+  const savedVideos = useMemo(
+    () =>
+      saved
+        .filter((video) => video.channelId === channel)
+        .map(
+          (video, position) =>
+            allVideos.find((item) => item.videoId === video.id) ?? {
+              videoId: video.id,
+              title: video.title,
+              thumbnail: video.thumbnail,
+              description: "",
+              publishedAt: "",
+              position,
+            },
+        ),
+    [saved, channel, allVideos],
   );
-  const hasSearchTerm = Boolean(filter.trim().length);
-  const hasVideoSearchTerm = Boolean(videoFilter.trim().length);
+  const activePlaylist = playlists.find(
+    (playlist) => playlist.id === playlistId,
+  );
+  const sourceVideos = useMemo(
+    () =>
+      showSaved
+        ? savedVideos
+        : activePlaylist
+          ? (pages[activePlaylist.id]?.items ?? [])
+          : mergeUniqueVideos(
+              ...categoryPlaylists.map(
+                (playlist) => pages[playlist.id]?.items ?? [],
+              ),
+            ),
+    [showSaved, savedVideos, activePlaylist, pages, categoryPlaylists],
+  );
+  const sorted = useMemo(
+    () =>
+      sort === "playlist" && !activePlaylist
+        ? sourceVideos
+        : sortPlaylistVideos(sourceVideos, sort),
+    [sourceVideos, sort, activePlaylist],
+  );
+  const videos = useMemo(
+    () => filterPlaylistVideos(sorted, query),
+    [sorted, query],
+  );
+  const savedIds = useMemo(
+    () => new Set(saved.map((video) => video.id)),
+    [saved],
+  );
+  const relevantIds = activePlaylist
+    ? [activePlaylist.id]
+    : categoryPlaylists.map((playlist) => playlist.id);
+  const busy =
+    loadingDirectory ||
+    loadingAll ||
+    relevantIds.some((key) => pages[key]?.loading);
+  const hasMore =
+    !showSaved && relevantIds.some((key) => Boolean(pages[key]?.nextPageToken));
+  const hasErrors = relevantIds.some((key) => Boolean(pages[key]?.error));
+  const currentIndex = playing
+    ? sorted.findIndex((video) => video.videoId === playing.videoId)
+    : -1;
+  const queue =
+    currentIndex >= 0
+      ? sorted.slice(currentIndex + 1, currentIndex + 5)
+      : sorted.slice(0, 4);
+  const title = showSaved
+    ? "Watch later"
+    : (activePlaylist?.title ?? "Explore the videos");
 
-  const selectVisibleVideoByOffset = (offset: number) => {
-    if (!visiblePlaylistVideos.length) return;
-
-    if (activeVideoIndex < 0) {
-      setSelectedVideoId(visiblePlaylistVideos[0].videoId);
-      return;
-    }
-
-    const nextIndex = Math.min(
-      Math.max(activeVideoIndex + offset, 0),
-      visiblePlaylistVideos.length - 1,
-    );
-    setSelectedVideoId(visiblePlaylistVideos[nextIndex].videoId);
+  const watch = (video: YouTubePlaylistVideo) => {
+    userSelected.current = true;
+    if (video.videoId === playing?.videoId) {
+      userSelected.current = false;
+      scrollWithinContainer(mainRef.current, playerRef.current);
+      headingRef.current?.focus({ preventScroll: true });
+    } else setSelection({ channel, video });
   };
+  const choosePlaylist = (next: string) => {
+    setPlaylistId(next);
+    setShowSaved(false);
+    setQuery("");
+    // Browsing a collection is independent of the persistent player.
+    if (next !== ALL_PLAYLIST_ID && !pages[next]?.loaded && !pages[next]?.error)
+      void loadPage(next);
+  };
+  const toggleSaved = (video: YouTubePlaylistVideo) => {
+    const removing = savedIds.has(video.videoId);
+    setSaved((previous) =>
+      removing
+        ? previous.filter((item) => item.id !== video.videoId)
+        : [
+            ...previous.filter((item) => item.id !== video.videoId),
+            {
+              id: video.videoId,
+              title: video.title,
+              thumbnail: video.thumbnail,
+              channelName: summary?.title ?? "Alex Unnippillil",
+              channelId: channel,
+            },
+          ],
+    );
+    setAnnouncement(
+      removing
+        ? "Removed from Watch later on this browser."
+        : "Saved to Watch later on this browser.",
+    );
+  };
+  const share = async () => {
+    if (!playing) return;
+    try {
+      if (window.navigator.share)
+        await window.navigator.share({
+          title: playing.title,
+          url: watchUrl(playing.videoId),
+        });
+      else if (window.navigator.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(watchUrl(playing.videoId));
+        setAnnouncement("Video link copied.");
+      } else setAnnouncement("Use Open on YouTube to copy this video’s link.");
+    } catch (error) {
+      if ((error as Error).name !== "AbortError")
+        setAnnouncement("Sharing is unavailable. Use Open on YouTube instead.");
+    }
+  };
+  const thumbnail = (src: string, alt = "") =>
+    allowNetwork && src ? (
+      <img
+        src={src}
+        alt={alt}
+        width="480"
+        height="270"
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        onError={(event) => {
+          event.currentTarget.hidden = true;
+        }}
+      />
+    ) : null;
 
   return (
-    <div className={styles.container}>
+    <div
+      ref={rootRef}
+      className={styles.container}
+      data-testid="youtube-app"
+      onKeyDown={(event) => {
+        if (
+          event.ctrlKey ||
+          event.metaKey ||
+          event.altKey ||
+          (event.target as HTMLElement).closest(
+            'input, textarea, select, [contenteditable="true"]',
+          )
+        )
+          return;
+        if (event.key === "/") {
+          event.preventDefault();
+          event.stopPropagation();
+          searchRef.current?.focus();
+        }
+      }}
+    >
       <header className={styles.header}>
-        <div className={styles.headerTop}>
-          <div className={styles.brand}>
-            {channelSummary?.thumbnail ? (
-              <img src={channelSummary.thumbnail} alt="" className={styles.avatar} />
-            ) : (
-              <div className={styles.avatarPlaceholder} aria-hidden />
-            )}
-            <div>
-              <p className={styles.kicker}>YouTube hub</p>
-              <h1 className={styles.title}>Channel playlists</h1>
-              <p className={styles.subtle}>
-                {channelSummary?.title
-                  ? `Curated playlists from ${channelSummary.title}`
-                  : 'Browse a clean, distraction-free set of playlists.'}
-              </p>
-            </div>
-          </div>
-
-          <div className={styles.actions}>
-            {resolvedChannelId && (
-              <a
-                href={channelUrl(resolvedChannelId)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${styles.button} ${styles.ghostButton}`}
-              >
-                Open channel
-              </a>
-            )}
+        <button
+          type="button"
+          className={styles.brand}
+          aria-label="YouTube library home"
+          onClick={() => {
+            choosePlaylist(ALL_PLAYLIST_ID);
+            setCategory("all");
+          }}
+        >
+          <span className={styles.logo}>
+            <VideoIcon name="play" />
+          </span>
+          <span>
+            YouTube <small>CURATED</small>
+          </span>
+        </button>
+        <form
+          className={styles.search}
+          role="search"
+          aria-label="YouTube library search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            scrollWithinContainer(mainRef.current, videosRef.current);
+          }}
+        >
+          <VideoIcon name="search" />
+          <label className={styles.srOnly} htmlFor={`${id}-search`}>
+            Search playlists or loaded videos
+          </label>
+          <input
+            ref={searchRef}
+            id={`${id}-search`}
+            aria-label="Search playlists or loaded videos"
+            type="search"
+            placeholder="Search the collection"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            aria-keyshortcuts="/"
+            autoComplete="off"
+          />
+          {query && (
             <button
               type="button"
-              onClick={() => void loadDirectory()}
-              className={styles.button}
-              disabled={loadingDirectory}
+              className={styles.iconButton}
+              aria-label="Clear search"
+              onClick={() => {
+                setQuery("");
+                searchRef.current?.focus();
+              }}
             >
-              {loadingDirectory ? 'Refreshing…' : 'Refresh'}
+              <VideoIcon name="close" />
             </button>
+          )}
+        </form>
+        <button
+          type="button"
+          className={styles.iconButton}
+          disabled={busy || !allowNetwork}
+          aria-label="Refresh channel playlists"
+          title="Refresh channel playlists"
+          onClick={refresh}
+        >
+          <VideoIcon name="refresh" />
+        </button>
+      </header>
+      <nav className={styles.libraryNav} aria-label="Library navigation">
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Back to selected video"
+          title="Back to selected video"
+          disabled={!playing}
+          onClick={() => {
+            scrollWithinContainer(mainRef.current, playerRef.current);
+            headingRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <VideoIcon name="play" />
+        </button>
+        <label className={styles.playlistPicker}>
+          <span className={styles.srOnly}>Choose a playlist</span>
+          <VideoIcon name="playlist" />
+          <select
+            aria-label="Choose a playlist"
+            value={playlistId}
+            disabled={!playlists.length}
+            onChange={(event) => {
+              setCategory("all");
+              choosePlaylist(event.target.value);
+            }}
+          >
+            <option value={ALL_PLAYLIST_ID}>All collections</option>
+            {playlists.map((playlist) => (
+              <option key={playlist.id} value={playlist.id}>
+                {playlist.title}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className={styles.iconButton}
+          aria-label="Browse playlist collections"
+          title="Browse playlist collections"
+          onClick={() =>
+            scrollWithinContainer(mainRef.current, collectionsRef.current)
+          }
+        >
+          <VideoIcon name="grid" />
+        </button>
+        <button
+          type="button"
+          className={styles.button}
+          aria-pressed={showSaved}
+          onClick={() => {
+            setShowSaved((value) => !value);
+            setQuery("");
+            scrollWithinContainer(mainRef.current, videosRef.current);
+          }}
+        >
+          <VideoIcon name="clock" />
+          Watch later
+          {savedVideos.length > 0 && (
+            <span className={styles.count}>{savedVideos.length}</span>
+          )}
+        </button>
+      </nav>
+      <main ref={mainRef} className={styles.main} aria-label="YouTube library">
+        <div className={styles.intro}>
+          <div>
+            <p className={styles.eyebrow}>CURATED BY ALEX UNNIPPILLIL</p>
+            <h1>A collection worth exploring.</h1>
+            <p className={styles.muted}>
+              Handpicked videos. Organized playlists. One place to watch.
+            </p>
           </div>
+          <a
+            className={styles.channel}
+            href={`https://www.youtube.com/channel/${channel}/playlists`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className={styles.avatar}>AU</span>
+            <span>
+              {summary?.title ?? "Alex’s library"}
+              <small>{playlists.length} public playlists</small>
+            </span>
+            <VideoIcon name="external" />
+          </a>
         </div>
-
-        <div className={styles.filterRow}>
-          <div className={styles.searchGroup}>
-            <label className="sr-only" htmlFor="youtube-playlist-filter">
-              Filter playlists
-            </label>
-            <input
-              id="youtube-playlist-filter"
-              type="search"
-              aria-label="Search playlists or videos"
-              value={filter}
-              onChange={(event) => setFilter(event.target.value)}
-              placeholder="Search playlists or videos"
-              className={styles.input}
-            />
-          </div>
-          <div className={styles.miniStat}>
-            {loadingDirectory
-              ? 'Loading directory…'
-              : `${playlistCount} playlists • ${filteredDirectory.length} categories`}
-          </div>
-        </div>
-
-        {missingApiKeyHint && (
-          <p className={styles.hint} role="status">
-            Configure <code className={styles.code}>YOUTUBE_API_KEY</code> on the server or{' '}
-            <code className={styles.code}>NEXT_PUBLIC_YOUTUBE_API_KEY</code> for client fallback.
-          </p>
-        )}
-
         {!allowNetwork && (
-          <div className={styles.banner} role="status">
-            <span>Network requests are disabled. Enable them to load playlists.</span>
+          <section className={styles.notice}>
+            <h2>Connect the video library</h2>
+            <p>
+              Network access is off. Enable it to retrieve Alex’s public
+              playlists and load the YouTube player.
+            </p>
             <button
+              className={styles.primaryButton}
               type="button"
               onClick={() => setAllowNetwork(true)}
-              className={`${styles.button} ${styles.smallButton}`}
             >
               Enable network
             </button>
-          </div>
+          </section>
         )}
-
-        {error && (
-          <p className={styles.error} role="alert">
-            {error}
-          </p>
+        {directoryError && (
+          <section className={styles.notice} role="alert">
+            <h2>Could not load playlists</h2>
+            <p>{directoryError}</p>
+            <button className={styles.button} type="button" onClick={refresh}>
+              Try again
+            </button>
+          </section>
         )}
-      </header>
-
-      <main className={styles.layout}>
-        <aside className={styles.sidebar}>
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <h2 className={styles.sectionTitle}>Playlists</h2>
-              <span className={styles.pill}>{playlistCount}</span>
+        <section
+          ref={playerRef}
+          className={styles.watchLayout}
+          data-theatre={theatre}
+          aria-label="Selected video"
+        >
+          <div className={styles.watchMain}>
+            <div className={styles.playerShell}>
+              {playing && allowNetwork ? (
+                <EmbedFrame
+                  key={playing.videoId}
+                  src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(playing.videoId)}?playsinline=1`}
+                  title={`YouTube player for ${playing.title}`}
+                  className={styles.embedFrame}
+                  containerClassName={styles.embedContainer}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                  fallbackLabel="Open on YouTube"
+                  externalUrl={watchUrl(playing.videoId)}
+                  showExternalLink={false}
+                  loading="eager"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-presentation"
+                  loadingLabel="Loading YouTube player…"
+                />
+              ) : (
+                <div className={styles.playerPlaceholder}>
+                  <VideoIcon name="play" />
+                  <p>
+                    {!allowNetwork
+                      ? "You are in control of network access."
+                      : busy
+                        ? "Finding your first video…"
+                        : "Select a video to begin."}
+                  </p>
+                </div>
+              )}
             </div>
-
-            {loadingDirectory && !filteredDirectory.length ? (
-              <div className={styles.placeholderCard}>Loading playlists…</div>
-            ) : filteredDirectory.length ? (
-              <div className={styles.playlistGroups}>
-                <h2 className={styles.sectionTitle}>Categories</h2>
-                {filteredDirectory.map((group) => (
-                  <div key={group.sectionId} className={styles.playlistGroup}>
-                    <div className={styles.groupHeader}>
-                      <h3 className={styles.groupTitle}>{group.sectionTitle}</h3>
-                      <span className={styles.groupCount}>{group.playlists.length}</span>
-                    </div>
-                    <ul className={styles.playlistList} aria-label={`${group.sectionTitle} playlists`}>
-                      {group.playlists.map((playlist) => {
-                        const active = playlist.id === selectedPlaylistId;
-                        return (
-                          <li key={playlist.id}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedPlaylistId(playlist.id);
-                                setSelectedVideoId(null);
-                              }}
-                              className={`${styles.playlistButton} ${active ? styles.playlistButtonActive : ''
-                                }`}
-                              aria-label={`Open playlist ${playlist.title}`}
-                            >
-                              {playlist.thumbnail ? (
-                                <img
-                                  src={playlist.thumbnail}
-                                  alt=""
-                                  className={styles.playlistThumb}
-                                />
-                              ) : (
-                                <div className={styles.thumbPlaceholder}>No preview</div>
-                              )}
-                              <div className={styles.playlistMeta}>
-                                <p className={styles.playlistTitle}>{playlist.title}</p>
-                                <p className={styles.metaText}>
-                                  {playlist.itemCount} videos
-                                  {playlist.privacyStatus !== 'public'
-                                    ? ` • ${playlist.privacyStatus}`
-                                    : ''}
-                                </p>
-                              </div>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
+            {playing && (
+              <div className={styles.nowPlaying}>
+                <p className={styles.eyebrow}>
+                  SELECTED VIDEO <span>· Press play to watch</span>
+                </p>
+                <h2 ref={headingRef} tabIndex={-1}>
+                  {playing.title}
+                </h2>
+                <div className={styles.videoActions}>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    aria-pressed={savedIds.has(playing.videoId)}
+                    onClick={() => toggleSaved(playing)}
+                  >
+                    <VideoIcon
+                      name={savedIds.has(playing.videoId) ? "check" : "clock"}
+                    />
+                    {savedIds.has(playing.videoId) ? "Saved" : "Save video"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    onClick={() => void share()}
+                  >
+                    <VideoIcon name="share" />
+                    Share
+                  </button>
+                  <a
+                    className={styles.button}
+                    href={watchUrl(playing.videoId)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <VideoIcon name="external" />
+                    Open on YouTube
+                  </a>
+                  <button
+                    type="button"
+                    className={`${styles.iconButton} ${styles.theatreButton}`}
+                    aria-label="Theatre view"
+                    aria-pressed={theatre}
+                    title="Theatre view"
+                    onClick={() => setTheatre((value) => !value)}
+                  >
+                    <VideoIcon name="theatre" />
+                  </button>
+                  <span className={styles.transport}>
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      aria-label="Previous video"
+                      disabled={currentIndex <= 0}
+                      onClick={() => watch(sorted[currentIndex - 1])}
+                    >
+                      <VideoIcon name="previous" />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      aria-label="Next video"
+                      disabled={
+                        currentIndex < 0 || currentIndex >= sorted.length - 1
+                      }
+                      onClick={() => watch(sorted[currentIndex + 1])}
+                    >
+                      <VideoIcon name="next" />
+                    </button>
+                  </span>
+                </div>
+                {playing.description && (
+                  <div className={styles.description}>
+                    <p>
+                      {expanded
+                        ? playing.description
+                        : playing.description.slice(0, 180) +
+                          (playing.description.length > 180 ? "…" : "")}
+                    </p>
+                    {playing.description.length > 180 && (
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        aria-expanded={expanded}
+                        onClick={() => setExpanded((value) => !value)}
+                      >
+                        {expanded ? "Show less" : "Show more"}
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
-            ) : hasSearchTerm ? (
-              <div className={styles.placeholderCard}>
-                <p style={{ margin: 0 }}>No playlists match your search.</p>
-                <button
-                  type="button"
-                  onClick={() => setFilter('')}
-                  className={`${styles.button} ${styles.smallButton}`}
-                  style={{ marginTop: '10px' }}
-                >
-                  Clear search
-                </button>
-              </div>
-            ) : (
-              <div className={styles.placeholderCard}>
-                {missingApiKeyHint
-                  ? 'Configure a YouTube API key to load playlists.'
-                  : resolvedChannelId
-                    ? 'No public playlists found for this channel.'
-                    : 'Enter a valid channel id to load playlists.'}
+                )}
               </div>
             )}
           </div>
-        </aside>
-
-        <section className={styles.contentArea}>
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <div>
-                <p className={styles.kicker}>Playlist</p>
-                <h3 className={styles.heading}>{selectedPlaylist?.title ?? 'Select a playlist'}</h3>
-                {selectedPlaylist?.publishedAt && (
-                  <p className={styles.metaText}>
-                    Published {formatDate(selectedPlaylist.publishedAt)} • {selectedPlaylist.itemCount} videos
-                  </p>
-                )}
-              </div>
-              {selectedPlaylist && (
-                <a
-                  href={playlistUrl(selectedPlaylist.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`${styles.button} ${styles.ghostButton}`}
-                >
-                  Open playlist
-                </a>
-              )}
+          <aside className={styles.queue} aria-label="Up next">
+            <div className={styles.sectionHeading}>
+              <h2>Up next</h2>
+              <span className={styles.muted}>Your collection</span>
             </div>
-          </div>
-
-          <div className={styles.contentGrid}>
-            <div className={`${styles.panel} ${styles.playerPanel}`}>
-              <div className={styles.panelHeader}>
-                <div>
-                  <p className={styles.kicker}>Watch</p>
-                  <h3 className={styles.subHeading}>{selectedVideo ? 'Now playing' : 'Choose a video'}</h3>
-                </div>
-                {selectedVideo && (
-                  <a
-                    href={videoUrl(selectedVideo.videoId)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`${styles.button} ${styles.ghostButton}`}
-                  >
-                    Open video
-                  </a>
-                )}
-              </div>
-
-              <div className={styles.playerShell}>
-                {selectedVideo ? (
-                  <EmbedFrame
-                    key={selectedVideo.videoId}
-                    title={`YouTube player for ${selectedVideo.title}`}
-                    src={`https://www.youtube-nocookie.com/embed/${selectedVideo.videoId}`}
-                    className={styles.embedFrame}
-                    containerClassName={styles.embedContainer}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    fallbackLabel="Open on YouTube"
-                    openInNewTabLabel="Open on YouTube"
-                    loadingLabel="Loading YouTube player…"
-                  />
-                ) : (
-                  <div className={styles.playerPlaceholder}>Select a video from the list.</div>
-                )}
-              </div>
-
-              {selectedVideo && (
-                <div className={styles.videoDetails}>
-                  <div className={styles.panelHeader}>
-                    <h3 className={styles.videoTitle}>{selectedVideo.title}</h3>
-                  </div>
-                  <p className={styles.metaText} style={{ marginBottom: 4 }}>
-                    Published {formatDate(selectedVideo.publishedAt)}
-                  </p>
-                  {selectedVideo.description && (
-                    <>
-                      <p className={styles.descriptionText}>
-                        {showFullDescription
-                          ? selectedVideo.description
-                          : selectedVideo.description.slice(0, 150) +
-                          (selectedVideo.description.length > 150 ? '...' : '')}
-                      </p>
-                      {selectedVideo.description.length > 150 && (
-                        <button
-                          type="button"
-                          className={styles.descriptionToggle}
-                          onClick={() => setShowFullDescription(!showFullDescription)}
-                        >
-                          {showFullDescription ? 'Show less' : 'Show more'}
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className={styles.panel}>
-              <div className={styles.panelHeader}>
-                <div>
-                  <p className={styles.kicker}>Playlist videos</p>
-                  <h3 className={styles.subHeading}>Queue</h3>
-                </div>
-                {playlistState?.loading && <span className={styles.loading}>Loading…</span>}
-              </div>
-
-              <div className={styles.queueControls}>
-                <label className="sr-only" htmlFor="youtube-video-filter">
-                  Search current playlist videos
-                </label>
-                <input
-                  id="youtube-video-filter"
-                  type="search"
-                  aria-label="Search videos in the selected playlist"
-                  value={videoFilter}
-                  onChange={(event) => setVideoFilter(event.target.value)}
-                  placeholder="Search this playlist"
-                  className={styles.input}
-                />
-
-                <label className="sr-only" htmlFor="youtube-video-sort">
-                  Sort videos
-                </label>
-                <select
-                  id="youtube-video-sort"
-                  className={styles.select}
-                  value={videoSortMode}
-                  onChange={(event) => setVideoSortMode(event.target.value as VideoSortMode)}
-                  aria-label="Sort videos"
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                  <option value="title">Title A-Z</option>
-                </select>
-              </div>
-
-              {!!visiblePlaylistVideos.length && (
-                <div className={styles.queueMetaRow}>
-                  <p className={styles.metaText}>
-                    {activeVideoIndex >= 0
-                      ? `Video ${activeVideoIndex + 1} of ${visiblePlaylistVideos.length}`
-                      : `${visiblePlaylistVideos.length} videos in queue`}
-                  </p>
-                  <div className={styles.inlineActions}>
-                    <button
-                      type="button"
-                      className={`${styles.button} ${styles.smallButton} ${styles.ghostButton}`}
-                      onClick={() => selectVisibleVideoByOffset(-1)}
-                      disabled={activeVideoIndex <= 0}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      type="button"
-                      className={`${styles.button} ${styles.smallButton} ${styles.ghostButton}`}
-                      onClick={() => selectVisibleVideoByOffset(1)}
-                      disabled={activeVideoIndex < 0 || activeVideoIndex >= visiblePlaylistVideos.length - 1}
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {!selectedPlaylistId ? (
-                <p className={styles.placeholderText}>Select a playlist to see videos.</p>
-              ) : playlistState?.error ? (
-                <div className={styles.placeholderCard}>
-                  <p className={styles.error}>{playlistState.error}</p>
+            <p className={styles.queueHint}>
+              Choose your next watch. Nothing autoplays.
+            </p>
+            <ol className={styles.queueList}>
+              {queue.map((video, index) => (
+                <li key={video.videoId}>
                   <button
                     type="button"
-                    onClick={() => void loadPlaylistItems(selectedPlaylistId, 'replace')}
-                    className={`${styles.button} ${styles.smallButton}`}
+                    className={styles.queueButton}
+                    aria-label={`Play next: ${video.title}`}
+                    onClick={() => watch(video)}
                   >
-                    Retry
+                    <span className={styles.queueNumber}>
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className={styles.thumbnail}>
+                      {thumbnail(video.thumbnail)}
+                      <VideoIcon name="play" />
+                    </span>
+                    <span className={styles.videoName}>{video.title}</span>
                   </button>
-                </div>
-              ) : visiblePlaylistVideos.length ? (
-                <>
-                  <ul className={styles.videoList} aria-label="Playlist videos">
-                    {visiblePlaylistVideos.map((video) => {
-                      const active = video.videoId === selectedVideoId;
-                      return (
-                        <li key={video.videoId}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedVideoId(video.videoId)}
-                            className={`${styles.videoButton} ${active ? styles.videoButtonActive : ''}`}
-                            aria-label={`Watch ${video.title}`}
-                          >
-                            {video.thumbnail ? (
-                              <img src={video.thumbnail} alt="" className={styles.videoThumb} />
-                            ) : (
-                              <div className={styles.thumbPlaceholder}>No preview</div>
-                            )}
-                            <div className={styles.videoMeta}>
-                              <p className={styles.videoName}>{video.title}</p>
-                              <p className={styles.metaText}>{formatDate(video.publishedAt)}</p>
-                            </div>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-
-                  {playlistState?.nextPageToken && (
-                    <button
-                      type="button"
-                      onClick={() => void loadPlaylistItems(selectedPlaylistId, 'append')}
-                      className={`${styles.button} ${styles.ghostButton} ${styles.fullWidth}`}
-                      disabled={playlistState.loading}
-                    >
-                      {playlistState.loading ? 'Loading…' : 'Load more'}
-                    </button>
-                  )}
-                </>
-              ) : (
-                <p className={styles.placeholderText}>
-                  {playlistState?.loading
-                    ? 'Loading videos…'
-                    : hasVideoSearchTerm
-                      ? 'No videos match this playlist search.'
-                      : 'No videos found.'}
-                </p>
-              )}
+                </li>
+              ))}
+            </ol>
+            {!queue.length && (
+              <p className={styles.muted}>Explore another collection below.</p>
+            )}
+            <button
+              type="button"
+              className={styles.textButton}
+              onClick={() =>
+                scrollWithinContainer(mainRef.current, videosRef.current)
+              }
+            >
+              Explore all loaded videos <VideoIcon name="next" />
+            </button>
+          </aside>
+        </section>
+        <section
+          ref={collectionsRef}
+          className={styles.collections}
+          aria-label="Playlist collections"
+        >
+          <div className={styles.sectionHeading}>
+            <div>
+              <p className={styles.eyebrow}>FIND YOUR NEXT INTEREST</p>
+              <h2>Browse collections</h2>
             </div>
           </div>
+          <nav className={styles.chips} aria-label="Collection categories">
+            <button
+              type="button"
+              aria-pressed={category === "all" && !showSaved}
+              onClick={() => {
+                setCategory("all");
+                choosePlaylist(ALL_PLAYLIST_ID);
+              }}
+            >
+              All collections
+            </button>
+            {sections.map((section) => (
+              <button
+                key={section.sectionId}
+                type="button"
+                aria-pressed={category === section.sectionId && !showSaved}
+                onClick={() => {
+                  setCategory(section.sectionId);
+                  choosePlaylist(ALL_PLAYLIST_ID);
+                }}
+              >
+                {section.sectionTitle}
+              </button>
+            ))}
+          </nav>
+          <ul className={styles.playlistRail} aria-label="Curated playlists">
+            {visiblePlaylists.map((playlist, index) => (
+              <li key={playlist.id}>
+                <button
+                  type="button"
+                  className={styles.playlistCard}
+                  data-tone={index % 4}
+                  aria-pressed={!showSaved && playlistId === playlist.id}
+                  aria-label={`Open playlist ${playlist.title}`}
+                  onClick={() => choosePlaylist(playlist.id)}
+                >
+                  <span className={styles.playlistArtwork}>
+                    {thumbnail(
+                      playlist.thumbnail ||
+                        pages[playlist.id]?.items[0]?.thumbnail ||
+                        "",
+                    )}
+                    <span className={styles.playlistGlyph}>
+                      <VideoIcon name="playlist" />
+                    </span>
+                    <span className={styles.playlistCount}>
+                      {playlist.itemCount} videos
+                    </span>
+                  </span>
+                  <span className={styles.playlistText}>
+                    <span className={styles.videoName}>{playlist.title}</span>
+                    <span className={styles.muted}>
+                      {playlistId === playlist.id && !showSaved
+                        ? "Browsing this collection"
+                        : "Explore playlist"}{" "}
+                      <VideoIcon name="next" />
+                    </span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          {!visiblePlaylists.length && !busy && (
+            <p className={styles.muted}>
+              {query
+                ? "No playlists match this search."
+                : "Public playlists will appear here when available."}
+            </p>
+          )}
         </section>
+        <section
+          ref={videosRef}
+          className={styles.videos}
+          aria-label="Video collection"
+        >
+          <div className={styles.sectionHeading}>
+            <div>
+              <h2>{query ? `Results for “${query}”` : title}</h2>
+              <p className={styles.muted}>
+                {showSaved
+                  ? "Saved on this browser, not your YouTube account."
+                  : `${videos.length} loaded videos${activePlaylist ? " in this playlist" : " across the collection"}`}
+              </p>
+            </div>
+            <label className={styles.sort}>
+              <span className={styles.srOnly}>Sort videos</span>
+              <select
+                aria-label="Sort videos"
+                value={sort}
+                onChange={(event) =>
+                  setSort(event.target.value as VideoSortMode)
+                }
+              >
+                <option value="playlist">Curated order</option>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="title">Title A–Z</option>
+              </select>
+            </label>
+          </div>
+          {activePlaylist?.description && !query && !showSaved && (
+            <p className={styles.collectionDescription}>
+              {activePlaylist.description}
+            </p>
+          )}
+          {videos.length > 0 && (
+            <ul className={styles.videoGrid} aria-label="Playlist videos">
+              {videos.map((video) => (
+                <li
+                  key={video.videoId}
+                  className={styles.videoCard}
+                  data-active={playing?.videoId === video.videoId}
+                >
+                  <button
+                    type="button"
+                    className={styles.watchButton}
+                    aria-label={`Watch ${video.title}`}
+                    aria-current={
+                      playing?.videoId === video.videoId ? "true" : undefined
+                    }
+                    onClick={() => watch(video)}
+                  >
+                    <span className={styles.thumbnail}>
+                      {thumbnail(video.thumbnail)}
+                      <VideoIcon name="play" />
+                      {playing?.videoId === video.videoId && (
+                        <span className={styles.selectedBadge}>Selected</span>
+                      )}
+                    </span>
+                    <span className={styles.cardText}>
+                      <span className={styles.videoName}>{video.title}</span>
+                      <span className={styles.muted}>
+                        {dateLabel(video.publishedAt) ||
+                          "From the curated library"}
+                      </span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.saveButton}
+                    aria-pressed={savedIds.has(video.videoId)}
+                    aria-label={`${savedIds.has(video.videoId) ? "Remove" : "Save"} ${video.title} ${savedIds.has(video.videoId) ? "from Watch later" : "for later"}`}
+                    onClick={() => toggleSaved(video)}
+                  >
+                    <VideoIcon
+                      name={savedIds.has(video.videoId) ? "check" : "clock"}
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!videos.length && !busy && (
+            <div className={styles.empty}>
+              <VideoIcon name={showSaved ? "clock" : "search"} />
+              <h3>
+                {query
+                  ? "No matching videos"
+                  : showSaved
+                    ? "Your next watch starts here"
+                    : "No videos to show yet"}
+              </h3>
+              <p>
+                {query
+                  ? "Search covers loaded videos. The selected video stays ready above."
+                  : showSaved
+                    ? "Use the clock on any video to save it for later."
+                    : "Choose another collection, enable network access, or refresh the library."}
+              </p>
+              {query && (
+                <button
+                  type="button"
+                  className={styles.button}
+                  onClick={() => setQuery("")}
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
+          {busy && (
+            <p className={styles.loading} role="status">
+              Loading {loadingDirectory ? "channel playlists" : "videos"}…
+            </p>
+          )}
+          {hasErrors && (
+            <div className={styles.notice} role="status">
+              <p>
+                Some playlist videos could not load. Available videos remain
+                ready to watch.
+              </p>
+              <button
+                type="button"
+                className={styles.button}
+                disabled={busy}
+                onClick={() => void retryErrors()}
+              >
+                Retry failed playlists
+              </button>
+            </div>
+          )}
+          {hasMore && (
+            <div className={styles.loadMore}>
+              <button
+                type="button"
+                className={styles.button}
+                disabled={busy}
+                onClick={() =>
+                  activePlaylist
+                    ? void loadPage(activePlaylist.id, true)
+                    : void loadAll(true)
+                }
+              >
+                {busy ? "Loading…" : "Load more videos"}
+              </button>
+              <p className={styles.muted}>
+                Search and sorting include the videos loaded so far.
+              </p>
+            </div>
+          )}
+        </section>
+        <footer className={styles.footer}>
+          Curated by Alex Unnippillil · Videos play on YouTube. This portfolio
+          library is not affiliated with YouTube.
+        </footer>
       </main>
+      <p className={styles.srOnly} role="status" aria-live="polite">
+        {announcement}
+      </p>
     </div>
   );
 }

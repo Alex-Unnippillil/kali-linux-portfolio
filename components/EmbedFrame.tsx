@@ -1,4 +1,4 @@
-import Head from 'next/head';
+import Head from "next/head";
 import React, {
   forwardRef,
   useEffect,
@@ -7,8 +7,8 @@ import React, {
   useRef,
   useState,
   type ReactEventHandler,
-} from 'react';
-import { EMBED_FRAME_ALLOWED_ORIGINS } from '../lib/embed-origins';
+} from "react";
+import { EMBED_FRAME_ALLOWED_ORIGINS } from "../lib/embed-origins";
 
 const DEFAULT_TIMEOUT_MS = 8000;
 
@@ -17,8 +17,10 @@ const hasMatchingOrigin = (origin: string, pattern: string) => {
   const normalizedPattern = pattern.toLowerCase();
   const normalizedOrigin = origin.toLowerCase();
 
-  if (normalizedPattern.includes('*')) {
-    const domain = normalizedPattern.replace(/^https?:\/\//, '').replace(/^\*\./, '');
+  if (normalizedPattern.includes("*")) {
+    const domain = normalizedPattern
+      .replace(/^https?:\/\//, "")
+      .replace(/^\*\./, "");
     return normalizedOrigin.endsWith(domain);
   }
 
@@ -28,10 +30,12 @@ const hasMatchingOrigin = (origin: string, pattern: string) => {
 const isAllowedSrc = (src: string, allowedOrigins: string[]) => {
   try {
     const url = new URL(src);
-    if (allowedOrigins.includes('*')) {
-      return url.protocol === 'http:' || url.protocol === 'https:';
+    if (allowedOrigins.includes("*")) {
+      return url.protocol === "http:" || url.protocol === "https:";
     }
-    return allowedOrigins.some((pattern) => hasMatchingOrigin(url.origin, pattern));
+    return allowedOrigins.some((pattern) =>
+      hasMatchingOrigin(url.origin, pattern),
+    );
   } catch {
     return false;
   }
@@ -48,6 +52,9 @@ export type EmbedFrameProps = {
   allowedOrigins?: string[];
   fallbackLabel?: string;
   openInNewTabLabel?: string;
+  externalUrl?: string;
+  showExternalLink?: boolean;
+  loading?: "eager" | "lazy";
   loadingLabel?: string;
   onLoad?: ReactEventHandler<HTMLIFrameElement>;
   onError?: ReactEventHandler<HTMLIFrameElement>;
@@ -61,14 +68,17 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
       src,
       title,
       allow,
-      sandbox = 'allow-same-origin allow-scripts allow-forms allow-popups',
+      sandbox = "allow-same-origin allow-scripts allow-forms allow-popups",
       className,
       containerClassName,
       prefetch = false,
       allowedOrigins = EMBED_FRAME_ALLOWED_ORIGINS,
-      fallbackLabel = 'Open in new tab',
-      openInNewTabLabel = 'Open in new tab',
-      loadingLabel = 'Loading embed…',
+      fallbackLabel = "Open in new tab",
+      openInNewTabLabel = "Open in new tab",
+      externalUrl,
+      showExternalLink = true,
+      loading = "lazy",
+      loadingLabel = "Loading embed…",
       onLoad,
       onError,
       onBlocked,
@@ -76,32 +86,41 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
     },
     ref,
   ) => {
-    const [status, setStatus] = useState<'loading' | 'ready' | 'blocked'>('loading');
+    const [status, setStatus] = useState<"loading" | "ready" | "blocked">(
+      "loading",
+    );
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const frameRef = useRef<HTMLIFrameElement>(null);
     const timeoutRef = useRef<number | null>(null);
 
-    const isAllowed = useMemo(() => isAllowedSrc(src, allowedOrigins), [src, allowedOrigins]);
+    const isAllowed = useMemo(
+      () => isAllowedSrc(src, allowedOrigins),
+      [src, allowedOrigins],
+    );
 
     useImperativeHandle(ref, () => frameRef.current as HTMLIFrameElement, []);
 
     useEffect(() => {
-      setStatus('loading');
+      setStatus("loading");
       setErrorMessage(null);
 
       if (!isAllowed) {
-        setStatus('blocked');
-        setErrorMessage('This embed is blocked by the sandbox policy.');
-        onBlocked?.('This embed is blocked by the sandbox policy.');
+        setStatus("blocked");
+        setErrorMessage("This embed is blocked by the sandbox policy.");
+        onBlocked?.("This embed is blocked by the sandbox policy.");
         return () => {};
       }
 
-      if (typeof window === 'undefined') return () => {};
+      if (typeof window === "undefined") return () => {};
 
       timeoutRef.current = window.setTimeout(() => {
-        setStatus((current) => (current === 'ready' ? current : 'blocked'));
-        setErrorMessage('The embed did not load. It may be blocked by your browser.');
-        onBlocked?.('The embed did not load. It may be blocked by your browser.');
+        setStatus((current) => (current === "ready" ? current : "blocked"));
+        setErrorMessage(
+          "The embed did not load. It may be blocked by your browser.",
+        );
+        onBlocked?.(
+          "The embed did not load. It may be blocked by your browser.",
+        );
       }, timeoutMs);
 
       return () => {
@@ -115,7 +134,7 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
       }
-      setStatus('ready');
+      setStatus("ready");
       onLoad?.(event);
     };
 
@@ -123,9 +142,9 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
       }
-      setStatus('blocked');
-      setErrorMessage('The embed was blocked from loading.');
-      onBlocked?.('The embed was blocked from loading.');
+      setStatus("blocked");
+      setErrorMessage("The embed was blocked from loading.");
+      onBlocked?.("The embed was blocked from loading.");
       onError?.(event);
     };
 
@@ -133,39 +152,45 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
       <div
         className={
           containerClassName ??
-          'relative h-full w-full overflow-hidden rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]'
+          "relative h-full w-full overflow-hidden rounded-lg border border-[color:var(--kali-panel-border)] bg-[var(--kali-panel)]"
         }
       >
         {prefetch && (
           <Head>
-            <link rel="prefetch" href={src} />
+            <link rel="prefetch" href={externalUrl ?? src} />
           </Head>
         )}
         <iframe
           ref={frameRef}
           title={title}
-          src={isAllowed ? src : 'about:blank'}
-          className={className ?? 'h-full w-full border-0'}
+          src={isAllowed ? src : "about:blank"}
+          className={className ?? "h-full w-full border-0"}
           allow={allow}
           sandbox={sandbox}
           onLoad={handleLoad}
           onError={handleError}
-          loading="lazy"
+          loading={loading}
+          referrerPolicy="strict-origin-when-cross-origin"
+          allowFullScreen
         />
-        {status !== 'ready' && (
+        {status !== "ready" && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-[color:var(--kali-overlay)]/70">
             <div className="flex flex-col items-center gap-3 text-center text-sm text-[color:var(--kali-text)]">
-              {status === 'loading' && (
-                <div className="flex flex-col items-center gap-2" aria-live="polite" role="status">
+              {status === "loading" && (
+                <div
+                  className="flex flex-col items-center gap-2"
+                  aria-live="polite"
+                  role="status"
+                >
                   <span className="h-5 w-5 animate-spin rounded-full border border-[color:var(--color-primary)] border-t-transparent" />
                   <span>{loadingLabel}</span>
                 </div>
               )}
-              {status === 'blocked' && (
+              {status === "blocked" && (
                 <div className="flex flex-col items-center gap-2" role="alert">
                   <span>{errorMessage}</span>
                   <a
-                    href={src}
+                    href={externalUrl ?? src}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="pointer-events-auto rounded-md border border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-3 py-1 text-xs font-semibold text-[color:var(--color-text)] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
@@ -177,19 +202,21 @@ const EmbedFrame = forwardRef<HTMLIFrameElement, EmbedFrameProps>(
             </div>
           </div>
         )}
-        <a
-          href={src}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="pointer-events-auto absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-[color:var(--kali-panel-border)] bg-[color-mix(in_srgb,var(--kali-panel)_82%,transparent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_78%,var(--kali-bg))] shadow-[0_12px_30px_-16px_var(--kali-blue-glow)] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
-        >
-          {openInNewTabLabel}
-        </a>
+        {showExternalLink && (
+          <a
+            href={externalUrl ?? src}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pointer-events-auto absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full border border-[color:var(--kali-panel-border)] bg-[color-mix(in_srgb,var(--kali-panel)_82%,transparent)] px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-text)_78%,var(--kali-bg))] shadow-[0_12px_30px_-16px_var(--kali-blue-glow)] transition hover:border-[color:var(--color-primary)] hover:text-[color:var(--kali-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+          >
+            {openInNewTabLabel}
+          </a>
+        )}
       </div>
     );
   },
 );
 
-EmbedFrame.displayName = 'EmbedFrame';
+EmbedFrame.displayName = "EmbedFrame";
 
 export default EmbedFrame;

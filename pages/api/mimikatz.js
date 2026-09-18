@@ -1,26 +1,17 @@
 import modules from '../../components/apps/mimikatz/modules.json';
-
+import { boundedText } from '../../lib/simulation-response';
+const output = '[demo] Credential-protection fixture. No command or script was executed. No process memory, credentials, secrets or system privileges were accessed.';
 export default async function handler(req, res) {
-  if (process.env.FEATURE_TOOL_APIS !== 'enabled') {
-    res.status(501).json({ error: 'Not implemented' });
-    return;
-  }
+  res.setHeader('Cache-Control', 'no-store');
   if (req.method === 'GET') {
-    const { command } = req.query || {};
-    if (command) {
-      return res.status(200).json({ output: `Executed ${command}` });
-    }
-    return res.status(200).json({ modules });
+    if (req.query?.command === undefined) return res.status(200).json({ simulated: true, modules });
+    if (!boundedText(req.query.command)) return res.status(400).json({ error: 'Invalid demonstration command.' });
+    return res.status(200).json({ simulated: true, output });
   }
-
   if (req.method === 'POST') {
-    const { script } = req.body || {};
-    if (!script) {
-      return res.status(400).json({ error: 'No script provided' });
-    }
-    return res.status(200).json({ output: `Executed script: ${script}` });
+    if (!boundedText(req.body?.script)) return res.status(400).json({ error: 'Provide a bounded demonstration script.' });
+    return res.status(200).json({ simulated: true, output });
   }
-
   res.setHeader('Allow', ['GET', 'POST']);
-  return res.status(405).end('Method Not Allowed');
+  return res.status(405).json({ error: 'Method not allowed' });
 }

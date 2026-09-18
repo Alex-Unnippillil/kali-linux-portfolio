@@ -1,0 +1,22 @@
+.guide { position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: calc(84px + env(safe-area-inset-bottom)); z-index: 250; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; color: #e7edf7; font-family: system-ui, sans-serif; max-width: calc(100% - 32px); pointer-events: none; }
+.guide > * { pointer-events: auto; }
+.controls { display: flex; align-items: center; border: 1px solid #ffffff24; border-radius: 999px; background: #111b2ef5; box-shadow: 0 8px 30px #0004; }
+.trigger { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 7px 14px 7px 9px; border: 0; border-radius: 999px; background: none; color: inherit; font-size: 12px; font-weight: 600; cursor: pointer; touch-action: manipulation; }
+.question { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid #87cefa88; color: #a4d9ff; border-radius: 50%; font-size: 15px; }
+.dismissHint, .close { width: 44px; height: 44px; flex: 0 0 44px; background: none; border: 0; border-radius: 50%; color: inherit; font-size: 24px; cursor: pointer; touch-action: manipulation; }
+.guide button:hover { background-color: #ffffff12; }
+.guide button:focus-visible { outline: 2px solid #95d9ff; outline-offset: 3px; }
+.panel { width: 360px; max-width: 100%; max-height: min(560px, calc(100dvh - 160px)); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #ffffff24; border-radius: 20px; padding: 20px; background: #101a2dfc; box-shadow: 0 20px 70px #0008; }
+.heading { display: flex; align-items: flex-start; gap: 6px; }
+.heading > div { flex: 1; }
+.eyebrow { color: #9db2cf; font-size: 10px; font-weight: 600; letter-spacing: 1.4px; text-transform: uppercase; }
+.panel h2 { font-size: 21px; line-height: 1.25; margin: 6px 0 12px; letter-spacing: -.5px; font-weight: 700; }
+.panel p { font-size: 12px; color: #b5c3d8; line-height: 1.65; margin: 0; }
+.tip { display: flex; gap: 12px; margin-top: 18px; }
+.symbol { width: 32px; height: 32px; flex: 0 0 32px; display: grid; place-items: center; border-radius: 10px; color: #a4d9ff; background: #25466777; font-size: 19px; }
+.tip h3 { font-size: 13px; font-weight: 650; margin: 0 0 4px; }
+.note { padding-top: 16px; margin-top: 16px !important; border-top: 1px solid #ffffff18; font-size: 11px !important; }
+.done { display: block; width: 100%; min-height: 44px; border: 1px solid #9bd6ff44; border-radius: 10px; padding: 8px; margin-top: 16px; background: #284b71; color: #f3f8ff; font-size: 13px; font-weight: 600; cursor: pointer; }
+@media (max-width: 639px) { .guide { right: max(12px, env(safe-area-inset-right)); bottom: calc(78px + env(safe-area-inset-bottom)); max-width: calc(100% - 24px); } .compactLabel { display: none; } .trigger { padding-right: 9px; } .panel { max-height: calc(100dvh - 160px); } }
+@media (max-height: 500px) { .guide { bottom: calc(60px + env(safe-area-inset-bottom)); } .panel { max-height: calc(100dvh - 140px); } }
+@media (forced-colors: active) { .controls, .panel, .question, .done { border: 1px solid ButtonText; } }

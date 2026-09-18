@@ -70,7 +70,7 @@ function WindowStateShelf({
     onRemove,
 }: WindowShelfProps) {
     const containerClasses = clsx(
-        'pointer-events-auto fixed bottom-4 z-[240] w-[calc(50vw-0.75rem)] md:w-[18rem] max-w-[92vw] text-sm text-white drop-shadow-xl',
+        'desktop-window-shelf pointer-events-auto fixed bottom-4 z-[240] w-[calc(50vw-0.75rem)] md:w-[18rem] max-w-[92vw] text-sm text-white drop-shadow-xl',
         anchor === 'left' ? 'left-2 md:left-4' : 'right-2 md:right-4',
     );
 
@@ -108,7 +108,7 @@ function WindowStateShelf({
                     </span>
                 </button>
             </div>
-            <div className={listWrapperClasses} aria-hidden={!open}>
+            <div className={listWrapperClasses} aria-hidden={!open} inert={!open}>
                 <ul className="flex max-h-64 flex-col gap-1 overflow-y-auto p-2" role="list">
                     {count === 0 ? (
                         <li className="px-2 py-4 text-center text-xs text-white/60">{emptyLabel}</li>

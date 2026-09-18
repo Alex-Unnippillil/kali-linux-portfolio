@@ -5,6 +5,51 @@ export class UbuntuApp extends Component {
     constructor() {
         super();
         this.state = { launching: false, dragging: false, prefetched: false };
+        this.pointerPress = null;
+        this.suppressClickUntil = 0;
+        this.launchTimer = null;
+    }
+
+    componentWillUnmount() {
+        clearTimeout(this.launchTimer);
+    }
+
+    handlePointerDown = (event) => {
+        this.pointerPress = event.isPrimary === false || (event.button !== undefined && event.button !== 0)
+            ? null
+            : { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+        this.props.onPointerDown?.(event);
+    }
+
+    handlePointerMove = (event) => {
+        const press = this.pointerPress;
+        if (press && press.id === event.pointerId && Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) {
+            press.moved = true;
+        }
+        this.props.onPointerMove?.(event);
+    }
+
+    handlePointerCancel = (event) => {
+        this.pointerPress = null;
+        this.suppressClickUntil = Date.now() + 750;
+        this.props.onPointerCancel?.(event);
+    }
+
+    handlePointerUp = (event) => {
+        const press = this.pointerPress;
+        this.pointerPress = null;
+        this.props.onPointerUp?.(event);
+        // The desktop's selection/drag controller may already own activation.
+        if (event.defaultPrevented) {
+            this.suppressClickUntil = Date.now() + 750;
+            return;
+        }
+        if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+        // Browsers synthesize click/dblclick after pointerup. Activate exactly once.
+        this.suppressClickUntil = Date.now() + 750;
+        if (!press || press.id !== event.pointerId || press.moved || event.defaultPrevented) return;
+        if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 10) return;
+        this.handleActivate(event);
     }
 
     handleDragStart = (event) => {
@@ -31,9 +76,9 @@ export class UbuntuApp extends Component {
 
     openApp = () => {
         if (this.props.disabled) return;
-        this.setState({ launching: true }, () => {
-            setTimeout(() => this.setState({ launching: false }), 300);
-        });
+        clearTimeout(this.launchTimer);
+        this.setState({ launching: true });
+        this.launchTimer = setTimeout(() => this.setState({ launching: false }), 300);
         if (typeof this.props.openApp === 'function') {
             this.props.openApp(this.props.id);
         }
@@ -63,9 +108,6 @@ export class UbuntuApp extends Component {
         const {
             draggable = true,
             isBeingDragged = false,
-            onPointerDown,
-            onPointerMove,
-            onPointerCancel,
             style,
             onKeyDown: customKeyDown,
             onBlur,
@@ -82,17 +124,6 @@ export class UbuntuApp extends Component {
 
         const hintId = assistiveHint ? (assistiveHintId || `app-${this.props.id}-instructions`) : undefined;
 
-        const handlePointerUp = (event) => {
-            if (typeof this.props.onPointerUp === 'function') {
-                this.props.onPointerUp(event);
-            }
-
-            if (event?.defaultPrevented) return;
-
-            if (event?.pointerType === 'touch') {
-                this.handleActivate(event);
-            }
-        };
 
         const stateStyle = {};
         if (isSelected) {
@@ -138,11 +169,15 @@ export class UbuntuApp extends Component {
                 draggable={draggable}
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
-                onPointerDown={onPointerDown}
-                onPointerMove={onPointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={onPointerCancel}
+                onPointerDown={this.handlePointerDown}
+                onPointerMove={this.handlePointerMove}
+                onPointerUp={this.handlePointerUp}
+                onPointerCancel={this.handlePointerCancel}
                 onClick={(event) => {
+                    if (Date.now() < this.suppressClickUntil) {
+                        event.preventDefault();
+                        return;
+                    }
                     if (typeof this.props.onClick === 'function') {
                         this.props.onClick(event);
                         if (event.defaultPrevented) return;
@@ -156,7 +191,10 @@ export class UbuntuApp extends Component {
                 className={(this.state.launching ? " app-icon-launch " : "") + (dragging ? " opacity-70 " : "") +
                     " m-px z-10 outline-none rounded select-none flex flex-col justify-start items-center text-center text-white transition-colors transition-shadow duration-150 ease-out border focus-visible:ring-2 focus-visible:ring-sky-300/70 "}
                 id={"app-" + this.props.id}
-                onDoubleClick={this.openApp}
+                onDoubleClick={(event) => {
+                    if (launchOnClick || Date.now() < this.suppressClickUntil) return;
+                    this.handleActivate(event);
+                }}
                 onKeyDown={(event) => {
                     if (typeof customKeyDown === 'function') {
                         customKeyDown(event);
@@ -166,7 +204,7 @@ export class UbuntuApp extends Component {
                     }
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        this.openApp();
+                        if (!event.repeat) this.openApp();
                     }
                 }}
                 onFocus={(event) => {

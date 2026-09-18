@@ -279,7 +279,7 @@ const ContactApp: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-full min-w-0 bg-gray-900 text-white p-4 sm:p-6">
       <h1 className="mb-6 text-2xl">Contact</h1>
       {banner && (
         <div
@@ -290,6 +290,10 @@ const ContactApp: React.FC = () => {
           {banner.message}
         </div>
       )}
+      <p className="mb-4 text-sm">
+        <a href={`mailto:${EMAIL}`} className="inline-flex min-h-[44px] items-center underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">Email Alex</a>
+        <span className="ml-2 text-gray-300">or use the form below.</span>
+      </p>
       {fallback && (
         <p className="mb-6 text-sm">
           Service unavailable in this mode. You can{' '}
@@ -320,6 +324,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <input
             id="contact-name"
+            aria-label="Name"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -336,6 +341,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <input
             id="contact-email"
+            aria-label="Email"
             type="email"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             value={email}
@@ -360,6 +366,7 @@ const ContactApp: React.FC = () => {
         <div className="relative">
           <textarea
             id="contact-message"
+            aria-label="Message"
             className="peer w-full rounded border border-gray-700 bg-gray-800 px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             rows={4}
             value={message}
@@ -395,6 +402,8 @@ const ContactApp: React.FC = () => {
         <input
           type="text"
           value={honeypot}
+          aria-label="Leave this field empty"
+          aria-hidden="true"
           onChange={(e) => setHoneypot(e.target.value)}
           className="hidden"
           tabIndex={-1}

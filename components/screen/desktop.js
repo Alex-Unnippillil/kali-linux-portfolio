@@ -12,6 +12,7 @@ const BackgroundImage =
 import apps, { games, displayDesktopFolder } from '../../apps.config';
 import { DEFAULT_DESKTOP_FOLDERS } from '../../data/desktopFolders';
 import Window from '../desktop/Window';
+import MobileTaskbar from '../desktop/MobileTaskbar';
 import UbuntuApp from '../base/ubuntu_app';
 import SystemOverlayWindow from '../base/SystemOverlayWindow';
 import AllApplications from '../screen/all-applications'
@@ -1145,6 +1146,7 @@ export class Desktop extends Component {
         const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
         const viewportHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
         this.handleViewportBucketChange(viewportWidth);
+        if (document.querySelector('[data-window-compact="true"]')) return;
         const topOffset = measureWindowTopOffset();
         const closedWindows = this.state.closed_windows || {};
         const storedPositions = this.state.window_positions || {};
@@ -3842,7 +3844,8 @@ export class Desktop extends Component {
                         session.windows.forEach(({ id }) => this.openApp(id));
                     });
                 } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
-                    this.openApp('about');
+                    const initialApp = apps.some((app) => app.id === this.props.initialApp && !app.disabled) ? this.props.initialApp : 'about';
+                    this.openApp(initialApp, this.props.initialContext);
                 }
             });
             this.checkForNewFolders();
@@ -3862,6 +3865,9 @@ export class Desktop extends Component {
     }
 
     componentDidUpdate(prevProps, prevState) {
+        if ((prevProps.initialApp !== this.props.initialApp || prevProps.initialContext !== this.props.initialContext) && this.props.initialApp) {
+            this.openApp(this.props.initialApp, this.props.initialContext);
+        }
         if (
             prevProps?.density !== this.props.density ||
             prevProps?.fontScale !== this.props.fontScale ||
@@ -5147,6 +5153,7 @@ export class Desktop extends Component {
                 onSizeChange: this.updateWindowSize,
                 snapEnabled: this.props.snapEnabled,
                 snapGrid,
+                zIndex: 100 + index,
                 context: this.state.window_context[id],
             };
 
@@ -5500,8 +5507,7 @@ export class Desktop extends Component {
                 this.focus(objId);
                 var r = document.querySelector("#" + objId);
                 r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                let minimized_windows = this.state.minimized_windows;
-                minimized_windows[objId] = false;
+                const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
                 this.setWorkspaceState({ minimized_windows }, this.saveSession);
 
             }
@@ -5512,9 +5518,8 @@ export class Desktop extends Component {
                     this.focus(objId);
                     var r = document.querySelector("#" + objId);
                     r.style.transform = `translate(${r.style.getPropertyValue("--window-transform-x")},${r.style.getPropertyValue("--window-transform-y")}) scale(1)`;
-                    let minimized_windows = this.state.minimized_windows;
-                    minimized_windows[objId] = false;
-                    this.setState({ minimized_windows: minimized_windows }, this.saveSession);
+                    const minimized_windows = { ...this.state.minimized_windows, [objId]: false };
+                    this.setWorkspaceState({ minimized_windows }, this.saveSession);
                 } else {
                     this.focus(objId);
                     this.saveSession();
@@ -5950,7 +5955,7 @@ export class Desktop extends Component {
                 {/* Window Area */}
                 <div
                     id="window-area"
-                    className="absolute h-full w-full bg-transparent"
+                    className="absolute inset-0 h-full w-full bg-transparent"
                     data-context="desktop-area"
                 >
                     {this.renderWindows()}
@@ -6085,6 +6090,11 @@ export class Desktop extends Component {
                         emptyLabel="No recently closed apps"
                     />
                 ) : null}
+
+                <MobileTaskbar apps={this.getRunningAppSummaries()} onOpen={(id) => {
+                    if (this.isOverlayId(id)) this.openOverlay(id, { transitionState: 'entered' });
+                    else this.openApp(id);
+                }} onApplications={this.showAllApps} />
 
                 {this.renderOverlayWindows()}
 
