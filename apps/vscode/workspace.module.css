@@ -1,0 +1,825 @@
+.app {
+  container: repository / inline-size;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #1f1f1f;
+  color: #cccccc;
+  color-scheme: dark;
+  font:
+    13px/1.45 -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+.app * {
+  box-sizing: border-box;
+}
+.app button,
+.app input {
+  font: inherit;
+}
+.app button,
+.app a {
+  -webkit-tap-highlight-color: transparent;
+}
+.app button {
+  cursor: pointer;
+  color: inherit;
+  border: 0;
+  background: transparent;
+}
+.app button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.app a {
+  color: inherit;
+  text-decoration: none;
+}
+.app :is(button, a, input, textarea):focus-visible {
+  outline: 2px solid #75beff;
+  outline-offset: -2px;
+}
+.app svg {
+  flex: 0 0 auto;
+}
+.titlebar {
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+  border-bottom: 1px solid #303030;
+  background: #181818;
+}
+.appMark {
+  display: flex;
+  color: #4daafc;
+  padding: 0 6px;
+}
+.titleAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  border-radius: 4px;
+}
+.titleAction:hover {
+  background: #303030;
+}
+.command {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: min(570px, 70%);
+  min-width: 0;
+  height: 27px;
+  margin: 0 auto;
+  border: 1px solid #414141 !important;
+  border-radius: 6px;
+  background: #252526 !important;
+  color: #d0d0d0;
+}
+.command:hover {
+  border-color: #666 !important;
+}
+.command span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.command svg {
+  width: 14px;
+  height: 14px;
+}
+.command kbd {
+  color: #aaaaaa;
+  margin-left: 12px;
+  font: 10px/1 monospace;
+}
+.workbench {
+  display: flex;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+.activity {
+  width: 48px;
+  flex: 0 0 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid #2c2c2c;
+  background: #181818;
+}
+.activity button {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #929292;
+  border-left: 2px solid transparent;
+}
+.activity button > svg {
+  width: 23px;
+  height: 23px;
+}
+.activity button:hover {
+  color: #eeeeee;
+}
+.activity button[aria-pressed="true"] {
+  border-left-color: #0078d4;
+  color: #eeeeee;
+}
+.activitySpacer,
+.statusSpacer {
+  flex: 1;
+}
+.ownerAvatar {
+  display: grid;
+  place-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #777;
+  color: #ddd;
+  border-radius: 50%;
+  font-size: 10px;
+  margin-bottom: 12px;
+}
+.changeBadge {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  min-width: 16px;
+  height: 16px;
+  line-height: 16px;
+  border-radius: 10px;
+  background: #0078d4;
+  color: white;
+  font-size: 10px;
+}
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 232px;
+  width: 232px;
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid #303030;
+  background: #181818;
+}
+.app[data-sidebar="closed"] .sidebar {
+  display: none;
+}
+.sidebarHeading {
+  display: flex;
+  align-items: center;
+  flex: 0 0 36px;
+  padding: 0 18px;
+  letter-spacing: 0.07em;
+  font-size: 10px;
+}
+.sidebarHeading strong {
+  font-weight: 500;
+}
+.mobileClose {
+  display: none;
+}
+.folderHeading {
+  display: flex;
+  flex: 0 0 29px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  font-size: 10px;
+  letter-spacing: 0.025em;
+}
+.folderHeading svg {
+  width: 13px;
+  height: 13px;
+}
+.folderHeading strong {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rotated {
+  transform: rotate(90deg);
+}
+.tree {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #555 transparent;
+}
+.treeItem {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: 100%;
+  min-width: max-content;
+  height: 28px;
+  padding: 0 12px 0 8px;
+  text-align: left;
+  font-size: 12px !important;
+}
+.treeItem:hover {
+  background: #252526;
+}
+.treeItem[aria-selected="true"] {
+  background: #04395e;
+  color: white;
+}
+.treeItem > svg {
+  width: 14px;
+  height: 14px;
+}
+.treeItem > svg:first-child {
+  width: 11px;
+  height: 11px;
+}
+.treeItem > span:not(.treeIndent):not(.dirtyDot) {
+  white-space: nowrap;
+}
+.treeIndent {
+  width: 11px;
+  flex: 0 0 11px;
+}
+.folderIcon {
+  color: #dcb67a;
+}
+.fileIcon {
+  color: #75beff;
+}
+.dirtyDot {
+  flex: 0 0 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e2c08d;
+  margin-left: 5px;
+}
+.sourceNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  border-top: 1px solid #2c2c2c;
+  font-size: 10px;
+  color: #aaa;
+  flex: 0 0 auto;
+}
+.sourceDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #89d185;
+}
+.searchInput {
+  margin: 2px 12px 0;
+  min-width: 0;
+  width: calc(100% - 24px);
+  height: 31px;
+  padding: 5px 8px;
+  background: #313131;
+  border: 1px solid #555;
+  border-radius: 3px;
+  color: #eee;
+  font-size: 12px !important;
+}
+.panelNote {
+  margin: 12px;
+  color: #aeb2b6;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.results {
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+.results > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 12px;
+  text-align: left;
+}
+.results > button:hover {
+  background: #2a2d2e;
+}
+.results > button > span {
+  min-width: 0;
+}
+.results strong,
+.results small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.results strong {
+  font-size: 12px;
+  font-weight: 500;
+  color: #ddd;
+}
+.results small {
+  color: #aaa;
+  font-size: 10px;
+}
+.results svg {
+  width: 14px;
+  color: #75beff;
+}
+.editArea {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.tabs {
+  display: flex;
+  flex: 0 0 36px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  background: #181818;
+  border-bottom: 1px solid #303030;
+}
+.tab {
+  display: flex;
+  flex: 0 0 auto;
+  max-width: 260px;
+  min-width: 145px;
+  border-right: 1px solid #303030;
+  border-top: 1px solid transparent;
+}
+.tab[data-active="true"] {
+  background: #1f1f1f;
+  border-top-color: #0078d4;
+}
+.tab > button:first-child {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 8px;
+  padding: 0 10px;
+  flex: 1;
+}
+.tab > button:first-child span:not(.dirtyDot) {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.tab > button:first-child svg {
+  color: #75beff;
+  width: 14px;
+  height: 14px;
+}
+.tab > button:last-child {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+}
+.tab > button:last-child svg {
+  width: 13px;
+  height: 13px;
+}
+.tab > button:last-child:hover {
+  background: #383838;
+}
+.breadcrumbs {
+  display: flex;
+  flex: 0 0 35px;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-left: 18px;
+  border-bottom: 1px solid #262626;
+}
+.breadcrumbs > span {
+  min-width: 0;
+  font-size: 11px;
+  color: #b3b3b3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.editorTools {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding-right: 5px;
+}
+.editorTools :is(button, a) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 31px;
+  height: 31px;
+  border-radius: 4px;
+}
+.editorTools :is(button, a):hover,
+.editorTools button[aria-pressed="true"] {
+  background: #343434;
+  color: #fff;
+}
+.editorTools svg {
+  width: 15px;
+  height: 15px;
+}
+.editorFrame {
+  min-height: 0;
+  min-width: 0;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+.codeSurface {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.monaco {
+  position: absolute;
+  inset: 0;
+}
+.plainEditor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  resize: none;
+  padding: 18px 22px;
+  background: #1f1f1f;
+  color: #d4d4d4;
+  font:
+    13px/21px ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  tab-size: 2;
+  overscroll-behavior: contain;
+}
+.editorFallback {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 1;
+  pointer-events: none;
+  padding: 4px 8px;
+  background: #303030;
+  color: #ccc;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.plainFind {
+  position: absolute;
+  z-index: 2;
+  top: 6px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: #252526;
+  border: 1px solid #555;
+  max-width: calc(100% - 20px);
+}
+.plainFind input {
+  min-width: 0;
+  width: 150px;
+  background: #333;
+  border: 1px solid #777;
+  padding: 5px;
+}
+.plainFind button {
+  white-space: nowrap;
+}
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #1f1f1f;
+  color: #aaa;
+}
+.spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid #444;
+  border-top-color: #4daafc;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.issue {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  background: #33291b;
+  color: #f2d7a5;
+  font-size: 12px;
+}
+.issue button {
+  padding: 7px 12px;
+  border: 1px solid #a68c65;
+  border-radius: 4px;
+}
+.welcome {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  overflow: auto;
+  text-align: center;
+}
+.welcome > svg {
+  color: #606060;
+}
+.welcome h1 {
+  font-size: 19px;
+  color: #dedede;
+  margin: 0;
+  font-weight: 500;
+}
+.welcome p {
+  max-width: 390px;
+  margin: 0;
+  color: #aaa;
+}
+.welcome button {
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 10px 18px;
+}
+.welcome kbd {
+  color: #b0cce3;
+  padding-left: 20px;
+}
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 24px;
+  padding-right: 12px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 10px;
+  background: #0078d4;
+  color: white;
+  white-space: nowrap;
+}
+.statusbar svg {
+  width: 13px;
+  height: 13px;
+}
+.remoteMark {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding: 0 10px;
+  background: #16825d;
+}
+.revision {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.revision > span {
+  opacity: 0.85;
+  font-family: monospace;
+}
+.quickBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  background: #0003;
+}
+.quickOpen {
+  width: min(630px, calc(100% - 24px));
+  margin: 45px auto 0;
+  max-height: calc(100% - 65px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #555;
+  background: #252526;
+  padding: 8px 0 0;
+  box-shadow: 0 12px 30px #0009;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.quickOpen > input {
+  margin: 0 8px 7px;
+  padding: 8px 10px;
+  background: #313131;
+  border: 1px solid #0078d4;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 13px;
+  min-width: 0;
+}
+.quickOpen > ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow: auto;
+  min-height: 0;
+  max-height: 300px;
+  scrollbar-width: thin;
+}
+.quickOpen li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 33px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.quickOpen li[aria-selected="true"] {
+  background: #04395e;
+  color: #fff;
+}
+.quickOpen li svg {
+  width: 14px;
+  height: 14px;
+  color: #75beff;
+}
+.quickOpen li strong {
+  font-size: 12px;
+  font-weight: 500;
+  flex-shrink: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.quickOpen li > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #b5b5b5;
+  font-size: 11px;
+}
+.quickOpen > p {
+  margin: 12px;
+}
+.quickHint {
+  flex: 0 0 auto;
+  font-size: 10px;
+  color: #aaa;
+  border-top: 1px solid #3c3c3c;
+  padding: 8px 12px;
+}
+.srOnly {
+  position: absolute;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+@container repository (max-width: 759px) {
+  .sidebar {
+    display: none;
+  }
+  .app[data-sidebar="open"] .sidebar {
+    display: flex;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 42px;
+    width: min(280px, calc(100% - 42px));
+    z-index: 35;
+    box-shadow: 10px 0 30px #0008;
+  }
+  .activity {
+    width: 42px;
+    flex-basis: 42px;
+  }
+  .activity button {
+    width: 42px;
+    height: 46px;
+  }
+  .titlebar {
+    flex-basis: 42px;
+    padding: 0 4px;
+  }
+  .appMark {
+    display: none;
+  }
+  .titleAction {
+    width: 36px;
+    height: 38px;
+  }
+  .command {
+    height: 32px;
+    width: min(570px, 78%);
+    gap: 6px;
+    font-size: 12px !important;
+  }
+  .command kbd {
+    display: none;
+  }
+  .treeItem {
+    height: 38px;
+    font-size: 13px !important;
+  }
+  .sidebarHeading {
+    flex-basis: 40px;
+  }
+  .mobileClose {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: auto;
+    margin-right: -16px;
+  }
+  .tabs {
+    flex-basis: 40px;
+  }
+  .tab > button:last-child {
+    width: 38px;
+  }
+  .breadcrumbs {
+    flex-basis: 40px;
+    padding-left: 10px;
+  }
+  .editorTools :is(button, a) {
+    width: 35px;
+    height: 38px;
+  }
+  .editorTools a {
+    display: none;
+  }
+  .statusbar {
+    gap: 9px;
+    padding-right: 8px;
+  }
+  .sessionLabel,
+  .encoding,
+  .revision > span {
+    display: none;
+  }
+  .quickOpen li {
+    min-height: 40px;
+  }
+  .quickOpen li strong {
+    max-width: 65%;
+  }
+}
+@container repository (max-width: 380px) {
+  .cursor {
+    display: none;
+  }
+  .breadcrumbs > span {
+    display: none;
+  }
+  .editorTools {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-style: dotted;
+  }
+}

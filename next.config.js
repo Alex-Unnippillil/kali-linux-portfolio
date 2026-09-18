@@ -129,6 +129,17 @@ const startUrlRuntimeCaching = {
 };
 
 const runtimeCaching = [
+  // Small manifest is fresh-first; hashed file assets are loaded on demand, not all precached.
+  {
+    urlPattern: ({ sameOrigin, url }) => sameOrigin && /\/showcase\/repository\/index\.json$/.test(url.pathname),
+    handler: 'NetworkFirst',
+    options: { cacheName: buildAwareCacheName('repository-index'), networkTimeoutSeconds: 5, expiration: { maxEntries: 1 } },
+  },
+  {
+    urlPattern: ({ sameOrigin, url }) => sameOrigin && /\/showcase\/repository\/files\/[a-f0-9]{64}\.json$/.test(url.pathname),
+    handler: 'CacheFirst',
+    options: { cacheName: buildAwareCacheName('repository-source'), expiration: { maxEntries: 80, maxAgeSeconds: 604800 } },
+  },
   // Profile posts may be deleted or protected. Do not persist X API results
   // (or configuration failures) in the visitor's service-worker cache.
   {
@@ -162,6 +173,7 @@ const withPWA = withPWAInit({
   dest: 'public',
   sw: 'sw.js',
   disable: process.env.NODE_ENV === 'development' || isVercelPreview,
+  publicExcludes: ["!noprecache/**/*", "!showcase/repository/**/*", "!showcase/x-media/**/*"],
   buildExcludes: [/dynamic-css-manifest\.json$/],
   workboxOptions: {
     navigateFallback: '/offline.html',

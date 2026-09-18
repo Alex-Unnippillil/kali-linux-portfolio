@@ -7,10 +7,10 @@
     "build:gamepad": "tsc -p tsconfig.gamepad.json",
     "prebuild": "tsc -p tsconfig.gamepad.json",
     "dev": "node scripts/dev.mjs",
-    "build": "next build",
+    "build": "node scripts/generate-repository-snapshot.mjs && next build",
     "postbuild": "node scripts/safe-copy.mjs",
     "start": "next start",
-    "export": "NEXT_PUBLIC_STATIC_EXPORT=true next build",
+    "export": "node scripts/generate-repository-snapshot.mjs && NEXT_PUBLIC_STATIC_EXPORT=true next build",
     "test": "jest",
     "dedupe:check": "yarn dedupe --check",
     "test:watch": "jest --watch",
@@ -23,7 +23,8 @@
     "analyze": "ANALYZE=true yarn build",
     "preinstall": "corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
-    "dedupe:fix": "yarn dedupe"
+    "dedupe:fix": "yarn dedupe",
+    "x:import": "node scripts/import-x-showcase.mjs"
   },
   "engines": {
     "node": "24.x"

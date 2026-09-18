@@ -531,3 +531,12 @@ The desktop X app and `/apps/x` share a read-only, responsive feed for
 `@AUnnippillil`. Configure a fresh **server-only** `X_BEARER_TOKEN` in Vercel
 Production and Preview to enable live posts. Never put credentials in browser
 code or GitHub. See [setup, privacy, limits, and validation](docs/x-profile-showcase.md).
+
+### Native X and repository workspace
+
+The X app supports dated, owner-reviewed saved posts and opens without a consent
+screen. See [X showcase setup](docs/x-profile-showcase.md) for the honest current
+data boundary and archive import. The Visual Studio Code app now opens this
+repository's actual build-time source in a native editor, not a StackBlitz iframe.
+See [repository editor](docs/repository-editor.md) for file search, editing,
+downloads, source packaging and privacy limits.

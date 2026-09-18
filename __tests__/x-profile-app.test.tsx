@@ -83,19 +83,17 @@ it("expands long text, opens external originals, and copies post links", async (
   ).toHaveAttribute("href", "https://x.com/AUnnippillil/status/1004");
 });
 it("paginates once at a time, deduplicates posts, and stops repeated cursors", async () => {
-  fetchMock
-    .mockResolvedValueOnce(json(xFeedFixture))
-    .mockResolvedValueOnce(
-      json({
-        ...xFeedFixture,
-        posts: [
-          xFeedFixture.posts[0],
-          makeXPost("1005", "Older fixture post"),
-          makeXPost("1005", "Duplicate fixture"),
-        ],
-        nextCursor: xFeedFixture.nextCursor,
-      }),
-    );
+  fetchMock.mockResolvedValueOnce(json(xFeedFixture)).mockResolvedValueOnce(
+    json({
+      ...xFeedFixture,
+      posts: [
+        xFeedFixture.posts[0],
+        makeXPost("1005", "Older fixture post"),
+        makeXPost("1005", "Duplicate fixture"),
+      ],
+      nextCursor: xFeedFixture.nextCursor,
+    }),
+  );
   render(<XProfileApp />);
   await screen.findByText(/Fixture: building an accessible/);
   fireEvent.click(screen.getByRole("button", { name: "Load older posts" }));
@@ -109,32 +107,27 @@ it("paginates once at a time, deduplicates posts, and stops repeated cursors", a
     "/api/x/profile?cursor=fixture-cursor-2",
   );
 });
-it("clears fetched content and aborts requests when external connections are disabled", async () => {
-  const { rerender } = render(<XProfileApp />);
+it("opens automatically without a consent gate or changing unrelated privacy settings", async () => {
+  mockAllowNetwork = false;
+  render(<XProfileApp />);
   await screen.findByText(/Fixture: building an accessible/);
-  mockAllowNetwork = false;
-  rerender(<XProfileApp />);
-  expect(screen.getByText("External connections are paused")).toBeVisible();
-  expect(screen.queryByRole("article")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Enable network" }));
-  expect(mockSetAllowNetwork).toHaveBeenCalledWith(true);
+  expect(
+    screen.queryByRole("button", { name: "Enable network" }),
+  ).not.toBeInTheDocument();
+  expect(mockSetAllowNetwork).not.toHaveBeenCalled();
   expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(fetchMock.mock.calls[0][0]).toBe("/api/x/profile");
 });
-it("never contacts the server or X in network-off or static-export mode", async () => {
-  mockAllowNetwork = false;
-  const { rerender } = render(<XProfileApp />);
-  expect(fetchMock).not.toHaveBeenCalled();
+it("does not attempt an API request in static export without an archive", async () => {
   process.env.NEXT_PUBLIC_STATIC_EXPORT = "true";
-  mockAllowNetwork = true;
-  rerender(<XProfileApp />);
-  await screen.findByText("View the latest posts on X");
+  render(<XProfileApp />);
+  await screen.findByText("The saved selection is not available yet");
   expect(fetchMock).not.toHaveBeenCalled();
-  delete process.env.NEXT_PUBLIC_STATIC_EXPORT;
 });
 it("reports a missing server credential instead of inventing posts or asking visitors for keys", async () => {
   fetchMock.mockResolvedValue(json({ code: "not_configured" }, 503));
   render(<XProfileApp />);
-  await screen.findByText("The profile feed is not connected yet");
+  await screen.findByText("The saved selection is not available yet");
   expect(screen.queryByRole("article")).not.toBeInTheDocument();
   expect(screen.getByText("Setup for the site owner")).toBeVisible();
   expect(screen.queryByLabelText(/token|secret/i)).not.toBeInTheDocument();
@@ -191,7 +184,7 @@ it("rejects late responses after closing and reopening and works under StrictMod
   expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
   await act(async () => resolveOld(json({ code: "not_configured" }, 503)));
   expect(
-    screen.queryByText("The profile feed is not connected yet"),
+    screen.queryByText("The saved selection is not available yet"),
   ).not.toBeInTheDocument();
   expect(
     within(
@@ -205,4 +198,15 @@ it("aborts on unmount without committing a stale response", async () => {
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
   unmount();
   expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
+});
+
+it("keeps the last successful posts visible if a refresh fails", async () => {
+  fetchMock
+    .mockResolvedValueOnce(json(xFeedFixture))
+    .mockResolvedValueOnce(json({ code: "rate_limited" }, 429));
+  render(<XProfileApp />);
+  await screen.findByText(/Fixture: building an accessible/);
+  fireEvent.click(screen.getByRole("button", { name: "Refresh posts" }));
+  await screen.findByText("The feed is taking a break");
+  expect(screen.getAllByRole("article")).toHaveLength(3);
 });

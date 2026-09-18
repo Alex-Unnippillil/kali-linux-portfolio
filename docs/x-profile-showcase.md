@@ -1,116 +1,83 @@
 # X profile showcase
 
-The desktop X window and `/apps/x` share one read-only application for
-[@AUnnippillil](https://x.com/AUnnippillil). It uses the existing native window
-manager; it does not replace the Kali desktop or require visitors to sign in.
+The desktop X app and `/apps/x` display only `@AUnnippillil`. Both open
+immediately, without asking visitors to enable networking, log in, supply keys,
+or confirm an embedded website. The app is native React, not an X iframe.
 
-## Server configuration
+## Saved posts: no API needed
 
-Rotate credentials that have been posted in a conversation, screenshot, issue,
-or source repository. Do not paste replacement secrets into chat or commit them.
+`data/x-profile-snapshot.json` is the reviewed public selection. When it contains
+a valid feed, the app renders it synchronously and makes **no automatic X API
+request**. It works in the static export too. The interface labels the selection
+with its capture date and says it is not live. Original text, dates, IDs and
+links are retained. Unknown engagement counts are omitted, not invented.
 
-In the existing Vercel project's **Settings → Environment Variables**, add a
-fresh app-only **`X_BEARER_TOKEN`** for **Production and Preview**, then redeploy
-those environments. Use Vercel's sensitive/encrypted secret storage. Never prefix
-this key with `NEXT_PUBLIC_`. The server reads the credential at runtime; neither
-API responses nor browser JavaScript contain it.
+**Current data boundary:** no verified account post archive was available when
+this change was implemented. The checked-in snapshot has `feed: null`, not demo
+posts. This does not mean the X account has no posts. The attempted public
+profile endpoint was rate-limited. Real posts require a reviewed owner archive
+or the already-supported server connection. Tests use explicitly labeled
+fixtures under `tests/`; those are never production feed content.
 
-An OAuth 1.0a alternative requires all four server-only values: `X_API_KEY`,
-`X_API_SECRET`, `X_ACCESS_TOKEN`, and `X_ACCESS_TOKEN_SECRET`. An access token and
-token secret alone are insufficient. The same names with `TWITTER_` prefixes are
-accepted for an existing configuration. A Bearer Token takes precedence when both
-methods are configured. `X_FEED_ENABLED=false` disables fetching without removing
-credentials. No X environment variable is required to build or run other apps.
+### Import an owner-reviewed X archive
 
-The X developer app must have the access and billing/usage allowance required by
-its account. This release does not purchase credits, change billing, create
-subscriptions, request write permissions, or expose a visitor credential form.
-
-## Data path and privacy
-
-`GET /api/x/profile` resolves the fixed handle with
-`GET https://api.x.com/2/users/by/username/AUnnippillil`, then reads
-`GET https://api.x.com/2/users/{id}/tweets`. It never accepts a visitor-supplied
-username or destination URL. Only the public profile and its own available posts
-are displayed; reposts, withheld entries, and protected accounts are excluded.
-The server uses the documented `post.fields`/`note_post` fields and narrowly
-retries the older `tweet.fields` spelling only after an explicit invalid-field
-response. `X_API_FIELD_STYLE=tweet` selects that spelling from the first request
-for older API deployments.
-
-The Activity API is for new event delivery, not a replacement for this timeline
-backfill. This showcase intentionally does not create paid event subscriptions
-or open long-lived streams on serverless functions.
-
-Responses are cached for up to 15 minutes, with no stale-on-error policy. The
-warm server instance coalesces concurrent reads, limits in-flight work, bounds
-its page cache, and observes upstream rate limits. These controls and CDN caching
-reduce reads; they are not a globally coordinated spend cap across regions or
-server instances. Set spending limits in the X developer console. No polling
-runs while the app is closed; Refresh respects the cache window.
-
-Pagination uses server-signed, expiring cursors with 20 posts per request and at
-most five pages (100 loaded posts). Invalid cursors and unsupported query fields
-are rejected before making an upstream request. User/private/deleted content is
-not permanently copied to disk, IndexedDB, local storage, or the service worker.
-An already loaded browser page is a snapshot until refreshed. The service worker
-uses NetworkOnly for this route, ahead of the general API cache rule.
-
-Network permission follows the existing desktop setting. Disabling it aborts
-pending requests and clears the visible feed. Static exports have no API server
-and show the external public profile link instead. The source does not contain
-fabricated profile posts; deterministic content exists only in test fixtures.
-
-## Interface and failure states
-
-Posts, Replies, and Media filter the currently loaded timeline. Search is also
-limited to loaded posts and does not trigger paid search API requests. Long posts
-expand in place. Photos and video preview images retain their source attribution;
-video playback opens the original X post. Read-only counts are shown only when
-returned by the API, without pretend like/repost buttons or a fake verified badge.
-Sensitive previews require an explicit reveal. Text and links are rendered without
-HTML injection; media URLs are restricted to known X image hosts.
-
-Missing credentials, denied authentication, billing restrictions, rate limits,
-timeouts, malformed responses, and empty timelines have distinct recovery states.
-Errors never include the raw upstream response or secret-bearing request headers.
-The public profile link remains available when the API is unavailable.
-
-## Validation
-
-Use Node 24 and the committed Yarn version:
+Download the account's archive from X. Keep it **outside the repository**. The
+importer only reads the two named files and, optionally, the named media folder.
+It never reads DMs, contacts, account email into the output, or the entire archive
+recursively. An archive can contain historical content you no longer wish to
+publish. Review the selection and use `--ids` to select specific originals.
 
 ```sh
-corepack enable
-yarn install --immutable
-yarn lint
-yarn typecheck
-yarn test --coverage --maxWorkers=2
-yarn build
-yarn export
-yarn playwright install --with-deps chromium firefox webkit
-yarn build
-yarn playwright test --config=playwright.portfolio.config.ts
+yarn x:import \
+  --account /private/x-archive/data/account.js \
+  --tweets /private/x-archive/data/tweets.js \
+  --media /private/x-archive/data/tweets_media \
+  --ids 1234567890123456789,1234567890123456790 \
+  --publish-reviewed
 ```
 
-Unit coverage includes public-only normalization, URL safety, OAuth signing,
-credential completeness, bounded pagination, expiry, cache behavior, permission
-changes, timeouts, error sanitization, route validation, app lifecycle, and both
-entry points. Browser scenarios exercise portrait, short landscape, desktop,
-maximization, native close/reopen, filtering, pagination, errors/retry, screenshot
-capture, and scoped axe checks in Chromium, Firefox, and WebKit. These scenarios
-use controlled API fixtures and are not proof of live account credentials, quota,
-or API availability. Validate a successful `/api/x/profile` response separately
-after configuring a fresh credential in Vercel.
+The example IDs are placeholders, not claimed account posts. Omit `--ids` to
+import up to 100 newest original posts from the supplied file. Omit `--media` for
+a text-only selection. The `--publish-reviewed` flag confirms the **owner's
+publication decision**, not a visitor confirmation step. Nothing is uploaded by
+this command: review its generated JSON/media, then commit those files normally.
 
-The changed-file lint selector also uses the actual before/after range on a GitHub
-push. It no longer falls through from current `origin/main` to an obsolete
-`origin/master`, which incorrectly pulled unrelated legacy files into the release
-gate. Strict zero-warning checks remain on every changed lintable file; full-tree
-legacy lint debt is not represented as fixed by this scoped release.
+The importer verifies the account handle and numeric account ID. It parses the
+archive assignment as JSON data without `eval`, excludes reposts and withheld
+entries, deduplicates IDs, and rejects malformed inputs without replacing the
+existing snapshot. Optional raster-image previews are copied from the explicit
+local archive directory to hashed first-party paths. No remote image download
+or script embedding occurs. File and media budgets are enforced. Unsupported
+or missing previews are omitted; videos link to their originals on X.
 
-## API references
+Commit only `data/x-profile-snapshot.json` and its intended files under
+`public/showcase/x-media/`. Never commit `account.js`, `tweets.js`, the raw
+archive, keys, tokens or secrets. Delete unused old media when removing posts.
+Saved selections do not automatically notice a deleted post or a protected
+account: the owner must remove or refresh the selection and redeploy.
 
-- [User timeline](https://docs.x.com/x-api/users/get-posts)
-- [App-only Bearer Tokens](https://docs.x.com/fundamentals/authentication/oauth-2-0/bearer-tokens)
-- [X Activity API](https://docs.x.com/x-api/activity/introduction)
+## Optional server retrieval
+
+Without a saved selection, the app automatically tries the same-origin
+`GET /api/x/profile` once. The existing server implementation resolves only the
+fixed public profile and uses X's user-post timeline. A visitor never receives
+account credentials. Configure either a server-only `X_BEARER_TOKEN`, or all
+four OAuth1 values: `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, and
+`X_ACCESS_TOKEN_SECRET`. An access-token/token-secret pair alone is not enough.
+Rotate previously exposed credentials; do not paste replacements into chat or
+public source. No billing or X access tier is changed by this implementation.
+
+The API keeps signed expiring cursors, a five-page/100-post bound, timeout and
+response budgets, coalescing, a 15-minute cache, and error cooldowns. It rejects
+protected or withheld profiles. Browser API responses are not put into the
+service-worker cache. Static export never requests the unavailable API.
+
+Refreshing is optional. A failed refresh keeps a previously loaded or saved
+selection visible. Errors expose neither raw upstream responses nor secrets.
+Replies, Media and search filter loaded content locally. Engagement counts are
+informational; posting, liking, following, and replying happen on X through
+explicit original links. Sensitive media retains its individual reveal control.
+
+No global privacy preference or unrelated application's confirmation is changed.
+Saved media comes only from this site. The optional API may return images from
+X's image CDN; outbound original links remain explicit user actions.

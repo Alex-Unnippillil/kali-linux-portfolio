@@ -1,6 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { XFeedSchema, type XFeed, type FeedIssue } from "../utils/x-profile";
+import snapshotData from "../data/x-profile-snapshot.json";
+import { readXSnapshot } from "../utils/x-snapshot";
+const savedFeed = readXSnapshot(snapshotData);
 
 const ISSUES = new Set<FeedIssue>([
   "not_configured",
@@ -9,19 +12,22 @@ const ISSUES = new Set<FeedIssue>([
   "timeout",
   "invalid_cursor",
 ]);
-export default function useXProfile(enabled: boolean) {
-  const [feed, setFeed] = useState<XFeed | null>(null);
+export default function useXProfile(enabled = true) {
+  const [feed, setFeed] = useState<XFeed | null>(savedFeed);
   const [issue, setIssue] = useState<FeedIssue | null>(null);
   const [busy, setBusy] = useState<"initial" | "more" | null>(null);
   const requestRef = useRef<AbortController | null>(null);
-  const feedRef = useRef<XFeed | null>(null);
+  const feedRef = useRef<XFeed | null>(savedFeed);
+  const [source, setSource] = useState<"saved" | "api">(
+    savedFeed ? "saved" : "api",
+  );
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
 
   const load = useCallback(async (more = false) => {
     if (!enabledRef.current || (more && requestRef.current)) return;
     if (process.env.NEXT_PUBLIC_STATIC_EXPORT === "true") {
-      setIssue("static_export");
+      if (!feedRef.current) setIssue("static_export");
       return;
     }
     const previous = feedRef.current;
@@ -79,6 +85,7 @@ export default function useXProfile(enabled: boolean) {
       }
       feedRef.current = value;
       setFeed(value);
+      setSource("api");
     } catch (error) {
       if (
         requestRef.current !== controller ||
@@ -89,10 +96,7 @@ export default function useXProfile(enabled: boolean) {
       const code =
         error instanceof Error ? (error.message as FeedIssue) : "unavailable";
       setIssue(timedOut ? "timeout" : ISSUES.has(code) ? code : "unavailable");
-      if (!more) {
-        feedRef.current = null;
-        setFeed(null);
-      }
+      // Retain the saved selection (or last successful read) if the optional API fails.
     } finally {
       clearTimeout(timer);
       if (requestRef.current === controller) {
@@ -103,8 +107,14 @@ export default function useXProfile(enabled: boolean) {
   }, []);
 
   useEffect(() => {
-    if (enabled) void load();
-    else {
+    if (enabled && !savedFeed) void load();
+    else if (enabled && savedFeed) {
+      feedRef.current = savedFeed;
+      setFeed(savedFeed);
+      setSource("saved");
+      setIssue(null);
+      setBusy(null);
+    } else {
       requestRef.current?.abort();
       requestRef.current = null;
       feedRef.current = null;
@@ -119,6 +129,7 @@ export default function useXProfile(enabled: boolean) {
   }, [enabled, load]);
   return {
     feed,
+    source,
     issue,
     busy,
     refresh: () => load(),

@@ -37,7 +37,7 @@ async function openX(page: Page, url = "/?app=x") {
     name: "Enable network",
     exact: true,
   });
-  if (await enable.isVisible()) await enable.click();
+  await expect(enable).toHaveCount(0);
   return app;
 }
 async function intactLayout(page: Page) {
@@ -227,7 +227,7 @@ test("X standalone route, errors and retry never ask visitors for credentials", 
   await page.route("https://pbs.twimg.com/**", (route) => route.abort());
   const app = await openX(page, "/apps/x");
   await expect(
-    app.getByText("The profile feed is not connected yet"),
+    app.getByText("The saved selection is not available yet"),
   ).toBeVisible();
   await expect(app.getByRole("article")).toHaveCount(0);
   await expect(app.locator("iframe")).toHaveCount(0);

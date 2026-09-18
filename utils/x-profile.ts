@@ -22,6 +22,11 @@ export function safeExternalUrl(value: unknown): string | undefined {
   }
 }
 export function safeXImage(value: unknown): string | undefined {
+  if (
+    typeof value === "string" &&
+    /^\/showcase\/x-media\/[a-f0-9]{64}\.(?:png|jpg|webp|gif)$/.test(value)
+  )
+    return value;
   const safe = safeExternalUrl(value);
   if (!safe) return undefined;
   const url = new URL(safe);
