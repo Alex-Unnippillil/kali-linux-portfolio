@@ -2397,7 +2397,6 @@ export function WindowEditButtons(props) {
     const closeAriaLabel = 'Window close';
     const controlsRef = useRef(null);
     const [pressedControl, setPressedControl] = useState(null);
-    const pointerActiveRef = useRef(null);
 
     useEffect(() => {
         const node = controlsRef.current;
@@ -2494,7 +2493,6 @@ export function WindowEditButtons(props) {
     );
 
     const resetPressedControl = useCallback(() => {
-        pointerActiveRef.current = null;
         setPressedControl(null);
     }, []);
 
@@ -2508,40 +2506,23 @@ export function WindowEditButtons(props) {
         }
     };
 
+    // Native buttons already synthesize one click for mouse, touch, pen and keyboard.
+    // Acting on pointerup as well can double-toggle after focus/layout changes.
     const handlePointerDown = useCallback((control) => (event) => {
         event.stopPropagation();
-        pointerActiveRef.current = 'pointer';
-        if (typeof event.pointerId === 'number' && typeof event.currentTarget?.setPointerCapture === 'function') {
-            event.currentTarget.setPointerCapture(event.pointerId);
-        }
+        if (event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
         setPressedControl(control);
     }, []);
 
-    const handlePointerUp = useCallback((control, handler) => (event) => {
+    const handlePointerUp = useCallback(() => (event) => {
         event.stopPropagation();
-        if (typeof event.pointerId === 'number'
-            && typeof event.currentTarget?.releasePointerCapture === 'function'
-            && (!event.currentTarget.hasPointerCapture
-                || event.currentTarget.hasPointerCapture(event.pointerId))) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-        }
-        setPressedControl((current) => (current === control ? null : current));
-        pointerActiveRef.current = 'pointer-handled';
-        if (typeof handler === 'function') {
-            handler(event);
-        }
+        setPressedControl(null);
     }, []);
 
     const handleButtonClick = useCallback((handler) => (event) => {
-        if (pointerActiveRef.current === 'pointer' || pointerActiveRef.current === 'pointer-handled') {
-            pointerActiveRef.current = null;
-            event.stopPropagation();
-            event.preventDefault();
-            return;
-        }
-        if (typeof handler === 'function') {
-            handler(event);
-        }
+        event.stopPropagation();
+        setPressedControl(null);
+        if (typeof handler === 'function') handler(event);
     }, []);
 
     return (
@@ -2553,6 +2534,7 @@ export function WindowEditButtons(props) {
             onPointerDown={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
             data-window-controls=""
         >
             <button
@@ -2561,7 +2543,7 @@ export function WindowEditButtons(props) {
                 title="Minimize"
                 className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
                 onPointerDown={handlePointerDown('minimize')}
-                onPointerUp={handlePointerUp('minimize', props.minimize)}
+                onPointerUp={handlePointerUp()}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
@@ -2582,7 +2564,7 @@ export function WindowEditButtons(props) {
                 disabled={!allowMaximize}
                 aria-disabled={!allowMaximize}
                 onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
-                onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
+                onPointerUp={allowMaximize ? handlePointerUp() : undefined}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
@@ -2596,7 +2578,7 @@ export function WindowEditButtons(props) {
                 title="Close"
                 className={[styles.windowControlButton, styles.windowControlButtonClose, pressedControl === 'close' ? styles.windowControlButtonPressed : ''].filter(Boolean).join(' ')}
                 onPointerDown={handlePointerDown('close')}
-                onPointerUp={handlePointerUp('close', props.close)}
+                onPointerUp={handlePointerUp()}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
