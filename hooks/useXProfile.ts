@@ -18,6 +18,7 @@ export default function useXProfile(enabled = true) {
   const [busy, setBusy] = useState<"initial" | "more" | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const feedRef = useRef<XFeed | null>(savedFeed);
+  const failedMoreRef = useRef(false);
   const [source, setSource] = useState<"saved" | "api">(
     savedFeed ? "saved" : "api",
   );
@@ -83,6 +84,7 @@ export default function useXProfile(enabled = true) {
         if (value.nextCursor === cursor || value.posts.length >= 100)
           value.nextCursor = undefined;
       }
+      failedMoreRef.current = false;
       feedRef.current = value;
       setFeed(value);
       setSource("api");
@@ -95,6 +97,9 @@ export default function useXProfile(enabled = true) {
         return;
       const code =
         error instanceof Error ? (error.message as FeedIssue) : "unavailable";
+      // A retained nextCursor does not tell us which request failed.
+      // Expired pagination must restart at the first page; other failures repeat the operation.
+      failedMoreRef.current = more && code !== "invalid_cursor";
       setIssue(timedOut ? "timeout" : ISSUES.has(code) ? code : "unavailable");
       // Retain the saved selection (or last successful read) if the optional API fails.
     } finally {
@@ -134,5 +139,6 @@ export default function useXProfile(enabled = true) {
     busy,
     refresh: () => load(),
     loadMore: () => load(true),
+    retry: () => load(failedMoreRef.current),
   };
 }

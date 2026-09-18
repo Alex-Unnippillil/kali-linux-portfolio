@@ -56,3 +56,21 @@ keyboard file selection, session edits, retries, and cancelled requests.
 The browser suite exercises the actual Monaco build, downloaded source equality,
 find, editing/undo, wrapping, narrow-window geometry, accessibility, and close.
 Browser runs include Chromium, Firefox, and WebKit.
+
+
+## Builds without Git metadata
+
+The source packager normally reads the build's Git index and commit. Deployment
+uploads that omit `.git` use the reviewed path allowlist in
+`data/repository-source-catalog.json` instead, together with the exact
+`VERCEL_GIT_COMMIT_SHA` (or `GITHUB_SHA`). They never fall back to recursively
+publishing the working directory. Missing/pruned tracked files are counted as
+omitted; README is still required, and all size, type and symlink checks apply.
+The catalog has no credentials or source contents. Local injected files cannot
+be included unless their public path was explicitly reviewed and tracked.
+
+After adding or deleting source files, run `git add <reviewed paths>` and
+`yarn source:catalog`, then commit the catalog with the change. CI compares it
+with the complete tracked public-source allowlist. A Git-less build without the
+catalog or an exact revision fails with an actionable message rather than
+claiming an unverifiable source revision.

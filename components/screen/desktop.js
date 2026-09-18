@@ -5627,17 +5627,15 @@ export class Desktop extends Component {
             return;
         }
 
-        // capture window snapshot
-        let image = await this.captureWindowPreview(objId, 'normal');
-        if (!image) {
-            image = await this.captureWindowPreview(objId, 'aggressive');
-        }
-        if (!image && this.windowPreviewLastGoodCache?.has(objId)) {
-            image = this.windowPreviewLastGoodCache.get(objId);
-        }
-        if (!image) {
-            image = this.buildFallbackPreview(objId);
-        }
+        // Closing must never wait for DOM rasterization (images/fonts can stall
+        // html-to-image, especially in WebKit). Use an existing taskbar preview
+        // or the lightweight app card; fresh previews are captured on hover.
+        const candidates = [
+            this.windowPreviewCache?.get(objId),
+            this.windowPreviewLastGoodCache?.get(objId),
+        ];
+        const image = candidates.find(value => typeof value === 'string' && value.length)
+            || this.buildFallbackPreview(objId);
 
         // persist in trash with autopurge
         const appMeta = apps.find(a => a.id === objId) || {};

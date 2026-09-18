@@ -7,6 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import VsCode from "../apps/vscode";
+import userEvent from "@testing-library/user-event";
 
 // DOM tests use the immediate text editor; browser tests load and edit the real Monaco engine.
 jest.mock("../apps/vscode/monaco", () => {
@@ -154,4 +155,32 @@ it("aborts stale StrictMode requests and ignores their late responses", async ()
   await act(async () => resolveOld(response({ invalid: true })));
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   unmount();
+});
+
+it("keeps Tab and Shift+Tab inside modal Quick Open and restores focus on Escape", async () => {
+  const user = userEvent.setup();
+  const { container } = render(<VsCode />);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("textbox", { name: "Code editor for README.md" }),
+    ).toHaveValue(content["README.md"]),
+  );
+  const trigger = screen.getByRole("button", { name: "Quick Open files" });
+  await user.click(trigger);
+  const picker = screen.getByRole("combobox", { name: "Quick Open file name" });
+  const sidebar = container.firstChild as HTMLElement;
+  const before = sidebar.getAttribute("data-sidebar");
+  await user.tab();
+  expect(picker).toHaveFocus();
+  await user.tab({ shift: true });
+  expect(picker).toHaveFocus();
+  expect(screen.getByRole("dialog", { name: "Quick Open" })).toHaveAttribute(
+    "aria-modal",
+    "true",
+  );
+  await user.keyboard("{Control>}b{/Control}");
+  expect(sidebar).toHaveAttribute("data-sidebar", before);
+  await user.keyboard("{Escape}");
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
 });

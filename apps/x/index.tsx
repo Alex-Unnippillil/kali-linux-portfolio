@@ -371,7 +371,7 @@ const issueCopy: Record<FeedIssue, [string, string]> = {
 };
 
 export default function XProfileApp() {
-  const { feed, source, issue, busy, refresh, loadMore } = useXProfile();
+  const { feed, source, issue, busy, refresh, loadMore, retry } = useXProfile();
   const [filter, setFilter] = useState<PostFilter>("posts");
   const [query, setQuery] = useState("");
   const [announcement, setAnnouncement] = useState("");
@@ -624,11 +624,7 @@ export default function XProfileApp() {
                         className={styles.secondary}
                         disabled={Boolean(busy)}
                         onClick={() => {
-                          void (issue === "invalid_cursor" ||
-                          !feed ||
-                          !feed.nextCursor
-                            ? refresh()
-                            : loadMore());
+                          void retry();
                         }}
                       >
                         Try again

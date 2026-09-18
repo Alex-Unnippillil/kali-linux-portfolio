@@ -24,7 +24,8 @@
     "preinstall": "corepack prepare yarn@4.9.2 --activate",
     "verify:all": "node scripts/verify.mjs",
     "dedupe:fix": "yarn dedupe",
-    "x:import": "node scripts/import-x-showcase.mjs"
+    "x:import": "node scripts/import-x-showcase.mjs",
+    "source:catalog": "node scripts/generate-repository-snapshot.mjs --catalog"
   },
   "engines": {
     "node": "24.x"

@@ -49,6 +49,19 @@ for (const viewport of [
       const picker = app.getByRole("combobox", {
         name: "Quick Open file name",
       });
+      await picker.press("Tab");
+      await expect(picker).toBeFocused();
+      await picker.press("Shift+Tab");
+      await expect(picker).toBeFocused();
+      await expect(
+        app.getByRole("dialog", { name: "Quick Open" }),
+      ).toHaveAttribute("aria-modal", "true");
+      await picker.press("Escape");
+      await expect(app.getByRole("dialog")).toHaveCount(0);
+      await expect(
+        app.getByRole("button", { name: "Quick Open files" }),
+      ).toBeFocused();
+      await app.getByRole("button", { name: "Quick Open files" }).click();
       await picker.fill("package.json");
       await picker.press("Enter");
       await expect(app.locator(".view-lines")).toContainText("unnippillil");
@@ -65,7 +78,9 @@ for (const viewport of [
       const input = app.locator(".monaco-editor textarea.inputarea");
       await input.focus();
       await input.press("Control+Home");
-      await page.keyboard.insertText("// local editor test\n");
+      // A newline has its own Monaco undo boundary. Check one text edit as
+      // one undo, without conflating the newline and text transactions.
+      await page.keyboard.insertText("// local editor test");
       await expect(
         app.getByRole("button", { name: "Local changes, 1 files" }),
       ).toBeVisible();
@@ -73,6 +88,13 @@ for (const viewport of [
       await expect(
         app.getByRole("button", { name: "Local changes, 0 files" }),
       ).toBeVisible();
+      // Inspect the complete restored document, not only the dirty indicator.
+      const restoredDownload = page.waitForEvent("download");
+      await app.getByRole("button", { name: "Download current file" }).click();
+      const restored = await restoredDownload;
+      expect(await readFile((await restored.path())!, "utf8")).toBe(
+        await readFile("package.json", "utf8"),
+      );
       await app.getByRole("button", { name: "Toggle word wrap" }).click();
       await expect(
         app.getByRole("button", { name: "Toggle word wrap" }),
