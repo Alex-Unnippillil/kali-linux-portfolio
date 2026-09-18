@@ -215,3 +215,38 @@ it("keeps the last successful posts visible if a refresh fails", async () => {
   await screen.findByText("The feed is taking a break");
   expect(screen.getAllByRole("article")).toHaveLength(3);
 });
+
+it.each([
+  ["refresh", "Refresh posts", "/api/x/profile", "rate_limited"],
+  [
+    "pagination",
+    "Load older posts",
+    "/api/x/profile?cursor=fixture-cursor-2",
+    "unavailable",
+  ],
+  [
+    "expired pagination",
+    "Load older posts",
+    "/api/x/profile",
+    "invalid_cursor",
+  ],
+])(
+  "retries the failed %s operation instead of guessing from the retained cursor",
+  async (_operation, button, expected, code) => {
+    fetchMock
+      .mockResolvedValueOnce(json(xFeedFixture))
+      .mockResolvedValueOnce(json({ code }, 503))
+      .mockResolvedValueOnce(json({ ...xFeedFixture, nextCursor: undefined }));
+    render(<XProfileApp />);
+    await screen.findByText(/Fixture: building an accessible/);
+    fireEvent.click(screen.getByRole("button", { name: button }));
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
+    expect(fetchMock.mock.calls[2][0]).toBe(expected);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Try again" }),
+      ).not.toBeInTheDocument(),
+    );
+  },
+);

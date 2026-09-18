@@ -70,6 +70,7 @@ export default function RepositoryEditor({
   const [quickQuery, setQuickQuery] = useState("");
   const [quickIndex, setQuickIndex] = useState(0);
   const quickInput = useRef<HTMLInputElement>(null);
+  const wasQuickOpen = useRef(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const quickTrigger = useRef<HTMLButtonElement>(null);
   const [wrap, setWrap] = useState(false);
@@ -99,7 +100,11 @@ export default function RepositoryEditor({
     if (quickOpen) {
       quickInput.current?.focus();
       setQuickIndex(0);
+    } else if (wasQuickOpen.current) {
+      // Restore only after React has removed inert from the background controls.
+      quickTrigger.current?.focus();
     }
+    wasQuickOpen.current = quickOpen;
   }, [quickOpen]);
   useEffect(() => {
     setQuickIndex(0);
@@ -170,6 +175,13 @@ export default function RepositoryEditor({
   const handleKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();
+    if (quickOpen) {
+      if (["p", "b", "s"].includes(key) || (event.shiftKey && key === "f")) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      return;
+    }
     if (key === "p") {
       event.preventDefault();
       event.stopPropagation();
@@ -233,7 +245,7 @@ export default function RepositoryEditor({
       data-testid="repository-editor"
       onKeyDownCapture={handleKeys}
     >
-      <header className={styles.titlebar}>
+      <header className={styles.titlebar} inert={quickOpen || undefined}>
         <span className={styles.appMark}>
           <Icon name="code" />
         </span>
@@ -268,7 +280,7 @@ export default function RepositoryEditor({
           <Icon name="external" />
         </a>
       </header>
-      <div className={styles.workbench}>
+      <div className={styles.workbench} inert={quickOpen || undefined}>
         <nav className={styles.activity} aria-label="Editor views">
           <button
             type="button"
@@ -615,7 +627,7 @@ export default function RepositoryEditor({
           )}
         </main>
       </div>
-      <footer className={styles.statusbar}>
+      <footer className={styles.statusbar} inert={quickOpen || undefined}>
         <span className={styles.remoteMark}>
           <Icon name="code" />
         </span>
@@ -651,13 +663,19 @@ export default function RepositoryEditor({
           <section
             className={styles.quickOpen}
             role="dialog"
+            aria-modal="true"
             aria-label="Quick Open"
             onKeyDown={(event) => {
-              if (event.key === "Escape") {
+              if (event.key === "Tab") {
+                // Options use the combobox's arrow-key navigation, so the search
+                // field is the dialog's only tab stop in either direction.
+                event.preventDefault();
+                event.stopPropagation();
+                quickInput.current?.focus();
+              } else if (event.key === "Escape") {
                 event.preventDefault();
                 event.stopPropagation();
                 setQuickOpen(false);
-                quickTrigger.current?.focus();
               } else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                 event.preventDefault();
                 setQuickIndex((current) =>

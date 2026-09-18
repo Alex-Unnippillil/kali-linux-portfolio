@@ -158,7 +158,7 @@ These tools are simulations designed for educational purposes. They do not perfo
 | Terminal | `xterm.js` shell simulation with custom parsing and OPFS integration. | `components/apps/terminal` |
 | Todoist | Embedded Todoist web interface. | `components/apps/todoist` |
 | Trash | Virtual trash bin with restore and delete actions. | `components/apps/trash` |
-| Visual Studio Code | Embedded StackBlitz editor for repository browsing. | `components/apps/vscode` |
+| Visual Studio Code | Native Monaco editor with the actual repository source, file navigation, local edits, and downloads. | `apps/vscode` |
 | Weather | Weather dashboard with live or demo data. | `components/apps/weather` |
 | Weather Widget | Compact weather widget for the desktop. | `components/apps/weather_widget` |
 | X | Social feed simulation with static or API-fed timelines. | `components/apps/x` |
@@ -527,16 +527,19 @@ See [LICENSE](LICENSE).
 
 ### X public-profile showcase
 
-The desktop X app and `/apps/x` share a read-only, responsive feed for
-`@AUnnippillil`. Configure a fresh **server-only** `X_BEARER_TOKEN` in Vercel
-Production and Preview to enable live posts. Never put credentials in browser
-code or GitHub. See [setup, privacy, limits, and validation](docs/x-profile-showcase.md).
+The desktop X app and `/apps/x` open immediately to **18 saved public posts from
+`@AUnnippillil`**, captured on September 18, 2026: 17 posts and one reply, including
+three photo posts. Text, dates, original links, and five locally hosted profile/media
+images come from the recorded public source; no production posts are fabricated.
+The interface labels this as a dated selection, not a live timeline. No visitor
+login, consent prompt, API key, third-party embed, or live connection is required.
+See [source provenance, privacy, and updating the selection](docs/x-profile-showcase.md).
 
-### Native X and repository workspace
+### Native repository workspace
 
-The X app supports dated, owner-reviewed saved posts and opens without a consent
-screen. See [X showcase setup](docs/x-profile-showcase.md) for the honest current
-data boundary and archive import. The Visual Studio Code app now opens this
-repository's actual build-time source in a native editor, not a StackBlitz iframe.
-See [repository editor](docs/repository-editor.md) for file search, editing,
-downloads, source packaging and privacy limits.
+The Visual Studio Code app opens this repository's actual build-time source in a
+first-party Monaco editor, not a StackBlitz iframe. Explorer, Quick Open, tabs,
+syntax highlighting, Find, local editing/undo, word wrap, and file downloads work
+without an external service. Edits stay in the app session and never change GitHub;
+this showcase does not execute code. See [repository editor](docs/repository-editor.md)
+for shortcuts, source packaging, and privacy limits.

@@ -233,3 +233,114 @@ test("archive import is bounded to 100 originals and never passes SVG or HTML as
     "png",
   );
 });
+
+test("source generation handles deployment-pruned tracked files without publishing untracked files", async () => {
+  const root = await temp();
+  try {
+    execFileSync("git", ["init", "-q", root]);
+    await writeFile(path.join(root, "README.md"), "# Tracked source");
+    await writeFile(
+      path.join(root, "removed.ts"),
+      "export const omitted = true;",
+    );
+    execFileSync("git", ["add", "README.md", "removed.ts"], { cwd: root });
+    execFileSync(
+      "git",
+      [
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.test",
+        "commit",
+        "-qm",
+        "fixture",
+      ],
+      { cwd: root },
+    );
+    await rm(path.join(root, "removed.ts"));
+    await writeFile(path.join(root, "untracked.ts"), "private working copy");
+    const manifest = await generateRepositorySnapshot(root);
+    assert.deepEqual(
+      manifest.files.map((file) => file.path),
+      ["README.md"],
+    );
+    assert.equal(manifest.omitted, 1);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Git-less builds require a reviewed catalog and exact deployment revision, not a directory scan", async () => {
+  const root = await temp();
+  try {
+    await mkdir(path.join(root, "data"));
+    await writeFile(path.join(root, "README.md"), "# Archived source");
+    await writeFile(
+      path.join(root, "demo.ts"),
+      "export const archived = true;",
+    );
+    await writeFile(path.join(root, "untracked.ts"), "must never be published");
+    await writeFile(path.join(root, ".env.local"), "NEVER_PUBLISH=this");
+    const catalog = {
+      version: 1,
+      repository: "Alex-Unnippillil/kali-linux-portfolio",
+      files: ["README.md", "demo.ts", "pruned.ts"],
+    };
+    const catalogPath = path.join(root, "data/repository-source-catalog.json");
+    await writeFile(catalogPath, JSON.stringify(catalog));
+    const revision = "b".repeat(40);
+    await assert.rejects(
+      generateRepositorySnapshot(root, {}),
+      /deployment revision/i,
+    );
+    const manifest = await generateRepositorySnapshot(root, {
+      VERCEL_GIT_COMMIT_SHA: revision,
+    });
+    assert.equal(manifest.revision, revision);
+    assert.deepEqual(
+      manifest.files.map((file) => file.path),
+      ["README.md", "demo.ts"],
+    );
+    assert.equal(manifest.omitted, 1);
+    for (const invalid of [
+      { ...catalog, files: ["README.md", ".env.local"] },
+      { ...catalog, files: ["README.md", "../outside.ts"] },
+      { ...catalog, files: ["README.md", "README.md"] },
+      { ...catalog, repository: "someone/else" },
+    ]) {
+      await writeFile(catalogPath, JSON.stringify(invalid));
+      await assert.rejects(
+        generateRepositorySnapshot(root, { VERCEL_GIT_COMMIT_SHA: revision }),
+        /source catalog/i,
+      );
+    }
+    await rm(catalogPath);
+    await assert.rejects(
+      generateRepositorySnapshot(root, { VERCEL_GIT_COMMIT_SHA: revision }),
+      /source catalog/i,
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("the committed deployment catalog matches the complete tracked public-source allowlist", async () => {
+  const root = path.resolve(import.meta.dirname, "../..");
+  const catalog = JSON.parse(
+    await readFile(
+      path.join(root, "data/repository-source-catalog.json"),
+      "utf8",
+    ),
+  );
+  const tracked = execFileSync("git", ["ls-files", "-z"], { cwd: root })
+    .toString("utf8")
+    .split("\0")
+    .filter(Boolean)
+    .filter(isPublicSource)
+    .sort();
+  assert.deepEqual(
+    catalog.files,
+    tracked,
+    "Update the reviewed catalog with yarn source:catalog after adding or removing source files",
+  );
+});
