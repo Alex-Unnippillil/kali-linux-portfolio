@@ -1,51 +1,11 @@
 #!/usr/bin/env node
 import { spawnSync } from 'child_process';
-import fs from 'fs';
 import { createRequire } from 'module';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { collectChangedFiles } from './changed-files.mjs';
 
 const require = createRequire(import.meta.url);
-const ESLINT_FILE_EXTENSIONS = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
-const execGit = (args) => {
-  try {
-    const result = spawnSync('git', args, { encoding: 'utf8' });
-    return result.status === 0 ? result.stdout.trim() : '';
-  } catch { return ''; }
-};
-
-const resolveBaseRevision = () => {
-  const head = execGit(['rev-parse', 'HEAD']);
-  const candidates = [
-    ['merge-base', '--fork-point', 'origin/main', 'HEAD'],
-    ['merge-base', 'origin/main', 'HEAD'],
-    ['merge-base', '--fork-point', 'origin/master', 'HEAD'],
-    ['merge-base', 'origin/master', 'HEAD'],
-    ['rev-parse', 'HEAD^'],
-  ];
-  for (const candidate of candidates) {
-    const result = execGit(candidate);
-    // On main, origin/main can equal HEAD; use a real parent instead.
-    if (result && result !== head) return result.split('\n')[0];
-  }
-  return '';
-};
-
-const collectChangedFiles = () => {
-  const files = new Set();
-  const base = resolveBaseRevision();
-  if (base) {
-    execGit(['diff', '--name-only', '--diff-filter=ACMRTUXB', `${base}...HEAD`])
-      .split('\n').filter(Boolean).forEach((file) => files.add(file));
-  }
-  execGit(['diff', '--name-only', '--diff-filter=ACMRTUXB', 'HEAD'])
-    .split('\n').filter(Boolean).forEach((file) => files.add(file));
-  execGit(['ls-files', '--others', '--exclude-standard'])
-    .split('\n').filter(Boolean).forEach((file) => files.add(file));
-  return Array.from(files).filter((file) =>
-    !file.split(path.sep).includes('node_modules') && fs.existsSync(file) && ESLINT_FILE_EXTENSIONS.has(path.extname(file)));
-};
-
 const run = () => {
   const files = collectChangedFiles();
   if (files.length === 0) {

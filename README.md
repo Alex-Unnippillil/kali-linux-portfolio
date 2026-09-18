@@ -524,3 +524,10 @@ If a new embed fails to load:
 ## License
 
 See [LICENSE](LICENSE).
+
+### X public-profile showcase
+
+The desktop X app and `/apps/x` share a read-only, responsive feed for
+`@AUnnippillil`. Configure a fresh **server-only** `X_BEARER_TOKEN` in Vercel
+Production and Preview to enable live posts. Never put credentials in browser
+code or GitHub. See [setup, privacy, limits, and validation](docs/x-profile-showcase.md).

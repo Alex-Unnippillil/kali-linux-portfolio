@@ -822,7 +822,9 @@ const apps = [
     desktop_shortcut: true,
     screen: displayX,
     category: 'productivity',
-    responsiveWidth: { mobile: 95, desktop: 60 },
+    description: 'Read public posts, replies, and media from Alex Unnippillil on X.',
+    tags: ['twitter', 'social', 'posts', 'profile'],
+    responsiveWidth: { mobile: 95, desktop: 72 },
     responsiveHeight: { mobile: 85, desktop: 80 },
   },
   {

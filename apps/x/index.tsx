@@ -1,703 +1,757 @@
-'use client';
+"use client";
+import { useId, useMemo, useRef, useState, type SVGProps } from "react";
+import { useSettings } from "../../hooks/useSettings";
+import useXProfile from "../../hooks/useXProfile";
 import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  FormEvent,
-  KeyboardEvent,
-  type SVGProps,
-} from 'react';
-import DOMPurify from 'dompurify';
-import usePersistentState from '../../hooks/usePersistentState';
-import { useSettings } from '../../hooks/useSettings';
-import useScheduledTweets, {
-  ScheduledTweet,
-} from './state/scheduled';
-import {
-  getNextEmbedTheme,
-  type EmbedTheme,
-  useEmbedTheme,
-} from './state/theme';
-import { loadEmbedScript } from './embed';
+  filterXPosts,
+  postTextParts,
+  X_HANDLE,
+  X_PROFILE_URL,
+  xPostUrl,
+  type FeedIssue,
+  type PostFilter,
+  type XPost,
+} from "../../utils/x-profile";
+import styles from "./profile.module.css";
 
-const IconRefresh = (
-  props: SVGProps<SVGSVGElement>,
-) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <polyline points="23 4 23 10 17 10" />
-    <polyline points="1 20 1 14 7 14" />
-    <path d="M3.51 9a9 9 0 0 1 14.36-3.36L23 10M1 14l5.63 4.36A9 9 0 0 0 20.49 15" />
-  </svg>
-);
-
-const IconShare = (props: SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <polyline points="16 6 12 2 8 6" />
-    <line x1="12" y1="2" x2="12" y2="15" />
-    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
-  </svg>
-);
-
-const IconBadge = (props: SVGProps<SVGSVGElement>) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <circle cx="12" cy="12" r="10" />
-    <path d="M9 12l2 2 4-4" />
-  </svg>
-);
-
-const iconButtonClasses =
-  'inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--color-text)] transition-colors hover:bg-[var(--color-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]';
-
-const pillButtonClasses =
-  'inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]';
-
-const subtleButtonClasses =
-  'inline-flex items-center justify-center rounded-full px-3 py-1.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-accent)]';
-
-export default function XTimeline() {
-  const { accent } = useSettings();
-  const [profilePresets, setProfilePresets] = usePersistentState<string[]>(
-    'x-profile-presets',
-    () => ['AUnnippillil']
-  );
-  const [listPresets, setListPresets] = usePersistentState<string[]>(
-    'x-list-presets',
-    () => []
-  );
-  const [timelineType, setTimelineType] = usePersistentState<'profile' | 'list'>(
-    'x-timeline-type',
-    'profile'
-  );
-  const [profileFeed, setProfileFeed] = usePersistentState<string>(
-    'x-profile-feed',
-    () => profilePresets[0] || ''
-  );
-  const [listFeed, setListFeed] = usePersistentState<string>(
-    'x-list-feed',
-    () => listPresets[0] || ''
-  );
-  const presets = timelineType === 'profile' ? profilePresets : listPresets;
-  const setPresets = timelineType === 'profile' ? setProfilePresets : setListPresets;
-  const feed = timelineType === 'profile' ? profileFeed : listFeed;
-  const setFeed = timelineType === 'profile' ? setProfileFeed : setListFeed;
-
-  const [input, setInput] = useState('');
-  const [tweetText, setTweetText] = useState('');
-  const [tweetTime, setTweetTime] = useState('');
-  const [loaded, setLoaded] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [timelineLoaded, setTimelineLoaded] = useState(false);
-  const [scriptError, setScriptError] = useState(false);
-  const [systemTheme, setSystemTheme] = useState<EmbedTheme>('light');
-  const [hasManualTheme, setHasManualTheme] = useState(false);
-  const manualThemeRef = useRef(false);
-  const initialTheme: EmbedTheme =
-    typeof document !== 'undefined' &&
-    document.documentElement.classList.contains('dark')
-      ? 'dark'
-      : 'light';
-  const { theme, setTheme, toggleTheme } = useEmbedTheme(initialTheme);
-  const timelineRef = useRef<HTMLDivElement>(null);
-  const timeoutsRef = useRef<Record<string, number>>({});
-  const [scheduled, setScheduled] = useScheduledTweets();
-  const [showSetup, setShowSetup] = useState(true);
-  const isMountedRef = useRef(true);
-
-  useEffect(() => () => {
-    isMountedRef.current = false;
-  }, []);
-
-  useEffect(() => {
-    manualThemeRef.current = hasManualTheme;
-  }, [hasManualTheme]);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    const updateTheme = () => {
-      const next = root.classList.contains('dark') ? 'dark' : 'light';
-      setSystemTheme(next);
-      if (!manualThemeRef.current) {
-        setTheme(next);
-      }
-    };
-    updateTheme();
-    const observer = new MutationObserver(updateTheme);
-    observer.observe(root, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, [setTheme]);
-
-  useEffect(() => {
-    if (!hasManualTheme) {
-      setTheme((current) => (current === systemTheme ? current : systemTheme));
-    }
-  }, [hasManualTheme, setTheme, systemTheme]);
-
-  useEffect(() => {
-    if (hasManualTheme && theme === systemTheme) {
-      setHasManualTheme(false);
-    }
-  }, [hasManualTheme, systemTheme, theme]);
-
-  useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
-      'Notification' in window &&
-      Notification.permission === 'default'
-    ) {
-      Notification.requestPermission().catch(() => {});
-    }
-    const timeouts = timeoutsRef.current;
-    return () => {
-      Object.values(timeouts).forEach(clearTimeout);
-    };
-  }, []);
-
-  useEffect(() => {
-    scheduled.forEach((t) => {
-      if (!timeoutsRef.current[t.id]) {
-        const delay = t.time - Date.now();
-        if (delay > 0) {
-          timeoutsRef.current[t.id] = window.setTimeout(() => {
-            if (
-              'Notification' in window &&
-              Notification.permission === 'granted'
-            ) {
-              new Notification('Tweet reminder', { body: t.text });
-            }
-            setScheduled((prev) => prev.filter((s) => s.id !== t.id));
-            delete timeoutsRef.current[t.id];
-          }, delay);
-        }
-      }
-    });
-    Object.keys(timeoutsRef.current).forEach((id) => {
-      if (!scheduled.some((t) => t.id === id)) {
-        clearTimeout(timeoutsRef.current[id]);
-        delete timeoutsRef.current[id];
-      }
-    });
-  }, [scheduled, setScheduled]);
-
-  const loadTimeline = useCallback(async () => {
-    if (!feed || !timelineRef.current) return;
-    setLoading(true);
-    setScriptError(false);
-    setTimelineLoaded(false);
-    try {
-      const widgets = await loadEmbedScript();
-      if (!widgets) {
-        if (!isMountedRef.current) return;
-        setScriptError(true);
-        return;
-      }
-      if (!isMountedRef.current || !timelineRef.current) return;
-      timelineRef.current.innerHTML = '';
-      const options = {
-        chrome: 'noheader noborders',
-        theme,
-        linkColor: accent,
-      } as const;
-      const source =
-        timelineType === 'profile'
-          ? { sourceType: 'profile', screenName: feed }
-          : feed.includes('/')
-              ? {
-                  sourceType: 'list',
-                  ownerScreenName: feed.split('/')[0],
-                  slug: feed.split('/')[1],
-                }
-              : { sourceType: 'list', id: feed };
-      await widgets.createTimeline(source as any, timelineRef.current, options);
-      if (!isMountedRef.current) return;
-      setTimelineLoaded(true);
-    } catch (error) {
-      console.error('Failed to load X timeline', error);
-      if (!isMountedRef.current) return;
-      setScriptError(true);
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [accent, feed, theme, timelineType]);
-
-  useEffect(() => {
-    if (!loaded) return;
-    void loadTimeline();
-  }, [loaded, loadTimeline]);
-
-  const handleAddPreset = (e: FormEvent) => {
-    e.preventDefault();
-    let value = DOMPurify.sanitize(input.trim());
-    if (timelineType === 'profile') value = value.replace('@', '');
-    if (value) {
-      if (!presets.includes(value)) {
-        setPresets([...presets, value]);
-      }
-      setFeed(value);
-    }
-    setInput('');
+type IconName =
+  | "x"
+  | "refresh"
+  | "external"
+  | "search"
+  | "link"
+  | "reply"
+  | "repeat"
+  | "heart"
+  | "image"
+  | "clock"
+  | "arrow";
+function Icon({
+  name,
+  ...props
+}: SVGProps<SVGSVGElement> & { name: IconName }) {
+  const paths: Record<IconName, React.ReactNode> = {
+    x: (
+      <path
+        d="m18.9 2h3.3l-7.2 8.2L23.5 22h-6.7l-5.2-6.9L5.5 22H2.1l7.9-9L1.8 2h6.9l4.7 6.3L18.9 2Zm-1.2 18h1.8L7.7 3.9H5.8L17.7 20Z"
+        fill="currentColor"
+        stroke="none"
+      />
+    ),
+    refresh: (
+      <>
+        <path d="M20 7v5h-5M4 17v-5h5" />
+        <path d="M6.1 6a8 8 0 0 1 13.3 3M4.6 15a8 8 0 0 0 13.3 3" />
+      </>
+    ),
+    external: (
+      <>
+        <path d="M14 3h7v7M21 3 10 14" />
+        <path d="M10 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5" />
+      </>
+    ),
+    search: (
+      <>
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m16 16 5 5" />
+      </>
+    ),
+    link: (
+      <>
+        <path
+          d="m10 13 4-4M8 16l-2 2a4 4 0 0 1-6-6l5-5a4 4 0 0 1 6 0M16 8l2-2a4 4 0 0 1 6 6l-5 5a4 4 0 0 1-6 0"
+          transform="translate(1 0) scale(.9)"
+        />
+      </>
+    ),
+    reply: (
+      <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5Z" />
+    ),
+    repeat: (
+      <>
+        <path d="m17 2 4 4-4 4M3 11V8a2 2 0 0 1 2-2h16M7 22l-4-4 4-4M21 13v3a2 2 0 0 1-2 2H3" />
+      </>
+    ),
+    heart: (
+      <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z" />
+    ),
+    image: (
+      <>
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <circle cx="8" cy="8" r="1" />
+        <path d="m21 15-5-5L5 21" />
+      </>
+    ),
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </>
+    ),
+    arrow: (
+      <>
+        <path d="M4 12h16m-6-6 6 6-6 6" />
+      </>
+    ),
   };
-
-  const handleScheduleTweet = (e: FormEvent) => {
-    e.preventDefault();
-    if (!tweetText.trim() || !tweetTime) return;
-    const newTweet: ScheduledTweet = {
-      id: Date.now().toString(),
-      text: DOMPurify.sanitize(tweetText.trim()),
-      time: new Date(tweetTime).getTime(),
-    };
-    setScheduled([...scheduled, newTweet]);
-    setTweetText('');
-    setTweetTime('');
-  };
-
-  const removeScheduled = (id: string) => {
-    setScheduled(scheduled.filter((t) => t.id !== id));
-  };
-
-  const handleScheduledKey = (
-    e: KeyboardEvent<HTMLDivElement>,
-    id: string,
-  ) => {
-    if (e.key === 'Delete') {
-      removeScheduled(id);
-    } else if (e.key === 'ArrowDown') {
-      const next = (e.currentTarget.parentElement
-        ?.nextElementSibling as HTMLElement | null)?.querySelector(
-        '[data-scheduled-item]',
-      ) as HTMLElement | null;
-      next?.focus();
-      e.preventDefault();
-    } else if (e.key === 'ArrowUp') {
-      const prev = (e.currentTarget.parentElement
-        ?.previousElementSibling as HTMLElement | null)?.querySelector(
-        '[data-scheduled-item]',
-      ) as HTMLElement | null;
-      prev?.focus();
-      e.preventDefault();
-    }
-  };
-
   return (
-    <>
-      {showSetup && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          style={{
-            backgroundColor:
-              'color-mix(in srgb, var(--color-inverse) 50%, transparent)',
-          }}
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.65"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+      {...props}
+    >
+      {paths[name]}
+    </svg>
+  );
+}
+const count = (value: number) =>
+  new Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+const dateLabel = (value: string) =>
+  new Date(value).toLocaleDateString("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+const filters: { id: PostFilter; label: string }[] = [
+  { id: "posts", label: "Posts" },
+  { id: "replies", label: "Replies" },
+  { id: "media", label: "Media" },
+];
+
+function Avatar({ src, large = false }: { src?: string; large?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className={`${styles.avatar} ${large ? styles.avatarLarge : ""}`}>
+      {src && !failed ? (
+        <img
+          src={src}
+          alt=""
+          width={large ? 80 : 40}
+          height={large ? 80 : 40}
+          onError={() => setFailed(true)}
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <span aria-hidden="true">AU</span>
+      )}
+    </span>
+  );
+}
+function Media({ post }: { post: XPost }) {
+  const [revealed, setRevealed] = useState(!post.sensitive);
+  if (!post.media.length) return null;
+  if (!revealed)
+    return (
+      <div className={styles.sensitive}>
+        <Icon name="image" />
+        <p>This post may contain sensitive media.</p>
+        <button
+          type="button"
+          className={styles.secondary}
+          onClick={() => setRevealed(true)}
         >
-          <div
-            className="p-4 rounded max-w-sm text-sm"
-            style={{ backgroundColor: 'var(--color-surface)' }}
+          Show media
+        </button>
+      </div>
+    );
+  return (
+    <div className={styles.mediaGrid} data-count={post.media.length}>
+      {post.media.map((media) => (
+        <a
+          className={styles.media}
+          href={xPostUrl(post.id)}
+          key={media.key}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={
+            media.type === "photo" ? "View photo on X" : "Watch video on X"
+          }
+        >
+          <img
+            src={media.src}
+            alt={media.alt}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={(event) => {
+              event.currentTarget.style.display = "none";
+            }}
+          />
+          <span className={styles.mediaLabel}>
+            <Icon name={media.type === "photo" ? "image" : "external"} />
+            {media.type === "photo" ? "View on X" : "Watch on X"}
+          </span>
+        </a>
+      ))}
+    </div>
+  );
+}
+function PostCard({
+  post,
+  name,
+  avatar,
+  onCopy,
+}: {
+  post: XPost;
+  name: string;
+  avatar?: string;
+  onCopy: (url: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const long = post.text.length > 650;
+  const displayed =
+    long && !expanded ? { ...post, text: `${post.text.slice(0, 650)}…` } : post;
+  return (
+    <article
+      className={styles.post}
+      aria-label={`Post by ${name}${post.createdAt ? ` on ${dateLabel(post.createdAt)}` : ""}`}
+    >
+      <a
+        className={styles.postAvatar}
+        href={X_PROFILE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Visit @${X_HANDLE}`}
+      >
+        <Avatar key={avatar} src={avatar} />
+      </a>
+      <div className={styles.postBody}>
+        <div className={styles.postHeader}>
+          <a
+            href={X_PROFILE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.author}
           >
-            <p className="mb-2">
-              To use this app you need X API credentials: API key, API secret,
-              access token and access token secret.
-            </p>
-            <p className="mb-4">
-              You can explore with a demo account{' '}
+            {name}
+          </a>
+          <span className={styles.handle}>@{X_HANDLE}</span>
+          {post.createdAt && (
+            <a
+              className={styles.date}
+              href={xPostUrl(post.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <time dateTime={post.createdAt}>{dateLabel(post.createdAt)}</time>
+            </a>
+          )}
+          <Icon name="x" className={styles.postLogo} />
+        </div>
+        {post.replyTo && (
+          <a
+            className={styles.context}
+            href={xPostUrl(post.replyTo)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Icon name="reply" />
+            Reply · View conversation
+          </a>
+        )}
+        <p className={styles.postText} dir="auto">
+          {postTextParts(displayed).map((part, index) =>
+            part.href ? (
               <a
-                href="https://x.com/AUnnippillil"
+                key={index}
+                href={part.href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline"
               >
-                @AUnnippillil
+                {part.text}
               </a>
-              .
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowSetup(false)}
-              className="px-3 py-1 rounded text-[var(--color-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-              style={{ backgroundColor: accent }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-      <div className="flex flex-col h-full">
-        <header className="flex items-center justify-between px-3 py-2 border-b gap-2">
-          <button
-            type="button"
-            aria-label="Refresh timeline"
-            onClick={() => {
-              if (loaded) {
-                void loadTimeline();
-              }
-            }}
-            className={iconButtonClasses}
-          >
-            <IconRefresh className="w-6 h-6" />
-          </button>
-          <div className="flex-1 text-center text-sm font-semibold">
-            Timeline
-          </div>
-          <button
-            type="button"
-            aria-label="Open on x.com"
-            onClick={() => window.open(`https://x.com/${feed}`, '_blank')}
-            className={iconButtonClasses}
-          >
-            <IconShare className="w-6 h-6" />
-          </button>
-        </header>
-        <div className="flex-1 overflow-auto space-y-5 px-3 py-4">
-          <div
-            className="flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3 text-xs uppercase tracking-wide text-[var(--color-muted)]"
-            style={{
-              borderColor:
-                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
-              backgroundColor:
-                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-            }}
-          >
-            <span className="font-semibold text-[var(--color-text)]">
-              Timeline theme
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                setHasManualTheme(true);
-                toggleTheme();
-              }}
-              aria-pressed={theme === 'dark'}
-              className={pillButtonClasses}
-              style={{
-                backgroundColor: accent,
-                color: 'var(--color-text)',
-              }}
-            >
-              {`Switch to ${getNextEmbedTheme(theme)} mode`}
-            </button>
-            {hasManualTheme && (
-              <button
-                type="button"
-                onClick={() => {
-                  setHasManualTheme(false);
-                  setTheme(systemTheme);
-                }}
-                className={`${subtleButtonClasses} border`}
-                style={{
-                  color: 'var(--color-text)',
-                  borderColor:
-                    'color-mix(in srgb, var(--color-muted) 40%, transparent)',
-                }}
-              >
-                {`Use system (${systemTheme})`}
-              </button>
-            )}
-          </div>
-          <form
-            onSubmit={handleScheduleTweet}
-            className="space-y-3 rounded-xl border px-4 py-3"
-            style={{
-              borderColor:
-                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
-              backgroundColor:
-                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-            }}
-          >
-            <textarea
-              value={tweetText}
-              onChange={(e) => setTweetText(e.target.value)}
-              placeholder="Tweet text"
-              aria-label="Tweet text"
-              className="w-full rounded-xl border bg-transparent p-3 text-sm leading-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-            />
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <input
-                type="datetime-local"
-                value={tweetTime}
-                onChange={(e) => setTweetTime(e.target.value)}
-                aria-label="Schedule time"
-                className="flex-1 rounded-xl border bg-transparent p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-              />
-              <button
-                type="submit"
-                className={pillButtonClasses}
-                style={{ backgroundColor: accent, color: 'var(--color-text)' }}
-              >
-                Schedule
-              </button>
-            </div>
-          </form>
-          {scheduled.length > 0 && (
-            <ul
-              className="space-y-3 rounded-xl border px-4 py-3"
-              style={{
-                borderColor:
-                  'color-mix(in srgb, var(--color-muted) 35%, transparent)',
-                backgroundColor:
-                  'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-              }}
-            >
-              {scheduled.map((t) => (
-                <li key={t.id}>
-                  <div
-                    tabIndex={0}
-                    data-scheduled-item
-                    onKeyDown={(e) => handleScheduledKey(e, t.id)}
-                    className="flex items-start justify-between gap-3 rounded-xl border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-                    style={{
-                      borderColor:
-                        'color-mix(in srgb, var(--color-muted) 40%, transparent)',
-                    }}
-                  >
-                    <span className="leading-6">
-                      {t.text} - {new Date(t.time).toLocaleString()}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeScheduled(t.id)}
-                      className={`${subtleButtonClasses} ml-2 bg-[var(--color-muted)] text-[var(--color-text)]`}
-                    >
-                      ×
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            ) : (
+              part.text
+            ),
           )}
-        <div
-          className="flex flex-wrap gap-2 rounded-xl border px-4 py-3"
-          style={{
-            borderColor:
-              'color-mix(in srgb, var(--color-muted) 35%, transparent)',
-            backgroundColor:
-              'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-          }}
-        >
+        </p>
+        {long && (
           <button
             type="button"
-            onClick={() => setTimelineType('profile')}
-            className={`${pillButtonClasses} ${
-              timelineType === 'profile'
-                ? 'text-[var(--color-text)]'
-                : 'bg-[var(--color-muted)] text-[var(--color-text)]'
-            }`}
-            style={
-              timelineType === 'profile' ? { backgroundColor: accent } : undefined
-            }
+            className={styles.textButton}
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
           >
-            Profile
+            {expanded ? "Show less" : "Read full post"}
           </button>
-          <button
-            type="button"
-            onClick={() => setTimelineType('list')}
-            className={`${pillButtonClasses} ${
-              timelineType === 'list'
-                ? 'text-[var(--color-text)]'
-                : 'bg-[var(--color-muted)] text-[var(--color-text)]'
-            }`}
-            style={
-              timelineType === 'list' ? { backgroundColor: accent } : undefined
-            }
+        )}
+        {post.quoteId && (
+          <a
+            className={styles.quote}
+            href={xPostUrl(post.quoteId)}
+            target="_blank"
+            rel="noopener noreferrer"
           >
-            List
-          </button>
-        </div>
-        <form
-          onSubmit={handleAddPreset}
-          className="flex flex-col gap-2 rounded-xl border px-4 py-3 sm:flex-row"
-          style={{
-            borderColor:
-              'color-mix(in srgb, var(--color-muted) 35%, transparent)',
-            backgroundColor:
-              'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-          }}
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={
-              timelineType === 'profile'
-                ? 'Add screen name'
-                : 'Add list (owner/slug or id)'
-            }
-            aria-label={
-              timelineType === 'profile'
-                ? 'Add screen name'
-                : 'Add list (owner and slug or id)'
-            }
-            className="flex-1 rounded-xl border bg-transparent p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          />
-          <button
-            type="submit"
-            className={pillButtonClasses}
-            style={{ backgroundColor: accent, color: 'var(--color-text)' }}
-          >
-            Save
-          </button>
-        </form>
-        {presets.length > 0 && (
-          <div
-            className="flex flex-wrap gap-2 rounded-xl border px-4 py-3"
-            style={{
-              borderColor:
-                'color-mix(in srgb, var(--color-muted) 35%, transparent)',
-              backgroundColor:
-                'color-mix(in srgb, var(--color-surface) 85%, transparent)',
-            }}
-          >
-            {presets.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => {
-                  setFeed(p);
-                }}
-                className={`${pillButtonClasses} ${
-                  feed === p
-                    ? 'text-[var(--color-text)]'
-                    : 'bg-[var(--color-muted)] text-[var(--color-text)]'
-                }`}
-                style={feed === p ? { backgroundColor: accent } : undefined}
-              >
-                {timelineType === 'profile' ? `@${p}` : p}
-              </button>
-            ))}
+            View quoted post on X <Icon name="external" />
+          </a>
+        )}
+        <Media post={post} />
+        <div className={styles.postFooter}>
+          <div className={styles.metrics} aria-label="Public engagement counts">
+            {(
+              [
+                ["replies", "reply", "replies"],
+                ["reposts", "repeat", "reposts"],
+                ["likes", "heart", "likes"],
+              ] as const
+            ).map(
+              ([metric, icon, label]) =>
+                post.metrics[metric] !== undefined && (
+                  <span
+                    key={metric}
+                    aria-label={`${post.metrics[metric]} ${label}`}
+                    title={`${post.metrics[metric]} ${label}`}
+                  >
+                    <Icon name={icon} />
+                    {count(post.metrics[metric]!)}
+                  </span>
+                ),
+            )}
           </div>
-        )}
-        {!loaded ? (
           <button
             type="button"
-            onClick={() => {
-              setLoaded(true);
-              void loadTimeline();
-            }}
-            className={`${pillButtonClasses} mx-auto`}
-            style={{ backgroundColor: accent, color: 'var(--color-text)' }}
+            className={styles.iconButton}
+            aria-label="Copy post link"
+            onClick={() => onCopy(xPostUrl(post.id))}
           >
-            Load timeline
+            <Icon name="link" />
           </button>
-        ) : (
-          <>
-            {loading && !timelineLoaded && !scriptError && (
-              <ul className="tweet-feed space-y-3" aria-hidden="true">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <li
-                    key={i}
-                    className="flex gap-3 rounded-2xl border px-4 py-3"
-                    style={{
-                      borderColor:
-                        'color-mix(in srgb, var(--color-muted) 40%, transparent)',
-                      backgroundColor:
-                        'color-mix(in srgb, var(--color-surface) 92%, transparent)',
-                    }}
-                  >
-                    <div className="relative">
-                      <div className="h-12 w-12 rounded-full bg-[var(--color-muted)] animate-pulse sm:h-14 sm:w-14" />
-                      <IconBadge className="absolute -bottom-1 -right-1 h-4 w-4 text-[var(--color-muted)]" />
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <div className="h-3 w-3/4 rounded bg-[var(--color-muted)] animate-pulse" />
-                      <div className="h-3 w-1/2 rounded bg-[var(--color-muted)] animate-pulse" />
-                      <div className="h-3 w-full rounded bg-[var(--color-muted)] animate-pulse" />
-                    </div>
-                    <IconShare className="h-5 w-5 text-[var(--color-muted)]" />
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div
-              ref={timelineRef}
-              className={`tweet-feed ${timelineLoaded ? 'block' : 'hidden'}`}
-            />
-            {scriptError && (
-              <div className="text-center space-y-2">
-                <div>
-                  Timeline failed to load. X embeds may be blocked by your browser
-                  or an ad blocker.
-                </div>
-                <div className="flex justify-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!loaded) {
-                        setLoaded(true);
-                        return;
-                      }
-                      void loadTimeline();
-                    }}
-                    className={pillButtonClasses}
-                    style={{
-                      backgroundColor: accent,
-                      color: 'var(--color-text)',
-                    }}
-                  >
-                    Retry
-                  </button>
-                  <a
-                    href={`https://x.com/${feed}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                    style={{ color: accent }}
-                  >
-                    Open on x.com
-                  </a>
-                </div>
-              </div>
-            )}
-            {!loading && !timelineLoaded && !scriptError && (
-              <div className="text-center text-[var(--color-muted)]">Nothing to see</div>
-            )}
-          </>
-        )}
+          <a
+            className={styles.openPost}
+            href={xPostUrl(post.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open post <Icon name="external" />
+          </a>
         </div>
       </div>
-      <style jsx>{`
-        .tweet-feed {
-          max-inline-size: 60ch;
-          margin-inline: auto;
-          width: 100%;
-        }
-        .tweet-feed :global(.twitter-timeline) {
-          margin-block: 1.5rem;
-          border-radius: 1.25rem;
-          overflow: hidden;
-          border: 1px solid
-            color-mix(in srgb, var(--color-muted) 35%, transparent);
-          background-color: color-mix(
-            in srgb,
-            var(--color-surface) 92%,
-            transparent
-          );
-        }
-        .tweet-feed :global(iframe) {
-          border: 0;
-        }
-      `}</style>
-    </>
+    </article>
+  );
+}
+const issueCopy: Record<FeedIssue, [string, string]> = {
+  not_configured: [
+    "The profile feed is not connected yet",
+    "The site owner needs to finish the server connection. No X account or API key is needed from visitors.",
+  ],
+  unavailable: [
+    "Posts are temporarily unavailable",
+    "The X connection could not be completed. The public profile is still available on X.",
+  ],
+  rate_limited: [
+    "The feed is taking a break",
+    "X has reached an API usage or rate limit. Please try again later, or view the profile directly.",
+  ],
+  timeout: [
+    "X is taking longer than expected",
+    "The request timed out safely. Try again, or continue to the public profile.",
+  ],
+  invalid_cursor: [
+    "This page has expired",
+    "Refresh the feed to get a new link to older posts.",
+  ],
+  offline: [
+    "External connections are paused",
+    "Enable network access to load public posts and images from X. Your browser never receives the account credentials.",
+  ],
+  static_export: [
+    "View the latest posts on X",
+    "This offline edition does not run the server connection. Open the public profile for the live timeline.",
+  ],
+};
+
+export default function XProfileApp() {
+  const { allowNetwork, setAllowNetwork } = useSettings();
+  const { feed, issue, busy, refresh, loadMore } = useXProfile(allowNetwork);
+  const [filter, setFilter] = useState<PostFilter>("posts");
+  const [query, setQuery] = useState("");
+  const [announcement, setAnnouncement] = useState("");
+  const searchId = useId();
+  const content = useRef<HTMLDivElement>(null);
+  const profile = feed?.profile;
+  const name = profile?.name || "Alex Unnippillil";
+  const posts = useMemo(
+    () => filterXPosts(feed?.posts || [], filter, query),
+    [feed, filter, query],
+  );
+  const visibleIssue = allowNetwork ? issue : "offline";
+  const copyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setAnnouncement("Link copied.");
+    } catch {
+      setAnnouncement("Copy is unavailable. Use the Open on X link instead.");
+    }
+  };
+  return (
+    <div className={styles.app} data-testid="x-profile-app">
+      <header className={styles.toolbar}>
+        <div className={styles.brand}>
+          <Icon name="x" width="25" height="25" />
+          <div>
+            <strong>Alex on X</strong>
+            <span>Profile showcase</span>
+          </div>
+        </div>
+        <span className={styles.readOnly}>Read-only</span>
+        <button
+          type="button"
+          className={styles.iconButton}
+          disabled={
+            Boolean(busy) ||
+            !allowNetwork ||
+            process.env.NEXT_PUBLIC_STATIC_EXPORT === "true"
+          }
+          onClick={() => {
+            void refresh();
+          }}
+          aria-label="Refresh posts"
+        >
+          <Icon name="refresh" className={busy ? styles.spinning : undefined} />
+        </button>
+        <a
+          className={styles.toolbarLink}
+          href={X_PROFILE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Open profile on X"
+        >
+          <span>Open on X</span>
+          <Icon name="external" />
+        </a>
+      </header>
+      <div
+        className={styles.scroll}
+        ref={content}
+        data-testid="x-profile-scroll"
+      >
+        <div className={styles.layout}>
+          <main className={styles.timeline} aria-label="X profile timeline">
+            <section className={styles.profile} aria-label="Profile details">
+              <div className={styles.banner}>
+                {profile?.banner ? (
+                  <img
+                    src={profile.banner}
+                    alt=""
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <>
+                    <span className={styles.bannerGrid} />
+                    <span className={styles.bannerTag}>FROM THE DESKTOP</span>
+                    <Icon name="x" className={styles.bannerLogo} />
+                  </>
+                )}
+              </div>
+              <div className={styles.profileBody}>
+                <div className={styles.profileActions}>
+                  <Avatar key={profile?.avatar} src={profile?.avatar} large />
+                  <a
+                    className={styles.primary}
+                    href={X_PROFILE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Visit profile <Icon name="arrow" />
+                  </a>
+                </div>
+                <h1>{name}</h1>
+                <p className={styles.profileHandle}>@{X_HANDLE}</p>
+                <p className={styles.bio}>
+                  {profile
+                    ? profile.description ||
+                      "Public posts from Alex’s X profile."
+                    : "Posts, conversations, and updates from my corner of X."}
+                </p>
+                {(profile?.location || profile?.joined || profile?.website) && (
+                  <div className={styles.profileMeta}>
+                    {profile.location && <span>{profile.location}</span>}
+                    {profile.website && (
+                      <a
+                        href={profile.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <Icon name="link" />
+                        {new URL(profile.website).hostname}
+                      </a>
+                    )}
+                    {profile.joined && (
+                      <span>
+                        <Icon name="clock" />
+                        Joined{" "}
+                        {new Date(profile.joined).toLocaleDateString("en", {
+                          month: "long",
+                          year: "numeric",
+                          timeZone: "UTC",
+                        })}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {profile && (
+                  <div className={styles.profileCounts}>
+                    {profile.following !== undefined && (
+                      <span>
+                        <strong>{count(profile.following)}</strong> Following
+                      </span>
+                    )}
+                    {profile.followers !== undefined && (
+                      <span>
+                        <strong>{count(profile.followers)}</strong> Followers
+                      </span>
+                    )}
+                    {profile.posts !== undefined && (
+                      <span>
+                        <strong>{count(profile.posts)}</strong> Posts
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
+            <nav className={styles.tabs} aria-label="Post filters">
+              {filters.map((item) => (
+                <button
+                  type="button"
+                  key={item.id}
+                  aria-pressed={filter === item.id}
+                  onClick={() => setFilter(item.id)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </nav>
+            <div className={styles.feedTools}>
+              <label className={styles.search} htmlFor={searchId}>
+                <Icon name="search" />
+                <input
+                  type="search"
+                  id={searchId}
+                  aria-label="Search loaded posts"
+                  placeholder="Search this profile"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  maxLength={200}
+                />
+              </label>
+              <span className={styles.loadedCount}>
+                {feed
+                  ? `${posts.length} shown · ${feed.posts.length} loaded`
+                  : "Public posts only"}
+              </span>
+            </div>
+            <div className={styles.feed} aria-busy={Boolean(busy)}>
+              {visibleIssue && (
+                <section className={styles.empty} role="status">
+                  <div className={styles.emptyIcon}>
+                    <Icon name="x" width="30" height="30" />
+                  </div>
+                  <h2>{issueCopy[visibleIssue][0]}</h2>
+                  <p>{issueCopy[visibleIssue][1]}</p>
+                  <div className={styles.emptyActions}>
+                    {visibleIssue === "offline" ? (
+                      <button
+                        type="button"
+                        className={styles.primary}
+                        onClick={() => setAllowNetwork(true)}
+                      >
+                        Enable network
+                      </button>
+                    ) : (
+                      visibleIssue !== "static_export" && (
+                        <button
+                          type="button"
+                          className={styles.secondary}
+                          disabled={Boolean(busy)}
+                          onClick={() => {
+                            void (issue === "invalid_cursor" || !feed
+                              ? refresh()
+                              : loadMore());
+                          }}
+                        >
+                          Try again
+                        </button>
+                      )
+                    )}
+                    <a
+                      className={styles.secondary}
+                      href={X_PROFILE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View on X <Icon name="external" />
+                    </a>
+                  </div>
+                  {visibleIssue === "not_configured" && (
+                    <details className={styles.ownerHelp}>
+                      <summary>Setup for the site owner</summary>
+                      <p>
+                        Add a server-only <code>X_BEARER_TOKEN</code> in
+                        Vercel’s environment settings, then redeploy. Never put
+                        it in a <code>NEXT_PUBLIC_</code> variable. Visitors do
+                        not need credentials.
+                      </p>
+                    </details>
+                  )}
+                </section>
+              )}
+              {busy === "initial" && !feed && (
+                <div
+                  className={styles.skeletons}
+                  role="status"
+                  aria-label="Loading posts"
+                >
+                  {[1, 2, 3].map((value) => (
+                    <div
+                      className={styles.skeleton}
+                      key={value}
+                      aria-hidden="true"
+                    >
+                      <i />
+                      <div>
+                        <span />
+                        <span />
+                        <span />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  name={name}
+                  avatar={profile?.avatar}
+                  onCopy={(url) => {
+                    void copyLink(url);
+                  }}
+                />
+              ))}
+              {feed && !posts.length && !busy && !visibleIssue && (
+                <div className={styles.empty}>
+                  <Icon
+                    name={filter === "media" ? "image" : "search"}
+                    width="30"
+                    height="30"
+                  />
+                  <h2>
+                    {query
+                      ? "No matching posts"
+                      : filter === "replies"
+                        ? "No replies in this selection"
+                        : filter === "media"
+                          ? "No media in this selection"
+                          : "No public posts to show"}
+                  </h2>
+                  <p>
+                    {query
+                      ? "Search covers the posts loaded here, not the whole X archive."
+                      : "Load older posts when available, or see the full profile on X."}
+                  </p>
+                  {query && (
+                    <button
+                      type="button"
+                      className={styles.secondary}
+                      onClick={() => setQuery("")}
+                    >
+                      Clear search
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            {feed && (
+              <footer className={styles.feedFooter}>
+                {feed.nextCursor && (
+                  <button
+                    type="button"
+                    disabled={Boolean(busy)}
+                    className={styles.secondary}
+                    onClick={() => {
+                      void loadMore();
+                    }}
+                  >
+                    {busy === "more"
+                      ? "Loading older posts…"
+                      : "Load older posts"}
+                  </button>
+                )}
+                <p>
+                  {feed.limitReached ? "Showing up to 100 recent posts. " : ""}
+                  Updated {dateLabel(feed.fetchedAt)} · Cached for up to 15
+                  minutes.
+                </p>
+                <a
+                  href={X_PROFILE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  See the full timeline on X <Icon name="arrow" />
+                </a>
+              </footer>
+            )}
+          </main>
+          <aside className={styles.sidebar} aria-label="About this X showcase">
+            <section className={styles.sideCard}>
+              <span className={styles.eyebrow}>ONE PROFILE. LESS NOISE.</span>
+              <h2>
+                A window into
+                <br />
+                what I’m sharing.
+              </h2>
+              <p>
+                Browse public posts from @{X_HANDLE} without leaving the
+                desktop.
+              </p>
+              <a
+                className={styles.sideLink}
+                href={X_PROFILE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Explore on X <Icon name="arrow" />
+              </a>
+            </section>
+            <section className={styles.sideCard}>
+              <h3>Made for reading</h3>
+              <p>
+                This is a read-only portfolio app, not an X login. Replies,
+                reposts, and likes happen on X—not in your browser session here.
+              </p>
+              <div className={styles.connection}>
+                <span data-connected={Boolean(feed)} />
+                {feed
+                  ? "Connected through X API"
+                  : allowNetwork && busy
+                    ? "Connecting to X"
+                    : "Profile connection pending"}
+              </div>
+            </section>
+            <p className={styles.disclaimer}>
+              Posts and counts come from X when connected. Reposts are excluded.
+              No generated or sample posts appear in this feed.
+            </p>
+          </aside>
+        </div>
+      </div>
+      <span className={styles.srOnly} aria-live="polite" aria-atomic="true">
+        {announcement}
+      </span>
+    </div>
   );
 }
