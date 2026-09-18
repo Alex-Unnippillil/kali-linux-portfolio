@@ -2,7 +2,7 @@ name: Stage tested release polish
 on:
   push:
     branches: [qa/deployed-kali-2026-09-17]
-    paths: [qa/window-controls.b64, .github/workflows/release-polish-candidate.yml]
+    paths: [qa/scroll-layout.b64, .github/workflows/release-polish-candidate.yml]
 permissions:
   contents: write
 jobs:
@@ -16,38 +16,29 @@ jobs:
           persist-credentials: false
       - uses: actions/checkout@v4
         with:
-          ref: 72a354bb68bfe013d53f6439e560583877265730
+          ref: e774c02ad98d3acb55c83322ea42f0d26b2acf7f
           path: source
-      - name: Verify tested control regressions and exact patch
+      - name: Verify exact reviewed scroll-layout patch
         run: |
           python3 - <<'PY'
-          import base64, difflib, hashlib, lzma, pathlib, subprocess
-          raw = lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/window-controls.b64').read_text()))
-          assert hashlib.sha256(raw).hexdigest() == '903411127e388b1c50c8880ea2a18ab2c1ead8cc7d44d4af238c43eba1fd5b25'
+          import base64, hashlib, lzma, pathlib, subprocess
+          raw = lzma.decompress(base64.b64decode(pathlib.Path('payload/qa/scroll-layout.b64').read_text()))
+          assert hashlib.sha256(raw).hexdigest() == 'a3602bc195a8b518f6456c81aaeba4cd6a232f8f9b245fd0e2c6fa3bc52e325e'
           pathlib.Path('/tmp/release.patch').write_bytes(raw)
-          assert subprocess.check_output(['git', '-C', 'source', 'rev-parse', 'HEAD']).decode().strip() == '72a354bb68bfe013d53f6439e560583877265730'
-          allowed = {'components/base/window.js', '__tests__/window-controls-activation.test.tsx'}
+          assert subprocess.check_output(['git', '-C', 'source', 'rev-parse', 'HEAD']).decode().strip() == 'e774c02ad98d3acb55c83322ea42f0d26b2acf7f'
+          allowed = {'styles/index.css', 'components/base/window.module.css', 'components/apps/youtube/index.tsx', 'components/apps/youtube/youtube.module.css', 'tests/portfolio/youtube-responsive.spec.ts', 'utils/scrollWithinContainer.ts', '__tests__/scroll-within-container.test.ts'}
           paths = {line.split('\t')[-1] for line in subprocess.check_output(['git', '-C', 'source', 'apply', '--numstat', '/tmp/release.patch']).decode().splitlines()}
           assert paths == allowed
           subprocess.run(['git', '-C', 'source', 'apply', '--check', '/tmp/release.patch'], check=True)
           subprocess.run(['git', '-C', 'source', 'apply', '/tmp/release.patch'], check=True)
-          p = pathlib.Path('source/components/base/window.js')
-          old = subprocess.check_output(['git', '-C', 'source', 'show', 'HEAD:components/base/window.js']).decode().splitlines(keepends=True)
-          new = p.read_text().splitlines(keepends=True)
-          out = []
-          for tag,a,b,c,d in difflib.SequenceMatcher(a=[x.rstrip('\r\n') for x in old],b=[x.rstrip('\r\n') for x in new],autojunk=False).get_opcodes():
-              out.extend(old[a:b] if tag == 'equal' else new[c:d])
-          p.write_bytes(''.join(out).encode())
-          assert hashlib.sha256(p.read_bytes()).hexdigest() == '145890a3251c018d8a577d4969e4d5636b957f1fce315f261d8d205d4e86ef35'
-          assert hashlib.sha256(pathlib.Path('source/__tests__/window-controls-activation.test.tsx').read_bytes()).hexdigest() == '5b5ec9ded458502d1c1f8cfd202af28a00701745ee771c8c87ecedaeddf05551'
           PY
-      - name: Stage native activation fix without changing main
+      - name: Stage scroll containment fix without changing main
         working-directory: source
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add --all
           git diff --cached --check
-          git commit -m 'fix(windows): use native button activation without double-toggling maximize' -m 'Three newly reproduced regressions now pass: pointerup must not act before click; focus changes must not double-activate; control double-click must not reach the title bar. All 37 window and compact-window tests pass locally.'
-          git push origin HEAD:refs/heads/qa/window-controls-9034111
+          git commit -m 'fix(layout): contain app scrolling and remove legacy full-window blur' -m 'Give app hosts a definite remaining flex height, prevent programmatic scrolling of window chrome, and scroll only the YouTube content panel. Add layout geometry assertions and three local-scroll regressions. Preserve context-menu glass and all release gates.'
+          git push origin HEAD:refs/heads/qa/scroll-layout-a3602bc
           git rev-parse HEAD
