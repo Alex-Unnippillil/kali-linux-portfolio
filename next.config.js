@@ -129,6 +129,13 @@ const startUrlRuntimeCaching = {
 };
 
 const runtimeCaching = [
+  // Profile posts may be deleted or protected. Do not persist X API results
+  // (or configuration failures) in the visitor's service-worker cache.
+  {
+    urlPattern: ({ sameOrigin, url }) => sameOrigin && /\/api\/x\/profile\/?$/.test(url.pathname),
+    handler: 'NetworkOnly',
+    method: 'GET',
+  },
   startUrlRuntimeCaching,
   ...defaultRuntimeCaching.map((entry) => ({
     ...entry,
