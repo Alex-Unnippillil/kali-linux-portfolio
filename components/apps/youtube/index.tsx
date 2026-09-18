@@ -106,8 +106,10 @@ export default function YouTubeApp({ channelId }: { channelId?: string }) {
     videoId: video.id, title: video.title, thumbnail: video.thumbnail, description: '', publishedAt: '', position,
   }), [saved, allVideos]);
   const selectedPlaylist = directory?.playlists.find((playlist) => playlist.id === playlistId);
-  const sourceVideos = view === 'saved' ? savedVideos : playlistId === ALL_PLAYLIST_ID ? allVideos : pages[playlistId]?.items ?? [];
-  const sortedVideos = useMemo(() => sortPlaylistVideos(sourceVideos, sort), [sourceVideos, sort]);
+  const sortedVideos = useMemo(() => {
+    const source = view === 'saved' ? savedVideos : playlistId === ALL_PLAYLIST_ID ? allVideos : pages[playlistId]?.items ?? [];
+    return sortPlaylistVideos(source, sort);
+  }, [view, savedVideos, playlistId, allVideos, pages, sort]);
   const visibleVideos = useMemo(() => filterPlaylistVideos(sortedVideos, query), [sortedVideos, query]);
   const sections = useMemo(() => {
     if (!directory) return [];
@@ -155,9 +157,9 @@ export default function YouTubeApp({ channelId }: { channelId?: string }) {
     if (!playing) return;
     const url = watchUrl(playing.videoId);
     try {
-      if (navigator.share) await navigator.share({ title: playing.title, url });
-      else if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(url);
+      if (window.navigator.share) await window.navigator.share({ title: playing.title, url });
+      else if (window.navigator.clipboard?.writeText) {
+        await window.navigator.clipboard.writeText(url);
         setAnnouncement('Video link copied.');
       } else setAnnouncement('Use Open on YouTube to copy the video link from your browser.');
     } catch (error) {

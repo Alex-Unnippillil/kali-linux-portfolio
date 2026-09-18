@@ -44,8 +44,9 @@ export default function useYouTubeLibrary(channelId: string, allowNetwork: boole
   useEffect(() => {
     const epoch = ++generation.current;
     const controller = new AbortController();
-    controllers.current.forEach((request) => request.abort());
-    controllers.current.clear();
+    const requests = controllers.current;
+    requests.forEach((request) => request.abort());
+    requests.clear();
     allRequest.current = false;
     pageCache.current = {};
     setPages({});
@@ -85,8 +86,8 @@ export default function useYouTubeLibrary(channelId: string, allowNetwork: boole
     return () => {
       ++generation.current;
       controller.abort();
-      controllers.current.forEach((request) => request.abort());
-      controllers.current.clear();
+      requests.forEach((request) => request.abort());
+      requests.clear();
     };
   }, [channelId, allowNetwork, revision]);
 

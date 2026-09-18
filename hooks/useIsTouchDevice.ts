@@ -8,7 +8,7 @@ export default function useIsTouchDevice() {
   useEffect(() => {
     const coarse = window.matchMedia?.('(any-pointer: coarse)');
     const primary = window.matchMedia?.('(pointer: coarse)');
-    const update = () => setIsTouch(Boolean(coarse?.matches || primary?.matches || navigator.maxTouchPoints > 0));
+    const update = () => setIsTouch(Boolean(coarse?.matches || primary?.matches || window.navigator.maxTouchPoints > 0));
     const pointer = (event: PointerEvent) => {
       if (event.pointerType === 'touch') setIsTouch(true);
     };
