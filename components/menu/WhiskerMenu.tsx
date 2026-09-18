@@ -356,12 +356,10 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
   }, [isOpen, isVisible]);
 
   const showMenu = useCallback(() => {
+    // Open atomically. A delayed frame can lose a race with the exit timer,
+    // leaving an invisible, focusable menu that disappears during selection.
     setIsVisible(true);
-    if (process.env.NODE_ENV === 'test') {
-      setIsOpen(true);
-      return;
-    }
-    requestAnimationFrame(() => setIsOpen(true));
+    setIsOpen(true);
   }, [setIsOpen]);
 
   const hideMenu = useCallback(() => {
@@ -533,6 +531,8 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
         type="button"
         onClick={toggleMenu}
         aria-keyshortcuts="Meta Alt+F1"
+        aria-expanded={isOpen}
+        aria-controls={isVisible ? 'desktop-applications-menu' : undefined}
         aria-label="Applications menu"
         className="group relative flex h-8 items-center justify-center gap-2 rounded-lg px-2.5 outline-none transition-all duration-200 ease-out hover:bg-white/8 focus-visible:ring-2 focus-visible:ring-cyan-400/60 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-950 sm:px-3"
         tabIndex={isOpen ? -1 : 0}
@@ -554,16 +554,12 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
       {isVisible && (
         <div
           ref={menuRef}
+          id="desktop-applications-menu"
           data-testid="whisker-menu-dropdown"
           className={`fixed z-[260] flex h-[500px] max-h-[85vh] w-[min(94vw,720px)] flex-row overflow-hidden rounded-2xl border border-white/[0.08] bg-[#0a1018] text-white shadow-[0_32px_96px_-12px_rgba(0,0,0,0.7),0_0_0_1px_rgba(255,255,255,0.05),inset_0_1px_0_rgba(255,255,255,0.05)] backdrop-blur-2xl transition-all ease-out sm:absolute sm:top-full sm:left-0 sm:mt-2 sm:max-h-[520px] ${isOpen ? 'opacity-100 translate-y-0 scale-100' : 'pointer-events-none opacity-0 -translate-y-4 scale-[0.96]'
             }`}
           style={{ ...menuStyle, transitionDuration: `${TRANSITION_DURATION}ms` }}
           tabIndex={-1}
-          onBlur={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-              hideMenu();
-            }
-          }}
         >
           <div className="order-2 flex flex-1 flex-col bg-transparent">
             <div className="border-b border-white/[0.06] px-4 py-4 sm:px-5">
@@ -720,7 +716,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
                       alt=""
                       width={20}
                       height={20}
-                      className={`h-5 w-5 transition-all duration-200 ${category === cat.id ? 'opacity-100 drop-shadow-[0_0_6px_rgba(34,211,238,0.5)]' : 'opacity-70 group-hover/cat:opacity-100'}`}
+                      className={`h-5 w-5 transition-transform duration-200 ${category === cat.id ? 'opacity-100 drop-shadow-[0_0_6px_rgba(34,211,238,0.5)]' : 'opacity-70 group-hover/cat:opacity-100'}`}
                       sizes="20px"
                     />
                   </span>

@@ -1,177 +1,317 @@
-import '@testing-library/jest-dom';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import React from "react";
+import "@testing-library/jest-dom";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import YouTubeApp from "../components/apps/youtube";
 
-let YouTubeApp: (typeof import('../components/apps/youtube'))['default'];
+let mockAllowNetwork = true;
+const mockSetAllowNetwork = jest.fn();
+jest.mock("../hooks/useSettings", () => ({
+  useSettings: () => ({
+    allowNetwork: mockAllowNetwork,
+    setAllowNetwork: mockSetAllowNetwork,
+  }),
+}));
+jest.mock("../components/EmbedFrame", () => ({
+  __esModule: true,
+  default: ({ src, title }: { src: string; title: string }) => (
+    <iframe src={src} title={title} />
+  ),
+}));
 
-describe('YouTubeApp', () => {
-  beforeAll(async () => {
-    process.env.NEXT_PUBLIC_YOUTUBE_API_KEY = 'test-key';
-    ({ default: YouTubeApp } = await import('../components/apps/youtube'));
+const playlists = [
+  {
+    id: "PL_LABS",
+    title: "Lab Playlist",
+    description: "Lab desc",
+    thumbnail: "",
+    itemCount: 3,
+    publishedAt: "",
+    privacyStatus: "public",
+  },
+  {
+    id: "PL_TUTORIALS",
+    title: "Tutorial Playlist",
+    description: "Tutorial desc",
+    thumbnail: "",
+    itemCount: 2,
+    publishedAt: "",
+    privacyStatus: "public",
+  },
+];
+const directory = {
+  summary: {
+    id: "UCxPIJ3hw6AOwomUWh5B7SfQ",
+    title: "Alex Unnippillil",
+    thumbnail: "",
+  },
+  directory: {
+    playlists,
+    sections: [
+      {
+        sectionId: "a",
+        sectionTitle: "Alpha Tutorials",
+        playlists: [playlists[1]],
+      },
+      { sectionId: "all", sectionTitle: "Playlists", playlists },
+      {
+        sectionId: "z",
+        sectionTitle: "Zeta Guides",
+        playlists: [playlists[0]],
+      },
+    ],
+  },
+};
+const video = (videoId: string, title = videoId) => ({
+  videoId,
+  title,
+  description: "A playlist video",
+  thumbnail: "",
+  publishedAt: "2026-01-01",
+  position: 0,
+});
+const response = (payload: unknown, status = 200) =>
+  new Response(JSON.stringify(payload), { status });
+let fetchMock: jest.SpyInstance;
+beforeEach(() => {
+  mockAllowNetwork = true;
+  mockSetAllowNetwork.mockClear();
+  localStorage.clear();
+  fetchMock = jest.spyOn(global, "fetch").mockImplementation(async (input) => {
+    const url = new URL(String(input), "http://localhost");
+    if (url.pathname.endsWith("/directory")) return response(directory);
+    const lab = url.searchParams.get("playlistId") === "PL_LABS";
+    return response({
+      items: [
+        video(
+          lab ? "lab-video01" : "tutorial001",
+          lab ? "First Lab Video" : "First Tutorial Video",
+        ),
+      ],
+    });
   });
+});
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
-  beforeEach(() => {
-    jest.restoreAllMocks();
+test("embeds the first curated video and preserves it while browsing and searching", async () => {
+  render(<YouTubeApp />);
+  const frame = await screen.findByTitle("YouTube player for First Lab Video");
+  expect(frame).toHaveAttribute(
+    "src",
+    "https://www.youtube-nocookie.com/embed/lab-video01?playsinline=1",
+  );
+  expect(frame.getAttribute("src")).not.toContain("autoplay=1");
+  expect(
+    screen.getByRole("heading", { name: "First Lab Video" }),
+  ).not.toHaveFocus();
+  const categories = screen.getByRole("navigation", {
+    name: "Collection categories",
   });
+  expect(
+    within(categories).getByRole("button", { name: "Alpha Tutorials" }),
+  ).toBeInTheDocument();
+  expect(
+    within(categories).getByRole("button", { name: "Zeta Guides" }),
+  ).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Open playlist Tutorial Playlist" }),
+  );
+  expect(screen.getByTitle("YouTube player for First Lab Video")).toBe(frame);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Watch First Tutorial Video" }),
+  );
+  const nextFrame = screen.getByTitle(
+    "YouTube player for First Tutorial Video",
+  );
+  expect(
+    screen.getByRole("heading", { name: "First Tutorial Video" }),
+  ).toHaveFocus();
+  fireEvent.change(screen.getByRole("searchbox"), {
+    target: { value: "no match" },
+  });
+  expect(screen.getByTitle("YouTube player for First Tutorial Video")).toBe(
+    nextFrame,
+  );
+  expect(screen.getByText(/selected video stays ready/)).toBeInTheDocument();
+});
 
-  it('renders channel playlists and loads playlist videos', async () => {
-    const fetchMock = jest
-      .spyOn(global, 'fetch')
-      .mockImplementation(async (input: RequestInfo | URL) => {
-        const url = typeof input === 'string' ? input : input.toString();
-        const asUrl = (() => {
-          try {
-            return new URL(url);
-          } catch {
-            return new URL(url, 'http://localhost');
+test("combined feed advances each playlist cursor and removes duplicate videos", async () => {
+  fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+    const url = new URL(String(input), "http://localhost");
+    if (url.pathname.endsWith("/directory")) return response(directory);
+    const lab = url.searchParams.get("playlistId") === "PL_LABS";
+    const pageToken = url.searchParams.get("pageToken");
+    return response(
+      pageToken
+        ? {
+            items: [
+              video("shared00001", "Shared video"),
+              video(
+                lab ? "lab-second1" : "tutorial002",
+                lab ? "Second lab" : "Second tutorial",
+              ),
+            ],
           }
-        })();
-
-        if (url.includes('/api/youtube/directory')) {
-          return new Response(
-            JSON.stringify({
-              summary: {
-                id: 'UCxPIJ3hw6AOwomUWh5B7SfQ',
-                title: 'Alex Unnippillil',
-                thumbnail: 'https://example.com/channel.jpg',
-              },
-              directory: (() => {
-                const playlists = [
-                  {
-                    id: 'PL_TUTORIALS',
-                    title: 'Tutorial Playlist',
-                    description: 'Tutorial desc',
-                    thumbnail: 'https://example.com/pl2.jpg',
-                    itemCount: 1,
-                    publishedAt: '2024-02-01T00:00:00Z',
-                    privacyStatus: 'public',
-                  },
-                  {
-                    id: 'PL_LABS',
-                    title: 'Lab Playlist',
-                    description: 'Lab desc',
-                    thumbnail: 'https://example.com/pl1.jpg',
-                    itemCount: 2,
-                    publishedAt: '2024-01-01T00:00:00Z',
-                    privacyStatus: 'public',
-                  },
-                ].sort((a, b) => a.title.localeCompare(b.title));
-                const sections = [
-                  {
-                    id: 'section-b',
-                    sectionId: 'section-b',
-                    sectionTitle: 'Zeta Guides',
-                    playlists: playlists.filter((playlist) => playlist.id === 'PL_LABS'),
-                  },
-                  {
-                    id: 'section-a',
-                    sectionId: 'section-a',
-                    sectionTitle: 'Alpha Tutorials',
-                    playlists: playlists.filter((playlist) => playlist.id === 'PL_TUTORIALS'),
-                  },
-                  {
-                    id: 'all',
-                    sectionId: 'all',
-                    sectionTitle: 'Playlists',
-                    playlists,
-                  },
-                ].sort((a, b) => a.sectionTitle.localeCompare(b.sectionTitle));
-
-                return { playlists, sections };
-              })(),
-            }),
-            { status: 200 },
-          );
-        }
-
-        if (url.includes('/api/youtube/playlist-items')) {
-          // Return different items depending on playlistId query param
-          const playlistId = asUrl.searchParams.get('playlistId');
-          const items =
-            playlistId === 'PL_LABS'
-              ? [
-                  {
-                    videoId: 'VID_1',
-                    title: 'First Lab Video',
-                    description: 'desc',
-                    thumbnail: 'https://example.com/v1.jpg',
-                    publishedAt: '2024-03-01T00:00:00Z',
-                    position: 0,
-                  },
-                ]
-              : [
-                  {
-                    videoId: 'VID_2',
-                    title: 'First Tutorial Video',
-                    description: 'desc',
-                    thumbnail: 'https://example.com/v2.jpg',
-                    publishedAt: '2024-04-01T00:00:00Z',
-                    position: 0,
-                  },
-                ];
-
-          return new Response(JSON.stringify({ items }), { status: 200 });
-        }
-
-        return new Response(JSON.stringify({ error: { message: 'Unknown endpoint' } }), {
-          status: 404,
-        });
-      });
-
-    render(<YouTubeApp channelId="UCxPIJ3hw6AOwomUWh5B7SfQ" />);
-
-    // Directory section
-    await waitFor(() => {
-      expect(screen.getByText('Playlists')).toBeInTheDocument();
-    });
-
-    // Playlist listing
-    await waitFor(() => {
-      const categoriesPanel = screen.getByRole('heading', { name: /Categories/i }).closest('div');
-      expect(categoriesPanel).not.toBeNull();
-      expect(
-        within(categoriesPanel as HTMLElement).getAllByRole('button', {
-          name: /Open playlist Lab Playlist/i,
-        }).length,
-      ).toBeGreaterThan(0);
-    });
-
-    // Sorted categories (alphabetical by section title) and playlists
-    const categoriesPanel = screen.getByRole('heading', { name: /Categories/i }).closest('div');
-    expect(categoriesPanel).not.toBeNull();
-    const categoryHeadings = within(categoriesPanel as HTMLElement)
-      .getAllByRole('heading', { level: 3 })
-      .map((heading) => heading.textContent);
-    expect(categoryHeadings.slice(0, 3)).toEqual(['Alpha Tutorials', 'Playlists', 'Zeta Guides']);
-
-    const aggregatedList = within(categoriesPanel as HTMLElement).getByRole('list', {
-      name: /Playlists playlists/i,
-    });
-    const playlistButtons = within(aggregatedList)
-      .getAllByRole('button', { name: /Open playlist/i })
-      .map((button) => button.textContent?.trim());
-    expect(playlistButtons[0]).toContain('Lab Playlist');
-    expect(playlistButtons[1]).toContain('Tutorial Playlist');
-
-    // Select playlist + video
-    const labPlaylistButtons = within(aggregatedList).getAllByRole('button', {
-      name: /Open playlist Lab Playlist/i,
-    });
-    fireEvent.click(labPlaylistButtons[0]);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Watch First Lab Video/i })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Watch First Lab Video/i }));
-
-    await waitFor(() => {
-      expect(screen.getByTitle(/YouTube player for First Lab Video/i)).toHaveAttribute(
-        'src',
-        expect.stringContaining('VID_1'),
-      );
-    });
-
-    // sanity: fetch called
-    expect(fetchMock).toHaveBeenCalled();
+        : {
+            items: [video("shared00001", "Shared video")],
+            nextPageToken: lab ? "LAB_NEXT" : "TUTORIAL_NEXT",
+          },
+    );
   });
+  render(<YouTubeApp />);
+  await screen.findByRole("button", { name: "Watch Shared video" });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Load more videos" }),
+    ).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Load more videos" }));
+  await screen.findByRole("button", { name: "Watch Second tutorial" });
+  expect(
+    screen.getAllByRole("button", { name: "Watch Shared video" }),
+  ).toHaveLength(1);
+  const urls = fetchMock.mock.calls.map(
+    ([url]) => new URL(String(url), "http://localhost"),
+  );
+  expect(
+    urls.some(
+      (url) =>
+        url.searchParams.get("playlistId") === "PL_LABS" &&
+        url.searchParams.get("pageToken") === "LAB_NEXT",
+    ),
+  ).toBe(true);
+  expect(
+    urls.some(
+      (url) =>
+        url.searchParams.get("playlistId") === "PL_TUTORIALS" &&
+        url.searchParams.get("pageToken") === "TUTORIAL_NEXT",
+    ),
+  ).toBe(true);
+  expect(
+    screen.queryByRole("button", { name: "Load more videos" }),
+  ).not.toBeInTheDocument();
+});
+
+test("empty playlists do not refetch indefinitely", async () => {
+  fetchMock.mockImplementation(async (input: RequestInfo | URL) =>
+    String(input).includes("/directory")
+      ? response(directory)
+      : response({ items: [] }),
+  );
+  render(<YouTubeApp />);
+  await screen.findByRole("heading", { name: "No videos to show yet" });
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(
+    fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes("/playlist-items"),
+    ),
+  ).toHaveLength(2);
+});
+
+test("failed playlists stop and retry only on explicit request", async () => {
+  fetchMock.mockImplementation(async (input: RequestInfo | URL) =>
+    String(input).includes("/directory")
+      ? response(directory)
+      : response({ error: "Temporary failure" }, 503),
+  );
+  render(<YouTubeApp />);
+  const retry = await screen.findByRole("button", {
+    name: "Retry failed playlists",
+  });
+  await waitFor(() => expect(retry).toBeEnabled());
+  expect(
+    fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes("/playlist-items"),
+    ),
+  ).toHaveLength(2);
+  fireEvent.click(retry);
+  await waitFor(() =>
+    expect(
+      fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes("/playlist-items"),
+      ),
+    ).toHaveLength(4),
+  );
+});
+
+test("network-off is respected until the visitor enables it", async () => {
+  mockAllowNetwork = false;
+  const { rerender } = render(<YouTubeApp />);
+  expect(fetchMock).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Enable network" }));
+  expect(mockSetAllowNetwork).toHaveBeenCalledWith(true);
+  mockAllowNetwork = true;
+  rerender(<YouTubeApp />);
+  await screen.findByRole("button", { name: "Watch First Lab Video" });
+});
+
+test("Watch later survives reopening and is explicitly browser-local", async () => {
+  const { unmount } = render(<YouTubeApp />);
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Save First Lab Video for later",
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      JSON.parse(localStorage.getItem("youtube:watch-later") ?? "[]"),
+    ).toHaveLength(1),
+  );
+  unmount();
+  render(<YouTubeApp />);
+  fireEvent.click(screen.getByRole("button", { name: /^Watch later/ }));
+  await screen.findByRole("button", { name: "Watch First Lab Video" });
+  expect(
+    screen.getByText("Saved on this browser, not your YouTube account."),
+  ).toBeInTheDocument();
+});
+
+test("slash focuses app search without taking typing from an editable control", async () => {
+  render(<YouTubeApp />);
+  await screen.findByRole("button", { name: "Watch First Lab Video" });
+  const root = screen.getByTestId("youtube-app");
+  fireEvent.keyDown(root, { key: "/" });
+  expect(screen.getByRole("searchbox")).toHaveFocus();
+  const event = new KeyboardEvent("keydown", {
+    key: "/",
+    bubbles: true,
+    cancelable: true,
+  });
+  screen.getByRole("searchbox").dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(false);
+});
+
+test("disabling network removes an already selected player", async () => {
+  const { rerender } = render(<YouTubeApp />);
+  await screen.findByTitle("YouTube player for First Lab Video");
+  mockAllowNetwork = false;
+  rerender(<YouTubeApp />);
+  expect(screen.queryByTitle(/YouTube player/)).not.toBeInTheDocument();
+});
+
+test("persistent playlist navigation changes the collection without replacing the selected player", async () => {
+  render(<YouTubeApp />);
+  const frame = await screen.findByTitle("YouTube player for First Lab Video");
+  const nav = screen.getByRole("navigation", { name: "Library navigation" });
+  fireEvent.change(
+    within(nav).getByRole("combobox", { name: "Choose a playlist" }),
+    { target: { value: "PL_TUTORIALS" } },
+  );
+  expect(
+    await screen.findByRole("button", { name: "Watch First Tutorial Video" }),
+  ).toBeInTheDocument();
+  expect(screen.getByTitle("YouTube player for First Lab Video")).toBe(frame);
+  expect(
+    within(nav).getByRole("button", { name: "Back to selected video" }),
+  ).toBeEnabled();
 });

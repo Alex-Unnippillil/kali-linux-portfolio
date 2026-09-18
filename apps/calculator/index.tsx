@@ -7,6 +7,7 @@ import FormulaEditor from './components/FormulaEditor';
 import Tape from './components/Tape';
 
 export default function Calculator() {
+  const rootRef = useRef<HTMLDivElement>(null);
   const HISTORY_LIMIT = 10;
   const [showShortcuts, setShowShortcuts] = usePersistentState<boolean>(
     'calc-show-shortcuts',
@@ -178,21 +179,23 @@ export default function Calculator() {
         setProgrammerMode: api.setProgrammerMode,
       };
 
-      const display = document.getElementById('display') as HTMLInputElement | null;
+      const root = rootRef.current;
+      if (!root) return;
+      const display = root.querySelector('#display') as HTMLInputElement | null;
       if (!display) return;
-      const buttons = document.querySelectorAll<HTMLButtonElement>('.btn');
-      const historyToggle = document.getElementById('toggle-history');
-      const historyEl = document.getElementById('history');
-      const formulasToggle = document.getElementById('toggle-formulas');
-      const formulasEl = document.getElementById('formulas');
-      const baseSelect = document.getElementById('base-select') as HTMLSelectElement | null;
-      const preciseToggle = document.getElementById('toggle-precise') as HTMLButtonElement | null;
-      const scientificToggle = document.getElementById('toggle-scientific') as HTMLButtonElement | null;
-      const programmerToggle = document.getElementById('toggle-programmer') as HTMLButtonElement | null;
-      const scientificPanel = document.getElementById('scientific');
-      const programmerPanel = document.getElementById('programmer');
-      const parenIndicator = document.getElementById('paren-indicator');
-      const allButtons = document.querySelectorAll<HTMLButtonElement>('.calculator button');
+      const buttons = rootRef.current!.querySelectorAll<HTMLButtonElement>('.btn');
+      const historyToggle = rootRef.current?.querySelector<HTMLElement>('#toggle-history');
+      const historyEl = rootRef.current?.querySelector<HTMLElement>('#history');
+      const formulasToggle = rootRef.current?.querySelector<HTMLElement>('#toggle-formulas');
+      const formulasEl = rootRef.current?.querySelector<HTMLElement>('#formulas');
+      const baseSelect = rootRef.current?.querySelector<HTMLElement>('#base-select') as HTMLSelectElement | null;
+      const preciseToggle = rootRef.current?.querySelector<HTMLElement>('#toggle-precise') as HTMLButtonElement | null;
+      const scientificToggle = rootRef.current?.querySelector<HTMLElement>('#toggle-scientific') as HTMLButtonElement | null;
+      const programmerToggle = rootRef.current?.querySelector<HTMLElement>('#toggle-programmer') as HTMLButtonElement | null;
+      const scientificPanel = rootRef.current?.querySelector<HTMLElement>('#scientific');
+      const programmerPanel = rootRef.current?.querySelector<HTMLElement>('#programmer');
+      const parenIndicator = rootRef.current?.querySelector<HTMLElement>('#paren-indicator');
+      const allButtons = rootRef.current!.querySelectorAll<HTMLButtonElement>('.calculator button');
 
       uiRef.current = {
         display,
@@ -372,12 +375,20 @@ export default function Calculator() {
           }
 
           insertAtCursor(value);
-          display.focus();
+          // Touch keypad use must not summon the software keyboard.
+          if (!window.matchMedia('(pointer: coarse)').matches) display.focus({ preventScroll: true });
         };
         addListener(btn, 'click', handler);
       });
 
       const keyHandler = (e: KeyboardEvent) => {
+        if (e.defaultPrevented || e.isComposing || e.ctrlKey || e.metaKey || e.altKey) return;
+        const target = e.target as HTMLElement | null;
+        // Formula fields and other editable controls retain native editing.
+        if (target !== display && target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+        // Do not replace native button activation with an evaluation.
+        if (e.key === 'Enter' && target?.closest('button')) return;
+        if (target === display && !['Enter', '=', 'Escape'].includes(e.key)) return;
         if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
           e.preventDefault();
           setShowShortcuts((prev) => !prev);
@@ -385,7 +396,7 @@ export default function Calculator() {
         }
         if (e.key === 'Enter' || e.key === '=') {
           e.preventDefault();
-          (document.querySelector('.btn[data-action="equals"]') as HTMLButtonElement)?.click();
+          (rootRef.current!.querySelector('.btn[data-action="equals"]') as HTMLButtonElement)?.click();
           return;
         }
         if (e.key === 'Backspace') {
@@ -402,9 +413,7 @@ export default function Calculator() {
           updateParenIndicator();
           return;
         }
-        const btn = document.querySelector<HTMLButtonElement>(
-          `.btn[data-key~="${e.key}"]`,
-        );
+        const btn = Array.from(buttons).find((button) => button.dataset.key?.split(' ').includes(e.key));
         if (btn) {
           e.preventDefault();
           btn.click();
@@ -418,7 +427,7 @@ export default function Calculator() {
           insertAtCursor(e.key);
         }
       };
-      addListener(document, 'keydown', keyHandler);
+      addListener(root, 'keydown', keyHandler);
 
       addListener(display, 'input', updateParenIndicator);
 
@@ -472,6 +481,7 @@ export default function Calculator() {
       }
 
       updateParenIndicator();
+      root.dataset.ready = 'true';
 
       cleanup = () => {
         handlers.forEach(({ element, type, handler }) =>
@@ -480,7 +490,7 @@ export default function Calculator() {
       };
     };
 
-    load();
+    void load().catch(() => setStatusMessage('Calculator could not initialize. Close and reopen this app to retry.'));
 
     return () => {
       disposed = true;
@@ -490,7 +500,7 @@ export default function Calculator() {
 
   const loadHistoryExpression = useCallback(
     (expr: string) => {
-      const display = document.getElementById('display') as HTMLInputElement | null;
+      const display = rootRef.current?.querySelector<HTMLElement>('#display') as HTMLInputElement | null;
       if (!display) return;
       display.value = expr;
       display.dispatchEvent(new Event('input', { bubbles: true }));
@@ -513,12 +523,12 @@ export default function Calculator() {
   );
 
   return (
-    <div className="calculator mx-auto flex w-full max-w-lg flex-col gap-6 rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-border)_55%,transparent)] bg-[var(--kali-panel)] p-6 text-[color:var(--kali-text)] shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
-      <header className="flex items-center justify-between text-sm text-[color:color-mix(in_srgb,var(--kali-text)_82%,rgba(148,163,184,0.35))]">
+    <div ref={rootRef} className="calculator mx-auto flex w-full max-w-lg flex-col gap-4 sm:gap-6 rounded-xl sm:rounded-3xl border border-[color:color-mix(in_srgb,var(--kali-border)_55%,transparent)] bg-[var(--kali-panel)] p-3 sm:p-6 text-[color:var(--kali-text)] shadow-[0_35px_80px_-30px_rgba(15,15,20,0.9)]">
+      <header className="flex flex-wrap gap-2 items-center justify-between text-sm text-[color:color-mix(in_srgb,var(--kali-text)_82%,rgba(148,163,184,0.35))]">
         <button
           type="button"
           onClick={() => {
-            const display = document.getElementById('display') as HTMLInputElement | null;
+            const display = rootRef.current?.querySelector<HTMLElement>('#display') as HTMLInputElement | null;
             if (display) {
               display.value = display.value.slice(0, -1);
               display.dispatchEvent(new Event('input', { bubbles: true }));
@@ -543,9 +553,9 @@ export default function Calculator() {
             <path d="M10 11v6" />
             <path d="M14 11v6" />
           </svg>
-          Undo
+          Backspace
         </button>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <ModeSwitcher mode={mode} onChange={(nextMode) => setMode(nextMode)} />
           <div className="flex items-center gap-2 text-[color:color-mix(in_srgb,var(--kali-text)_65%,rgba(148,163,184,0.55))]">
             <button

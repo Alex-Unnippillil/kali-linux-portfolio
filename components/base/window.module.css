@@ -7,25 +7,22 @@
     0 1px 1px rgba(15, 23, 42, 0.32),
     0 8px 24px rgba(15, 23, 42, 0.28),
     0 0 0 1px rgba(12, 74, 110, 0.5);
-  overflow: hidden;
+  /* The frame clips app content but must never become a scroll container. */
+  overflow: clip;
   --window-motion-transform-duration: var(--window-motion-duration-restore);
   --window-motion-transform-easing: var(--window-motion-ease-restore);
   --window-motion-opacity-duration: var(--window-motion-duration-minimize);
   --window-motion-opacity-easing: var(--window-motion-ease-minimize);
   transition:
     transform var(--window-motion-transform-duration) var(--window-motion-transform-easing),
-    filter var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease,
-    backdrop-filter var(--motion-fast) ease,
-    -webkit-backdrop-filter var(--motion-fast) ease,
     opacity var(--window-motion-opacity-duration) var(--window-motion-opacity-easing),
     visibility 0s linear;
-  transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, 0s;
+  transition-delay: 0s, 0s, 0s, 0s;
 }
 
 .windowFrameActive {
   border-color: rgba(56, 189, 248, 0.7);
-  filter: brightness(1.02) saturate(1.02);
   box-shadow:
     0 1px 2px rgba(15, 23, 42, 0.42),
     0 16px 42px rgba(15, 23, 42, 0.45),
@@ -53,7 +50,6 @@
 }
 
 .windowFrameInactive {
-  filter: brightness(0.9) saturate(0.85);
   box-shadow:
     0 1px 1px rgba(15, 23, 42, 0.24),
     0 10px 28px rgba(15, 23, 42, 0.22),
@@ -70,11 +66,10 @@
 }
 
 .windowFrameResizing {
-  filter: brightness(1.07) saturate(1.08);
   box-shadow:
     0 2px 6px rgba(56, 189, 248, 0.35),
     0 0 0 1px rgba(56, 189, 248, 0.4);
-  transition: filter var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  transition: box-shadow var(--motion-fast) ease;
 }
 
 .windowFrameSnapReady {
@@ -84,12 +79,10 @@
     0 0 18px var(--kali-blue-glow);
 }
 
-@supports ((backdrop-filter: blur(0)) or (-webkit-backdrop-filter: blur(0))) {
-  .windowFrameActive {
-    background-color: rgba(15, 23, 42, 0.72);
-    backdrop-filter: blur(18px) saturate(1.1);
-    -webkit-backdrop-filter: blur(18px) saturate(1.1);
-  }
+/* Focus is conveyed by chrome, not a filter over embedded players and canvases.
+   Avoid full-window backdrop compositing on software-rendered WebKit and phones. */
+.windowFrameActive {
+  background-color: rgb(15, 23, 42);
 }
 
 .windowFrameMaximized {
@@ -106,7 +99,7 @@
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transition-delay: 0s, 0s, 0s, 0s, 0s, 0s, var(--window-motion-opacity-duration);
+  transition-delay: 0s, 0s, 0s, var(--window-motion-opacity-duration);
 }
 
 .snapPreview {
@@ -302,6 +295,7 @@
 }
 
 .windowControlIcon {
+  pointer-events: none;
   width: clamp(12px, 3.2vw, 14px);
   height: clamp(12px, 3.2vw, 14px);
   display: block;

@@ -28,7 +28,7 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - run: yarn playwright install --with-deps chromium
+      - run: yarn playwright install --with-deps chromium firefox webkit
       - run: yarn build
       - run: yarn playwright test --config=playwright.portfolio.config.ts
       - uses: actions/upload-artifact@v4

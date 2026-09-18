@@ -14,8 +14,8 @@ jobs:
     timeout-minutes: 12
     env:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
-      BASE_URL: https://kali-linux-alex-unnippillil-mue1368gf.vercel.app
-      EXPECTED_REVISION: 29a9664c3ec54edbdd6808fd6f6c754a6e094ad2
+      BASE_URL: https://unnippillil.com
+      EXPECTED_REVISION: c432e9a9fe11a434548ea0f9c0e8e11d11924097
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,7 +31,7 @@ jobs:
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
       - run: yarn playwright install --with-deps chromium
-      - name: Verify exact deployed desktop and touch interactions
+      - name: Verify exact production desktop and touch interactions
         env:
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
         run: |

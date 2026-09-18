@@ -98,7 +98,7 @@ export default function SystemOverlayWindow({
 }: SystemOverlayWindowProps) {
     const isActive = open && !minimized;
     const overlayClasses = [
-        'fixed inset-0 z-[60] flex items-center justify-center px-4 py-12 sm:py-16',
+        'fixed inset-0 z-[220] flex items-center justify-center px-4 py-12 sm:py-16',
         overlayClassName,
         isActive ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
     ]
@@ -116,7 +116,7 @@ export default function SystemOverlayWindow({
         .filter(Boolean)
         .join(' ');
 
-    const bodyClasses = ['flex-1 overflow-auto', bodyClassName].filter(Boolean).join(' ');
+    const bodyClasses = ['min-h-0 flex-1 overflow-auto', bodyClassName].filter(Boolean).join(' ');
 
     const handleMinimize = () => {
         if (typeof onMinimize === 'function') {

@@ -32,13 +32,13 @@ describe('Calculator interactions', () => {
 
     expect(await screen.findByText('Evaluate expression')).toBeInTheDocument();
 
-    fireEvent.keyDown(document, { key: '?', code: 'Slash', shiftKey: true });
+    fireEvent.keyDown(screen.getByRole('button', { name: /equals/i }), { key: '?', code: 'Slash', shiftKey: true });
 
     await waitFor(() => {
       expect(screen.queryByText('Evaluate expression')).not.toBeInTheDocument();
     });
 
-    fireEvent.keyDown(document, { key: '?', code: 'Slash', shiftKey: true });
+    fireEvent.keyDown(screen.getByRole('button', { name: /equals/i }), { key: '?', code: 'Slash', shiftKey: true });
 
     await waitFor(() => {
       expect(screen.getByText('Evaluate expression')).toBeInTheDocument();
@@ -68,4 +68,23 @@ describe('Calculator interactions', () => {
     expect(display).toHaveValue('7*6');
     expect(screen.getByTestId('calc-status-message')).toHaveTextContent('Loaded "7*6" from tape.');
   });
+});
+
+
+it('does not consume another application’s typing or native display editing', async () => {
+  const { container } = render(<><Calculator /><input aria-label="Other application" /></>);
+  const display = await screen.findByLabelText('Calculator display');
+  await act(async () => { await Promise.resolve(); });
+  fireEvent.change(display, { target: { value: '12345' } });
+  const other = screen.getByLabelText('Other application');
+  for (const key of ['c', 'Enter', 'Backspace', '7', '"', '?']) {
+    const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+    other.dispatchEvent(event);
+    expect(event.defaultPrevented).toBe(false);
+  }
+  expect(display).toHaveValue('12345');
+  const edit = new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true });
+  display.dispatchEvent(edit);
+  expect(edit.defaultPrevented).toBe(false);
+  expect(container.querySelector('.calculator')).toBeInTheDocument();
 });

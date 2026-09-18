@@ -2388,6 +2388,67 @@ export function WindowCornerHandle({ direction, onResizeStart, active }) {
     );
 }
 
+// Stable icon types preserve the native click target.
+const iconProps = {
+    className: styles.windowControlIcon,
+    viewBox: '0 0 16 16',
+    'aria-hidden': true,
+    focusable: 'false',
+};
+
+const MinimizeIcon = () => (
+    <svg {...iconProps}>
+        <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+);
+
+const MaximizeIcon = () => (
+    <svg {...iconProps}>
+        <rect
+            x="3"
+            y="3"
+            width="10"
+            height="10"
+            rx="1.6"
+            stroke="currentColor"
+            strokeWidth="1.4"
+            fill="none"
+        />
+    </svg>
+);
+
+const RestoreIcon = () => (
+    <svg {...iconProps}>
+        <rect
+            x="5"
+            y="3"
+            width="8"
+            height="6.5"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            fill="none"
+        />
+        <rect
+            x="3"
+            y="6.5"
+            width="8"
+            height="6.5"
+            rx="1.4"
+            stroke="currentColor"
+            strokeWidth="1.2"
+            fill="none"
+        />
+    </svg>
+);
+
+const CloseIcon = () => (
+    <svg {...iconProps}>
+        <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+);
+
 // Window's Edit Buttons
 export function WindowEditButtons(props) {
     const allowMaximize = props.allowMaximize !== false;
@@ -2397,7 +2458,6 @@ export function WindowEditButtons(props) {
     const closeAriaLabel = 'Window close';
     const controlsRef = useRef(null);
     const [pressedControl, setPressedControl] = useState(null);
-    const pointerActiveRef = useRef(null);
 
     useEffect(() => {
         const node = controlsRef.current;
@@ -2433,68 +2493,7 @@ export function WindowEditButtons(props) {
         };
     }, []);
 
-    const iconProps = {
-        className: styles.windowControlIcon,
-        viewBox: '0 0 16 16',
-        'aria-hidden': true,
-        focusable: 'false',
-    };
-
-    const MinimizeIcon = () => (
-        <svg {...iconProps}>
-            <line x1="3" y1="8" x2="13" y2="8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-    );
-
-    const MaximizeIcon = () => (
-        <svg {...iconProps}>
-            <rect
-                x="3"
-                y="3"
-                width="10"
-                height="10"
-                rx="1.6"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                fill="none"
-            />
-        </svg>
-    );
-
-    const RestoreIcon = () => (
-        <svg {...iconProps}>
-            <rect
-                x="5"
-                y="3"
-                width="8"
-                height="6.5"
-                rx="1.4"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-            />
-            <rect
-                x="3"
-                y="6.5"
-                width="8"
-                height="6.5"
-                rx="1.4"
-                stroke="currentColor"
-                strokeWidth="1.2"
-                fill="none"
-            />
-        </svg>
-    );
-
-    const CloseIcon = () => (
-        <svg {...iconProps}>
-            <line x1="4" y1="4" x2="12" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-            <line x1="12" y1="4" x2="4" y2="12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-    );
-
     const resetPressedControl = useCallback(() => {
-        pointerActiveRef.current = null;
         setPressedControl(null);
     }, []);
 
@@ -2508,40 +2507,23 @@ export function WindowEditButtons(props) {
         }
     };
 
+    // Native buttons already synthesize one click for mouse, touch, pen and keyboard.
+    // Acting on pointerup as well can double-toggle after focus/layout changes.
     const handlePointerDown = useCallback((control) => (event) => {
         event.stopPropagation();
-        pointerActiveRef.current = 'pointer';
-        if (typeof event.pointerId === 'number' && typeof event.currentTarget?.setPointerCapture === 'function') {
-            event.currentTarget.setPointerCapture(event.pointerId);
-        }
+        if (event.isPrimary === false || (event.button !== undefined && event.button !== 0)) return;
         setPressedControl(control);
     }, []);
 
-    const handlePointerUp = useCallback((control, handler) => (event) => {
+    const handlePointerUp = useCallback(() => (event) => {
         event.stopPropagation();
-        if (typeof event.pointerId === 'number'
-            && typeof event.currentTarget?.releasePointerCapture === 'function'
-            && (!event.currentTarget.hasPointerCapture
-                || event.currentTarget.hasPointerCapture(event.pointerId))) {
-            event.currentTarget.releasePointerCapture(event.pointerId);
-        }
-        setPressedControl((current) => (current === control ? null : current));
-        pointerActiveRef.current = 'pointer-handled';
-        if (typeof handler === 'function') {
-            handler(event);
-        }
+        setPressedControl(null);
     }, []);
 
     const handleButtonClick = useCallback((handler) => (event) => {
-        if (pointerActiveRef.current === 'pointer' || pointerActiveRef.current === 'pointer-handled') {
-            pointerActiveRef.current = null;
-            event.stopPropagation();
-            event.preventDefault();
-            return;
-        }
-        if (typeof handler === 'function') {
-            handler(event);
-        }
+        event.stopPropagation();
+        setPressedControl(null);
+        if (typeof handler === 'function') handler(event);
     }, []);
 
     return (
@@ -2553,6 +2535,7 @@ export function WindowEditButtons(props) {
             onPointerDown={(event) => event.stopPropagation()}
             onMouseDown={(event) => event.stopPropagation()}
             onTouchStart={(event) => event.stopPropagation()}
+            onDoubleClick={(event) => event.stopPropagation()}
             data-window-controls=""
         >
             <button
@@ -2561,7 +2544,7 @@ export function WindowEditButtons(props) {
                 title="Minimize"
                 className={`${styles.windowControlButton} ${pressedControl === 'minimize' ? styles.windowControlButtonPressed : ''}`.trim()}
                 onPointerDown={handlePointerDown('minimize')}
-                onPointerUp={handlePointerUp('minimize', props.minimize)}
+                onPointerUp={handlePointerUp()}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
@@ -2582,7 +2565,7 @@ export function WindowEditButtons(props) {
                 disabled={!allowMaximize}
                 aria-disabled={!allowMaximize}
                 onPointerDown={allowMaximize ? handlePointerDown('maximize') : undefined}
-                onPointerUp={allowMaximize ? handlePointerUp('maximize', handleMaximize) : undefined}
+                onPointerUp={allowMaximize ? handlePointerUp() : undefined}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
@@ -2596,7 +2579,7 @@ export function WindowEditButtons(props) {
                 title="Close"
                 className={[styles.windowControlButton, styles.windowControlButtonClose, pressedControl === 'close' ? styles.windowControlButtonPressed : ''].filter(Boolean).join(' ')}
                 onPointerDown={handlePointerDown('close')}
-                onPointerUp={handlePointerUp('close', props.close)}
+                onPointerUp={handlePointerUp()}
                 onPointerLeave={resetPressedControl}
                 onPointerCancel={resetPressedControl}
                 onBlur={resetPressedControl}
