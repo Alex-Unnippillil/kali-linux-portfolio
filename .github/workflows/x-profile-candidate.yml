@@ -1,63 +1,42 @@
-name: Stage checksum-verified X profile candidate
+name: Stage X browser and review repairs
 on:
   push:
     branches: [qa/x-profile-2026-09-18]
-    paths: ['qa/x-profile-source/**', '.github/workflows/x-profile-candidate.yml']
+    paths: [.github/workflows/x-profile-candidate.yml]
 permissions:
   contents: write
 jobs:
   candidate:
-    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          path: payload
-          persist-credentials: false
-      - uses: actions/checkout@v4
-        with:
-          ref: 8063d70d63da9bb73654c9adb08f71c3afff94d7
-          path: source
-      - name: Verify reviewed source and exact change scope
+          ref: 734e705725e14e678374fdb3da08443dc5dafa5f
+      - name: Verify exact reviewed patch and scope
         run: |
           python3 <<'PY'
-          import base64, hashlib, json, lzma, pathlib, subprocess
-          root = pathlib.Path('source')
-          assert subprocess.check_output(['git', '-C', str(root), 'rev-parse', 'HEAD']).decode().strip() == '8063d70d63da9bb73654c9adb08f71c3afff94d7'
-          encoded = ''.join(pathlib.Path(f'payload/qa/x-profile-source/{i}.b64').read_text().strip() for i in range(1, 6))
+          import base64, hashlib, lzma, pathlib, subprocess
+          encoded = '''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'''
           raw = lzma.decompress(base64.b64decode(encoded, validate=True))
-          assert hashlib.sha256(raw).hexdigest() == '6b4a74a2115d8b066fcb07a43f87badf3b101c398599760116af0271b66bef51', 'Source checksum mismatch'
-          payload = json.loads(raw)
-          assert set(payload) == {'files', 'patch'}
-          allowed = {'__tests__/lint-changed.test.ts', '__tests__/x-profile-api.test.ts', '__tests__/x-profile-app.test.tsx', '__tests__/x-profile-normalization.test.ts', '__tests__/x-profile-server.test.ts', 'apps/x/index.tsx', 'apps/x/profile.module.css', 'components/apps/x.js', 'docs/x-profile-showcase.md', 'hooks/useXProfile.ts', 'lib/x-profile.server.ts', 'pages/api/x/profile.ts', 'scripts/changed-files.mjs', 'scripts/lint-changed.mjs', 'tests/fixtures/x-profile.ts', 'tests/portfolio/x-profile.spec.ts', 'utils/x-profile.ts'}
-          assert set(payload['files']) == allowed
-          for path, text in payload['files'].items():
-              assert isinstance(text, str)
-              destination = root / path
-              destination.parent.mkdir(parents=True, exist_ok=True)
-              destination.write_text(text, encoding='utf-8')
-          patch = pathlib.Path('/tmp/x-profile.patch')
-          patch.write_text(payload['patch'], encoding='utf-8')
-          patched = {line.split('\t')[-1] for line in subprocess.check_output(['git', '-C', str(root), 'apply', '--numstat', str(patch)]).decode().splitlines()}
-          assert patched == {'README.md', 'apps.config.js', 'next.config.js', 'playwright.portfolio.config.ts'}
-          subprocess.run(['git', '-C', str(root), 'apply', '--check', str(patch)], check=True)
-          subprocess.run(['git', '-C', str(root), 'apply', str(patch)], check=True)
-          subprocess.run(['git', '-C', str(root), 'add', '--all'], check=True)
-          changed = set(subprocess.check_output(['git', '-C', str(root), 'diff', '--cached', '--name-only']).decode().splitlines())
-          assert changed == allowed | patched
-          tree = subprocess.check_output(['git', '-C', str(root), 'write-tree']).decode().strip()
-          # Includes original ignored-but-tracked baseline files, unchanged.
-          assert tree == 'd639bea45e83a0d15df9f485c6482a4ebabd7179', f'Unexpected source tree: {tree}'
-          print(f'Exact candidate source tree: {tree}')
+          assert hashlib.sha256(raw).hexdigest() == 'bcf1e7e0f4d664d087fecec074a5295a859bcc0b05bab7245c5f550826c0e673'
+          patch = pathlib.Path('/tmp/x-polish.patch')
+          patch.write_bytes(raw)
+          allowed = {'.github/workflows/gh-deploy.yml', 'scripts/changed-files.mjs', '__tests__/lint-changed.test.ts', '__tests__/shell-overlay-layout.test.tsx', 'apps/x/profile.module.css', 'components/desktop/DesktopGuide.tsx', 'components/desktop/DesktopGuide.module.css', 'components/desktop/MobileTaskbar.module.css', 'components/menu/WhiskerMenu.tsx', 'tests/portfolio/x-profile.spec.ts'}
+          paths = {line.split('\t')[-1] for line in subprocess.check_output(['git', 'apply', '--numstat', str(patch)]).decode().splitlines()}
+          assert paths == allowed
+          assert subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip() == '734e705725e14e678374fdb3da08443dc5dafa5f'
+          subprocess.run(['git', 'apply', '--check', str(patch)], check=True)
+          subprocess.run(['git', 'apply', str(patch)], check=True)
+          subprocess.run(['git', 'add', '--all'], check=True)
+          assert subprocess.check_output(['git', 'write-tree']).decode().strip() == 'fa17e765361f566e1f568cd6284f868ccba104b1'
           PY
-      - name: Commit isolated release candidate without changing main
-        working-directory: source
+      - name: Stage candidate without changing main or the PR branch
         run: |
           set -euo pipefail
           git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --cached --check
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m '[x] rebuild read-only public profile showcase' -m 'Unify native and standalone X screens; add fixed-profile server-side timeline retrieval, bounded signed pagination, consent-aware UI, safe media/text rendering, and explicit configuration failures. Repair changed-file lint base detection without relaxing strict lint checks. No credentials included. Locally validated 1070 passing tests, strict changed-file lint, typecheck, and production build with offline font assets; hosted browser and full CI gates remain mandatory before main.'
-          git push origin HEAD:refs/heads/feat/x-profile-showcase-2026-09-18
+          git commit -m '[x] repair phone overlay reachability and readable post links' -m 'Use reserved phone taskbar space for optional help; bound the launcher above taskbar and keyboard; underline inline post links and use readable system typography. Add four red/green overlay regressions and retain real browser hit-target, geometry and accessibility assertions. Also address the reviewed shallow-checkout lint base. No security settings, timeout or browser assertion relaxed; hosted release gate required.'
+          git push origin HEAD:refs/heads/qa/x-profile-polished-2026-09-18
           git rev-parse HEAD
