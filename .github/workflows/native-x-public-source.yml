@@ -1,0 +1,39 @@
+name: Public X snapshot source
+on:
+  push:
+    branches: [qa/native-apps-2026-09-18]
+    paths: [.github/workflows/native-x-public-source.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Retrieve public read-only profile
+        run: |
+          mkdir -p evidence
+          python3 - <<'PY'
+          import pathlib, urllib.request, json, datetime
+          results=[]
+          for name,url in [
+            ('profile','https://api.fxtwitter.com/2/profile/AUnnippillil'),
+            ('statuses','https://api.fxtwitter.com/2/profile/AUnnippillil/statuses?count=20&with_replies=1')
+          ]:
+            try:
+              req=urllib.request.Request(url,headers={'User-Agent':'PortfolioPublicShowcase/1.0','Accept':'application/json'})
+              with urllib.request.urlopen(req,timeout=30) as r:
+                body=r.read(2000000)
+                data=json.loads(body)
+                pathlib.Path('evidence/'+name+'.json').write_text(json.dumps(data,ensure_ascii=False,indent=2))
+                results.append({'name':name,'url':url,'status':r.status,'bytes':len(body)})
+            except Exception as e:
+              results.append({'name':name,'url':url,'error':type(e).__name__,'status':getattr(e,'code',None)})
+          pathlib.Path('evidence/retrieval.json').write_text(json.dumps({'retrievedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'sources':results},indent=2))
+          print(json.dumps(results))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-x-public-source
+          path: evidence/
+          retention-days: 3
