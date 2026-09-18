@@ -595,6 +595,9 @@ class AllApplications extends React.Component {
                             </label>
                             <input
                                 id={`${headingId}-search`}
+                                type="search"
+                                inputMode="search"
+                                enterKeyHint="search"
                                 ref={searchInputRef}
                                 className="w-full rounded-2xl border bg-slate-950/60 px-4 py-3 text-base shadow-lg transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
                                 style={searchAccentStyles}

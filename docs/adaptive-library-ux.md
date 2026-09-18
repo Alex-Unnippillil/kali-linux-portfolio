@@ -33,7 +33,7 @@ cause automatic request loops. Failures expose an explicit retry. Refresh, chann
 changes, network-off and unmount cancel or invalidate in-flight responses.
 Search and sort apply to **loaded videos**, not to the entire YouTube catalogue.
 
-No player is loaded until a visitor chooses a video. The official privacy-enhanced
+When network access is enabled, the first available curated video is selected and embedded immediately, without autoplay. The official privacy-enhanced
 YouTube embed remains the player. Search does not interrupt playback; the watch
 view provides a queue, previous/next, theatre layout, description expansion,
 sharing and an external YouTube fallback. Playback availability still depends on
@@ -56,3 +56,28 @@ live Google API or DRM/restricted-video availability.
 Run `yarn typecheck`, `yarn lint`, `yarn test --runInBand`, `yarn build`, then
 `yarn playwright test --config=playwright.portfolio.config.ts`. Browser evidence
 is written to `portfolio-screenshots/` and uploaded by the existing CI workflow.
+
+## Curated-library release — September 18, 2026
+
+The YouTube app now presents Alex Unnippillil's public playlists as browsable
+collections, with channel sections used as category filters. It is a curator's
+library, not a simulation of YouTube account subscriptions, recommendations or
+engagement statistics. Video counts and titles come from the existing API.
+
+The first available video is selected in playlist order and immediately embedded
+when network access is enabled. It does not autoplay or take keyboard focus.
+Changing categories, selecting a playlist, searching and saving videos leave the
+selected player mounted. Choosing another video changes the embed and brings its
+heading into keyboard focus. No account login or new API service is introduced.
+
+The player sits above the library on phones and narrow windows, with a next-video
+queue alongside it in wide windows. All collection and video controls remain
+available with touch, mouse and keyboard. API requests have an explicit timeout,
+errors retain available videos, and malformed optional video metadata is normalized.
+
+The phone applications browser now exposes a real search field, including mobile
+search keyboard hints. Its regression scenario opens the launcher over an active
+app, searches for and launches YouTube, then returns to Calculator without losing
+input. The browser matrix now adds WebKit and Firefox for app/YouTube scenarios,
+while retaining the full Chromium desktop-shell suite. Test fixtures establish UI
+and interaction behavior; live API availability is verified separately at release.
