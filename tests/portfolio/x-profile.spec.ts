@@ -101,6 +101,19 @@ for (const viewport of [
         app.getByText(/Awesome! I was among the first 1,000 people/),
       ).toBeVisible();
       await expect(app.getByRole("article")).toHaveCount(17);
+      await expect
+        .poll(() =>
+          app
+            .locator("img:not([loading=lazy])")
+            .evaluateAll((images) =>
+              images.every(
+                (image) =>
+                  (image as HTMLImageElement).complete &&
+                  (image as HTMLImageElement).naturalWidth > 0,
+              ),
+            ),
+        )
+        .toBe(true);
       await intactLayout(page);
       await mkdir("portfolio-screenshots", { recursive: true });
       await page.screenshot({

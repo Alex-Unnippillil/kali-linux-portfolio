@@ -78,9 +78,9 @@ for (const viewport of [
       const input = app.locator(".monaco-editor textarea.inputarea");
       await input.focus();
       await input.press("Control+Home");
-      // A newline has its own Monaco undo boundary. Check one text edit as
-      // one undo, without conflating the newline and text transactions.
-      await page.keyboard.insertText("// local editor test");
+      // Monaco groups typing at spaces as well as newlines. A contiguous token
+      // is one undo unit across native input implementations.
+      await page.keyboard.insertText("localEditorTest");
       await expect(
         app.getByRole("button", { name: "Local changes, 1 files" }),
       ).toBeVisible();
@@ -93,6 +93,33 @@ for (const viewport of [
       await app.getByRole("button", { name: "Download current file" }).click();
       const restored = await restoredDownload;
       expect(await readFile((await restored.path())!, "utf8")).toBe(
+        await readFile("package.json", "utf8"),
+      );
+      // Also exercise ordinary multi-word typing. Browsers emit insertText
+      // differently, so follow the editor's real undo boundaries (bounded),
+      // then compare every byte; never reset the model to make the test pass.
+      await input.focus();
+      await input.press("Control+Home");
+      await page.keyboard.insertText("// local editor test\n");
+      await expect(
+        app.getByRole("button", { name: "Local changes, 1 files" }),
+      ).toBeVisible();
+      for (let undo = 0; undo < 8; undo += 1) {
+        await input.press("Control+z");
+        if (
+          await app
+            .getByRole("button", { name: "Local changes, 0 files" })
+            .count()
+        )
+          break;
+      }
+      await expect(
+        app.getByRole("button", { name: "Local changes, 0 files" }),
+      ).toBeVisible();
+      const multiwordDownload = page.waitForEvent("download");
+      await app.getByRole("button", { name: "Download current file" }).click();
+      const multiwordRestored = await multiwordDownload;
+      expect(await readFile((await multiwordRestored.path())!, "utf8")).toBe(
         await readFile("package.json", "utf8"),
       );
       await app.getByRole("button", { name: "Toggle word wrap" }).click();
