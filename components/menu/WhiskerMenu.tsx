@@ -380,6 +380,13 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      // Desktop and application handlers run before this window listener.
+      // Do not reopen their shortcut or steal Command from a text editor.
+      if (e.defaultPrevented) return;
+      const editing = e.target instanceof Element && Boolean(
+        e.target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]'),
+      );
+      if (editing && (e.key === 'Meta' || e.metaKey)) return;
       const metaShortcut =
         e.key === 'Meta' && !e.ctrlKey && !e.shiftKey && !e.altKey;
       const altF1Shortcut =

@@ -18,6 +18,49 @@ beforeAll(() => {
 });
 
 describe('WhiskerMenu keyboard shortcuts', () => {
+  it.each(['input', 'textarea', 'contenteditable'])(
+    'leaves Command editing chords with a focused %s',
+    (kind) => {
+      render(<WhiskerMenu />);
+      const control = document.createElement(kind === 'contenteditable' ? 'div' : kind);
+      if (kind === 'contenteditable') {
+        control.setAttribute('contenteditable', 'true');
+        control.tabIndex = 0;
+      }
+      document.body.append(control);
+      try {
+        control.focus();
+        for (const key of ['Meta', 'z', 'f', 'ArrowUp']) {
+          const event = new KeyboardEvent('keydown', {
+            key, metaKey: true, bubbles: true, cancelable: true,
+          });
+          fireEvent(control, event);
+          expect(event.defaultPrevented).toBe(false);
+          expect(screen.queryByTestId('whisker-menu-dropdown')).not.toBeInTheDocument();
+          expect(control).toHaveFocus();
+        }
+      } finally {
+        control.remove();
+      }
+    },
+  );
+
+  it('does not reopen a launcher shortcut already consumed by the desktop', () => {
+    render(<WhiskerMenu />);
+    const event = new KeyboardEvent('keydown', {
+      key: 'Meta', metaKey: true, bubbles: true, cancelable: true,
+    });
+    event.preventDefault();
+    fireEvent(window, event);
+    expect(screen.queryByTestId('whisker-menu-dropdown')).not.toBeInTheDocument();
+  });
+
+  it('retains standalone Super activation outside text controls', () => {
+    render(<WhiskerMenu />);
+    fireEvent.keyDown(window, { key: 'Meta', metaKey: true });
+    expect(screen.getByTestId('whisker-menu-dropdown')).toBeInTheDocument();
+  });
+
   it('opens the menu when the Alt+F1 fallback shortcut is pressed', () => {
     render(<WhiskerMenu />);
 
