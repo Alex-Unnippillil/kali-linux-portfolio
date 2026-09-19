@@ -157,7 +157,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [volume, setVolume] = useState<number>(defaults.volume);
   const [theme, setTheme] = useState<string>('default');
-  const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -275,54 +274,56 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         // The current-session toggle still works when browser storage is read-only.
       });
     }
-    if (typeof window === 'undefined') return;
-    if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
-    if (!allowNetwork) {
-      const normalizeRequest = (input: RequestInfo | URL): URL | null => {
-        if (typeof window === 'undefined') return null;
-        try {
-          if (typeof input === 'string') {
-            return new URL(input, window.location.href);
-          }
-          if (input instanceof URL) {
-            return new URL(input.href, window.location.href);
-          }
-          if (typeof Request !== 'undefined' && input instanceof Request) {
-            return new URL(input.url, window.location.href);
-          }
-          if (typeof input === 'object' && input) {
-            const candidate =
-              (input as { url?: string | URL }).url ?? (input as { href?: string | URL }).href;
-            if (candidate instanceof URL) {
-              return new URL(candidate.href, window.location.href);
-            }
-            if (typeof candidate === 'string') {
-              return new URL(candidate, window.location.href);
-            }
-          }
-        } catch {
-          return null;
+    if (typeof window === 'undefined' || allowNetwork) return;
+    // Each effect owns one wrapper and releases it on toggle/unmount/StrictMode replay.
+    // Capture the implementation, not a mutable ref that can point at another guard.
+    const originalFetch = window.fetch;
+    const normalizeRequest = (input: RequestInfo | URL): URL | null => {
+      try {
+        if (typeof input === 'string') {
+          return new URL(input, window.location.href);
         }
+        if (input instanceof URL) {
+          return new URL(input.href, window.location.href);
+        }
+        if (typeof Request !== 'undefined' && input instanceof Request) {
+          return new URL(input.url, window.location.href);
+        }
+        if (typeof input === 'object' && input) {
+          const candidate =
+            (input as { url?: string | URL }).url ?? (input as { href?: string | URL }).href;
+          if (candidate instanceof URL) {
+            return new URL(candidate.href, window.location.href);
+          }
+          if (typeof candidate === 'string') {
+            return new URL(candidate, window.location.href);
+          }
+        }
+      } catch {
         return null;
-      };
+      }
+      return null;
+    };
 
-      window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-        const resolvedUrl = normalizeRequest(input);
-        if (resolvedUrl) {
-          const protocol = resolvedUrl.protocol.toLowerCase();
-          const isHttp = protocol === 'http:' || protocol === 'https:';
-          const isSameOrigin = resolvedUrl.origin === window.location.origin;
-          const isAllowed = ['api.github.com'].includes(resolvedUrl.hostname);
+    const guardedFetch: typeof fetch = (input, init) => {
+      const resolvedUrl = normalizeRequest(input);
+      if (resolvedUrl) {
+        const protocol = resolvedUrl.protocol.toLowerCase();
+        const isHttp = protocol === 'http:' || protocol === 'https:';
+        const isSameOrigin = resolvedUrl.origin === window.location.origin;
+        const isAllowed = ['api.github.com'].includes(resolvedUrl.hostname);
 
-          if (isHttp && !isSameOrigin && !isAllowed) {
-            return Promise.reject(new Error('Network requests disabled'));
-          }
+        if (isHttp && !isSameOrigin && !isAllowed) {
+          return Promise.reject(new Error('Network requests disabled'));
         }
-        return fetchRef.current!(input, init);
-      };
-    } else {
-      window.fetch = fetchRef.current!;
-    }
+      }
+      return originalFetch.call(window, input, init);
+    };
+    window.fetch = guardedFetch;
+    return () => {
+      // Do not clobber a fetch implementation installed by a different owner.
+      if (window.fetch === guardedFetch) window.fetch = originalFetch;
+    };
   }, [allowNetwork, networkSettingsLoaded]);
 
   useEffect(() => {
