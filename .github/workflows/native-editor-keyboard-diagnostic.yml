@@ -1,0 +1,82 @@
+name: Diagnose native editor keyboard dispatch
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-editor-keyboard-diagnostic.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NEXT_PUBLIC_VERCEL_ENV: preview
+      VERCEL_ENV: preview
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 0033ac9c7b065a3cc92ab05811aa0cffb74b4cdd
+          persist-credentials: false
+      - name: Preserve exact review source before temporary diagnostics
+        run: |
+          mkdir -p /tmp/editor-diagnostic
+          git rev-parse HEAD > /tmp/editor-diagnostic/revision.txt
+          git rev-parse HEAD^{tree} > /tmp/editor-diagnostic/tree.txt
+          git ls-files '*AGENTS.md' > /tmp/editor-diagnostic/agent-paths.txt
+          git archive --format=tar.gz HEAD > /tmp/editor-diagnostic/source.tar.gz
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock') }}
+      - run: yarn install --immutable
+      - run: yarn playwright install --with-deps webkit
+      - name: Add observation-only logging in isolated checkout
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apps/vscode/CodeEditor.tsx')
+          s=p.read_text()
+          s=s.replace('if (model && model.getValue() !== value) model.setValue(value);', '''if (model && model.getValue() !== value) {
+            console.log('QA_MODEL_SET', JSON.stringify({path, from:model.getValue().slice(0,60), to:value.slice(0,60), undo:model.canUndo()}));
+            model.setValue(value);
+          }''')
+          s=s.replace('change = editor.onDidChangeModelContent(() => {', '''change = editor.onDidChangeModelContent((event) => {
+            console.log('QA_MODEL_CHANGE', JSON.stringify({value:editor.getValue().slice(0,60), undo:editor.getModel()?.canUndo(), isUndoing:event.isUndoing, isRedoing:event.isRedoing, isFlush:event.isFlush}));''')
+          p.write_text(s)
+          p=Path('tests/portfolio/repository-editor.spec.ts')
+          s=p.read_text().replace('page.on("pageerror", (error) => errors.push(error.message));', '''page.on("pageerror", (error) => errors.push(error.message));
+            page.on("console", (message) => { if (message.text().startsWith('QA_')) console.log(message.text()); });''')
+          s=s.replace('await input.focus();', '''console.log('QA_PLATFORM', await page.evaluate(() => ({platform:navigator.platform, userAgent:navigator.userAgent})), process.env.QA_UNDO_KEY);
+            await input.focus();''',1)
+          s=s.replace('input.press("Control+z")', 'input.press(process.env.QA_UNDO_KEY || "Control+z")')
+          s=s.replace('for (let undo = 0; undo < 8; undo += 1) {', '''for (let undo = 0; undo < 8; undo += 1) {
+            console.log('QA_UNDO_ATTEMPT', undo);''')
+          p.write_text(s)
+          PY
+      - run: yarn build
+      - name: Compare Control and Command without changing any release assertion
+        run: |
+          set +e
+          QA_UNDO_KEY=Control+z yarn playwright test --config=playwright.portfolio.config.ts repository-editor.spec.ts --project=webkit --grep '390x844' > /tmp/editor-diagnostic/control.log 2>&1
+          control=$?
+          mv test-results /tmp/editor-diagnostic/control-results
+          QA_UNDO_KEY=Meta+z yarn playwright test --config=playwright.portfolio.config.ts repository-editor.spec.ts --project=webkit --grep '390x844' > /tmp/editor-diagnostic/command.log 2>&1
+          command=$?
+          mv test-results /tmp/editor-diagnostic/command-results
+          printf '{"controlExit":%s,"commandExit":%s}\n' "$control" "$command" > /tmp/editor-diagnostic/results.json
+          cat /tmp/editor-diagnostic/results.json
+          grep 'QA_' /tmp/editor-diagnostic/control.log /tmp/editor-diagnostic/command.log
+          exit 0
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-editor-keyboard-diagnostic
+          path: /tmp/editor-diagnostic/
+          retention-days: 3
