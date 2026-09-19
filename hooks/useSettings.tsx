@@ -151,12 +151,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
   const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
-  const [allowNetwork, setAllowNetwork] = useState<boolean>(defaults.allowNetwork);
+  // Hydrate the saved preference before permitting requests, including on deep links.
+  const [allowNetwork, setAllowNetwork] = useState<boolean>(false);
+  const [networkSettingsLoaded, setNetworkSettingsLoaded] = useState(false);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [volume, setVolume] = useState<number>(defaults.volume);
   const [theme, setTheme] = useState<string>('default');
   const fetchRef = useRef<typeof fetch | null>(null);
   const previousThemeRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    // Do not wait for unrelated IndexedDB preferences or persist the hydration placeholder.
+    void loadAllowNetwork().then((value) => {
+      if (!active) return;
+      setAllowNetwork(value);
+      setNetworkSettingsLoaded(true);
+    }).catch(() => {
+      // Unreadable storage must not accidentally override a possible saved opt-out.
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -169,7 +184,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setHighContrast(await loadHighContrast());
       setLargeHitAreas(await loadLargeHitAreas());
       setPongSpin(await loadPongSpin());
-      setAllowNetwork(await loadAllowNetwork());
       setHaptics(await loadHaptics());
       setVolume(await loadVolume());
       setTheme(loadTheme());
@@ -256,7 +270,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [pongSpin]);
 
   useEffect(() => {
-    saveAllowNetwork(allowNetwork);
+    if (networkSettingsLoaded) {
+      void saveAllowNetwork(allowNetwork).catch(() => {
+        // The current-session toggle still works when browser storage is read-only.
+      });
+    }
     if (typeof window === 'undefined') return;
     if (!fetchRef.current) fetchRef.current = window.fetch.bind(window);
     if (!allowNetwork) {
@@ -305,7 +323,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     } else {
       window.fetch = fetchRef.current!;
     }
-  }, [allowNetwork]);
+  }, [allowNetwork, networkSettingsLoaded]);
 
   useEffect(() => {
     saveHaptics(haptics);
@@ -403,4 +421,3 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 }
 
 export const useSettings = () => useContext(SettingsContext);
-

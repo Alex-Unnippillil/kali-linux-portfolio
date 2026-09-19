@@ -89,7 +89,7 @@ Representative apps include:
 
 ### Safety, privacy, and controls
 
-- External network access from the client is guarded behind `allowNetwork` in Settings.
+- External network access is controlled by `allowNetwork` in Settings (enabled by default, with a persistent opt-out).
 - Optional integrations are explicitly gated behind environment variables.
 - Production deployments ship with security headers and CSP constraints.
 
@@ -470,7 +470,7 @@ Human-readable changes are tracked in `CHANGELOG.md`. The changelog format follo
 
 ## Security
 
-- Default-deny for external network access from the client (`allowNetwork` in Settings).
+- Network access is enabled by default so opening YouTube loads the curated library. Disable `allowNetwork` in Settings to opt out; saved choices are respected on reload. Analytics and simulated-tool feature flags remain separate.
 - Serverless routes intended for tool-like outputs are feature-gated behind environment flags.
 - CSP and security headers are configured in `next.config.js` and `middleware.ts`.
 
@@ -543,3 +543,17 @@ syntax highlighting, Find, local editing/undo, word wrap, and file downloads wor
 without an external service. Edits stay in the app session and never change GitHub;
 this showcase does not execute code. See [repository editor](docs/repository-editor.md)
 for shortcuts, source packaging, and privacy limits.
+
+
+### YouTube opens connected
+
+Opening YouTube from the launcher or `/?app=youtube` loads Alex's public playlists,
+video cards, and the first available embedded video without an extra network-enable
+click. Video playback does not autoplay. Settings are loaded before requests begin,
+and startup no longer overwrites an existing network preference.
+
+Browsers with an existing `allow-network=false` value keep that saved choice, including
+values saved by older releases. Use **Enable network** once in YouTube to reconnect;
+that choice now survives reloads. New visitors and a settings reset use the connected
+default. The configured YouTube API key, quota, and video embedding permissions are
+still required; network defaults do not bypass third-party errors.

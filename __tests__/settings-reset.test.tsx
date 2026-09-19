@@ -48,6 +48,7 @@ describe('Settings reset flow', () => {
 
     await waitFor(() => expect(hapticsToggle).toBeChecked());
     await waitFor(() => expect(pongSpinToggle).toBeChecked());
+    await waitFor(() => expect(allowNetworkToggle).toBeChecked());
 
     await user.click(alternateAccentRadio);
     await user.selectOptions(densitySelect, 'compact');
@@ -67,7 +68,7 @@ describe('Settings reset flow', () => {
     expect(reducedMotionToggle).toBeChecked();
     expect(largeHitAreasToggle).toBeChecked();
     expect(highContrastToggle).toBeChecked();
-    expect(allowNetworkToggle).toBeChecked();
+    expect(allowNetworkToggle).not.toBeChecked();
     expect(hapticsToggle).not.toBeChecked();
     expect(pongSpinToggle).not.toBeChecked();
 
