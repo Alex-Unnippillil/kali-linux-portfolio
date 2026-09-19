@@ -27,12 +27,14 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     {
       name: "webkit",
-      testMatch: /(?:youtube-responsive|app-polish|x-profile)\.spec\.ts/,
+      testMatch:
+        /(?:youtube-responsive|app-polish|x-profile|repository-editor)\.spec\.ts/,
       use: { ...devices["Desktop Safari"] },
     },
     {
       name: "firefox",
-      testMatch: /(?:youtube-responsive|app-polish|x-profile)\.spec\.ts/,
+      testMatch:
+        /(?:youtube-responsive|app-polish|x-profile|repository-editor)\.spec\.ts/,
       use: { ...devices["Desktop Firefox"] },
     },
   ],

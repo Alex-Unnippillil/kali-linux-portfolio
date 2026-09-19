@@ -1,9 +1,9 @@
 .app {
-  --x-bg: #080c12;
-  --x-panel: #0e141e;
-  --x-line: #273140;
-  --x-muted: #a1adbd;
-  --x-text: #f2f5fa;
+  --x-bg: #000000;
+  --x-panel: #000000;
+  --x-line: #2f3336;
+  --x-muted: #a4abb0;
+  --x-text: #e7e9ea;
   --x-accent: #81c6ff;
   container: xprofile / inline-size;
   height: 100%;
@@ -52,7 +52,7 @@
   gap: 12px;
   padding: 10px 22px;
   border-bottom: 1px solid var(--x-line);
-  background: #101620;
+  background: #000000;
 }
 .brand {
   display: flex;
@@ -139,9 +139,9 @@
   scrollbar-gutter: stable;
 }
 .layout {
-  max-width: 1170px;
+  max-width: 1230px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 0 24px;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
@@ -151,7 +151,8 @@
   min-width: 0;
   background: var(--x-panel);
   border: 1px solid var(--x-line);
-  border-radius: 18px;
+  border-radius: 0;
+  border-block: 0;
   overflow: clip;
 }
 .banner {
@@ -488,6 +489,18 @@
   height: 100%;
   object-fit: cover;
 }
+/* Preserve portrait screenshots and photos rather than cropping away their content. */
+.mediaGrid[data-count="1"] .media {
+  aspect-ratio: auto;
+  min-height: 0;
+  background: #0b0d10;
+}
+.mediaGrid[data-count="1"] .media img {
+  display: block;
+  height: auto;
+  max-height: 560px;
+  object-fit: contain;
+}
 .mediaLabel {
   position: absolute;
   display: inline-flex;
@@ -635,7 +648,7 @@
   border-radius: 17px;
   padding: 23px;
   margin-bottom: 17px;
-  background: linear-gradient(130deg, #132132, #0d131d 85%);
+  background: #16181c;
 }
 .eyebrow {
   display: block;
@@ -752,6 +765,7 @@
     grid-template-columns: minmax(0, 1fr) 264px;
   }
   .sidebar {
+    padding-top: 24px;
     display: block;
   }
 }
@@ -765,7 +779,9 @@
     gap: 10px;
   }
   .readOnly {
-    display: none;
+    padding: 4px 7px;
+    font-size: 9px;
+    white-space: nowrap;
   }
   .toolbarLink {
     padding: 10px 12px;
@@ -856,5 +872,64 @@
   }
   .tabs button[aria-pressed="true"] {
     border-bottom: 3px solid Highlight;
+  }
+}
+
+/* The expanded layout follows X's profile column, with useful navigation only. */
+.profileNav {
+  display: none;
+  min-width: 0;
+  padding: 26px 0;
+}
+.profileNav > svg {
+  margin: 0 0 24px 12px;
+}
+.profileNav button,
+.profileNav a {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  padding: 10px 13px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 17px;
+  text-align: left;
+  color: var(--x-text);
+}
+.profileNav button:hover,
+.profileNav a:hover {
+  background: #181818;
+}
+.profileNav p {
+  font-size: 12px;
+  margin: 28px 12px 0;
+  font-weight: 650;
+}
+.profileNav p span {
+  color: var(--x-muted);
+  font-weight: 400;
+}
+.navAvatar {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--x-muted);
+  border-radius: 50%;
+  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+@container xprofile (min-width: 1100px) {
+  .layout {
+    grid-template-columns: 168px minmax(0, 610px) minmax(0, 285px);
+    gap: 22px;
+  }
+  .profileNav {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
   }
 }

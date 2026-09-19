@@ -4237,6 +4237,18 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        if (e.defaultPrevented) return;
+
+        // Command is an editing modifier, not a launcher key, while typing.
+        // Opening the launcher on Meta keydown steals focus before Cmd+Z/F/etc.
+        // reaches the editor. Explicit Ctrl+Escape and Alt+Tab still belong to
+        // the desktop; Super outside editable controls retains its OS behavior.
+        const target = e.target;
+        const editing = target instanceof Element && Boolean(
+            target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]'),
+        );
+        if (editing && (e.key === 'Meta' || e.metaKey)) return;
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {
@@ -5627,17 +5639,15 @@ export class Desktop extends Component {
             return;
         }
 
-        // capture window snapshot
-        let image = await this.captureWindowPreview(objId, 'normal');
-        if (!image) {
-            image = await this.captureWindowPreview(objId, 'aggressive');
-        }
-        if (!image && this.windowPreviewLastGoodCache?.has(objId)) {
-            image = this.windowPreviewLastGoodCache.get(objId);
-        }
-        if (!image) {
-            image = this.buildFallbackPreview(objId);
-        }
+        // Closing must never wait for DOM rasterization (images/fonts can stall
+        // html-to-image, especially in WebKit). Use an existing taskbar preview
+        // or the lightweight app card; fresh previews are captured on hover.
+        const candidates = [
+            this.windowPreviewCache?.get(objId),
+            this.windowPreviewLastGoodCache?.get(objId),
+        ];
+        const image = candidates.find(value => typeof value === 'string' && value.length)
+            || this.buildFallbackPreview(objId);
 
         // persist in trash with autopurge
         const appMeta = apps.find(a => a.id === objId) || {};

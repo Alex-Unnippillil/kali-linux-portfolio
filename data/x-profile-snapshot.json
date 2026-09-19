@@ -1,0 +1,279 @@
+{
+  "version": 1,
+  "source": "https://x.com/AUnnippillil",
+  "feed": {
+    "profile": {
+      "id": "185897765",
+      "username": "AUnnippillil",
+      "name": "Alex Unnippillil",
+      "description": "",
+      "location": "Toronto",
+      "joined": "2010-09-02T02:41:54Z",
+      "followers": 282,
+      "following": 273,
+      "posts": 3960,
+      "avatar": "/showcase/x-media/e24c95e2c7d8c53dc0d955b9095f941a85e5ac7b2855e1a0af60a403d3da6ed9.jpg",
+      "banner": "/showcase/x-media/49acf996e9403998cdf248f08611c7cc3fd77bfb37f3690db94770c23ba07890.jpg"
+    },
+    "posts": [
+      {
+        "id": "2022722108921610324",
+        "text": "Awesome! I was among the first 1,000 people to solve OpenAI's Super Bowl Ad Codex Challenge!",
+        "createdAt": "2026-02-14T17:18:25Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [
+          {
+            "key": "2022722106119647232",
+            "type": "photo",
+            "src": "/showcase/x-media/8925c7f552a927f25d7c835d459bd7c1b086a32d414e50ef128eec2e2ee147df.jpg",
+            "alt": "Order summary for the Codex Core Kit from OpenAI Supply Co."
+          }
+        ],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "2003804617809768579",
+        "text": "",
+        "createdAt": "2025-12-24T12:27:04Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [
+          {
+            "key": "2003804614722797568",
+            "type": "photo",
+            "src": "/showcase/x-media/1f3c47c197b2d4a05e7b40a2d01ef0ecc5cd48c88f378b46bd1a8ac361890e89.jpg",
+            "alt": "An illuminated Lenovo Legion desktop PC."
+          }
+        ],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "2003263606654402641",
+        "text": "My ChatGPT Stats of 2025",
+        "createdAt": "2025-12-23T00:37:17Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [
+          {
+            "key": "2003263517135163392",
+            "type": "photo",
+            "src": "/showcase/x-media/1baf2d7be2b34056a08d731d04e49de92f266bb760a5ba3e6470c6a4825c2f9a.png",
+            "alt": "ChatGPT year-in-review card titled Your 2025 chat stats."
+          }
+        ],
+        "metrics": {
+          "replies": 1,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "2000207652769395040",
+        "text": "Art can be a window, and art can be a mirror. And great art, great art is both.\n\n…you’ll never be a true artist if there’s always a mask between you and the viewer, especially when the viewer is you…",
+        "createdAt": "2025-12-14T14:14:01Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1899769624758980980",
+        "text": "Here begins a new story - the story of the gradual renewal of a man, the story of his gradual regeneration, of his passing from one world into another, of his initiation into a new unknown life.",
+        "createdAt": "2025-03-12T10:29:09Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1824010908248527130",
+        "text": "There is neither happiness nor unhappiness in this world; there is only the comparison of one state with another. Only a man who has felt ultimate despair is capable of feeling ultimate bliss. It is necessary to have wished for death in order to know how good it is to live.",
+        "createdAt": "2024-08-15T09:11:03Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 1
+        }
+      },
+      {
+        "id": "1816706053624467649",
+        "text": "I still want to keep tabs on reality, though. Just in case it tries to do anything sneaky. It makes me feel like I'm contributing. The illusion of control makes the helplessness seem more palatable. And when that illusion is taken away, I panic.",
+        "createdAt": "2024-07-26T05:24:10Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        },
+        "replyTo": "1816705843762430456"
+      },
+      {
+        "id": "1816705843762430456",
+        "text": "I don't like when I can't control what reality is doing. Which is unfortunate because reality works independently of the things I want, and I have only a limited number of ways to influence it, none of which are guaranteed to work.",
+        "createdAt": "2024-07-26T05:23:20Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 1,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1815259144628109522",
+        "text": "No matter where you stand on the long path, right now, try very hard to smile, and be glad you're in the game.",
+        "createdAt": "2024-07-22T05:34:40Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1815254082354884616",
+        "text": "If predictions are always right, then you only have one future. Like that future has been decided. But if it's wrong then you have an almost infinite number of possibilities. Meaning that even the tiniest twist of fate can change your future. I want to believe that I have choices",
+        "createdAt": "2024-07-22T05:14:33Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1806018086924874124",
+        "text": "But I try not to think with my gut. If I'm serious about understanding the world, thinking with anything besides my brain, as tempting as that might be, is likely to get me into trouble.\n\nThe Demon-Haunted World: Science as a Candle in the Dark\nby Carl Sagan",
+        "createdAt": "2024-06-26T17:34:00Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1804307464889700791",
+        "text": "Patience does not mean to passively endure. It means to be farsighted enough to trust the end result of a process. It means to look at the thorn and see the rose, to look at the night and see the dawn. Impatience means to be so shortsighted as to not be able to see the outcome.",
+        "createdAt": "2024-06-22T00:16:36Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 1
+        }
+      },
+      {
+        "id": "1804269344228282550",
+        "text": "You're curious, smart, and bored, but all you see is the choice between working hard and slacking off. There many adventures you miss because you're waiting to think of a plan. To find them, look for tiny interesting choices and remember that you're making the future up as you go",
+        "createdAt": "2024-06-21T21:45:08Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 1
+        }
+      },
+      {
+        "id": "1804248447408615457",
+        "text": "Find a purpose in your life and live it. But, sometimes, it is only after you have lived that you recognize your life had a purpose, and likely one you never had in mind.  \n\nAnd the Mountains Echoed \nby Khaled Hosseini",
+        "createdAt": "2024-06-21T20:22:05Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 1
+        }
+      },
+      {
+        "id": "1802913083322487090",
+        "text": "Pain and suffering are always inevitable for a large intelligence and a deep heart. The really great men must, I think, have great sadness on earth.\n\nCrime and Punishment\nby Fyodor Dostoevsky",
+        "createdAt": "2024-06-18T03:55:50Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 1
+        }
+      },
+      {
+        "id": "1802899493764886603",
+        "text": "If you want to destroy any nation without war, make adultery or nudity common in the young generation",
+        "createdAt": "2024-06-18T03:01:50Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1802079725533221018",
+        "text": "Even if there's only one actual truth, you can have two truths from two perspectives. A method to determine which truth is true doesn't exist. There's no real way to prove your truth in this world. But believing you're wrong for that reason is also wrong.",
+        "createdAt": "2024-06-15T20:44:22Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      },
+      {
+        "id": "1802078307220852776",
+        "text": "Even though there may be a deceiver of some sort, who bends his efforts to keep me perpetually deceived, there can be no doubt that I exist, since he deceives me; and let him deceive me as much as he will, he can never make me be nothing as long as I think that I am something.",
+        "createdAt": "2024-06-15T20:38:44Z",
+        "sensitive": false,
+        "urls": [],
+        "media": [],
+        "metrics": {
+          "replies": 0,
+          "reposts": 0,
+          "likes": 0
+        }
+      }
+    ],
+    "fetchedAt": "2026-09-18T22:08:45.712119Z",
+    "limitReached": false
+  }
+}

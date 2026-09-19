@@ -1,6 +1,9 @@
+import { generateRepositorySnapshot } from './generate-repository-snapshot.mjs';
 import { open, rm } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+
+await generateRepositorySnapshot();
 
 const DIST_DIR = process.env.NEXT_DIST_DIR || '.next-dev';
 
@@ -208,4 +211,3 @@ if (TURBO && !nextArgs.includes('--turbo')) nextArgs.push('--turbo');
 const child = spawn('node', nextArgs, { stdio: 'inherit', env });
 
 child.on('exit', (code) => process.exit(code ?? 1));
-

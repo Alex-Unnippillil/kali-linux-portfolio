@@ -322,6 +322,41 @@ describe('Desktop overlay window controls', () => {
 });
 
 describe('Desktop window state transitions', () => {
+  it('closes promptly without waiting for a pending screenshot capture', async () => {
+    const originalEnvironment = process.env.NODE_ENV;
+    const instance = new Desktop({});
+    instance.state.closed_windows.x = false;
+    instance.state.focused_windows.x = true;
+    instance.state.window_context.x = {};
+    const update = (partial: any, callback?: () => void) => {
+      const next = typeof partial === 'function' ? partial(instance.state) : partial;
+      instance.state = { ...instance.state, ...next };
+      callback?.();
+    };
+    instance.setState = jest.fn(update);
+    instance.setWorkspaceState = jest.fn(update);
+    instance.captureWindowPreview = jest.fn(() => new Promise(() => {}));
+    instance.buildFallbackPreview = jest.fn(() => 'data:image/svg+xml,preview');
+    instance.getActiveStack = jest.fn(() => ['x']);
+    instance.updateTrashIcon = jest.fn();
+    instance.giveFocusToLastApp = jest.fn();
+    instance.saveSession = jest.fn();
+    instance.clearAppBadge = jest.fn();
+    try {
+      // Exercise the real close/trash path, not its legacy NODE_ENV=test shortcut.
+      Object.assign(process.env, { NODE_ENV: 'production' });
+      const closing = instance.closeApp('x');
+      await Promise.resolve();
+      expect(instance.state.closed_windows.x).toBe(true);
+      expect(instance.captureWindowPreview).not.toHaveBeenCalled();
+      expect(instance.buildFallbackPreview).toHaveBeenCalledWith('x');
+      await closing;
+      expect(instance.saveSession).toHaveBeenCalled();
+    } finally {
+      Object.assign(process.env, { NODE_ENV: originalEnvironment });
+    }
+  });
+
   it('reopens a closed minimized window in a visible state', async () => {
     jest.useFakeTimers();
     try {
@@ -449,5 +484,83 @@ describe('Desktop gesture handlers', () => {
     expect(desktop.gestureState.overview).toBeNull();
 
     document.body.innerHTML = '';
+  });
+});
+
+
+describe('Desktop and native editor shortcut ownership', () => {
+  const mountDesktop = () => {
+    const ref = React.createRef<Desktop>();
+    render(
+      <Desktop
+        ref={ref}
+        clearSession={() => {}}
+        changeBackgroundImage={() => {}}
+        bg_image_name="aurora"
+        snapEnabled
+      />
+    );
+    return ref.current!;
+  };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each(['input', 'textarea', 'contenteditable'])(
+    'leaves Command and its edit chords with the focused %s',
+    (kind) => {
+      const desktop = mountDesktop();
+      const launcher = jest.spyOn(desktop, 'openAllAppsOverlay').mockImplementation(() => {});
+      const focusedWindow = jest.spyOn(desktop, 'getFocusedWindowId');
+      const target = document.createElement(kind === 'contenteditable' ? 'div' : kind);
+      if (kind === 'contenteditable') {
+        target.setAttribute('contenteditable', 'true');
+        target.tabIndex = 0;
+      }
+      document.body.appendChild(target);
+      try {
+        target.focus();
+        for (const key of ['Meta', 'z', 'f', 'ArrowUp']) {
+          const event = new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true });
+          fireEvent(target, event);
+          expect(event.defaultPrevented).toBe(false);
+          expect(document.activeElement).toBe(target);
+        }
+        expect(launcher).not.toHaveBeenCalled();
+        expect(focusedWindow).not.toHaveBeenCalled();
+      } finally {
+        target.remove();
+      }
+    }
+  );
+
+  it('retains Super on the desktop and explicit desktop shortcuts from an editor', () => {
+    const desktop = mountDesktop();
+    const launcher = jest.spyOn(desktop, 'openAllAppsOverlay').mockImplementation(() => {});
+    const switcher = jest.spyOn(desktop, 'openWindowSwitcher').mockImplementation(() => {});
+    fireEvent.keyDown(document.body, { key: 'Meta', metaKey: true });
+    expect(launcher).toHaveBeenCalledWith('Meta');
+    launcher.mockClear();
+    const target = document.createElement('textarea');
+    document.body.appendChild(target);
+    try {
+      target.focus();
+      fireEvent.keyDown(target, { key: 'Escape', ctrlKey: true });
+      expect(launcher).toHaveBeenCalledWith('Ctrl+Escape');
+      fireEvent.keyDown(target, { key: 'Tab', altKey: true });
+      expect(switcher).toHaveBeenCalledTimes(1);
+    } finally {
+      target.remove();
+    }
+  });
+
+  it('does not override a shortcut already consumed by an application', () => {
+    const desktop = mountDesktop();
+    const launcher = jest.spyOn(desktop, 'openAllAppsOverlay').mockImplementation(() => {});
+    const event = new KeyboardEvent('keydown', { key: 'Meta', metaKey: true, bubbles: true, cancelable: true });
+    event.preventDefault();
+    fireEvent(document.body, event);
+    expect(launcher).not.toHaveBeenCalled();
   });
 });

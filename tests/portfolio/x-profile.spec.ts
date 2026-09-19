@@ -1,33 +1,21 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { mkdir } from "node:fs/promises";
-import { xFeedFixture, makeXPost } from "../fixtures/x-profile";
-
-async function mockApi(page: Page) {
-  const requests: string[] = [];
-  await page.route("https://pbs.twimg.com/**", (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500"><defs><linearGradient id="g"><stop stop-color="#152c43"/><stop offset="1" stop-color="#154548"/></linearGradient></defs><rect width="800" height="500" fill="url(#g)"/><path d="M70 250h660M400 60v380" stroke="#568caa" stroke-width="1"/><rect x="120" y="130" width="560" height="250" rx="20" fill="#0d1929" stroke="#507b96"/><text x="154" y="205" font-size="21" fill="#81c6ff" font-family="sans-serif">ENGINEERING INTERFACE</text><text x="154" y="258" font-size="32" fill="white" font-family="sans-serif">Built for people.</text><text x="154" y="338" font-size="15" fill="#b6c6d6" font-family="sans-serif">Test fixture — not live account content</text></svg>',
-    }),
-  );
-  await page.route("**/api/x/profile**", (route) => {
-    requests.push(route.request().url());
-    const more = new URL(route.request().url()).searchParams.has("cursor");
-    return route.fulfill({
-      json: more
-        ? {
-            ...xFeedFixture,
-            posts: [
-              xFeedFixture.posts[0],
-              makeXPost("1005", "Fixture: older cloud architecture notes."),
-            ],
-            nextCursor: undefined,
-          }
-        : xFeedFixture,
-    });
+import snapshot from "../../data/x-profile-snapshot.json";
+async function denyExternalServices(page: Page) {
+  const unexpected: string[] = [];
+  await page.route("**/*", (route) => {
+    const url = new URL(route.request().url());
+    if (
+      /twitter|twimg|x\.com|fxtwitter/.test(url.hostname) ||
+      url.pathname.startsWith("/api/x/")
+    ) {
+      unexpected.push(url.href);
+      return route.abort();
+    }
+    return route.continue();
   });
-  return requests;
+  return unexpected;
 }
 async function openX(page: Page, url = "/?app=x") {
   await page.goto(url);
@@ -37,7 +25,7 @@ async function openX(page: Page, url = "/?app=x") {
     name: "Enable network",
     exact: true,
   });
-  if (await enable.isVisible()) await enable.click();
+  await expect(enable).toHaveCount(0);
   return app;
 }
 async function intactLayout(page: Page) {
@@ -107,12 +95,25 @@ for (const viewport of [
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     try {
-      const requests = await mockApi(page);
+      const requests = await denyExternalServices(page);
       const app = await openX(page);
       await expect(
-        app.getByText(/Fixture: building an accessible/),
+        app.getByText(/Awesome! I was among the first 1,000 people/),
       ).toBeVisible();
-      await expect(app.getByRole("article")).toHaveCount(3);
+      await expect(app.getByRole("article")).toHaveCount(17);
+      await expect
+        .poll(() =>
+          app
+            .locator("img:not([loading=lazy])")
+            .evaluateAll((images) =>
+              images.every(
+                (image) =>
+                  (image as HTMLImageElement).complete &&
+                  (image as HTMLImageElement).naturalWidth > 0,
+              ),
+            ),
+        )
+        .toBe(true);
       await intactLayout(page);
       await mkdir("portfolio-screenshots", { recursive: true });
       await page.screenshot({
@@ -125,29 +126,47 @@ for (const viewport of [
         else await control.click();
       };
       await press("Replies");
-      await expect(app.getByText(/Fixture: thanks/)).toBeVisible();
+      await expect(
+        app.getByText(/I still want to keep tabs on reality/),
+      ).toBeVisible();
       await expect(app.getByRole("article")).toHaveCount(1);
       await press("Media");
-      await expect(app.getByRole("article")).toHaveCount(2);
+      await expect(app.getByRole("article")).toHaveCount(3);
       await press("Posts");
       await app
         .getByRole("searchbox", { name: "Search loaded posts" })
         .fill("unmatched selection");
       await expect(app.getByText("No matching posts")).toBeVisible();
       await press("Clear search");
-      expect(requests).toHaveLength(1);
-      await press("Read full post");
-      await expect(
-        app.getByRole("button", { name: "Show less" }),
-      ).toHaveAttribute("aria-expanded", "true");
-      await press("Load older posts");
-      await expect(
-        app.getByText("Fixture: older cloud architecture notes."),
-      ).toBeVisible();
-      await expect(app.getByRole("article")).toHaveCount(4);
+      expect(requests).toHaveLength(0);
+      await expect(app.getByRole("article")).toHaveCount(17);
       await expect(
         app.getByRole("button", { name: "Load older posts" }),
       ).toHaveCount(0);
+      await expect(
+        app.getByRole("button", { name: "Refresh posts" }),
+      ).toHaveCount(0);
+      const first = app.getByRole("article").first();
+      await expect(
+        first.getByRole("link", { name: "Open post", exact: true }),
+      ).toHaveAttribute(
+        "href",
+        "https://x.com/AUnnippillil/status/2022722108921610324",
+      );
+      await expect(first).toContainText(snapshot.feed.posts[0].text);
+      await expect
+        .poll(() =>
+          first
+            .locator("img")
+            .evaluateAll((images) =>
+              images.every(
+                (image) =>
+                  (image as HTMLImageElement).complete &&
+                  (image as HTMLImageElement).naturalWidth > 0,
+              ),
+            ),
+        )
+        .toBe(true);
       await intactLayout(page);
       const window = page.locator("#x");
       if (viewport.width >= 1000) {
@@ -196,7 +215,7 @@ for (const viewport of [
         .getByRole("button", { name: "X", exact: true })
         .click();
       await expect(
-        app.getByText(/Fixture: building an accessible/),
+        app.getByText(/Awesome! I was among the first 1,000 people/),
       ).toBeVisible();
       await intactLayout(page);
       expect(errors).toEqual([]);
@@ -205,40 +224,29 @@ for (const viewport of [
     }
   });
 }
-test("X standalone route, errors and retry never ask visitors for credentials", async ({
+test("X standalone shows actual saved posts with external services blocked", async ({
   page,
   browserName,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  let failing = true;
-  await page.route("**/api/x/profile**", (route) =>
-    route.fulfill(
-      failing
-        ? { status: 503, json: { code: "not_configured" } }
-        : {
-            json: {
-              ...xFeedFixture,
-              profile: { ...xFeedFixture.profile, avatar: undefined },
-              nextCursor: undefined,
-            },
-          },
-    ),
-  );
-  await page.route("https://pbs.twimg.com/**", (route) => route.abort());
+  const requests = await denyExternalServices(page);
   const app = await openX(page, "/apps/x");
   await expect(
-    app.getByText("The profile feed is not connected yet"),
+    app.getByText(/Awesome! I was among the first 1,000 people/),
   ).toBeVisible();
-  await expect(app.getByRole("article")).toHaveCount(0);
+  await expect(app.getByText("Saved posts")).toBeVisible();
+  await expect(app.getByRole("article")).toHaveCount(17);
   await expect(app.locator("iframe")).toHaveCount(0);
+  await expect(
+    app.getByText("The saved selection is not available yet"),
+  ).toHaveCount(0);
   await intactLayout(page);
   await mkdir("portfolio-screenshots", { recursive: true });
   await page.screenshot({
-    path: `portfolio-screenshots/${browserName}-x-unconfigured.png`,
+    path: `portfolio-screenshots/${browserName}-x-saved-standalone.png`,
     animations: "disabled",
   });
-  failing = false;
-  await app.getByRole("button", { name: "Try again" }).click();
-  await expect(app.getByText(/Fixture: building an accessible/)).toBeVisible();
-  await intactLayout(page);
+  await page.reload();
+  await expect(app.getByRole("article")).toHaveCount(17);
+  expect(requests).toEqual([]);
 });

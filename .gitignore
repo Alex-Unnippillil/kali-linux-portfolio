@@ -58,3 +58,8 @@ tsconfig.tsbuildinfo
 .env*.local
 
 .env.local.bak
+
+# Generated first-party code workspace
+/public/showcase/repository/
+/public/showcase/repository.tmp/
+/data/x-profile-snapshot.json.tmp

@@ -1,6 +1,5 @@
 "use client";
 import { useId, useMemo, useRef, useState, type SVGProps } from "react";
-import { useSettings } from "../../hooks/useSettings";
 import useXProfile from "../../hooks/useXProfile";
 import {
   filterXPosts,
@@ -342,8 +341,8 @@ function PostCard({
 }
 const issueCopy: Record<FeedIssue, [string, string]> = {
   not_configured: [
-    "The profile feed is not connected yet",
-    "The site owner needs to finish the server connection. No X account or API key is needed from visitors.",
+    "The saved selection is not available yet",
+    "This profile has no published post archive yet, and its optional server connection is not configured. Open the original profile below.",
   ],
   unavailable: [
     "Posts are temporarily unavailable",
@@ -366,14 +365,13 @@ const issueCopy: Record<FeedIssue, [string, string]> = {
     "Enable network access to load public posts and images from X. Your browser never receives the account credentials.",
   ],
   static_export: [
-    "View the latest posts on X",
-    "This offline edition does not run the server connection. Open the public profile for the live timeline.",
+    "The saved selection is not available yet",
+    "This edition has no published post archive yet. Open the original profile to read Alex’s posts.",
   ],
 };
 
 export default function XProfileApp() {
-  const { allowNetwork, setAllowNetwork } = useSettings();
-  const { feed, issue, busy, refresh, loadMore } = useXProfile(allowNetwork);
+  const { feed, source, issue, busy, refresh, loadMore, retry } = useXProfile();
   const [filter, setFilter] = useState<PostFilter>("posts");
   const [query, setQuery] = useState("");
   const [announcement, setAnnouncement] = useState("");
@@ -385,7 +383,7 @@ export default function XProfileApp() {
     () => filterXPosts(feed?.posts || [], filter, query),
     [feed, filter, query],
   );
-  const visibleIssue = allowNetwork ? issue : "offline";
+  const visibleIssue = issue;
   const copyLink = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
@@ -404,22 +402,27 @@ export default function XProfileApp() {
             <span>Profile showcase</span>
           </div>
         </div>
-        <span className={styles.readOnly}>Read-only</span>
-        <button
-          type="button"
-          className={styles.iconButton}
-          disabled={
-            Boolean(busy) ||
-            !allowNetwork ||
-            process.env.NEXT_PUBLIC_STATIC_EXPORT === "true"
-          }
-          onClick={() => {
-            void refresh();
-          }}
-          aria-label="Refresh posts"
-        >
-          <Icon name="refresh" className={busy ? styles.spinning : undefined} />
-        </button>
+        <span className={styles.readOnly}>
+          {source === "saved" ? "Saved posts" : "Read-only"}
+        </span>
+        {source !== "saved" && (
+          <button
+            type="button"
+            className={styles.iconButton}
+            disabled={
+              Boolean(busy) || process.env.NEXT_PUBLIC_STATIC_EXPORT === "true"
+            }
+            onClick={() => {
+              void refresh();
+            }}
+            aria-label="Refresh posts"
+          >
+            <Icon
+              name="refresh"
+              className={busy ? styles.spinning : undefined}
+            />
+          </button>
+        )}
         <a
           className={styles.toolbarLink}
           href={X_PROFILE_URL}
@@ -437,6 +440,58 @@ export default function XProfileApp() {
         data-testid="x-profile-scroll"
       >
         <div className={styles.layout}>
+          <nav className={styles.profileNav} aria-label="Profile navigation">
+            <Icon name="x" width="31" height="31" />
+            <button
+              type="button"
+              onClick={() =>
+                content.current?.scrollTo({ top: 0, behavior: "auto" })
+              }
+            >
+              <span className={styles.navAvatar}>AU</span>Profile
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("posts");
+                setQuery("");
+              }}
+              aria-label="Browse all posts"
+            >
+              <Icon name="clock" />
+              Posts
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                document.getElementById(searchId)?.focus();
+              }}
+              aria-label="Find a post"
+            >
+              <Icon name="search" />
+              Search
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setFilter("media");
+                setQuery("");
+              }}
+              aria-label="Browse media posts"
+            >
+              <Icon name="image" />
+              Media
+            </button>
+            <a href={X_PROFILE_URL} target="_blank" rel="noopener noreferrer">
+              <Icon name="external" />
+              View on X
+            </a>
+            <p>
+              Alex Unnippillil
+              <br />
+              <span>@{X_HANDLE}</span>
+            </p>
+          </nav>
           <main className={styles.timeline} aria-label="X profile timeline">
             <section className={styles.profile} aria-label="Profile details">
               <div className={styles.banner}>
@@ -563,29 +618,17 @@ export default function XProfileApp() {
                   <h2>{issueCopy[visibleIssue][0]}</h2>
                   <p>{issueCopy[visibleIssue][1]}</p>
                   <div className={styles.emptyActions}>
-                    {visibleIssue === "offline" ? (
+                    {visibleIssue !== "static_export" && (
                       <button
                         type="button"
-                        className={styles.primary}
-                        onClick={() => setAllowNetwork(true)}
+                        className={styles.secondary}
+                        disabled={Boolean(busy)}
+                        onClick={() => {
+                          void retry();
+                        }}
                       >
-                        Enable network
+                        Try again
                       </button>
-                    ) : (
-                      visibleIssue !== "static_export" && (
-                        <button
-                          type="button"
-                          className={styles.secondary}
-                          disabled={Boolean(busy)}
-                          onClick={() => {
-                            void (issue === "invalid_cursor" || !feed
-                              ? refresh()
-                              : loadMore());
-                          }}
-                        >
-                          Try again
-                        </button>
-                      )
                     )}
                     <a
                       className={styles.secondary}
@@ -600,10 +643,12 @@ export default function XProfileApp() {
                     <details className={styles.ownerHelp}>
                       <summary>Setup for the site owner</summary>
                       <p>
-                        Add a server-only <code>X_BEARER_TOKEN</code> in
-                        Vercel’s environment settings, then redeploy. Never put
-                        it in a <code>NEXT_PUBLIC_</code> variable. Visitors do
-                        not need credentials.
+                        Publish a reviewed selection using{" "}
+                        <code>yarn x:import</code>. See{" "}
+                        <code>docs/x-profile-showcase.md</code> for the archive
+                        format. Saved posts need no API keys, login, or visitor
+                        confirmation. A server-only <code>X_BEARER_TOKEN</code>{" "}
+                        remains optional.
                       </p>
                     </details>
                   )}
@@ -693,8 +738,9 @@ export default function XProfileApp() {
                 )}
                 <p>
                   {feed.limitReached ? "Showing up to 100 recent posts. " : ""}
-                  Updated {dateLabel(feed.fetchedAt)} · Cached for up to 15
-                  minutes.
+                  {source === "saved"
+                    ? `Saved selection · ${dateLabel(feed.fetchedAt)} · Not a live feed.`
+                    : `Updated ${dateLabel(feed.fetchedAt)} · Cached for up to 15 minutes.`}
                 </p>
                 <a
                   href={X_PROFILE_URL}
@@ -736,15 +782,18 @@ export default function XProfileApp() {
               <div className={styles.connection}>
                 <span data-connected={Boolean(feed)} />
                 {feed
-                  ? "Connected through X API"
-                  : allowNetwork && busy
-                    ? "Connecting to X"
-                    : "Profile connection pending"}
+                  ? source === "saved"
+                    ? "Saved on this website"
+                    : "Retrieved through the server"
+                  : busy
+                    ? "Loading public posts"
+                    : "Awaiting a published selection"}
               </div>
             </section>
             <p className={styles.disclaimer}>
-              Posts and counts come from X when connected. Reposts are excluded.
-              No generated or sample posts appear in this feed.
+              Original posts, with links back to X. Saved selections are dated,
+              not presented as live. Reposts are excluded. No generated or
+              sample posts appear in this feed.
             </p>
           </aside>
         </div>
