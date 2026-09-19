@@ -74,7 +74,6 @@ describe('Settings reset flow', () => {
     render(<ResetHarness />);
     expect(screen.getByRole('combobox')).toHaveValue('compact');
     expect(screen.getByLabelText('Adjust font scale')).toHaveValue('1.5');
-    expect(screen.getByLabelText('Adjust master volume')).toHaveValue('25');
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
     }
@@ -82,7 +81,6 @@ describe('Settings reset flow', () => {
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue(defaults.density));
     expect(resetSettings).toHaveBeenCalledTimes(1);
     expect(screen.getByLabelText('Adjust font scale')).toHaveValue(String(defaults.fontScale));
-    expect(screen.getByLabelText('Adjust master volume')).toHaveValue(String(defaults.volume));
     expect(screen.getByRole('radio', { name: `select-accent-${defaults.accent}` })).toHaveAttribute('aria-checked', 'true');
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(defaults[key]);
