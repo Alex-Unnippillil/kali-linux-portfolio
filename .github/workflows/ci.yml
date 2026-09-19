@@ -26,6 +26,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Record validation source
+        run: |
+          git rev-parse HEAD
+          git hash-object .github/workflows/ci.yml hooks/useSettings.tsx __tests__/allowNetwork.test.ts
+          git status --porcelain
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
