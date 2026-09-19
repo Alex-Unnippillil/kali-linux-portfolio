@@ -1,0 +1,38 @@
+name: Stage native Command focus repair
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-command-focus-repair.yml]
+permissions:
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 0033ac9c7b065a3cc92ab05811aa0cffb74b4cdd
+      - name: Verify bounded patch and exact resulting source tree
+        run: |
+          python3 - <<'PY'
+          import base64,gzip,hashlib,pathlib,subprocess
+          encoded='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'
+          patch=gzip.decompress(base64.b64decode(encoded,validate=True))
+          assert hashlib.sha256(patch).hexdigest()=='e796d010f8998f4a8a827414ee6b66adf1f9ea72ceab402244d51c41d3d44261'
+          pathlib.Path('/tmp/keyboard.patch').write_bytes(patch)
+          pathlib.Path('.git/info/attributes').write_text('* -text\n')
+          subprocess.run(['git','apply','--check','/tmp/keyboard.patch'],check=True)
+          subprocess.run(['git','apply','/tmp/keyboard.patch'],check=True)
+          paths=['__tests__/desktop.listeners.test.tsx','components/screen/desktop.js','tests/portfolio/repository-editor.spec.ts']
+          subprocess.run(['git','add','--',*paths],check=True)
+          assert subprocess.check_output(['git','diff','--cached','--name-only']).decode().splitlines()==paths
+          assert subprocess.check_output(['git','write-tree']).decode().strip()=='454f430f6e77377d9dafe76f1738f7d0b569bd72'
+          PY
+      - name: Store reviewed objects on isolated branch only
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          git commit -m 'fix(desktop): stage native Command focus repair and keyboard regressions'
+          git push origin HEAD:refs/heads/qa/native-keyboard-454f430
