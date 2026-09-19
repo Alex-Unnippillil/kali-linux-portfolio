@@ -170,8 +170,12 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
     window.localStorage.setItem("allow-network", "false");
     const settings = renderSettings();
     await act(async () => {});
-    const replacement = jest.fn() as unknown as typeof fetch;
-    window.fetch = replacement;
+    const replacement = jest.fn();
+    Object.defineProperty(window, "fetch", {
+      configurable: true,
+      writable: true,
+      value: replacement,
+    });
     settings.unmount();
     expect(window.fetch).toBe(replacement);
   });
