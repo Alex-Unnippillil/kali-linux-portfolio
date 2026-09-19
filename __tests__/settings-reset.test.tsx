@@ -1,99 +1,104 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { useContext, useState } from 'react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Settings } from '../components/apps/settings';
-import { SettingsProvider } from '../hooks/useSettings';
+import { SettingsContext } from '../hooks/useSettings';
 import { defaults, resetSettings } from '../utils/settingsStore';
 
-// This test exercises the reset UI. Storage and network preference persistence
-// are covered separately; give every asynchronous preference a stable value.
-jest.mock('../utils/settingsStore', () => {
-  const actual = jest.requireActual('../utils/settingsStore');
-  return {
-    __esModule: true,
-    ...actual,
-    getAccent: async () => actual.defaults.accent,
-    getWallpaper: async () => actual.defaults.wallpaper,
-    getUseKaliWallpaper: async () => actual.defaults.useKaliWallpaper,
-    getDensity: async () => actual.defaults.density,
-    getReducedMotion: async () => actual.defaults.reducedMotion,
-    getFontScale: async () => actual.defaults.fontScale,
-    getHighContrast: async () => actual.defaults.highContrast,
-    getLargeHitAreas: async () => actual.defaults.largeHitAreas,
-    getPongSpin: async () => actual.defaults.pongSpin,
-    getHaptics: async () => actual.defaults.haptics,
-    getVolume: async () => actual.defaults.volume,
-    resetSettings: jest.fn().mockResolvedValue(undefined),
-  };
-});
+jest.mock('../utils/settingsStore', () => ({
+  __esModule: true,
+  ...jest.requireActual('../utils/settingsStore'),
+  resetSettings: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Exercise the reset control against explicit React state, independently of
+// asynchronous IDB startup. Provider and persistence have separate regressions.
+function ResetHarness() {
+  const initial = useContext(SettingsContext);
+  const [value, setValue] = useState({
+    ...initial,
+    accent: '#e53e3e',
+    wallpaper: 'wall-3',
+    useKaliWallpaper: !defaults.useKaliWallpaper,
+    density: 'compact' as typeof initial.density,
+    reducedMotion: !defaults.reducedMotion,
+    fontScale: 1.5,
+    highContrast: !defaults.highContrast,
+    largeHitAreas: !defaults.largeHitAreas,
+    pongSpin: !defaults.pongSpin,
+    allowNetwork: !defaults.allowNetwork,
+    haptics: !defaults.haptics,
+    volume: 25,
+    theme: 'dark',
+  });
+  return (
+    <SettingsContext.Provider value={{
+      ...value,
+      setAccent: (accent) => setValue((current) => ({ ...current, accent })),
+      setWallpaper: (wallpaper) => setValue((current) => ({ ...current, wallpaper })),
+      setUseKaliWallpaper: (useKaliWallpaper) => setValue((current) => ({ ...current, useKaliWallpaper })),
+      setDensity: (density) => setValue((current) => ({ ...current, density })),
+      setReducedMotion: (reducedMotion) => setValue((current) => ({ ...current, reducedMotion })),
+      setFontScale: (fontScale) => setValue((current) => ({ ...current, fontScale })),
+      setHighContrast: (highContrast) => setValue((current) => ({ ...current, highContrast })),
+      setLargeHitAreas: (largeHitAreas) => setValue((current) => ({ ...current, largeHitAreas })),
+      setPongSpin: (pongSpin) => setValue((current) => ({ ...current, pongSpin })),
+      setAllowNetwork: (allowNetwork) => setValue((current) => ({ ...current, allowNetwork })),
+      setHaptics: (haptics) => setValue((current) => ({ ...current, haptics })),
+      setVolume: (volume) => setValue((current) => ({ ...current, volume })),
+      setTheme: (theme) => setValue((current) => ({ ...current, theme })),
+    }}>
+      <Settings />
+    </SettingsContext.Provider>
+  );
+}
+
+const toggles = [
+  ['Enable Kali gradient wallpaper', 'useKaliWallpaper'],
+  ['Enable reduced motion', 'reducedMotion'],
+  ['Enable large hit areas', 'largeHitAreas'],
+  ['Enable high contrast mode', 'highContrast'],
+  ['Allow simulated network requests', 'allowNetwork'],
+  ['Enable haptics', 'haptics'],
+  ['Enable pong spin', 'pongSpin'],
+] as const;
 
 describe('Settings reset flow', () => {
   beforeEach(() => {
-    window.localStorage.clear();
     window.confirm = jest.fn(() => true);
     (resetSettings as jest.Mock).mockClear();
   });
 
-  test('Reset Desktop restores toggles and slider to defaults', async () => {
+  test('Reset restores non-default controls, including enabled networking', async () => {
     const user = userEvent.setup();
-    render(
-      <SettingsProvider>
-        <Settings />
-      </SettingsProvider>,
-    );
-    // Drain the provider's asynchronous preference chain before user changes.
-    // render already handles synchronous effects; no Testing Library utility
-    // is wrapped in act here.
-    await act(async () => {});
-
-    const densitySelect = screen.getByRole('combobox');
-    const fontSlider = screen.getByLabelText('Adjust font scale');
-    const alternateAccentRadio = screen.getByRole('radio', {
-      name: 'select-accent-#e53e3e',
-    });
-    const kaliWallpaperToggle = screen.getByLabelText('Enable Kali gradient wallpaper');
-    const reducedMotionToggle = screen.getByLabelText('Enable reduced motion');
-    const largeHitAreasToggle = screen.getByLabelText('Enable large hit areas');
-    const highContrastToggle = screen.getByLabelText('Enable high contrast mode');
-    const allowNetworkToggle = screen.getByLabelText('Allow simulated network requests');
-    const hapticsToggle = screen.getByLabelText('Enable haptics');
-    const pongSpinToggle = screen.getByLabelText('Enable pong spin');
-
-    await waitFor(() => expect(allowNetworkToggle).toBeChecked());
-    expect(hapticsToggle).toBeChecked();
-    expect(pongSpinToggle).toBeChecked();
-
-    await user.click(alternateAccentRadio);
-    await user.selectOptions(densitySelect, 'compact');
-    fireEvent.change(fontSlider, { target: { value: '1.5' } });
-    await user.click(kaliWallpaperToggle);
-    await user.click(reducedMotionToggle);
-    await user.click(largeHitAreasToggle);
-    await user.click(highContrastToggle);
-    await user.click(allowNetworkToggle);
-    await user.click(hapticsToggle);
-    await user.click(pongSpinToggle);
-
-    expect(alternateAccentRadio).toHaveAttribute('aria-checked', 'true');
-    expect(densitySelect).toHaveValue('compact');
-    expect(fontSlider).toHaveValue('1.5');
-    expect(kaliWallpaperToggle).toBeChecked();
-    expect(reducedMotionToggle).toBeChecked();
-    expect(largeHitAreasToggle).toBeChecked();
-    expect(highContrastToggle).toBeChecked();
-    expect(allowNetworkToggle).not.toBeChecked();
-    expect(hapticsToggle).not.toBeChecked();
-    expect(pongSpinToggle).not.toBeChecked();
-
+    render(<ResetHarness />);
+    expect(screen.getByRole('combobox')).toHaveValue('compact');
+    expect(screen.getByLabelText('Adjust font scale')).toHaveValue('1.5');
+    expect(screen.getByLabelText('Adjust master volume')).toHaveValue('25');
+    for (const [label, key] of toggles) {
+      expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
+    }
     await user.click(screen.getByRole('button', { name: 'Reset', exact: true }));
-    await waitFor(() => expect(resetSettings).toHaveBeenCalledTimes(1));
-    expect(densitySelect).toHaveValue(defaults.density);
-    expect(fontSlider).toHaveValue(String(defaults.fontScale));
-    expect(kaliWallpaperToggle.checked).toBe(defaults.useKaliWallpaper);
-    expect(reducedMotionToggle.checked).toBe(defaults.reducedMotion);
-    expect(largeHitAreasToggle.checked).toBe(defaults.largeHitAreas);
-    expect(highContrastToggle.checked).toBe(defaults.highContrast);
-    expect(allowNetworkToggle.checked).toBe(defaults.allowNetwork);
-    expect(hapticsToggle.checked).toBe(defaults.haptics);
-    expect(pongSpinToggle.checked).toBe(defaults.pongSpin);
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue(defaults.density));
+    expect(resetSettings).toHaveBeenCalledTimes(1);
+    expect(screen.getByLabelText('Adjust font scale')).toHaveValue(String(defaults.fontScale));
+    expect(screen.getByLabelText('Adjust master volume')).toHaveValue(String(defaults.volume));
+    expect(screen.getByRole('radio', { name: `select-accent-${defaults.accent}` })).toHaveAttribute('aria-checked', 'true');
+    for (const [label, key] of toggles) {
+      expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(defaults[key]);
+    }
+    expect(screen.getByText('All settings restored to defaults')).toBeVisible();
+  });
+
+  test('canceling reset preserves existing values and does not clear storage', async () => {
+    window.confirm = jest.fn(() => false);
+    const user = userEvent.setup();
+    render(<ResetHarness />);
+    await user.click(screen.getByRole('button', { name: 'Reset', exact: true }));
+    expect(resetSettings).not.toHaveBeenCalled();
+    expect(screen.getByRole('combobox')).toHaveValue('compact');
+    for (const [label, key] of toggles) {
+      expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
+    }
   });
 });
