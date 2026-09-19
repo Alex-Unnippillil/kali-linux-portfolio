@@ -112,7 +112,6 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
     window.localStorage.setItem("allow-network", "true");
     const { result } = renderSettings();
     expect(window.localStorage.getItem("allow-network")).toBe("true");
-    expect(window.localStorage.getItem("allow-network")).toBe("true");
     await waitFor(() => expect(result.current.allowNetwork).toBe(true));
     expect(window.localStorage.getItem("allow-network")).toBe("true");
   });
@@ -171,7 +170,7 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
     window.localStorage.setItem("allow-network", "false");
     const settings = renderSettings();
     await act(async () => {});
-    const replacement = jest.fn() as typeof fetch;
+    const replacement = jest.fn() as unknown as typeof fetch;
     window.fetch = replacement;
     settings.unmount();
     expect(window.fetch).toBe(replacement);
