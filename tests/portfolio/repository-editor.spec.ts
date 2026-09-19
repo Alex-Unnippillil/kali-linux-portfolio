@@ -93,6 +93,8 @@ for (const viewport of [
         app.getByRole("button", { name: "Local changes, 1 files" }),
       ).toBeVisible();
       await input.press(undoShortcut);
+      await expect(page.getByTestId("whisker-menu-dropdown")).toHaveCount(0);
+      await expect(input).toBeFocused();
       await expect(
         app.getByRole("button", { name: "Local changes, 0 files" }),
       ).toBeVisible();
