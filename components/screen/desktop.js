@@ -4237,6 +4237,18 @@ export class Desktop extends Component {
     }
 
     handleGlobalShortcut = (e) => {
+        if (e.defaultPrevented) return;
+
+        // Command is an editing modifier, not a launcher key, while typing.
+        // Opening the launcher on Meta keydown steals focus before Cmd+Z/F/etc.
+        // reaches the editor. Explicit Ctrl+Escape and Alt+Tab still belong to
+        // the desktop; Super outside editable controls retains its OS behavior.
+        const target = e.target;
+        const editing = target instanceof Element && Boolean(
+            target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]'),
+        );
+        if (editing && (e.key === 'Meta' || e.metaKey)) return;
+
         if (e.altKey && e.key === 'Tab') {
             e.preventDefault();
             if (!this.isOverlayOpen(SWITCHER_OVERLAY_ID)) {

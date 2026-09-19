@@ -76,6 +76,14 @@ for (const viewport of [
       await expect(app.locator(".find-widget")).toBeVisible();
       await page.keyboard.press("Escape");
       const input = app.locator(".monaco-editor textarea.inputarea");
+      // Monaco selects Command shortcuts from the browser's advertised platform.
+      // WebKit advertises macOS even on a Linux runner; ControlOrMeta follows
+      // the runner OS instead and can hit textarea history rather than Monaco.
+      const macOS = await page.evaluate(() =>
+        navigator.userAgent.includes("Macintosh"),
+      );
+      const undoShortcut = macOS ? "Meta+z" : "Control+z";
+      const redoShortcut = macOS ? "Meta+Shift+z" : "Control+y";
       await input.focus();
       await input.press("Control+Home");
       // Monaco groups typing at spaces as well as newlines. A contiguous token
@@ -84,7 +92,7 @@ for (const viewport of [
       await expect(
         app.getByRole("button", { name: "Local changes, 1 files" }),
       ).toBeVisible();
-      await input.press("Control+z");
+      await input.press(undoShortcut);
       await expect(
         app.getByRole("button", { name: "Local changes, 0 files" }),
       ).toBeVisible();
@@ -95,6 +103,24 @@ for (const viewport of [
       expect(await readFile((await restored.path())!, "utf8")).toBe(
         await readFile("package.json", "utf8"),
       );
+      // Redo must restore the edit after a toolbar download changed focus;
+      // this proves the editor history survives the React/toolbar round trip.
+      await input.focus();
+      await input.press(redoShortcut);
+      await expect(
+        app.getByRole("button", { name: "Local changes, 1 files" }),
+      ).toBeVisible();
+      const redoDownload = page.waitForEvent("download");
+      await app.getByRole("button", { name: "Download current file" }).click();
+      const redone = await redoDownload;
+      expect(await readFile((await redone.path())!, "utf8")).toBe(
+        `localEditorTest${await readFile("package.json", "utf8")}`,
+      );
+      await input.focus();
+      await input.press(undoShortcut);
+      await expect(
+        app.getByRole("button", { name: "Local changes, 0 files" }),
+      ).toBeVisible();
       // Also exercise ordinary multi-word typing. Browsers emit insertText
       // differently, so follow the editor's real undo boundaries (bounded),
       // then compare every byte; never reset the model to make the test pass.
@@ -105,7 +131,7 @@ for (const viewport of [
         app.getByRole("button", { name: "Local changes, 1 files" }),
       ).toBeVisible();
       for (let undo = 0; undo < 8; undo += 1) {
-        await input.press("Control+z");
+        await input.press(undoShortcut);
         if (
           await app
             .getByRole("button", { name: "Local changes, 0 files" })
