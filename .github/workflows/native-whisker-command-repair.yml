@@ -1,0 +1,38 @@
+name: Stage native launcher Command repair
+on:
+  push:
+    branches: [qa/native-apps-source-2026-09-18]
+    paths: [.github/workflows/native-whisker-command-repair.yml]
+permissions:
+  contents: write
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cea5ffaad86d965a8509353a94cc97b5f6136762
+      - name: Verify exact bounded patch and tree
+        run: |
+          python3 - <<'PY'
+          import base64,gzip,hashlib,pathlib,subprocess
+          encoded='H4sIAAAAAAAC/61XbVPbRhD+7l+x9UxjebBlGwgBUqchIUwzbaaZJG0+ZDLMSVrhG2SdenfCuIT/3uf0YsmGYpopwyicdPv+PLubSMYxDYcX0pIYnZ9bNtacn48WM2kuWb/jNPfdO9+aawq2XOjINOJr2t8/CvZY+P4kPNwNxDOajMcH+/ud4XC41UZnZ2dnu52XL2k4ORwc0A6e+0eEc8Cx0nySJJ7Xp+kLuunQbf95hzoUsQm1DNjrfW500SUvAyV0RGamtA1za3oDqkV3iKT1WYQz70tPpllu8bFn+doKzcL9HarUMn4jaUWQcO9r33NSRL2ExRUbeq3mc5FG5G7I9IJCmIkMLaSdkaBYhbnhiH6E1VLOu0TyGvPuRzPSqb2f2m6PXiCo6jt8MNY9rVYJTSmC0jmc8kM4aflNwu5UKKbpdHrXafqZepG86tExFdZXmmVMD4j1GxepNu8btifWIs+5RaY3RVz2dA7R53clceNtgZspjVefb+s/VkEFKlr6IsuQFK8SbbRZvbzPqSLNXtsoQEJemTgggFRMX3rv2BY1/ds9Yvc40Vot/shQ1bbWOuN8BX/gbcoL+rWC0Rv3zutBZ6QWKXSsyZEzNqA5DEHgmFwuBhTkAXJj6mMo0pATl67qTVvDbTsIhCE1lyarUAelV+u3+Drj0HrFFz/iWOSJfa+LI0d936pX7MUiMXyvGFjDnPp/5ayXr5afwL23kder+DhETfJhpFVWxNvv+6myhca36acZn1ZV8+7VXJcP938BWc7uVGlV/VtEmookube6mufqiluCldhtkTn3uiSy14sUGAkHQSkFAIGAicjTcMZ6RX8SCVgTLYsaw/eIgiXZGbv2cWlVtt4dtpHze4By6ZBRg/G7oLICSVnxrCz1aVn4VZ4a7CxAcbXYgM7/X/3bdik0ApOpIWPRHUWiUqaPeYZCiNDKK2GlSkmhG8uIyTXcutrmvxVgFaSPtJ7CyVWwNw8kupXBtSxcsH1EDh6On8r4Hf5MASwnT4sZ4OhOJ4ndOZsQ6JgEIrxscCkNoZAG06KVgYfnA3Wi9lQP1TxDnlNrRs7m6HN7pBZjfcuNaq4/fSaOxHjf9+PJbvB0c65v01EO9m233GTfOxy70e7+mey52V6yqXX1mD5gOFv/7HU7+PeohXkBvnk3yNrvSPRxjZ6EI3cekEo/qQu3FRBhAL+JY1fltayWxmZAZ8IAhlMHlq3Rd31Mj0Z0WvYIcgMfIyqRYQnkUos2pPO02lBQbOnWAAdGSqTBmGTtt3WpdqcCNGSrSWF6QUIkq/Ui1mqOdlYwxU1b1ehyQ5zvtn1otrlON7aIek2ZEmMgawCewFLr+gxmZLVK0JMn9EopbDip17TjWsAPE2XAEa/cmAZU70sDMpwgzwP6srEXTLuOdd2v930p3qJ07hIUBeq6+7XXXw3F9WWldh8OImY32YvNpeA4ffsGHyue95v412a6+/yxzvK000ysTWWw8AP7odWJA0d5MjMZ2+YoEnfYMICXZ5OWhTWGFsvuKMPHWCVSjTRnyrhiLodVUQ3aEQgCBj36bsXaUIxDFs98f/dA8O54d521j9dW8vfx9x2Tj/YckfE8dDRu7V5XkhdOSbGANdkGd8pe+wF197rYJa1Ku65np2IOFnZ/UyHAH4JXF2wGhH4pMRa7aLGDWkvZh/+URgJGrgPXuhdCOlADmn7RUL0cHKwr0sCpvFf1/0xc8Fr3797b/bv9epd5rXL0/fG/qCuslw6elf8DuONgdfP7czJ+TE7+AZ6SNGz2DQAA'
+          patch=gzip.decompress(base64.b64decode(encoded,validate=True))
+          assert hashlib.sha256(patch).hexdigest()=='55d835a54f0e8ebadae1335d041fcfc84c5dc82da351c3b324fc5cbffab4d9ad'
+          pathlib.Path('/tmp/launcher.patch').write_bytes(patch)
+          pathlib.Path('.git/info/attributes').write_text('* -text\n')
+          subprocess.run(['git','apply','--check','/tmp/launcher.patch'],check=True)
+          subprocess.run(['git','apply','/tmp/launcher.patch'],check=True)
+          paths=['__tests__/whiskerMenu.test.tsx','components/menu/WhiskerMenu.tsx','tests/portfolio/repository-editor.spec.ts']
+          subprocess.run(['git','add','--',*paths],check=True)
+          assert subprocess.check_output(['git','diff','--cached','--name-only']).decode().splitlines()==paths
+          assert subprocess.check_output(['git','write-tree']).decode().strip()=='e830af4ece672fe103db4799a1512fefa18591dc'
+          PY
+      - name: Publish isolated source objects without modifying main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git diff --cached --check
+          git commit -m 'fix(launcher): stage reviewed native editing shortcut ownership'
+          git push origin HEAD:refs/heads/qa/native-launcher-e830af4
