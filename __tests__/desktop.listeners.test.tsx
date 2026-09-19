@@ -486,3 +486,81 @@ describe('Desktop gesture handlers', () => {
     document.body.innerHTML = '';
   });
 });
+
+
+describe('Desktop and native editor shortcut ownership', () => {
+  const mountDesktop = () => {
+    const ref = React.createRef<Desktop>();
+    render(
+      <Desktop
+        ref={ref}
+        clearSession={() => {}}
+        changeBackgroundImage={() => {}}
+        bg_image_name="aurora"
+        snapEnabled
+      />
+    );
+    return ref.current!;
+  };
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it.each(['input', 'textarea', 'contenteditable'])(
+    'leaves Command and its edit chords with the focused %s',
+    (kind) => {
+      const desktop = mountDesktop();
+      const launcher = jest.spyOn(desktop, 'openAllAppsOverlay').mockImplementation(() => {});
+      const focusedWindow = jest.spyOn(desktop, 'getFocusedWindowId');
+      const target = document.createElement(kind === 'contenteditable' ? 'div' : kind);
+      if (kind === 'contenteditable') {
+        target.setAttribute('contenteditable', 'true');
+        target.tabIndex = 0;
+      }
+      document.body.appendChild(target);
+      try {
+        target.focus();
+        for (const key of ['Meta', 'z', 'f', 'ArrowUp']) {
+          const event = new KeyboardEvent('keydown', { key, metaKey: true, bubbles: true, cancelable: true });
+          fireEvent(target, event);
+          expect(event.defaultPrevented).toBe(false);
+          expect(document.activeElement).toBe(target);
+        }
+        expect(launcher).not.toHaveBeenCalled();
+        expect(focusedWindow).not.toHaveBeenCalled();
+      } finally {
+        target.remove();
+      }
+    }
+  );
+
+  it('retains Super on the desktop and explicit desktop shortcuts from an editor', () => {
+    const desktop = mountDesktop();
+    const launcher = jest.spyOn(desktop, 'openAllAppsOverlay').mockImplementation(() => {});
+    const switcher = jest.spyOn(desktop, 'openWindowSwitcher').mockImplementation(() => {});
+    fireEvent.keyDown(document.body, { key: 'Meta', metaKey: true });
+    expect(launcher).toHaveBeenCalledWith('Meta');
+    launcher.mockClear();
+    const target = document.createElement('textarea');
+    document.body.appendChild(target);
+    try {
+      target.focus();
+      fireEvent.keyDown(target, { key: 'Escape', ctrlKey: true });
+      expect(launcher).toHaveBeenCalledWith('Ctrl+Escape');
+      fireEvent.keyDown(target, { key: 'Tab', altKey: true });
+      expect(switcher).toHaveBeenCalledTimes(1);
+    } finally {
+      target.remove();
+    }
+  });
+
+  it('does not override a shortcut already consumed by an application', () => {
+    const desktop = mountDesktop();
+    const launcher = jest.spyOn(desktop, 'openAllAppsOverlay').mockImplementation(() => {});
+    const event = new KeyboardEvent('keydown', { key: 'Meta', metaKey: true, bubbles: true, cancelable: true });
+    event.preventDefault();
+    fireEvent(document.body, event);
+    expect(launcher).not.toHaveBeenCalled();
+  });
+});
