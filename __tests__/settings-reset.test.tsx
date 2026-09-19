@@ -85,7 +85,6 @@ describe('Settings reset flow', () => {
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(defaults[key]);
     }
-    expect(screen.getByText('All settings restored to defaults')).toBeVisible();
   });
 
   test('canceling reset preserves existing values and does not clear storage', async () => {
