@@ -62,8 +62,9 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
 
   test("handles Request objects when blocking network access", async () => {
     // jsdom does not consistently expose the Node fetch constructors as globals.
-    const { Request: NativeRequest } =
-      jest.requireActual<typeof import("undici")>("undici");
+    const { Request: NativeRequest } = jest.requireActual<
+      typeof import("undici")
+    >("undici");
     window.localStorage.setItem("allow-network", "false");
     renderSettings();
     await act(async () => {});
@@ -110,6 +111,7 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
   test("does not overwrite a saved enabled preference during startup", async () => {
     window.localStorage.setItem("allow-network", "true");
     const { result } = renderSettings();
+    expect(window.localStorage.getItem("allow-network")).toBe("true");
     expect(window.localStorage.getItem("allow-network")).toBe("true");
     await waitFor(() => expect(result.current.allowNetwork).toBe(true));
     expect(window.localStorage.getItem("allow-network")).toBe("true");
