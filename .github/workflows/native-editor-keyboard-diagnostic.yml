@@ -44,11 +44,11 @@ jobs:
           p=Path('apps/vscode/CodeEditor.tsx')
           s=p.read_text()
           s=s.replace('if (model && model.getValue() !== value) model.setValue(value);', '''if (model && model.getValue() !== value) {
-            console.log('QA_MODEL_SET', JSON.stringify({path, from:model.getValue().slice(0,60), to:value.slice(0,60), undo:model.canUndo()}));
+            console.log('QA_MODEL_SET', JSON.stringify({path, from:model.getValue().slice(0,60), to:value.slice(0,60), version:model.getVersionId()}));
             model.setValue(value);
           }''')
           s=s.replace('change = editor.onDidChangeModelContent(() => {', '''change = editor.onDidChangeModelContent((event) => {
-            console.log('QA_MODEL_CHANGE', JSON.stringify({value:editor.getValue().slice(0,60), undo:editor.getModel()?.canUndo(), isUndoing:event.isUndoing, isRedoing:event.isRedoing, isFlush:event.isFlush}));''')
+            console.log('QA_MODEL_CHANGE', JSON.stringify({value:editor.getValue().slice(0,60), version:editor.getModel()?.getVersionId(), isUndoing:event.isUndoing, isRedoing:event.isRedoing, isFlush:event.isFlush}));''')
           p.write_text(s)
           p=Path('tests/portfolio/repository-editor.spec.ts')
           s=p.read_text().replace('page.on("pageerror", (error) => errors.push(error.message));', '''page.on("pageerror", (error) => errors.push(error.message));
