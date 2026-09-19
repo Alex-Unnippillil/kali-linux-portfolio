@@ -29,6 +29,7 @@ describe('SettingsProvider allowNetwork fetch guard', () => {
     });
 
   test('normalizes URLs before blocking off-origin requests', async () => {
+    window.localStorage.setItem('allow-network', 'false');
     const { result } = renderSettings();
 
     await waitFor(() => expect(window.fetch).not.toBe(fetchSpy));
@@ -63,6 +64,7 @@ describe('SettingsProvider allowNetwork fetch guard', () => {
   });
 
   test('handles Request objects when blocking network access', async () => {
+    window.localStorage.setItem('allow-network', 'false');
     if (typeof Request === 'undefined') {
       return;
     }
@@ -76,6 +78,7 @@ describe('SettingsProvider allowNetwork fetch guard', () => {
   });
 
   test('restores original fetch implementation when re-enabled', async () => {
+    window.localStorage.setItem('allow-network', 'false');
     const { result } = renderSettings();
 
     await waitFor(() => expect(window.fetch).not.toBe(fetchSpy));
@@ -109,5 +112,39 @@ describe('SettingsProvider allowNetwork fetch guard', () => {
     await expect(window.fetch('https://external.com')).resolves.toBe('ok');
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     expect(fetchSpy.mock.calls[0][0]).toBe('https://external.com');
+  });
+
+  test('enables networking on a fresh visit without an extra consent click', async () => {
+    const { result } = renderSettings();
+    await waitFor(() => expect(result.current.allowNetwork).toBe(true));
+    expect(window.localStorage.getItem('allow-network')).toBe('true');
+    await expect(window.fetch('https://external.com')).resolves.toBe('ok');
+  });
+
+  test('does not overwrite a saved enabled preference during startup', async () => {
+    window.localStorage.setItem('allow-network', 'true');
+    const { result } = renderSettings();
+    // The placeholder must not be written before the asynchronous load completes.
+    expect(window.localStorage.getItem('allow-network')).toBe('true');
+    await waitFor(() => expect(result.current.allowNetwork).toBe(true));
+    expect(window.localStorage.getItem('allow-network')).toBe('true');
+  });
+
+  test('keeps a user opt-out disabled after remounting the provider', async () => {
+    const first = renderSettings();
+    await waitFor(() => expect(first.result.current.allowNetwork).toBe(true));
+    act(() => first.result.current.setAllowNetwork(false));
+    expect(window.localStorage.getItem('allow-network')).toBe('false');
+    first.unmount();
+    // Simulate a new document with its native fetch implementation.
+    window.fetch = fetchSpy as typeof fetch;
+    const second = renderSettings();
+    await act(async () => {});
+    expect(second.result.current.allowNetwork).toBe(false);
+    expect(window.localStorage.getItem('allow-network')).toBe('false');
+    await expect(window.fetch('https://external.com')).rejects.toThrow(
+      'Network requests disabled',
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });
