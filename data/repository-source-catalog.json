@@ -182,6 +182,7 @@
     "__tests__/nessus-report.test.tsx",
     "__tests__/nessus.test.ts",
     "__tests__/nessusParser.test.ts",
+    "__tests__/networkSettings.test.ts",
     "__tests__/niktoApp.test.tsx",
     "__tests__/niktoPage.test.tsx",
     "__tests__/niktoReport.test.tsx",
