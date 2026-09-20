@@ -1,18 +1,15 @@
 import { useContext, useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { clear, get, set } from 'idb-keyval';
 import { Settings } from '../components/apps/settings';
 import { SettingsContext } from '../hooks/useSettings';
-import { defaults, resetSettings } from '../utils/settingsStore';
+import { defaults, getAllowNetwork } from '../utils/settingsStore';
 
-jest.mock('../utils/settingsStore', () => ({
-  __esModule: true,
-  ...jest.requireActual('../utils/settingsStore'),
-  resetSettings: jest.fn().mockResolvedValue(undefined),
-}));
-
-// Exercise the reset control against explicit React state, independently of
-// asynchronous IDB startup. Provider and persistence have separate regressions.
+// Exercise the real reset control and storage implementation against explicit
+// React state. Provider hydration is covered separately by allowNetwork.test.ts.
+// Asserting persisted outcomes avoids coupling this integration test to the
+// identity of a module mock under Next/Jest's transform and coverage pipeline.
 function ResetHarness() {
   const initial = useContext(SettingsContext);
   const [value, setValue] = useState({
@@ -63,13 +60,38 @@ const toggles = [
   ['Enable pong spin', 'pongSpin'],
 ] as const;
 
-describe('Settings reset flow', () => {
-  beforeEach(() => {
+const persisted = {
+  density: 'compact',
+  'reduced-motion': String(!defaults.reducedMotion),
+  'font-scale': '1.5',
+  'high-contrast': String(!defaults.highContrast),
+  'large-hit-areas': String(!defaults.largeHitAreas),
+  'pong-spin': String(!defaults.pongSpin),
+  'allow-network': 'false',
+  haptics: String(!defaults.haptics),
+  'use-kali-wallpaper': String(!defaults.useKaliWallpaper),
+  volume: '25',
+};
+
+describe('Settings reset persistence', () => {
+  beforeEach(async () => {
+    await clear();
+    window.localStorage.clear();
     window.confirm = jest.fn(() => true);
-    (resetSettings as jest.Mock).mockClear();
+    for (const [key, value] of Object.entries(persisted)) {
+      window.localStorage.setItem(key, value);
+    }
+    window.localStorage.setItem('youtube:watch-later', '["saved-video"]');
+    await set('accent', '#e53e3e');
+    await set('bg-image', 'wall-3');
   });
 
-  test('Reset restores non-default controls, including enabled networking', async () => {
+  afterEach(async () => {
+    await clear();
+    window.localStorage.clear();
+  });
+
+  test('Reset clears persisted settings and restores controls including enabled networking', async () => {
     const user = userEvent.setup();
     render(<ResetHarness />);
     expect(screen.getByRole('combobox')).toHaveValue('compact');
@@ -77,25 +99,39 @@ describe('Settings reset flow', () => {
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
     }
+
     await user.click(screen.getByRole('button', { name: 'Reset', exact: true }));
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveValue(defaults.density));
-    expect(resetSettings).toHaveBeenCalledTimes(1);
+    expect(window.confirm).toHaveBeenCalledWith('Reset desktop personalization and settings?');
     expect(screen.getByLabelText('Adjust font scale')).toHaveValue(String(defaults.fontScale));
     expect(screen.getByRole('radio', { name: `select-accent-${defaults.accent}` })).toHaveAttribute('aria-checked', 'true');
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(defaults[key]);
     }
+    for (const key of Object.keys(persisted)) {
+      expect(window.localStorage.getItem(key)).toBeNull();
+    }
+    await expect(get('accent')).resolves.toBeUndefined();
+    await expect(get('bg-image')).resolves.toBeUndefined();
+    await expect(getAllowNetwork()).resolves.toBe(true);
+    expect(window.localStorage.getItem('youtube:watch-later')).toBe('["saved-video"]');
   });
 
-  test('canceling reset preserves existing values and does not clear storage', async () => {
+  test('Cancel preserves controls and both localStorage and IndexedDB preferences', async () => {
     window.confirm = jest.fn(() => false);
     const user = userEvent.setup();
     render(<ResetHarness />);
     await user.click(screen.getByRole('button', { name: 'Reset', exact: true }));
-    expect(resetSettings).not.toHaveBeenCalled();
+    expect(window.confirm).toHaveBeenCalledWith('Reset desktop personalization and settings?');
     expect(screen.getByRole('combobox')).toHaveValue('compact');
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
     }
+    for (const [key, value] of Object.entries(persisted)) {
+      expect(window.localStorage.getItem(key)).toBe(value);
+    }
+    await expect(get('accent')).resolves.toBe('#e53e3e');
+    await expect(get('bg-image')).resolves.toBe('wall-3');
+    await expect(getAllowNetwork()).resolves.toBe(false);
   });
 });
