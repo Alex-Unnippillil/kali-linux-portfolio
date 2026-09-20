@@ -19,6 +19,27 @@ jobs:
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+      - name: Verify requested revision and integrate the exact PR base
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          if [ -n "$EXPECTED_BASE" ] && ! git merge-base --is-ancestor "$EXPECTED_BASE" HEAD; then
+            git config user.name 'CI validation'
+            git config user.email 'ci-validation@users.noreply.github.com'
+            git merge --no-edit "$EXPECTED_BASE"
+          fi
+          {
+            echo "Requested head: $EXPECTED_HEAD"
+            echo "Requested base: $EXPECTED_BASE"
+            echo "Tested commit: $(git rev-parse HEAD)"
+            echo "Tested tree: $(git rev-parse HEAD^{tree})"
+            git ls-files -s hooks/useSettings.tsx components/screen/navbar.js
+          } | tee validation-source.txt
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -36,6 +57,7 @@ jobs:
         with:
           name: portfolio-browser-evidence
           path: |
+            validation-source.txt
             portfolio-screenshots
             portfolio-browser-report
             test-results
