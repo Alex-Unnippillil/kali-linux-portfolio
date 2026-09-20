@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import Image from "next/image";
 import { isCompactWindowViewport } from "../../utils/compactWindow";
 import styles from "./MobileTaskbar.module.css";
@@ -54,6 +54,21 @@ export default function MobileTaskbar({
   useEffect(() => {
     active.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [activeId, compact]);
+
+  const handleNavigation = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>("button[data-app-id]"));
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (index < 0 || buttons.length === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const next = event.key === "Home" ? 0
+      : event.key === "End" ? buttons.length - 1
+      : (index + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+    buttons[next].focus({ preventScroll: true });
+    buttons[next].scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  };
+
   if (!compact) return null;
   return (
     <nav className={styles.bar} style={{ bottom }} aria-label="Phone taskbar">
@@ -69,12 +84,13 @@ export default function MobileTaskbar({
         <span aria-hidden="true">▦</span>
         <span>Apps</span>
       </button>
-      <div className={styles.running} aria-label="Running applications">
+      <div className={styles.running} aria-label="Running applications" onKeyDown={handleNavigation}>
         {apps.length ? (
           apps.map((app) => (
             <button
               key={app.id}
               type="button"
+              data-app-id={app.id}
               ref={app.id === activeId ? active : undefined}
               aria-label={`${app.isMinimized ? 'Restore' : app.id === activeId && onToggle ? 'Minimize' : 'Switch to'} ${app.title}`}
               aria-pressed={app.id === activeId}
