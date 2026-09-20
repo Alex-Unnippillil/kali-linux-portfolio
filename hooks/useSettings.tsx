@@ -258,7 +258,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined' || (networkSettingsLoaded && allowNetwork)) return;
-    // Own exactly one wrapper, including during StrictMode replay and remounts.
+    // Keep the original identity for cleanup; invoke it below with .call(window, ...).
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalFetch = window.fetch;
     const normalizeRequest = (input: RequestInfo | URL): URL | null => {
       try {
