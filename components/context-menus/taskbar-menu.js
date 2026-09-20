@@ -65,7 +65,7 @@ function TaskbarMenu(props) {
                     onClick={handleNewWindow}
                     role="menuitem"
                     aria-label="Open new window"
-                    className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                    className="w-full text-left cursor-default min-h-[40px] px-1 py-2 hover:bg-gray-700 focus-visible:bg-gray-700 focus-visible:outline-none mb-0.5"
                 >
                     <span className="ml-5">New window</span>
                 </button>
@@ -75,7 +75,7 @@ function TaskbarMenu(props) {
                 onClick={handleTogglePin}
                 role="menuitem"
                 aria-label={props.pinned ? 'Unpin from taskbar' : 'Pin to taskbar'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left cursor-default min-h-[40px] px-1 py-2 hover:bg-gray-700 focus-visible:bg-gray-700 focus-visible:outline-none mb-0.5"
             >
                 <span className="ml-5">{props.pinned ? 'Unpin from taskbar' : 'Pin to taskbar'}</span>
             </button>
@@ -84,7 +84,7 @@ function TaskbarMenu(props) {
                 onClick={handleMinimize}
                 role="menuitem"
                 aria-label={props.minimized ? 'Restore Window' : 'Minimize Window'}
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left cursor-default min-h-[40px] px-1 py-2 hover:bg-gray-700 focus-visible:bg-gray-700 focus-visible:outline-none mb-0.5"
             >
                 <span className="ml-5">{props.minimized ? 'Restore' : 'Minimize'}</span>
             </button>
@@ -95,7 +95,7 @@ function TaskbarMenu(props) {
                 aria-label={props.isMaximized ? 'Restore Window size' : 'Maximize Window'}
                 disabled={!allowMaximize}
                 aria-disabled={!allowMaximize}
-                className={`w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 ${allowMaximize ? '' : 'opacity-50 cursor-not-allowed'}`}
+                className={`w-full text-left cursor-default min-h-[40px] px-1 py-2 hover:bg-gray-700 focus-visible:bg-gray-700 focus-visible:outline-none mb-0.5 ${allowMaximize ? '' : 'opacity-50 cursor-not-allowed'}`}
             >
                 <span className="ml-5">{props.isMaximized ? 'Restore' : 'Maximize'}</span>
             </button>
@@ -116,7 +116,7 @@ function TaskbarMenu(props) {
                             aria-label={`Move to workspace ${workspace.label || workspace.id + 1}`}
                             disabled={workspace.id === props.activeWorkspace}
                             aria-disabled={workspace.id === props.activeWorkspace}
-                            className={`w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5 ${workspace.id === props.activeWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`w-full text-left cursor-default min-h-[40px] px-1 py-2 hover:bg-gray-700 focus-visible:bg-gray-700 focus-visible:outline-none mb-0.5 ${workspace.id === props.activeWorkspace ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <span className="ml-5">Workspace {workspace.label || workspace.id + 1}</span>
                         </button>
@@ -128,7 +128,7 @@ function TaskbarMenu(props) {
                 onClick={handleClose}
                 role="menuitem"
                 aria-label="Close Window"
-                className="w-full text-left cursor-default py-0.5 hover:bg-gray-700 mb-1.5"
+                className="w-full text-left cursor-default min-h-[40px] px-1 py-2 hover:bg-gray-700 focus-visible:bg-gray-700 focus-visible:outline-none mb-0.5"
             >
                 <span className="ml-5">Close</span>
             </button>

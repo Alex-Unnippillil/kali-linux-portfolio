@@ -14,10 +14,13 @@ type App = {
 export default function MobileTaskbar({
   apps,
   onOpen,
+  onToggle,
   onApplications,
 }: {
   apps: App[];
   onOpen: (id: string) => void;
+  /** Uses the desktop manager for the same minimize/restore behavior as the top panel. */
+  onToggle?: (id: string) => void;
   onApplications: () => void;
 }) {
   const [compact, setCompact] = useState(false);
@@ -73,9 +76,13 @@ export default function MobileTaskbar({
               key={app.id}
               type="button"
               ref={app.id === activeId ? active : undefined}
-              aria-label={`Switch to ${app.title}`}
+              aria-label={`${app.isMinimized ? 'Restore' : app.id === activeId && onToggle ? 'Minimize' : 'Switch to'} ${app.title}`}
               aria-pressed={app.id === activeId}
-              onClick={() => onOpen(app.id)}
+              data-window-state={app.isMinimized ? 'minimized' : app.id === activeId ? 'focused' : 'running'}
+              onClick={(event) => {
+                event.stopPropagation();
+                (onToggle ?? onOpen)(app.id);
+              }}
             >
               {app.icon && (
                 <Image src={app.icon} width={20} height={20} alt="" />

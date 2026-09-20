@@ -9,3 +9,10 @@
 .launcher { flex-direction: column; border-right: 1px solid #334155; }
 .launcher > span:first-child { font-size: 21px; line-height: 20px; }
 .empty { font-size: 13px; align-self: center; padding: 0 8px; }
+
+/* Minimized windows remain visibly running without appearing active. */
+.running button { position: relative; }
+.running button::after { content: ""; position: absolute; left: 50%; bottom: 2px; width: 6px; height: 2px; border-radius: 2px; background: #7dd3fc; transform: translateX(-50%); }
+.running button[data-window-state="minimized"]::after { background: #94a3b8; }
+.running button[data-window-state="focused"]::after { width: 20px; }
+@media (prefers-reduced-motion: reduce) { .running { scroll-behavior: auto; } }
