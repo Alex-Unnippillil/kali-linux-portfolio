@@ -1,0 +1,35 @@
+name: Apply reviewed taskbar patch
+on:
+  push:
+    branches: [polish/os-taskbar]
+    paths: [.github/workflows/apply-taskbar-update.yml, .release/taskbar.patch.gz]
+permissions:
+  contents: read
+jobs:
+  apply:
+    if: github.repository == 'Alex-Unnippillil/kali-linux-portfolio' && github.ref == 'refs/heads/polish/os-taskbar'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Verify and apply the fixed reviewed patch
+        run: |
+          python3 <<'PY'
+          import gzip, hashlib, pathlib, subprocess
+          data = gzip.decompress(pathlib.Path('.release/taskbar.patch.gz').read_bytes())
+          assert hashlib.sha256(data).hexdigest() == '82ae75bdce8e0b63951776005356e0a6e1208c8c2b50c9e198f58a4438f1d627', 'Patch checksum mismatch'
+          subprocess.run(['git', 'apply', '--check', '-'], input=data, check=True)
+          subprocess.run(['git', 'apply', '-'], input=data, check=True)
+          PY
+          git -c core.whitespace=cr-at-eol diff --check
+          git rm .github/workflows/apply-taskbar-update.yml .release/taskbar.patch.gz
+          git add __tests__/mobile-taskbar.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/taskbar-menu-keyboard.test.tsx components/context-menus/taskbar-menu.js components/desktop/MobileTaskbar.module.css components/desktop/MobileTaskbar.tsx components/screen/Taskbar.module.css components/screen/TaskbarPreviewFlyout.js components/screen/desktop.js components/screen/navbar.js hooks/useRovingTabIndex.ts
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'feat(taskbar): integrate reviewed OS window controls, previews and keyboard navigation'
+          git push origin HEAD:refs/heads/polish/os-taskbar
