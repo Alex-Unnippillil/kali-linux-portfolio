@@ -1,0 +1,5 @@
+.button { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; min-width: 36px; min-height: 36px; border: 1px solid transparent; border-radius: 6px; color: #cbd5e1; background: transparent; touch-action: manipulation; }
+.button:hover:not(:disabled), .button[aria-pressed="true"] { background: #173e54; color: #e0f2fe; border-color: #27516a; }
+.button:focus-visible { outline: 2px solid #7dd3fc; outline-offset: -2px; }
+.button:disabled { opacity: .45; }
+@media (any-pointer: coarse) { .button { min-width: 44px; min-height: 44px; } }

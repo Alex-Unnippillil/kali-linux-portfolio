@@ -19,7 +19,7 @@ export default function useRovingTabIndex(
       node.querySelectorAll<HTMLElement>(
         '[role="tab"], [role="menuitem"], [role="option"]'
       )
-    );
+    ).filter((item) => !item.hasAttribute('disabled') && item.getAttribute('aria-disabled') !== 'true');
     if (items.length === 0) return;
 
     let index = items.findIndex((el) => el.tabIndex === 0);
@@ -29,7 +29,14 @@ export default function useRovingTabIndex(
     const handleKey = (e: KeyboardEvent) => {
       const forward = orientation === 'horizontal' ? ['ArrowRight', 'ArrowDown'] : ['ArrowDown'];
       const backward = orientation === 'horizontal' ? ['ArrowLeft', 'ArrowUp'] : ['ArrowUp'];
-      if (forward.includes(e.key)) {
+      const focusedIndex = items.indexOf(document.activeElement as HTMLElement);
+      if (focusedIndex >= 0) index = focusedIndex;
+      if (e.key === 'Home' || e.key === 'End') {
+        e.preventDefault();
+        index = e.key === 'Home' ? 0 : items.length - 1;
+        items.forEach((el, i) => (el.tabIndex = i === index ? 0 : -1));
+        items[index].focus();
+      } else if (forward.includes(e.key)) {
         e.preventDefault();
         index = (index + 1) % items.length;
         items.forEach((el, i) => (el.tabIndex = i === index ? 0 : -1));

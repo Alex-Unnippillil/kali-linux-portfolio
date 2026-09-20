@@ -1,0 +1,38 @@
+.button {
+  min-width: 36px;
+  min-height: 36px;
+  touch-action: manipulation;
+}
+.indicator {
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 6px;
+  height: 3px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: var(--color-accent, #38bdf8);
+  opacity: 0.75;
+  pointer-events: none;
+}
+.button[data-window-state="focused"] .indicator {
+  width: 16px;
+  opacity: 1;
+}
+.button[data-window-state="minimized"] .indicator {
+  background: #94a3b8;
+  opacity: 0.7;
+}
+@media (any-pointer: coarse) {
+  .button { min-width: 44px; min-height: 44px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .button { transition: none; }
+}
+.preview { width: 280px; max-width: calc(100vw - 16px); }
+.previewHeader { min-height: 44px; }
+.previewImage { min-height: 128px; }
+.previewAction { min-width: 40px; min-height: 40px; }
+@media (any-pointer: coarse) {
+  .previewAction { min-width: 44px; min-height: 44px; }
+}

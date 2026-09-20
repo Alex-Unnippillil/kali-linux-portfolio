@@ -4016,6 +4016,9 @@ export class Desktop extends Component {
 
         if (this.isOverlayId(appId)) {
             switch (action) {
+                case 'close':
+                    this.closeOverlay(appId);
+                    break;
                 case 'minimize':
                     if (!this.state.minimized_windows[appId]) {
                         this.minimizeOverlay(appId);
@@ -4043,6 +4046,10 @@ export class Desktop extends Component {
         }
 
         switch (action) {
+            case 'close':
+                // Use the same close/history/session path as the window chrome.
+                void this.closeApp(appId);
+                break;
             case 'minimize':
                 if (!this.state.minimized_windows[appId]) {
                     this.hasMinimised(appId);
@@ -6104,7 +6111,9 @@ export class Desktop extends Component {
                 <MobileTaskbar apps={this.getRunningAppSummaries()} onOpen={(id) => {
                     if (this.isOverlayId(id)) this.openOverlay(id, { transitionState: 'entered' });
                     else this.openApp(id);
-                }} onApplications={this.showAllApps} />
+                }} onToggle={(id) => this.handleExternalTaskbarCommand({
+                    detail: { appId: id, action: 'toggle' },
+                })} onApplications={this.showAllApps} />
 
                 {this.renderOverlayWindows()}
 
