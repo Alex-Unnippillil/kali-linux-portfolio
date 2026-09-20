@@ -257,7 +257,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork, networkSettingsLoaded]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || allowNetwork) return;
+    if (typeof window === 'undefined' || (networkSettingsLoaded && allowNetwork)) return;
     // Own exactly one wrapper, including during StrictMode replay and remounts.
     const originalFetch = window.fetch;
     const normalizeRequest = (input: RequestInfo | URL): URL | null => {
@@ -296,7 +296,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       // Preserve exact identity; never clobber another owner's replacement.
       if (window.fetch === guardedFetch) window.fetch = originalFetch;
     };
-  }, [allowNetwork]);
+  }, [allowNetwork, networkSettingsLoaded]);
 
   useEffect(() => { saveHaptics(haptics); }, [haptics]);
   useEffect(() => {
