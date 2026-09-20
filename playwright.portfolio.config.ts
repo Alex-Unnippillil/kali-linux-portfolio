@@ -9,6 +9,7 @@ export default defineConfig({
   reporter: [
     ["list"],
     ["html", { outputFolder: "portfolio-browser-report", open: "never" }],
+    ["json", { outputFile: "test-results/portfolio-results.json" }],
   ],
   use: {
     baseURL: process.env.BASE_URL || "http://127.0.0.1:3000",
@@ -28,13 +29,13 @@ export default defineConfig({
     {
       name: "webkit",
       testMatch:
-        /(?:youtube-responsive|app-polish|x-profile|repository-editor)\.spec\.ts/,
+        /(?:youtube-responsive|app-polish|x-profile|repository-editor|taskbar-os)\.spec\.ts/,
       use: { ...devices["Desktop Safari"] },
     },
     {
       name: "firefox",
       testMatch:
-        /(?:youtube-responsive|app-polish|x-profile|repository-editor)\.spec\.ts/,
+        /(?:youtube-responsive|app-polish|x-profile|repository-editor|taskbar-os)\.spec\.ts/,
       use: { ...devices["Desktop Firefox"] },
     },
   ],
