@@ -48,7 +48,33 @@ jobs:
       - if: matrix.check == 'typecheck'
         run: yarn typecheck
       - if: matrix.check == 'test'
-        run: yarn test --coverage --maxWorkers=2
+        run: yarn test --coverage --maxWorkers=2 --json --outputFile=jest-results.json
+      - name: Summarize failing tests
+        if: always() && matrix.check == 'test'
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          if (!fs.existsSync('jest-results.json')) process.exit(0);
+          const result = JSON.parse(fs.readFileSync('jest-results.json', 'utf8'));
+          const summary = {
+            source: process.env.GITHUB_SHA,
+            passed: result.numPassedTests,
+            failed: result.numFailedTests,
+            pending: result.numPendingTests,
+            failures: result.testResults.filter(suite => suite.status === 'failed').map(suite => ({
+              file: suite.name.replace(process.env.GITHUB_WORKSPACE + '/', ''),
+              message: suite.message,
+              tests: suite.assertionResults.filter(test => test.status === 'failed').map(test => ({
+                name: test.fullName,
+                messages: test.failureMessages,
+              })),
+            })),
+          };
+          const text = JSON.stringify(summary, null, 2);
+          fs.writeFileSync('jest-failures.json', text);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Jest results\n```json\n' + text + '\n```\n');
+          console.log(text);
+          NODE
       - if: matrix.check == 'security'
         run: |
           set -o pipefail
@@ -64,6 +90,15 @@ jobs:
           path: dependency-audit.log
           retention-days: 7
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.check == 'test'
+        with:
+          name: jest-results
+          path: |
+            jest-results.json
+            jest-failures.json
+          if-no-files-found: warn
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always() && matrix.check == 'test'
         with:
