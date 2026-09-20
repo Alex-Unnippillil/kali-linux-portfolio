@@ -8,8 +8,7 @@ import { defaults, getAllowNetwork } from '../utils/settingsStore';
 
 // Exercise the real reset control and storage implementation against explicit
 // React state. Provider hydration is covered separately by allowNetwork.test.ts.
-// Asserting persisted outcomes avoids coupling this integration test to the
-// identity of a module mock under Next/Jest's transform and coverage pipeline.
+// Persisted outcomes, not mock function identities, are the reset contract.
 function ResetHarness() {
   const initial = useContext(SettingsContext);
   const [value, setValue] = useState({
@@ -122,8 +121,11 @@ describe('Settings reset persistence', () => {
     const user = userEvent.setup();
     render(<ResetHarness />);
     await user.click(screen.getByRole('button', { name: 'Reset', exact: true }));
+    expect(window.confirm).toHaveBeenCalledTimes(1);
     expect(window.confirm).toHaveBeenCalledWith('Reset desktop personalization and settings?');
     expect(screen.getByRole('combobox')).toHaveValue('compact');
+    expect(screen.getByLabelText('Adjust font scale')).toHaveValue('1.5');
+    expect(screen.getByRole('radio', { name: 'select-accent-#e53e3e' })).toHaveAttribute('aria-checked', 'true');
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
     }
@@ -133,5 +135,6 @@ describe('Settings reset persistence', () => {
     await expect(get('accent')).resolves.toBe('#e53e3e');
     await expect(get('bg-image')).resolves.toBe('wall-3');
     await expect(getAllowNetwork()).resolves.toBe(false);
+    expect(window.localStorage.getItem('youtube:watch-later')).toBe('["saved-video"]');
   });
 });
