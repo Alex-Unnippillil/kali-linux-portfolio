@@ -62,6 +62,9 @@ jobs:
         run: yarn lint
       - if: matrix.check == 'typecheck'
         run: yarn typecheck
+      - name: Generate revision-bound source assets for tests
+        if: matrix.check == 'test'
+        run: node scripts/generate-repository-snapshot.mjs
       - if: matrix.check == 'test'
         run: yarn test --coverage --maxWorkers=2 --json --outputFile=jest-results.json
       - name: Summarize failing tests
