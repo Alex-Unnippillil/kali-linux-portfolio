@@ -66,9 +66,8 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
 
   test("handles Request objects when blocking network access", async () => {
     // jsdom does not consistently expose the Node fetch constructors as globals.
-    const { Request: NativeRequest } = jest.requireActual<
-      typeof import("undici")
-    >("undici");
+    const { Request: NativeRequest } =
+      jest.requireActual<typeof import("undici")>("undici");
     window.localStorage.setItem("allow-network", "false");
     renderSettings();
     await act(async () => {});
