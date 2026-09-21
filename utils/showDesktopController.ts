@@ -8,7 +8,7 @@ const EMPTY: ShowDesktopView = Object.freeze({ showing: false, busy: false, avai
  * Restore commands are acknowledged one at a time because the manager also saves
  * positions and session state. A closed window is never reopened by Restore windows.
  */
-export function createShowDesktopController(send: (command: DesktopCommand) => void) {
+export function createShowDesktopController(send: (instruction: DesktopCommand) => void) {
   let latest: DesktopSnapshot = { activeWorkspace: 0, runningApps: [] };
   const saved = new Map<number, string[]>();
   const listeners = new Set<() => void>();

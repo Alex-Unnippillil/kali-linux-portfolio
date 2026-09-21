@@ -570,6 +570,8 @@ export default class Navbar extends PureComponent {
         handlePreviewResponse = (event) => {
                 const detail = event?.detail || {};
                 const { appId, requestId, preview } = detail;
+                const active = this.state.preview;
+                if (!active || active.appId !== appId || active.requestId !== requestId) return;
                 if (!appId || requestId === undefined || requestId === null) {
                         return;
                 }
@@ -577,8 +579,6 @@ export default class Navbar extends PureComponent {
                 this.setState((prevState) => {
                         const current = prevState.preview;
                         if (!current || current.appId !== appId || current.requestId !== requestId) {
-                                this.previewFocusPending = false;
-                                this.previewRefreshInFlight = false;
                                 return null;
                         }
                         return {
@@ -589,6 +589,7 @@ export default class Navbar extends PureComponent {
                                 },
                         };
                 }, () => {
+                        if (this.state.preview?.appId !== appId || this.state.preview?.requestId !== requestId) return;
                         this.previewRefreshInFlight = false;
                         // If we were refreshing, keep the "Updating…" label on-screen long enough to read.
                         if (this.state.preview?.updating) {
@@ -599,7 +600,8 @@ export default class Navbar extends PureComponent {
                                 this.startPreviewAutoRefresh();
                         }
                         if (this.previewFocusPending && this.previewFlyoutRef.current) {
-                                this.previewFlyoutRef.current.focus();
+                                this.previewFocusPending = false;
+                                this.previewFlyoutRef.current.querySelector('[data-preview-activate]')?.focus({ preventScroll: true });
                         }
                         this.previewFocusPending = false;
                 });

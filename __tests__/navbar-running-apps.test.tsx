@@ -454,3 +454,36 @@ describe('Taskbar operating-system interactions', () => {
     }
   });
 });
+
+
+describe('Taskbar asynchronous keyboard preview focus', () => {
+  test('a matching late thumbnail focuses the action, never the dialog, and stale responses cannot consume that focus request', () => {
+    const instance = React.createRef<Navbar>();
+    render(<Navbar ref={instance} />);
+    act(() => window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail })));
+    const bar = screen.getByRole('navigation', { name: 'Desktop taskbar' });
+    const button = within(bar).getByRole('button', { name: 'App One', exact: true });
+    fireEvent.keyDown(button, { key: 'ArrowDown' });
+    const preview = screen.getByRole('dialog', { name: 'App One preview' });
+    const activate = within(preview).getByRole('button', { name: 'Switch to App One', exact: true });
+    const controller = instance.current!;
+    const active = controller.state.preview as unknown as { appId: string; requestId: number };
+    // Exercise the delayed-ref path: the request still owns keyboard focus when its thumbnail returns.
+    act(() => { preview.focus(); controller.previewFocusPending = true; });
+    act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+      detail: { appId: active.appId, requestId: active.requestId - 1, preview: null },
+    })));
+    expect(controller.previewFocusPending).toBe(true);
+    act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+      detail: { ...active, preview: null },
+    })));
+    expect(activate).toHaveFocus();
+    expect(controller.previewFocusPending).toBe(false);
+    const close = within(preview).getByRole('button', { name: 'Close App One', exact: true });
+    act(() => close.focus());
+    act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+      detail: { ...active, preview: null },
+    })));
+    expect(close).toHaveFocus();
+  });
+});
