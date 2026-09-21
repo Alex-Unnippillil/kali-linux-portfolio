@@ -296,12 +296,17 @@ test("slash focuses app search without taking typing from an editable control", 
   expect(event.defaultPrevented).toBe(false);
 });
 
-test("disabling network removes an already selected player", async () => {
+test("unrelated network preference changes do not interrupt YouTube playback or refetch its library", async () => {
   const { rerender } = render(<YouTubeApp />);
-  await screen.findByTitle("YouTube player for First Lab Video");
+  const frame = await screen.findByTitle("YouTube player for First Lab Video");
+  await waitFor(() => expect(screen.getByRole("button", { name: "Refresh library" })).toBeEnabled());
+  const requestsBefore = fetchMock.mock.calls.length;
   mockAllowNetwork = false;
   rerender(<YouTubeApp />);
-  expect(screen.queryByTitle(/YouTube player/)).not.toBeInTheDocument();
+  expect(screen.getByTitle("YouTube player for First Lab Video")).toBe(frame);
+  expect(fetchMock).toHaveBeenCalledTimes(requestsBefore);
+  expect(mockSetAllowNetwork).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Enable network" })).not.toBeInTheDocument();
 });
 
 test("persistent playlist navigation changes the collection without replacing the selected player", async () => {
