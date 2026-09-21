@@ -1342,6 +1342,7 @@
     "tests/portfolio/release.spec.ts",
     "tests/portfolio/repository-editor.spec.ts",
     "tests/portfolio/taskbar-operating-system.spec.ts",
+    "tests/portfolio/taskbar-os.spec.ts",
     "tests/portfolio/x-profile.spec.ts",
     "tests/portfolio/youtube-responsive.spec.ts",
     "tests/tower-defense.spec.ts",

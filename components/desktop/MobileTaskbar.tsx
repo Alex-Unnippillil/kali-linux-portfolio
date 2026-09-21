@@ -88,6 +88,7 @@ export default function MobileTaskbar({
           apps.map((app) => (
             <button
               key={app.id}
+              data-app-id={app.id}
               type="button"
               ref={app.id === activeId ? active : undefined}
               aria-label={`${app.isMinimized ? 'Restore' : app.id === activeId && onToggle ? 'Minimize' : 'Switch to'} ${app.title}`}
