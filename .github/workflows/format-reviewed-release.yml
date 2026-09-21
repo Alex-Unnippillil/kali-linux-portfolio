@@ -115,6 +115,13 @@ jobs:
           git rm .github/workflows/format-reviewed-release.yml
           node scripts/generate-repository-snapshot.mjs --catalog
           git -c core.whitespace=cr-at-eol diff --check
+      - name: Commit the candidate locally so snapshot tests inspect the final tracked tree
+        run: |
+          set -euo pipefail
+          git add $REVIEWED_PATHS data/repository-source-catalog.json
+          git config user.name 'Alex Unnippillil repository automation'
+          git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
+          git commit -m 'fix(release): scope automatic networking and clear completed desktop captures'
       - name: Validate explicit release paths before publication
         run: |
           set -euo pipefail
@@ -122,13 +129,9 @@ jobs:
           node --test tests/node/showcase-scripts.test.mjs
           yarn test __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/show-desktop-controller.test.ts __tests__/networkSettings.test.ts __tests__/allowNetwork.test.ts --runInBand
           yarn typecheck
-      - name: Commit reviewed paths and fast-forward feature branch only
+      - name: Publish the validated candidate as a fast-forward of the feature branch only
         run: |
           set -euo pipefail
-          git add $REVIEWED_PATHS data/repository-source-catalog.json
-          git config user.name 'Alex Unnippillil repository automation'
-          git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
-          git commit -m 'fix(release): scope automatic networking and clear completed desktop captures'
           git fetch --no-tags origin refs/heads/feat/taskbar-os-controls
           git merge-base --is-ancestor FETCH_HEAD HEAD
           git push origin HEAD:refs/heads/feat/taskbar-os-controls
