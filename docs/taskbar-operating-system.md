@@ -8,6 +8,8 @@ Click the focused application's taskbar button to minimize it. Click a minimized
 
 Use Left/Right and Home/End to move between taskbar controls. On the phone, navigation includes Apps and Show desktop, not just running apps. On the desktop, Down opens an application's preview; Escape closes it and restores focus to its taskbar button. Preview actions can switch/restore, minimize, or close the real window even before its thumbnail loads. Context menus skip disabled items during keyboard navigation. Existing pinning and drag ordering are retained.
 
+Asynchronous thumbnail responses preserve keyboard intent: a pending keyboard-open action focuses Switch/Restore, not the non-actionable dialog container. Stale responses cannot consume another preview's focus request. Once the visitor moves to another preview control, a thumbnail refresh does not move focus back. A regression test covers delayed matching responses, stale request IDs, and preserving focus on Close.
+
 The monitor-shaped **Show desktop** control minimizes visible windows in the current workspace. **Restore windows** restores that captured set, leaving previously minimized applications alone and restoring the previously focused window last. Closed windows are not reopened. The controller waits for actual workspace-state acknowledgements between commands to avoid overwriting window-manager session updates, cancels pending commands when workspaces change, and recovers from missing acknowledgements after three seconds. Phone and desktop controls share the same snapshot across viewport changes.
 
 ## Validation
