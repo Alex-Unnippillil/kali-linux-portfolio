@@ -410,33 +410,22 @@ test("a fresh visitor opens YouTube from the launcher without enabling network",
   await expect(app.locator("iframe")).not.toHaveAttribute("src", /autoplay=1/);
 });
 
-test("a saved network opt-out survives reload and enabling it persists", async ({ page }) => {
-  let youtubeRequests = 0;
-  page.on("request", (request) => {
-    if (/\/api\/youtube\/|youtube-nocookie\.com\/embed\//.test(request.url())) youtubeRequests += 1;
-  });
+test("opening YouTube loads immediately despite an old network opt-out, including after reload", async ({ page }) => {
   await fixture(page);
   await page.goto("/");
   await expect(page.locator("#about")).toBeVisible();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("allow-network"))).toBe("true");
   await page.evaluate(() => localStorage.setItem("allow-network", "false"));
+  const directoryRequest = page.waitForRequest("**/api/youtube/directory?**");
   await page.goto("/?app=youtube");
+  await directoryRequest;
   const app = page.getByTestId("youtube-app");
-  const enable = app.getByRole("button", { name: "Enable network", exact: true });
-  await expect(enable).toBeVisible();
-  await page.reload();
-  await expect(enable).toBeVisible();
-  await expect(app.locator("iframe")).toHaveCount(0);
-  expect(youtubeRequests).toBe(0);
+  await expect(app.getByRole("button", { name: "Enable network", exact: true })).toHaveCount(0);
+  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("false");
-  await enable.click();
-  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", {
-    exact: true,
-  })).toBeVisible();
-  expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("true");
+  const reloadRequest = page.waitForRequest("**/api/youtube/directory?**");
   await page.reload();
-  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", {
-    exact: true,
-  })).toBeVisible();
-  await expect(enable).toHaveCount(0);
+  await reloadRequest;
+  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", { exact: true })).toBeVisible();
+  await expect(app.locator("iframe")).not.toHaveAttribute("src", /autoplay=1/);
+  expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("false");
 });

@@ -244,15 +244,20 @@ test("failed playlists stop and retry only on explicit request", async () => {
   );
 });
 
-test("network-off is respected until the visitor enables it", async () => {
+test("opening YouTube loads its API and player even with a saved network opt-out", async () => {
   mockAllowNetwork = false;
-  const { rerender } = render(<YouTubeApp />);
-  expect(fetchMock).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Enable network" }));
-  expect(mockSetAllowNetwork).toHaveBeenCalledWith(true);
-  mockAllowNetwork = true;
-  rerender(<YouTubeApp />);
-  await screen.findByRole("button", { name: "Watch First Lab Video" });
+  localStorage.setItem("allow-network", "false");
+  render(<YouTubeApp />);
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining("/api/youtube/directory?channelId="),
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  );
+  expect(screen.queryByRole("button", { name: "Enable network" })).not.toBeInTheDocument();
+  expect(screen.queryByText("Connect the video library")).not.toBeInTheDocument();
+  await screen.findByTitle("YouTube player for First Lab Video");
+  expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/youtube/playlist-items"))).toBe(true);
+  expect(mockSetAllowNetwork).not.toHaveBeenCalled();
+  expect(localStorage.getItem("allow-network")).toBe("false");
 });
 
 test("Watch later survives reopening and is explicitly browser-local", async () => {

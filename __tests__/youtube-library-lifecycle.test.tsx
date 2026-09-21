@@ -21,7 +21,7 @@ test("ignores a stale directory response when switching channels", async () => {
         : response("Second channel"),
     );
   const { result, rerender } = renderHook(
-    ({ channel }) => useYouTubeLibrary(channel, true),
+    ({ channel }) => useYouTubeLibrary(channel),
     { initialProps: { channel: "first-channel" } },
   );
   rerender({ channel: "second-channel" });
@@ -34,26 +34,18 @@ test("ignores a stale directory response when switching channels", async () => {
     true,
   );
 });
-test("network-off cancels outstanding requests and clears network-backed state", async () => {
+test("closing YouTube cancels outstanding requests and ignores their late responses", async () => {
   let resolveRequest!: (value: Response) => void;
   const fetchMock = jest.spyOn(global, "fetch").mockImplementation(
-    () =>
-      new Promise((resolve) => {
-        resolveRequest = resolve;
-      }),
+    () => new Promise((resolve) => { resolveRequest = resolve; }),
   );
-  const { result, rerender, unmount } = renderHook(
-    ({ allowed }) => useYouTubeLibrary("channel", allowed),
-    { initialProps: { allowed: true } },
-  );
-  rerender({ allowed: false });
-  expect((fetchMock.mock.calls[0][1]?.signal as AbortSignal).aborted).toBe(
-    true,
-  );
+  const { result, unmount } = renderHook(() => useYouTubeLibrary("channel"));
+  expect(result.current.loadingDirectory).toBe(true);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  unmount();
+  expect((fetchMock.mock.calls[0][1]?.signal as AbortSignal).aborted).toBe(true);
   await act(async () => resolveRequest(response("Late channel")));
   expect(result.current.directory).toBeNull();
-  expect(result.current.loadingDirectory).toBe(false);
-  unmount();
 });
 
 test("a stalled API request ends with a retryable error instead of an endless spinner", async () => {
@@ -68,7 +60,7 @@ test("a stalled API request ends with a retryable error instead of an endless sp
   );
   try {
     const { result, unmount } = renderHook(() =>
-      useYouTubeLibrary("channel", true),
+      useYouTubeLibrary("channel"),
     );
     await act(async () => {
       await jest.advanceTimersByTimeAsync(20001);

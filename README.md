@@ -547,13 +547,13 @@ for shortcuts, source packaging, and privacy limits.
 
 ### YouTube opens connected
 
-Opening YouTube from the launcher or `/?app=youtube` loads Alex's public playlists,
-video cards, and the first available embedded video without an extra network-enable
-click. Video playback does not autoplay. Settings are loaded before requests begin,
-and startup no longer overwrites an existing network preference.
+Opening YouTube from the launcher or `/?app=youtube` immediately requests Alex's
+playlist directory and then its video pages. The first available video is embedded
+without autoplay; there is no network-enable prompt.
 
-Browsers with an existing `allow-network=false` value keep that saved choice, including
-values saved by older releases. Use **Enable network** once in YouTube to reconnect;
-that choice now survives reloads. New visitors and a settings reset use the connected
-default. The configured YouTube API key, quota, and video embedding permissions are
-still required; network defaults do not bypass third-party errors.
+YouTube does not use the optional-network setting: old `allow-network=false` values
+cannot block its library or player. Those preferences remain unchanged for unrelated
+apps. Closing YouTube cancels pending requests; refresh and channel changes ignore
+stale responses. Failed requests expose a retry instead of looping.
+A configured YouTube API key, available quota, and embedding permission are still
+required. Automatic loading does not bypass third-party errors.
