@@ -1,0 +1,71 @@
+name: Reconcile taskbar release
+on:
+  push:
+    branches: [feat/taskbar-os-controls]
+    paths: [.github/workflows/reconcile-taskbar-release.yml]
+permissions:
+  contents: write
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Reconcile the exact reviewed heads on the feature branch
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          def run(*args):
+              return subprocess.check_output(args, text=True).strip()
+          assert run('git','rev-parse','HEAD^') == '6502a7a657225d281c0513bf528d146fca169ff9'
+          assert run('git','rev-parse','origin/polish/os-taskbar') == '80f97370bfce49c2323b0231201f71f1ecf17df8'
+          subprocess.run(['git','config','user.name','Alex Unnippillil repository automation'],check=True)
+          subprocess.run(['git','config','user.email','24538548+Alex-Unnippillil@users.noreply.github.com'],check=True)
+          merge = subprocess.run(['git','merge','--no-ff','--no-commit','80f97370bfce49c2323b0231201f71f1ecf17df8'])
+          conflicts = set(run('git','diff','--name-only','--diff-filter=U').splitlines())
+          reviewed = {'components/desktop/MobileTaskbar.tsx', 'data/repository-source-catalog.json', 'playwright.portfolio.config.ts'}
+          assert conflicts <= reviewed, f'Unexpected conflicts require review: {conflicts - reviewed}'
+          if merge.returncode and not conflicts:
+              raise SystemExit('Merge failed without a reviewed conflict')
+          # The newer release implementation owns whole-bar keyboard navigation and Show desktop.
+          for name in sorted(conflicts):
+              subprocess.run(['git','checkout','--ours','--',name],check=True)
+              subprocess.run(['git','add',name],check=True)
+          p=Path('components/desktop/MobileTaskbar.tsx'); s=p.read_text()
+          assert '<ShowDesktopButton />' in s and 'event.altKey' in s
+          if 'data-app-id={app.id}' not in s:
+              old='              key={app.id}\n              type="button"'
+              assert old in s
+              s=s.replace(old,'              key={app.id}\n              data-app-id={app.id}\n              type="button"')
+          p.write_text(s)
+          # Retain the earlier input-preservation scenarios, updated for whole-bar navigation.
+          p=Path('tests/portfolio/taskbar-os.spec.ts'); s=p.read_text()
+          assert "const buttons = bar.locator('button[data-app-id]');" in s
+          s=s.replace("const buttons = bar.locator('button[data-app-id]');", "const buttons = bar.locator('button:not(:disabled)');")
+          p.write_text(s)
+          p=Path('tests/portfolio/app-polish.spec.ts'); s=p.read_text()
+          assert 'name: "Restore Calculator"' in s
+          p=Path('playwright.portfolio.config.ts'); s=p.read_text()
+          assert 'taskbar-operating-system' in s
+          s=s.replace('taskbar-operating-system', 'taskbar-(?:operating-system|os)')
+          p.write_text(s)
+          subprocess.run(['git','rm','.github/workflows/reconcile-taskbar-release.yml'],check=True)
+          subprocess.run(['node','scripts/generate-repository-snapshot.mjs','--catalog'],check=True)
+          subprocess.run(['git','add','components/desktop/MobileTaskbar.tsx','tests/portfolio/taskbar-os.spec.ts','tests/portfolio/app-polish.spec.ts','playwright.portfolio.config.ts','data/repository-source-catalog.json'],check=True)
+          subprocess.run(['git','diff','--check','--cached'],check=True)
+          assert not run('git','diff','--name-only','--diff-filter=U')
+          subprocess.run(['git','commit','-m','Merge #10685 taskbar regressions into the unified immediate-YouTube release'],check=True)
+          import os
+          remote=run('git','ls-remote','origin','refs/heads/feat/taskbar-os-controls').split()[0]
+          assert remote == os.environ['EXPECTED_HEAD'], 'Feature head changed; do not overwrite it'
+          subprocess.run(['git','push','origin','HEAD:refs/heads/feat/taskbar-os-controls'],check=True)
+          print('Final integration revision:',run('git','rev-parse','HEAD'))
