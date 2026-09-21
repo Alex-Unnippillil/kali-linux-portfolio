@@ -8,7 +8,7 @@ permissions:
 jobs:
   lint-fixes:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
@@ -26,19 +26,20 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Rename shadowed controller identifiers without changing behavior
+      - name: Apply a source-checked type-only parameter rename
         shell: python
         run: |
           from pathlib import Path
-          import re, subprocess
-          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip() == '8e65bafd23d5ce6cda99c5bd6d5e4bc36ed68bf6'
+          import subprocess
+          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip() == 'b7a27212d399bcc860cb71226e4def9b02640e1a', 'Review changed branch before applying fixes'
           p=Path('utils/showDesktopController.ts')
+          assert subprocess.check_output(['git','hash-object',str(p)],text=True).strip() == 'a8f0a88a720bd740e0528daa8e928a5518859880'
           s=p.read_text()
-          assert 'command: DesktopCommand' in s
-          p.write_text(re.sub(r'\bcommand\b', 'instruction', s))
-      - name: Apply configured ESLint autofixes to the seven reviewed files
-        run: |
-          yarn eslint --fix __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts
+          old='createShowDesktopController(send: (command: DesktopCommand) => void)'
+          assert s.count(old) == 1
+          p.write_text(s.replace(old,'createShowDesktopController(send: (instruction: DesktopCommand) => void)'))
+      - name: Apply configured ESLint autofixes to reviewed paths
+        run: yarn eslint --fix __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts
       - name: Remove temporary tooling and commit only reviewed source
         env:
           EXPECTED_HEAD: ${{ github.sha }}
@@ -51,25 +52,29 @@ jobs:
           git add __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts data/repository-source-catalog.json
           git config user.name 'Alex Unnippillil repository automation'
           git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
-          git commit -m 'fix(qa): resolve consolidated release lint and controller shadowing errors'
+          git commit -m 'fix(qa): resolve release lint and controller type-parameter shadowing'
           git push origin HEAD:refs/heads/feat/taskbar-os-controls
-      - name: Preserve exact-source validation evidence
+      - name: Preserve exact-source diagnostics including native test output
+        if: always()
         run: |
           set +e
           mkdir -p release-validation
           git rev-parse HEAD > release-validation/source-revision.txt
           git diff HEAD^ HEAD --stat > release-validation/changed-files.txt
           git status --porcelain > release-validation/worktree.txt
+          git diff > release-validation/uncommitted.patch
+          git archive --format=tar.gz HEAD > release-validation/source.tar.gz
+          node --test tests/node/showcase-scripts.test.mjs > release-validation/native-showcase.log 2>&1
+          echo "native-showcase=$?" >> release-validation/status.txt
           yarn lint > release-validation/lint.log 2>&1
           echo "lint=$?" >> release-validation/status.txt
           yarn typecheck > release-validation/typecheck.log 2>&1
           echo "typecheck=$?" >> release-validation/status.txt
-          git archive --format=tar.gz HEAD > release-validation/source.tar.gz
           cat release-validation/status.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reviewed-release-lint-evidence
+          name: reviewed-release-diagnostics
           path: release-validation/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 2
