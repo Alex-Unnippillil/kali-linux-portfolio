@@ -299,7 +299,9 @@ test("slash focuses app search without taking typing from an editable control", 
 test("unrelated network preference changes do not interrupt YouTube playback or refetch its library", async () => {
   const { rerender } = render(<YouTubeApp />);
   const frame = await screen.findByTitle("YouTube player for First Lab Video");
-  await waitFor(() => expect(screen.getByRole("button", { name: "Refresh library" })).toBeEnabled());
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Refresh channel playlists" })).toBeEnabled(),
+  );
   const requestsBefore = fetchMock.mock.calls.length;
   mockAllowNetwork = false;
   rerender(<YouTubeApp />);
