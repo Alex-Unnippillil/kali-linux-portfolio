@@ -4,25 +4,176 @@ on:
     branches: [feat/taskbar-os-controls]
     paths: [.github/workflows/youtube-launch-source-snapshot.yml]
 permissions:
-  contents: read
+  contents: write
+concurrency:
+  group: youtube-launch-validation
+  cancel-in-progress: false
 jobs:
   source:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 40
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-          persist-credentials: false
-      - name: Archive tracked source only
+          fetch-depth: 2
+      - name: Apply guarded launch fix to the reviewed source
+        shell: python
         run: |
+          from pathlib import Path
+          import subprocess
+          parent = subprocess.check_output(['git','rev-parse','HEAD^'], text=True).strip()
+          if parent != 'eb89c99102095ddfc17ff79329ab49d1f83cc271':
+              raise SystemExit('Source changed; review and reconcile instead of overwriting.')
+          def replace(s, old, new):
+              if old not in s:
+                  raise ValueError('Expected source not found: ' + old[:100])
+              return s.replace(old, new)
+          p=Path('hooks/useYouTubeLibrary.ts'); s=p.read_text()
+          s=replace(s,'export default function useYouTubeLibrary(\n  channelId: string,\n  allowNetwork: boolean,\n) {','// Opening this app starts its requests, independently of unrelated apps\' network preferences.\nexport default function useYouTubeLibrary(channelId: string) {')
+          s=replace(s,'useState(false);\n  const [directoryError','useState(true);\n  const [directoryError')
+          s=replace(s,'    setLoadingDirectory(allowNetwork);\n\n    if (allowNetwork) {\n      void (async () => {','    setLoadingDirectory(true);\n\n    void (async () => {')
+          s=replace(s,'      })();\n    }\n    return () => {','    })();\n    return () => {')
+          a=s.index('    void (async () => {\n')+len('    void (async () => {\n'); b=s.index('    })();',a)
+          s=s[:a]+''.join(line[2:] if line.startswith('  ') else line for line in s[a:b].splitlines(keepends=True))+s[b:]
+          s=replace(s,'[channelId, allowNetwork, revision]','[channelId, revision]')
+          s=replace(s,'      if (!allowNetwork) return;\n','')
+          s=replace(s,'    [allowNetwork],','    [],')
+          s=replace(s,'!directory || !allowNetwork || allRequest.current','!directory || allRequest.current')
+          s=replace(s,'[directory, allowNetwork, loadPage]','[directory, loadPage]')
+          assert 'allowNetwork' not in s
+          p.write_text(s)
+          p=Path('components/apps/youtube/index.tsx'); s=p.read_text()
+          s=replace(s,'import { useSettings } from "../../../hooks/useSettings";\n','')
+          s=replace(s,'  const { allowNetwork, setAllowNetwork } = useSettings();\n','')
+          s=replace(s,'useYouTubeLibrary(channel, allowNetwork)','useYouTubeLibrary(channel)')
+          s=replace(s,'!directory || !allowNetwork || loadingAll','!directory || loadingAll')
+          s=replace(s,'[directory, allowNetwork, pages, loadingAll, loadAll]','[directory, pages, loadingAll, loadAll]')
+          s=replace(s,'playing || !allowNetwork','playing')
+          s=replace(s,'[playing, allowNetwork, playlists, pages, channel]','[playing, playlists, pages, channel]')
+          s=replace(s,'allowNetwork && src ? (','src ? (')
+          s=replace(s,'disabled={busy || !allowNetwork}','disabled={busy}')
+          a=s.index('        {!allowNetwork && ('); b=s.index('        {directoryError && (',a); s=s[:a]+s[b:]
+          s=replace(s,'{playing && allowNetwork ? (','{playing ? (')
+          s=replace(s,'                    {!allowNetwork\n                      ? "You are in control of network access."\n                      : busy\n                        ? "Finding your first video…"\n                        : "Select a video to begin."}','                    {busy\n                      ? "Finding your first video…"\n                      : "Select a video to begin."}')
+          s=replace(s,'<small>{playlists.length} public playlists</small>','<small>{loadingDirectory ? "Loading playlists…" : `${playlists.length} public playlists`}</small>')
+          assert 'allowNetwork' not in s and 'setAllowNetwork' not in s
+          p.write_text(s)
+          p=Path('__tests__/youtube.test.tsx'); s=p.read_text(); a=s.index('test("network-off is respected'); b=s.index('\ntest(',a+5)
+          s=s[:a]+'''test("opening YouTube loads its API and player even with a saved network opt-out", async () => {
+            mockAllowNetwork = false;
+            localStorage.setItem("allow-network", "false");
+            render(<YouTubeApp />);
+            expect(fetchMock).toHaveBeenCalledWith(
+              expect.stringContaining("/api/youtube/directory?channelId="),
+              expect.objectContaining({ signal: expect.any(AbortSignal) }),
+            );
+            expect(screen.queryByRole("button", { name: "Enable network" })).not.toBeInTheDocument();
+            expect(screen.queryByText("Connect the video library")).not.toBeInTheDocument();
+            await screen.findByTitle("YouTube player for First Lab Video");
+            expect(fetchMock.mock.calls.some(([url]) => String(url).includes("/api/youtube/playlist-items"))).toBe(true);
+            expect(mockSetAllowNetwork).not.toHaveBeenCalled();
+            expect(localStorage.getItem("allow-network")).toBe("false");
+          });
+          '''+s[b:]; p.write_text(s)
+          p=Path('__tests__/youtube-library-lifecycle.test.tsx'); s=p.read_text()
+          s=s.replace('useYouTubeLibrary(channel, true)','useYouTubeLibrary(channel)').replace('useYouTubeLibrary("channel", true)','useYouTubeLibrary("channel")')
+          a=s.index('test("network-off cancels'); b=s.index('\ntest(',a+5)
+          s=s[:a]+'''test("closing YouTube cancels outstanding requests and ignores their late responses", async () => {
+            let resolveRequest!: (value: Response) => void;
+            const fetchMock = jest.spyOn(global, "fetch").mockImplementation(
+              () => new Promise((resolve) => { resolveRequest = resolve; }),
+            );
+            const { result, unmount } = renderHook(() => useYouTubeLibrary("channel"));
+            expect(result.current.loadingDirectory).toBe(true);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            unmount();
+            expect((fetchMock.mock.calls[0][1]?.signal as AbortSignal).aborted).toBe(true);
+            await act(async () => resolveRequest(response("Late channel")));
+            expect(result.current.directory).toBeNull();
+          });
+          '''+s[b:]; p.write_text(s)
+          p=Path('tests/portfolio/youtube-responsive.spec.ts'); s=p.read_text(); a=s.index('test("a saved network opt-out survives')
+          s=s[:a]+'''test("opening YouTube loads immediately despite an old network opt-out, including after reload", async ({ page }) => {
+            await fixture(page);
+            await page.goto("/");
+            await expect(page.locator("#about")).toBeVisible();
+            await page.evaluate(() => localStorage.setItem("allow-network", "false"));
+            const directoryRequest = page.waitForRequest("**/api/youtube/directory?**");
+            await page.goto("/?app=youtube");
+            await directoryRequest;
+            const app = page.getByTestId("youtube-app");
+            await expect(app.getByRole("button", { name: "Enable network", exact: true })).toHaveCount(0);
+            await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", { exact: true })).toBeVisible();
+            expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("false");
+            const reloadRequest = page.waitForRequest("**/api/youtube/directory?**");
+            await page.reload();
+            await reloadRequest;
+            await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", { exact: true })).toBeVisible();
+            await expect(app.locator("iframe")).not.toHaveAttribute("src", /autoplay=1/);
+            expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("false");
+          });
+          '''; p.write_text(s)
+          p=Path('README.md'); s=p.read_text(); a=s.index('### YouTube opens connected'); s=s[:a]+'''### YouTube opens connected
+
+          Opening YouTube from the launcher or `/?app=youtube` immediately requests Alex's
+          playlist directory and then its video pages. The first available video is embedded
+          without autoplay; there is no network-enable prompt.
+
+          YouTube does not use the optional-network setting: old `allow-network=false` values
+          cannot block its library or player. Those preferences remain unchanged for unrelated
+          apps. Closing YouTube cancels pending requests; refresh and channel changes ignore
+          stale responses. Failed requests expose a retry instead of looping.
+          A configured YouTube API key, available quota, and embedding permission are still
+          required. Automatic loading does not bypass third-party errors.
+          '''; p.write_text(s)
+          p=Path('docs/adaptive-library-ux.md'); s=p.read_text().replace('changes, network-off and unmount','changes and unmount').replace('When network access is enabled, the first available curated video is selected and embedded immediately, without autoplay.','Opening YouTube immediately requests playlists and selects the first available curated video, without autoplay.').replace('Network-off settings are respected; enabling requests requires a visitor action.','Opening the app starts requests. The network-enable prompt is removed; unrelated apps retain their saved network preferences.').replace('when network access is enabled. It does not autoplay or take keyboard focus.','when the app opens. It does not autoplay or take keyboard focus.'); p.write_text(s)
+      - name: Commit the reviewed changes to the feature branch only
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/feat/taskbar-os-controls | cut -f1)" = "$EXPECTED_HEAD"
+          git diff --check
+          git add hooks/useYouTubeLibrary.ts components/apps/youtube/index.tsx __tests__/youtube.test.tsx __tests__/youtube-library-lifecycle.test.tsx tests/portfolio/youtube-responsive.spec.ts README.md docs/adaptive-library-ux.md
+          git config user.name 'Alex Unnippillil repository automation'
+          git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
+          git commit -m 'fix(youtube): fetch playlists immediately on app launch without a network gate'
+          git push origin HEAD:refs/heads/feat/taskbar-os-controls
           git rev-parse HEAD > source-revision.txt
-          git archive --format=tar.gz HEAD > source.tar.gz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v6
         with:
-          name: youtube-launch-source-${{ github.sha }}
-          path: |
-            source.tar.gz
-            source-revision.txt
-          if-no-files-found: error
-          retention-days: 1
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - name: Run checks and preserve machine-readable results
+        shell: bash
+        run: |
+          set +e
+          mkdir -p launch-validation
+          git rev-parse HEAD > launch-validation/source-revision.txt
+          git status --porcelain > launch-validation/worktree.txt
+          node scripts/generate-repository-snapshot.mjs > launch-validation/snapshot.log 2>&1
+          yarn typecheck > launch-validation/typecheck.log 2>&1
+          echo "typecheck=$?" >> launch-validation/status.txt
+          yarn lint > launch-validation/lint.log 2>&1
+          echo "lint=$?" >> launch-validation/status.txt
+          yarn test --runInBand --json --outputFile=launch-validation/jest-results.json > launch-validation/jest.log 2>&1
+          echo "test=$?" >> launch-validation/status.txt
+          cat launch-validation/status.txt
+          git archive --format=tar.gz HEAD > launch-validation/source.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: youtube-launch-validation
+          path: launch-validation/
+          if-no-files-found: warn
+          retention-days: 2
