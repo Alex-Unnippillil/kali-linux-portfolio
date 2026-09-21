@@ -5,13 +5,17 @@ on:
     paths: [.github/workflows/finalize-reviewed-release.yml]
 permissions:
   contents: write
+concurrency:
+  group: finalize-taskbar-release
+  cancel-in-progress: false
 jobs:
-  lint-fixes:
+  repair:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,55 +30,106 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Apply a source-checked type-only parameter rename
+      - name: Apply source-checked focus and type-only lint repairs
         shell: python
         run: |
           from pathlib import Path
           import subprocess
-          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip() == 'b7a27212d399bcc860cb71226e4def9b02640e1a', 'Review changed branch before applying fixes'
-          p=Path('utils/showDesktopController.ts')
-          assert subprocess.check_output(['git','hash-object',str(p)],text=True).strip() == 'a8f0a88a720bd740e0528daa8e928a5518859880'
+          def checked(name, sha):
+              p = Path(name)
+              assert subprocess.check_output(['git','hash-object',name],text=True).strip() == sha, name + ' changed; review before patching'
+              return p, p.read_bytes().decode()
+          p,s=checked('utils/showDesktopController.ts','a8f0a88a720bd740e0528daa8e928a5518859880')
+          s=s.replace('createShowDesktopController(send: (command: DesktopCommand) => void)', 'createShowDesktopController(send: (instruction: DesktopCommand) => void)')
+          p.write_bytes(s.encode())
+          p,s=checked('components/screen/navbar.js','fb299491520f7dc5173ad5aa4b62e83167d93b5a')
+          assert s.count('this.previewFlyoutRef.current.focus();') == 1
+          s=s.replace('this.previewFlyoutRef.current.focus();', "this.previewFocusPending = false;\r\n                                this.previewFlyoutRef.current.querySelector('[data-preview-activate]')?.focus({ preventScroll: true });")
+          old="                                this.previewFocusPending = false;\r\n                                this.previewRefreshInFlight = false;\r\n                                return null;"
+          assert old in s
+          s=s.replace(old,'                                return null;')
+          old="                const { appId, requestId, preview } = detail;"
+          assert old in s
+          s=s.replace(old,old+"\r\n                const active = this.state.preview;\r\n                if (!active || active.appId !== appId || active.requestId !== requestId) return;")
+          old="                }, () => {\r\n                        this.previewRefreshInFlight = false;"
+          assert old in s
+          s=s.replace(old,"                }, () => {\r\n                        if (this.state.preview?.appId !== appId || this.state.preview?.requestId !== requestId) return;\r\n                        this.previewRefreshInFlight = false;")
+          p.write_bytes(s.encode())
+          p=Path('__tests__/navbar-running-apps.test.tsx')
           s=p.read_text()
-          old='createShowDesktopController(send: (command: DesktopCommand) => void)'
-          assert s.count(old) == 1
-          p.write_text(s.replace(old,'createShowDesktopController(send: (instruction: DesktopCommand) => void)'))
-      - name: Apply configured ESLint autofixes to reviewed paths
-        run: yarn eslint --fix __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts
-      - name: Remove temporary tooling and commit only reviewed source
-        env:
-          EXPECTED_HEAD: ${{ github.sha }}
+          s+='''
+
+          describe('Taskbar asynchronous keyboard preview focus', () => {
+            test('a matching late thumbnail focuses the action, never the dialog, and stale responses cannot consume that focus request', () => {
+              const instance = React.createRef<Navbar>();
+              render(<Navbar ref={instance} />);
+              act(() => window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail })));
+              const bar = screen.getByRole('navigation', { name: 'Desktop taskbar' });
+              const button = within(bar).getByRole('button', { name: 'App One', exact: true });
+              fireEvent.keyDown(button, { key: 'ArrowDown' });
+              const preview = screen.getByRole('dialog', { name: 'App One preview' });
+              const activate = within(preview).getByRole('button', { name: 'Switch to App One', exact: true });
+              const controller = instance.current!;
+              const active = controller.state.preview as unknown as { appId: string; requestId: number };
+              // Exercise the delayed-ref path: the request still owns keyboard focus when its thumbnail returns.
+              act(() => { preview.focus(); controller.previewFocusPending = true; });
+              act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+                detail: { appId: active.appId, requestId: active.requestId - 1, preview: null },
+              })));
+              expect(controller.previewFocusPending).toBe(true);
+              act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+                detail: { ...active, preview: null },
+              })));
+              expect(activate).toHaveFocus();
+              expect(controller.previewFocusPending).toBe(false);
+              const close = within(preview).getByRole('button', { name: 'Close App One', exact: true });
+              act(() => close.focus());
+              act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+                detail: { ...active, preview: null },
+              })));
+              expect(close).toHaveFocus();
+            });
+          });
+          '''
+          p.write_text(s)
+      - name: Run configured lint fixes and remove the temporary workflow
         run: |
           set -euo pipefail
-          test "$(git ls-remote origin refs/heads/feat/taskbar-os-controls | cut -f1)" = "$EXPECTED_HEAD"
+          yarn eslint --fix components/screen/navbar.js __tests__/navbar-running-apps.test.tsx utils/showDesktopController.ts
           git rm .github/workflows/finalize-reviewed-release.yml
           node scripts/generate-repository-snapshot.mjs --catalog
-          git diff --check
-          git add __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts data/repository-source-catalog.json
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Validate the repaired source before committing
+        run: |
+          set -euo pipefail
+          node --test tests/node/showcase-scripts.test.mjs
+          yarn test __tests__/navbar-running-apps.test.tsx __tests__/showDesktopController.test.ts --runInBand
+          yarn typecheck
+          yarn lint
+      - name: Publish only a fast-forward of the reviewed feature branch
+        run: |
+          set -euo pipefail
+          git add components/screen/navbar.js __tests__/navbar-running-apps.test.tsx utils/showDesktopController.ts data/repository-source-catalog.json
           git config user.name 'Alex Unnippillil repository automation'
           git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
-          git commit -m 'fix(qa): resolve release lint and controller type-parameter shadowing'
+          git commit -m 'fix(taskbar): preserve keyboard preview focus across asynchronous responses'
+          git fetch --no-tags origin refs/heads/feat/taskbar-os-controls
+          echo "Local candidate: $(git rev-parse HEAD)"
+          echo "Current remote: $(git rev-parse FETCH_HEAD)"
+          git merge-base --is-ancestor FETCH_HEAD HEAD
           git push origin HEAD:refs/heads/feat/taskbar-os-controls
-      - name: Preserve exact-source diagnostics including native test output
+      - name: Preserve exact source and diagnostics
         if: always()
         run: |
-          set +e
-          mkdir -p release-validation
-          git rev-parse HEAD > release-validation/source-revision.txt
-          git diff HEAD^ HEAD --stat > release-validation/changed-files.txt
-          git status --porcelain > release-validation/worktree.txt
-          git diff > release-validation/uncommitted.patch
-          git archive --format=tar.gz HEAD > release-validation/source.tar.gz
-          node --test tests/node/showcase-scripts.test.mjs > release-validation/native-showcase.log 2>&1
-          echo "native-showcase=$?" >> release-validation/status.txt
-          yarn lint > release-validation/lint.log 2>&1
-          echo "lint=$?" >> release-validation/status.txt
-          yarn typecheck > release-validation/typecheck.log 2>&1
-          echo "typecheck=$?" >> release-validation/status.txt
-          cat release-validation/status.txt
+          mkdir -p "$RUNNER_TEMP/release-validation"
+          git rev-parse HEAD > "$RUNNER_TEMP/release-validation/source-revision.txt"
+          git status --porcelain > "$RUNNER_TEMP/release-validation/worktree.txt"
+          git diff HEAD > "$RUNNER_TEMP/release-validation/uncommitted.patch"
+          git archive --format=tar.gz HEAD > "$RUNNER_TEMP/release-validation/source.tar.gz"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reviewed-release-diagnostics
-          path: release-validation/
+          name: final-repair-source
+          path: ${{ runner.temp }}/release-validation/
           if-no-files-found: error
           retention-days: 2
