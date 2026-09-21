@@ -4,7 +4,9 @@ import userEvent from '@testing-library/user-event';
 import { clear, get, set } from 'idb-keyval';
 import { Settings } from '../components/apps/settings';
 import { SettingsContext } from '../hooks/useSettings';
-import { defaults, getAllowNetwork } from '../utils/settingsStore';
+import * as settingsStore from '../utils/settingsStore';
+
+const { defaults } = settingsStore;
 
 // Exercise the real reset control and storage implementation against explicit
 // React state. Provider hydration is covered separately by allowNetwork.test.ts.
@@ -95,6 +97,7 @@ describe('Settings reset persistence', () => {
     render(<ResetHarness />);
     expect(screen.getByRole('combobox')).toHaveValue('compact');
     expect(screen.getByLabelText('Adjust font scale')).toHaveValue('1.5');
+    await expect(settingsStore.getAllowNetwork()).resolves.toBe(false);
     for (const [label, key] of toggles) {
       expect((screen.getByLabelText(label) as HTMLInputElement).checked).toBe(!defaults[key]);
     }
@@ -112,7 +115,8 @@ describe('Settings reset persistence', () => {
     }
     await expect(get('accent')).resolves.toBeUndefined();
     await expect(get('bg-image')).resolves.toBeUndefined();
-    await expect(getAllowNetwork()).resolves.toBe(true);
+    await expect(settingsStore.getAllowNetwork()).resolves.toBe(defaults.allowNetwork);
+    expect(window.localStorage.getItem('allow-network')).toBeNull();
     expect(window.localStorage.getItem('youtube:watch-later')).toBe('["saved-video"]');
   });
 
@@ -134,7 +138,8 @@ describe('Settings reset persistence', () => {
     }
     await expect(get('accent')).resolves.toBe('#e53e3e');
     await expect(get('bg-image')).resolves.toBe('wall-3');
-    await expect(getAllowNetwork()).resolves.toBe(false);
+    await expect(settingsStore.getAllowNetwork()).resolves.toBe(false);
+    expect(window.localStorage.getItem('allow-network')).toBe('false');
     expect(window.localStorage.getItem('youtube:watch-later')).toBe('["saved-video"]');
   });
 });

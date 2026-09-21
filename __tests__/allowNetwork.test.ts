@@ -7,6 +7,8 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
   let fetchSpy: jest.Mock;
 
   beforeEach(() => {
+    // Capture only for restoration; never invoke this reference without its receiver.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     originalFetch = window.fetch;
     fetchSpy = jest.fn(() => Promise.resolve("ok"));
     // @ts-expect-error - jest mock assignment
@@ -34,6 +36,8 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
     window.localStorage.setItem("allow-network", "false");
     const { result } = renderSettings();
     await act(async () => {});
+    // Identity comparison only; calls below always go through window.fetch.
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const blockedFetch = window.fetch;
 
     await expect(window.fetch("//external.com")).rejects.toThrow(
@@ -62,9 +66,8 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
 
   test("handles Request objects when blocking network access", async () => {
     // jsdom does not consistently expose the Node fetch constructors as globals.
-    const { Request: NativeRequest } = jest.requireActual<
-      typeof import("undici")
-    >("undici");
+    const { Request: NativeRequest } =
+      jest.requireActual<typeof import("undici")>("undici");
     window.localStorage.setItem("allow-network", "false");
     renderSettings();
     await act(async () => {});

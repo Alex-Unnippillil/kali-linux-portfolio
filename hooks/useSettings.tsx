@@ -6,7 +6,7 @@ import {
   useState,
   ReactNode,
   useRef,
-} from 'react';
+} from "react";
 import {
   getAccent as loadAccent,
   setAccent as saveAccent,
@@ -33,26 +33,26 @@ import {
   getVolume as loadVolume,
   setVolume as saveVolume,
   defaults,
-} from '../utils/settingsStore';
-import { Howler } from 'howler';
-import { setMasterVolume } from '../utils/audio';
+} from "../utils/settingsStore";
+import { Howler } from "howler";
+import { setMasterVolume } from "../utils/audio";
 import {
   DesktopTheme,
   DESKTOP_THEME_PRESETS,
   resolveDesktopTheme,
   getTheme as loadTheme,
   setTheme as saveTheme,
-} from '../utils/theme';
-type Density = 'regular' | 'compact';
+} from "../utils/theme";
+type Density = "regular" | "compact";
 
 // Predefined accent palette exposed to settings UI
 export const ACCENT_OPTIONS = [
-  '#1793d1', // kali blue (default)
-  '#e53e3e', // red
-  '#d97706', // orange
-  '#38a169', // green
-  '#805ad5', // purple
-  '#ed64a6', // pink
+  "#1793d1", // kali blue (default)
+  "#e53e3e", // red
+  "#d97706", // orange
+  "#38a169", // green
+  "#805ad5", // purple
+  "#ed64a6", // pink
 ];
 
 // Utility to lighten or darken a hex color by a percentage
@@ -103,7 +103,7 @@ interface SettingsContextValue {
 }
 
 const DEFAULT_DESKTOP_THEME = resolveDesktopTheme({
-  theme: 'default',
+  theme: "default",
   accent: defaults.accent,
   wallpaperName: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
@@ -124,52 +124,62 @@ export const SettingsContext = createContext<SettingsContextValue>({
   allowNetwork: defaults.allowNetwork,
   haptics: defaults.haptics,
   volume: defaults.volume,
-  theme: 'default',
+  theme: "default",
   desktopTheme: DEFAULT_DESKTOP_THEME,
-  setAccent: () => { },
-  setWallpaper: () => { },
-  setUseKaliWallpaper: () => { },
-  setDensity: () => { },
-  setReducedMotion: () => { },
-  setFontScale: () => { },
-  setHighContrast: () => { },
-  setLargeHitAreas: () => { },
-  setPongSpin: () => { },
-  setAllowNetwork: () => { },
-  setHaptics: () => { },
-  setVolume: () => { },
-  setTheme: () => { },
+  setAccent: () => {},
+  setWallpaper: () => {},
+  setUseKaliWallpaper: () => {},
+  setDensity: () => {},
+  setReducedMotion: () => {},
+  setFontScale: () => {},
+  setHighContrast: () => {},
+  setLargeHitAreas: () => {},
+  setPongSpin: () => {},
+  setAllowNetwork: () => {},
+  setHaptics: () => {},
+  setVolume: () => {},
+  setTheme: () => {},
 });
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [accent, setAccent] = useState<string>(defaults.accent);
   const [wallpaper, setWallpaper] = useState<string>(defaults.wallpaper);
-  const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(defaults.useKaliWallpaper);
+  const [useKaliWallpaper, setUseKaliWallpaper] = useState<boolean>(
+    defaults.useKaliWallpaper,
+  );
   const [density, setDensity] = useState<Density>(defaults.density as Density);
-  const [reducedMotion, setReducedMotion] = useState<boolean>(defaults.reducedMotion);
+  const [reducedMotion, setReducedMotion] = useState<boolean>(
+    defaults.reducedMotion,
+  );
   const [fontScale, setFontScale] = useState<number>(defaults.fontScale);
   const [highContrast, setHighContrast] = useState<boolean>(defaults.highContrast);
-  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(defaults.largeHitAreas);
+  const [largeHitAreas, setLargeHitAreas] = useState<boolean>(
+    defaults.largeHitAreas,
+  );
   const [pongSpin, setPongSpin] = useState<boolean>(defaults.pongSpin);
   // Hydrate the saved preference before permitting requests, including on deep links.
   const [allowNetwork, setAllowNetwork] = useState<boolean>(false);
   const [networkSettingsLoaded, setNetworkSettingsLoaded] = useState(false);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [volume, setVolume] = useState<number>(defaults.volume);
-  const [theme, setTheme] = useState<string>('default');
+  const [theme, setTheme] = useState<string>("default");
   const previousThemeRef = useRef<string | null>(null);
 
   useEffect(() => {
     let active = true;
     // Do not wait for unrelated IndexedDB preferences or persist the hydration placeholder.
-    void loadAllowNetwork().then((value) => {
-      if (!active) return;
-      setAllowNetwork(value);
-      setNetworkSettingsLoaded(true);
-    }).catch(() => {
-      // Unreadable storage must not accidentally override a possible saved opt-out.
-    });
-    return () => { active = false; };
+    void loadAllowNetwork()
+      .then((value) => {
+        if (!active) return;
+        setAllowNetwork(value);
+        setNetworkSettingsLoaded(true);
+      })
+      .catch(() => {
+        // Unreadable storage must not accidentally override a possible saved opt-out.
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -196,13 +206,13 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
     const vars: Record<string, string> = {
-      '--color-ub-orange': accent,
-      '--color-ub-border-orange': border,
-      '--color-primary': accent,
-      '--color-accent': accent,
-      '--color-focus-ring': accent,
-      '--color-selection': accent,
-      '--color-control-accent': accent,
+      "--color-ub-orange": accent,
+      "--color-ub-border-orange": border,
+      "--color-primary": accent,
+      "--color-accent": accent,
+      "--color-focus-ring": accent,
+      "--color-selection": accent,
+      "--color-control-accent": accent,
     };
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
@@ -210,18 +220,30 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     saveAccent(accent);
   }, [accent]);
 
-  useEffect(() => { saveWallpaper(wallpaper); }, [wallpaper]);
-  useEffect(() => { saveUseKaliWallpaper(useKaliWallpaper); }, [useKaliWallpaper]);
+  useEffect(() => {
+    saveWallpaper(wallpaper);
+  }, [wallpaper]);
+  useEffect(() => {
+    saveUseKaliWallpaper(useKaliWallpaper);
+  }, [useKaliWallpaper]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
       regular: {
-        '--space-1': '0.25rem', '--space-2': '0.5rem', '--space-3': '0.75rem',
-        '--space-4': '1rem', '--space-5': '1.5rem', '--space-6': '2rem',
+        "--space-1": "0.25rem",
+        "--space-2": "0.5rem",
+        "--space-3": "0.75rem",
+        "--space-4": "1rem",
+        "--space-5": "1.5rem",
+        "--space-6": "2rem",
       },
       compact: {
-        '--space-1': '0.125rem', '--space-2': '0.25rem', '--space-3': '0.5rem',
-        '--space-4': '0.75rem', '--space-5': '1rem', '--space-6': '1.5rem',
+        "--space-1": "0.125rem",
+        "--space-2": "0.25rem",
+        "--space-3": "0.5rem",
+        "--space-4": "0.75rem",
+        "--space-5": "1rem",
+        "--space-6": "1.5rem",
       },
     };
     Object.entries(spacing[density]).forEach(([key, value]) => {
@@ -231,22 +253,27 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [density]);
 
   useEffect(() => {
-    document.documentElement.classList.toggle('reduced-motion', reducedMotion);
+    document.documentElement.classList.toggle("reduced-motion", reducedMotion);
     saveReducedMotion(reducedMotion);
   }, [reducedMotion]);
   useEffect(() => {
-    document.documentElement.style.setProperty('--font-multiplier', fontScale.toString());
+    document.documentElement.style.setProperty(
+      "--font-multiplier",
+      fontScale.toString(),
+    );
     saveFontScale(fontScale);
   }, [fontScale]);
   useEffect(() => {
-    document.documentElement.classList.toggle('high-contrast', highContrast);
+    document.documentElement.classList.toggle("high-contrast", highContrast);
     saveHighContrast(highContrast);
   }, [highContrast]);
   useEffect(() => {
-    document.documentElement.classList.toggle('large-hit-area', largeHitAreas);
+    document.documentElement.classList.toggle("large-hit-area", largeHitAreas);
     saveLargeHitAreas(largeHitAreas);
   }, [largeHitAreas]);
-  useEffect(() => { savePongSpin(pongSpin); }, [pongSpin]);
+  useEffect(() => {
+    savePongSpin(pongSpin);
+  }, [pongSpin]);
 
   // Persistence must not replace or recapture the fetch guard during hydration.
   useEffect(() => {
@@ -257,21 +284,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [allowNetwork, networkSettingsLoaded]);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || (networkSettingsLoaded && allowNetwork)) return;
-    // Own exactly one wrapper, including during StrictMode replay and remounts.
+    if (typeof window === "undefined" || (networkSettingsLoaded && allowNetwork))
+      return;
+    // Keep the original identity for cleanup; invoke it below with .call(window, ...).
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalFetch = window.fetch;
     const normalizeRequest = (input: RequestInfo | URL): URL | null => {
       try {
-        if (typeof input === 'string') return new URL(input, window.location.href);
+        if (typeof input === "string") return new URL(input, window.location.href);
         if (input instanceof URL) return new URL(input.href, window.location.href);
-        if (typeof Request !== 'undefined' && input instanceof Request) {
+        if (typeof Request !== "undefined" && input instanceof Request) {
           return new URL(input.url, window.location.href);
         }
-        if (typeof input === 'object' && input) {
+        if (typeof input === "object" && input) {
           const candidate =
-            (input as { url?: string | URL }).url ?? (input as { href?: string | URL }).href;
-          if (candidate instanceof URL) return new URL(candidate.href, window.location.href);
-          if (typeof candidate === 'string') return new URL(candidate, window.location.href);
+            (input as { url?: string | URL }).url ??
+            (input as { href?: string | URL }).href;
+          if (candidate instanceof URL)
+            return new URL(candidate.href, window.location.href);
+          if (typeof candidate === "string")
+            return new URL(candidate, window.location.href);
         }
       } catch {
         return null;
@@ -282,11 +314,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       const resolvedUrl = normalizeRequest(input);
       if (resolvedUrl) {
         const protocol = resolvedUrl.protocol.toLowerCase();
-        const isHttp = protocol === 'http:' || protocol === 'https:';
+        const isHttp = protocol === "http:" || protocol === "https:";
         const isSameOrigin = resolvedUrl.origin === window.location.origin;
-        const isAllowed = ['api.github.com'].includes(resolvedUrl.hostname);
+        const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname);
         if (isHttp && !isSameOrigin && !isAllowed) {
-          return Promise.reject(new Error('Network requests disabled'));
+          return Promise.reject(new Error("Network requests disabled"));
         }
       }
       return originalFetch.call(window, input, init);
@@ -298,17 +330,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     };
   }, [allowNetwork, networkSettingsLoaded]);
 
-  useEffect(() => { saveHaptics(haptics); }, [haptics]);
+  useEffect(() => {
+    saveHaptics(haptics);
+  }, [haptics]);
   useEffect(() => {
     const vol = volume / 100;
-    if (typeof Howler !== 'undefined') Howler.volume(vol);
+    if (typeof Howler !== "undefined") Howler.volume(vol);
     setMasterVolume(vol);
     saveVolume(volume);
   }, [volume]);
 
-  const bgImageName = useKaliWallpaper ? 'kali-gradient' : wallpaper;
+  const bgImageName = useKaliWallpaper ? "kali-gradient" : wallpaper;
   const desktopTheme = useMemo(
-    () => resolveDesktopTheme({ theme, accent, wallpaperName: wallpaper, bgImageName, useKaliWallpaper }),
+    () =>
+      resolveDesktopTheme({
+        theme,
+        accent,
+        wallpaperName: wallpaper,
+        bgImageName,
+        useKaliWallpaper,
+      }),
     [theme, accent, wallpaper, bgImageName, useKaliWallpaper],
   );
   useEffect(() => {
@@ -318,21 +359,59 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const preset = DESKTOP_THEME_PRESETS[theme];
     if (firstRun || themeChanged) {
       if (preset?.accent && preset.accent !== accent) setAccent(preset.accent);
-      if (preset?.wallpaperName && preset.wallpaperName !== wallpaper) setWallpaper(preset.wallpaperName);
-      if (preset?.useKaliWallpaper !== undefined && preset.useKaliWallpaper !== useKaliWallpaper) {
+      if (preset?.wallpaperName && preset.wallpaperName !== wallpaper)
+        setWallpaper(preset.wallpaperName);
+      if (
+        preset?.useKaliWallpaper !== undefined &&
+        preset.useKaliWallpaper !== useKaliWallpaper
+      ) {
         setUseKaliWallpaper(preset.useKaliWallpaper);
       }
       previousThemeRef.current = theme;
     }
-  }, [theme, accent, wallpaper, useKaliWallpaper, setAccent, setWallpaper, setUseKaliWallpaper]);
+  }, [
+    theme,
+    accent,
+    wallpaper,
+    useKaliWallpaper,
+    setAccent,
+    setWallpaper,
+    setUseKaliWallpaper,
+  ]);
 
   return (
-    <SettingsContext.Provider value={{
-      accent, wallpaper, bgImageName, useKaliWallpaper, density, reducedMotion, fontScale,
-      highContrast, largeHitAreas, pongSpin, allowNetwork, haptics, volume, theme, desktopTheme,
-      setAccent, setWallpaper, setUseKaliWallpaper, setDensity, setReducedMotion, setFontScale,
-      setHighContrast, setLargeHitAreas, setPongSpin, setAllowNetwork, setHaptics, setVolume, setTheme,
-    }}>
+    <SettingsContext.Provider
+      value={{
+        accent,
+        wallpaper,
+        bgImageName,
+        useKaliWallpaper,
+        density,
+        reducedMotion,
+        fontScale,
+        highContrast,
+        largeHitAreas,
+        pongSpin,
+        allowNetwork,
+        haptics,
+        volume,
+        theme,
+        desktopTheme,
+        setAccent,
+        setWallpaper,
+        setUseKaliWallpaper,
+        setDensity,
+        setReducedMotion,
+        setFontScale,
+        setHighContrast,
+        setLargeHitAreas,
+        setPongSpin,
+        setAllowNetwork,
+        setHaptics,
+        setVolume,
+        setTheme,
+      }}
+    >
       {children}
     </SettingsContext.Provider>
   );
