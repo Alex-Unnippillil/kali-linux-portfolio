@@ -1,0 +1,73 @@
+name: Format reviewed release
+on:
+  push:
+    branches: [feat/taskbar-os-controls]
+    paths: [.github/workflows/format-reviewed-release.yml]
+permissions:
+  contents: write
+concurrency:
+  group: finalize-taskbar-release
+  cancel-in-progress: false
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NODE_OPTIONS: --max-old-space-size=4096
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - name: Apply configured formatting to every outstanding PR lint failure
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = '600ded373f715b882f2a4706362ab23cce352b20'
+          yarn eslint --fix __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts
+          git rm .github/workflows/format-reviewed-release.yml
+          node scripts/generate-repository-snapshot.mjs --catalog
+          git -c core.whitespace=cr-at-eol diff --check
+      - name: Check explicit paths rather than relying on a narrow push diff
+        run: |
+          set -euo pipefail
+          yarn eslint --max-warnings 0 __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts components/screen/navbar.js __tests__/navbar-running-apps.test.tsx utils/showDesktopController.ts
+          node --test tests/node/showcase-scripts.test.mjs
+          yarn test __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/showDesktopController.test.ts --runInBand
+          yarn typecheck
+      - name: Commit reviewed paths and fast-forward the feature branch
+        run: |
+          set -euo pipefail
+          git add __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts data/repository-source-catalog.json
+          git config user.name 'Alex Unnippillil repository automation'
+          git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
+          git commit -m 'style(release): apply configured lint fixes to all remaining reviewed paths'
+          git fetch --no-tags origin refs/heads/feat/taskbar-os-controls
+          git merge-base --is-ancestor FETCH_HEAD HEAD
+          git push origin HEAD:refs/heads/feat/taskbar-os-controls
+      - name: Preserve the exact final source and patch
+        if: always()
+        run: |
+          mkdir -p "$RUNNER_TEMP/release-validation"
+          git rev-parse HEAD > "$RUNNER_TEMP/release-validation/source-revision.txt"
+          git status --porcelain > "$RUNNER_TEMP/release-validation/worktree.txt"
+          git diff HEAD > "$RUNNER_TEMP/release-validation/uncommitted.patch"
+          git diff HEAD^ HEAD > "$RUNNER_TEMP/release-validation/committed.patch"
+          git archive --format=tar.gz HEAD > "$RUNNER_TEMP/release-validation/source.tar.gz"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: release-formatting-source
+          path: ${{ runner.temp }}/release-validation/
+          if-no-files-found: error
+          retention-days: 2
