@@ -1,0 +1,28 @@
+name: YouTube launch source snapshot
+on:
+  push:
+    branches: [feat/taskbar-os-controls]
+    paths: [.github/workflows/youtube-launch-source-snapshot.yml]
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Archive tracked source only
+        run: |
+          git rev-parse HEAD > source-revision.txt
+          git archive --format=tar.gz HEAD > source.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: youtube-launch-source-${{ github.sha }}
+          path: |
+            source.tar.gz
+            source-revision.txt
+          if-no-files-found: error
+          retention-days: 1
