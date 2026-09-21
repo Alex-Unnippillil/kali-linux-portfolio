@@ -5,18 +5,18 @@ on:
     paths: [.github/workflows/format-reviewed-release.yml]
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: finalize-taskbar-release
   cancel-in-progress: false
 jobs:
-  format:
+  repair:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: '1'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
       NODE_OPTIONS: --max-old-space-size=4096
-      REVIEWED_PATHS: __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/settingsStore.js hooks/useSettings.tsx __tests__/networkSettings.test.ts __tests__/allowNetwork.test.ts utils/showDesktopController.ts __tests__/show-desktop-controller.test.ts
     steps:
       - uses: actions/checkout@v4
         with:
@@ -31,29 +31,39 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Apply reviewed replacements with exact source-match guards
+      - name: Apply reproduced repairs to exact verified source blobs
         shell: python
         run: |
           from pathlib import Path
-          def edit(name, old, new):
-              p=Path(name); raw=p.read_bytes(); s=raw.decode(); eol='\r\n' if b'\r\n' in raw else '\n'; s=s.replace('\r\n','\n')
-              assert s.count(old)==1, f'{name}: expected one reviewed source match ({s.count(old)})'
-              p.write_bytes(s.replace(old,new).replace('\n',eol).encode())
-          edit('utils/settingsStore.js', '  allowNetwork: true,', '  // YouTube uses approved endpoints; arbitrary external requests remain opt-in.\n  allowNetwork: false,')
-          edit('hooks/useSettings.tsx', '        const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname);', '''        const requestMethod = (init?.method ??
-            (typeof input === "object" && input && "method" in input ? input.method : "GET")).toUpperCase();
-          const isYouTubeRead = requestMethod === "GET" &&
+          import hashlib
+          expected = {'utils/settingsStore.js': '2be4c0a48447bc7ed54b6591127ca376a09cfdfb', 'hooks/useSettings.tsx': '26e5d74d8aa1cfba43c373929e537243921f3f07', '__tests__/allowNetwork.test.ts': 'a34279f53b1d2bb5e79d754580240bcf7bef248d', '__tests__/networkSettings.test.ts': '8ef0469e21c259141afa6b041ae91dbc3ee4bacb', 'utils/showDesktopController.ts': '7e73ac6facf25636bb0c683669aed598ff3a7b49', '__tests__/show-desktop-controller.test.ts': '398b3463881c80029a5c09ec594ba85039a2537c', 'docs/taskbar-operating-system.md': 'd6fe8978de54b890ba957a569beacebb211b893f'}
+          for name, wanted in expected.items():
+              raw = Path(name).read_bytes()
+              actual = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
+              assert actual == wanted, f'Source changed; reconcile {name} before editing'
+          def replace(name, old, new):
+              p = Path(name)
+              raw = p.read_bytes()
+              eol = '\r\n' if b'\r\n' in raw else '\n'
+              s = raw.decode().replace('\r\n', '\n')
+              assert s.count(old) == 1, (name, s.count(old), old[:80])
+              p.write_bytes(s.replace(old, new).replace('\n', eol).encode())
+          replace('utils/settingsStore.js', '  allowNetwork: true,', '  // YouTube reads are approved separately; arbitrary hosts remain opt-in.\n  allowNetwork: false,')
+          replace('hooks/useSettings.tsx', '        const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname);', '''        const method = init?.method ?? (
+            typeof input === "object" && input && "method" in input ? input.method : "GET"
+          );
+          const isYouTubeRead =
+            method.toUpperCase() === "GET" &&
             resolvedUrl.origin === "https://www.googleapis.com" &&
-            !resolvedUrl.username && !resolvedUrl.password &&
+            !resolvedUrl.username &&
+            !resolvedUrl.password &&
             /^\\/youtube\\/v3\\/(channels|channelSections|playlists|playlistItems)$/.test(resolvedUrl.pathname);
           const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname) || isYouTubeRead;''')
-          p=Path('__tests__/networkSettings.test.ts'); s=p.read_text().replace('defaults to enabled','defaults to disabled').replace('restores the enabled default','restores the disabled default').replace('expect(defaults.allowNetwork).toBe(true)','expect(defaults.allowNetwork).toBe(false)').replace('resolves.toBe(true)','resolves.toBe(false)').replace('await setAllowNetwork(false);','await setAllowNetwork(true);'); p.write_text(s)
-          edit('__tests__/allowNetwork.test.ts', '''  test("enables networking on a fresh visit without an extra consent click", async () => {
-            const { result } = renderSettings();
-            await waitFor(() => expect(result.current.allowNetwork).toBe(true));
-            expect(window.localStorage.getItem("allow-network")).toBe("true");
-            await expect(window.fetch("https://external.com")).resolves.toBe("ok");
-          });''', '''  test("keeps arbitrary hosts opt-in while YouTube reads work on a fresh visit", async () => {
+          p = Path('__tests__/allowNetwork.test.ts')
+          s = p.read_text()
+          start = s.index('  test("enables networking on a fresh visit')
+          end = s.index('\n  test(', start + 5)
+          s = s[:start] + '''  test("keeps arbitrary hosts opt-in while approved YouTube reads load immediately", async () => {
             const { result } = renderSettings();
             await waitFor(() => expect(window.localStorage.getItem("allow-network")).toBe("false"));
             expect(result.current.allowNetwork).toBe(false);
@@ -64,27 +74,36 @@ jobs:
               await expect(window.fetch(`https://www.googleapis.com/youtube/v3/${endpoint}?part=snippet`)).resolves.toBe("ok");
             }
             fetchSpy.mockClear();
-            for (const url of ["http://www.googleapis.com/youtube/v3/playlists", "https://www.googleapis.com/drive/v3/files", "https://www.googleapis.com.attacker.test/youtube/v3/playlists", "https://www.googleapis.com/youtube/v3/playlists/other"]) {
+            for (const url of [
+              "http://www.googleapis.com/youtube/v3/playlists",
+              "https://www.googleapis.com/drive/v3/files",
+              "https://www.googleapis.com.attacker.test/youtube/v3/playlists",
+              "https://www.googleapis.com/youtube/v3/playlists/other",
+              "https://user:pass@www.googleapis.com/youtube/v3/playlists",
+            ]) {
               await expect(window.fetch(url)).rejects.toThrow("Network requests disabled");
             }
             await expect(window.fetch("https://www.googleapis.com/youtube/v3/playlists", { method: "POST" })).rejects.toThrow("Network requests disabled");
+            const { Request: NativeRequest } = jest.requireActual<typeof import("undici")>("undici");
+            const writeRequest = new NativeRequest("https://www.googleapis.com/youtube/v3/playlists", { method: "POST" });
+            await expect(window.fetch(writeRequest as unknown as Request)).rejects.toThrow("Network requests disabled");
             expect(fetchSpy).not.toHaveBeenCalled();
-          });''')
-          edit('__tests__/allowNetwork.test.ts', '''    const first = renderSettings();
-            await waitFor(() => expect(first.result.current.allowNetwork).toBe(true));''', '''    window.localStorage.setItem("allow-network", "true");
-            const first = renderSettings();
-            await waitFor(() => expect(first.result.current.allowNetwork).toBe(true));''')
-          edit('utils/showDesktopController.ts', 'let operation: { workspace: number; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;', 'let operation: { workspace: number; restoring: boolean; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;')
-          edit('utils/showDesktopController.ts', '''    operation = undefined;
-            publish();
-          };''', '''    // Completed restore is a one-shot action, not a persistent minimized-window set.
-            if (operation.restoring) saved.delete(operation.workspace);
-            operation = undefined;
-            publish();
-          };''')
-          edit('utils/showDesktopController.ts', '      operation = { workspace, queue };', '      operation = { workspace, queue, restoring: view.showing };')
-          p=Path('__tests__/show-desktop-controller.test.ts'); s=p.read_text(); s+='''
-
+            const readRequest = new NativeRequest("https://www.googleapis.com/youtube/v3/playlists");
+            await expect(window.fetch(readRequest as unknown as Request)).resolves.toBe("ok");
+          });
+          ''' + s[end:]
+          needle = '  test("keeps an opt-out after remount and can reconnect without a stale guard", async () => {\n'
+          assert s.count(needle) == 1
+          s = s.replace(needle, needle + '    window.localStorage.setItem("allow-network", "true");\n')
+          p.write_text(s)
+          p = Path('__tests__/networkSettings.test.ts')
+          s = p.read_text().replace('defaults to enabled', 'defaults to disabled').replace('restores the enabled default', 'restores the disabled default').replace('expect(defaults.allowNetwork).toBe(true)', 'expect(defaults.allowNetwork).toBe(false)').replace('resolves.toBe(true)', 'resolves.toBe(false)').replace('await setAllowNetwork(false);', 'await setAllowNetwork(true);')
+          p.write_text(s)
+          replace('utils/showDesktopController.ts', 'let operation: { workspace: number; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;', 'let operation: { workspace: number; restoring: boolean; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;')
+          replace('utils/showDesktopController.ts', '    operation = undefined;\n    publish();\n  };', '    // A completed restore consumes its capture; later manual minimization is independent.\n    if (operation.restoring) saved.delete(operation.workspace);\n    operation = undefined;\n    publish();\n  };')
+          replace('utils/showDesktopController.ts', '      operation = { workspace, queue };', '      operation = { workspace, queue, restoring: view.showing };')
+          p = Path('__tests__/show-desktop-controller.test.ts')
+          p.write_text(p.read_text() + '''
           test('completed restore cannot resurrect a later manually minimized window', () => {
             const send = jest.fn<void, [DesktopCommand]>();
             const controller = createShowDesktopController(send);
@@ -107,39 +126,58 @@ jobs:
             expect(send.mock.calls).toEqual([[{ appId: 'about', action: 'open' }]]);
             controller.reset();
           });
-          '''; p.write_text(s)
-      - name: Format all reviewed paths and remove temporary workflow
+          ''')
+          p = Path('docs/taskbar-operating-system.md')
+          p.write_text(p.read_text() + '''
+          ## Release repairs
+
+          YouTube opens immediately with no network prompt even on a fresh browser or with
+          an old saved network-off preference. The optional-network default remains off for
+          unrelated apps: same-origin APIs and narrowly scoped HTTPS YouTube GET endpoints
+          are allowed, not arbitrary external hosts or write requests.
+
+          A completed Restore windows operation consumes its captured window set, so
+          manually minimizing a window afterward does not turn the next Show desktop action
+          into an unexpected restore. Targeted tests cover this sequence, approved YouTube
+          reads, blocked unrelated hosts and write requests, and asynchronous preview focus.
+          ''')
+      - name: Fix and check the complete PR lint scope, not only the workflow push
         run: |
           set -euo pipefail
-          yarn eslint --fix $REVIEWED_PATHS
+          mkdir -p "$RUNNER_TEMP/release-validation"
+          env GITHUB_EVENT_NAME=workflow_dispatch GITHUB_BASE_REF=main yarn lint --fix 2>&1 | tee "$RUNNER_TEMP/release-validation/lint-fix.log"
           git rm .github/workflows/format-reviewed-release.yml
           node scripts/generate-repository-snapshot.mjs --catalog
           git -c core.whitespace=cr-at-eol diff --check
-      - name: Commit the candidate locally so snapshot tests inspect the final tracked tree
-        run: |
-          set -euo pipefail
-          git add $REVIEWED_PATHS data/repository-source-catalog.json
+          git add -u
           git config user.name 'Alex Unnippillil repository automation'
           git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
-          git commit -m 'fix(release): scope automatic networking and clear completed desktop captures'
-      - name: Validate explicit release paths before publication
+          git commit -m 'fix(release): finish immediate YouTube networking and desktop restore regressions'
+      - name: Validate the committed candidate before publishing it
         run: |
           set -euo pipefail
-          yarn eslint --max-warnings 0 $REVIEWED_PATHS components/screen/navbar.js __tests__/navbar-running-apps.test.tsx
-          node --test tests/node/showcase-scripts.test.mjs
-          yarn test __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/show-desktop-controller.test.ts __tests__/networkSettings.test.ts __tests__/allowNetwork.test.ts --runInBand
-          yarn typecheck
-      - name: Publish the validated candidate as a fast-forward of the feature branch only
+          env GITHUB_EVENT_NAME=workflow_dispatch GITHUB_BASE_REF=main yarn lint 2>&1 | tee "$RUNNER_TEMP/release-validation/lint.log"
+          yarn typecheck 2>&1 | tee "$RUNNER_TEMP/release-validation/typecheck.log"
+          node scripts/generate-repository-snapshot.mjs
+          node --test tests/node/showcase-scripts.test.mjs 2>&1 | tee "$RUNNER_TEMP/release-validation/native.log"
+          yarn test __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/show-desktop-controller.test.ts __tests__/networkSettings.test.ts __tests__/allowNetwork.test.ts --runInBand 2>&1 | tee "$RUNNER_TEMP/release-validation/targeted.log"
+      - name: Fast-forward the reviewed feature branch and dispatch its normal gates
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin refs/heads/feat/taskbar-os-controls
-          git merge-base --is-ancestor FETCH_HEAD HEAD
+          test "$(git ls-remote origin refs/heads/feat/taskbar-os-controls | cut -f1)" = "$EXPECTED_HEAD"
           git push origin HEAD:refs/heads/feat/taskbar-os-controls
-      - name: Preserve exact source and patch
+          test "$(git ls-remote origin refs/heads/feat/taskbar-os-controls | cut -f1)" = "$(git rev-parse HEAD)"
+          gh workflow run ci.yml --ref feat/taskbar-os-controls
+          gh workflow run portfolio-browser.yml --ref feat/taskbar-os-controls
+      - name: Preserve exact source and native diagnostics
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/release-validation"
           git rev-parse HEAD > "$RUNNER_TEMP/release-validation/source-revision.txt"
+          git rev-parse HEAD^{tree} > "$RUNNER_TEMP/release-validation/source-tree.txt"
           git status --porcelain > "$RUNNER_TEMP/release-validation/worktree.txt"
           git diff HEAD > "$RUNNER_TEMP/release-validation/uncommitted.patch"
           git diff HEAD^ HEAD > "$RUNNER_TEMP/release-validation/committed.patch"
@@ -147,7 +185,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: release-review-source
+          name: release-repair-evidence
           path: ${{ runner.temp }}/release-validation/
           if-no-files-found: error
-          retention-days: 2
+          retention-days: 3
