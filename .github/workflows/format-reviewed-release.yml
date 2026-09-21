@@ -16,6 +16,7 @@ jobs:
       NEXT_TELEMETRY_DISABLED: '1'
       PUPPETEER_SKIP_DOWNLOAD: 'true'
       NODE_OPTIONS: --max-old-space-size=4096
+      REVIEWED_PATHS: __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/settingsStore.js hooks/useSettings.tsx __tests__/networkSettings.test.ts __tests__/allowNetwork.test.ts utils/showDesktopController.ts __tests__/show-desktop-controller.test.ts
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,32 +31,108 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Apply configured formatting to every outstanding PR lint failure
+      - name: Apply reviewed replacements with exact source-match guards
+        shell: python
+        run: |
+          from pathlib import Path
+          def edit(name, old, new):
+              p=Path(name); raw=p.read_bytes(); s=raw.decode(); eol='\r\n' if b'\r\n' in raw else '\n'; s=s.replace('\r\n','\n')
+              assert s.count(old)==1, f'{name}: expected one reviewed source match ({s.count(old)})'
+              p.write_bytes(s.replace(old,new).replace('\n',eol).encode())
+          edit('utils/settingsStore.js', '  allowNetwork: true,', '  // YouTube uses approved endpoints; arbitrary external requests remain opt-in.\n  allowNetwork: false,')
+          edit('hooks/useSettings.tsx', '        const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname);', '''        const requestMethod = (init?.method ??
+            (typeof input === "object" && input && "method" in input ? input.method : "GET")).toUpperCase();
+          const isYouTubeRead = requestMethod === "GET" &&
+            resolvedUrl.origin === "https://www.googleapis.com" &&
+            !resolvedUrl.username && !resolvedUrl.password &&
+            /^\\/youtube\\/v3\\/(channels|channelSections|playlists|playlistItems)$/.test(resolvedUrl.pathname);
+          const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname) || isYouTubeRead;''')
+          p=Path('__tests__/networkSettings.test.ts'); s=p.read_text().replace('defaults to enabled','defaults to disabled').replace('restores the enabled default','restores the disabled default').replace('expect(defaults.allowNetwork).toBe(true)','expect(defaults.allowNetwork).toBe(false)').replace('resolves.toBe(true)','resolves.toBe(false)').replace('await setAllowNetwork(false);','await setAllowNetwork(true);'); p.write_text(s)
+          edit('__tests__/allowNetwork.test.ts', '''  test("enables networking on a fresh visit without an extra consent click", async () => {
+            const { result } = renderSettings();
+            await waitFor(() => expect(result.current.allowNetwork).toBe(true));
+            expect(window.localStorage.getItem("allow-network")).toBe("true");
+            await expect(window.fetch("https://external.com")).resolves.toBe("ok");
+          });''', '''  test("keeps arbitrary hosts opt-in while YouTube reads work on a fresh visit", async () => {
+            const { result } = renderSettings();
+            await waitFor(() => expect(window.localStorage.getItem("allow-network")).toBe("false"));
+            expect(result.current.allowNetwork).toBe(false);
+            await expect(window.fetch("https://external.com")).rejects.toThrow("Network requests disabled");
+            await expect(window.fetch("/api/youtube/directory?channelId=example")).resolves.toBe("ok");
+            await expect(window.fetch("/api/youtube/playlist-items?playlistId=example")).resolves.toBe("ok");
+            for (const endpoint of ["channels", "channelSections", "playlists", "playlistItems"]) {
+              await expect(window.fetch(`https://www.googleapis.com/youtube/v3/${endpoint}?part=snippet`)).resolves.toBe("ok");
+            }
+            fetchSpy.mockClear();
+            for (const url of ["http://www.googleapis.com/youtube/v3/playlists", "https://www.googleapis.com/drive/v3/files", "https://www.googleapis.com.attacker.test/youtube/v3/playlists", "https://www.googleapis.com/youtube/v3/playlists/other"]) {
+              await expect(window.fetch(url)).rejects.toThrow("Network requests disabled");
+            }
+            await expect(window.fetch("https://www.googleapis.com/youtube/v3/playlists", { method: "POST" })).rejects.toThrow("Network requests disabled");
+            expect(fetchSpy).not.toHaveBeenCalled();
+          });''')
+          edit('__tests__/allowNetwork.test.ts', '''    const first = renderSettings();
+            await waitFor(() => expect(first.result.current.allowNetwork).toBe(true));''', '''    window.localStorage.setItem("allow-network", "true");
+            const first = renderSettings();
+            await waitFor(() => expect(first.result.current.allowNetwork).toBe(true));''')
+          edit('utils/showDesktopController.ts', 'let operation: { workspace: number; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;', 'let operation: { workspace: number; restoring: boolean; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;')
+          edit('utils/showDesktopController.ts', '''    operation = undefined;
+            publish();
+          };''', '''    // Completed restore is a one-shot action, not a persistent minimized-window set.
+            if (operation.restoring) saved.delete(operation.workspace);
+            operation = undefined;
+            publish();
+          };''')
+          edit('utils/showDesktopController.ts', '      operation = { workspace, queue };', '      operation = { workspace, queue, restoring: view.showing };')
+          p=Path('__tests__/show-desktop-controller.test.ts'); s=p.read_text(); s+='''
+
+          test('completed restore cannot resurrect a later manually minimized window', () => {
+            const send = jest.fn<void, [DesktopCommand]>();
+            const controller = createShowDesktopController(send);
+            const state = (calculatorMinimized: boolean, aboutMinimized: boolean) =>
+              controller.update({ activeWorkspace: 0, runningApps: [
+                { id: 'calculator', isMinimized: calculatorMinimized },
+                { id: 'about', isMinimized: aboutMinimized, isFocused: true },
+              ] });
+            state(false, false);
+            controller.toggle(); state(true, false); state(true, true);
+            controller.toggle(); state(false, true); state(false, false);
+            expect(controller.getSnapshot().showing).toBe(false);
+            state(true, false);
+            expect(controller.getSnapshot()).toEqual({ showing: false, busy: false, available: true });
+            send.mockClear();
+            controller.toggle(); state(true, true);
+            expect(send.mock.calls).toEqual([[{ appId: 'about', action: 'minimize' }]]);
+            send.mockClear();
+            controller.toggle(); state(true, false);
+            expect(send.mock.calls).toEqual([[{ appId: 'about', action: 'open' }]]);
+            controller.reset();
+          });
+          '''; p.write_text(s)
+      - name: Format all reviewed paths and remove temporary workflow
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = '600ded373f715b882f2a4706362ab23cce352b20'
-          yarn eslint --fix __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts
+          yarn eslint --fix $REVIEWED_PATHS
           git rm .github/workflows/format-reviewed-release.yml
           node scripts/generate-repository-snapshot.mjs --catalog
           git -c core.whitespace=cr-at-eol diff --check
-      - name: Check explicit paths rather than relying on a narrow push diff
+      - name: Validate explicit release paths before publication
         run: |
           set -euo pipefail
-          yarn eslint --max-warnings 0 __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts components/screen/navbar.js __tests__/navbar-running-apps.test.tsx utils/showDesktopController.ts
+          yarn eslint --max-warnings 0 $REVIEWED_PATHS components/screen/navbar.js __tests__/navbar-running-apps.test.tsx
           node --test tests/node/showcase-scripts.test.mjs
-          yarn test __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/showDesktopController.test.ts --runInBand
+          yarn test __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx __tests__/navbar-running-apps.test.tsx __tests__/show-desktop-controller.test.ts __tests__/networkSettings.test.ts __tests__/allowNetwork.test.ts --runInBand
           yarn typecheck
-      - name: Commit reviewed paths and fast-forward the feature branch
+      - name: Commit reviewed paths and fast-forward feature branch only
         run: |
           set -euo pipefail
-          git add __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts data/repository-source-catalog.json
+          git add $REVIEWED_PATHS data/repository-source-catalog.json
           git config user.name 'Alex Unnippillil repository automation'
           git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
-          git commit -m 'style(release): apply configured lint fixes to all remaining reviewed paths'
+          git commit -m 'fix(release): scope automatic networking and clear completed desktop captures'
           git fetch --no-tags origin refs/heads/feat/taskbar-os-controls
           git merge-base --is-ancestor FETCH_HEAD HEAD
           git push origin HEAD:refs/heads/feat/taskbar-os-controls
-      - name: Preserve the exact final source and patch
+      - name: Preserve exact source and patch
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/release-validation"
@@ -67,7 +144,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: release-formatting-source
+          name: release-review-source
           path: ${{ runner.temp }}/release-validation/
           if-no-files-found: error
           retention-days: 2
