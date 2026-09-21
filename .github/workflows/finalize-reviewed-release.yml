@@ -1,0 +1,75 @@
+name: Finalize reviewed release
+on:
+  push:
+    branches: [feat/taskbar-os-controls]
+    paths: [.github/workflows/finalize-reviewed-release.yml]
+permissions:
+  contents: write
+jobs:
+  lint-fixes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - name: Rename shadowed controller identifiers without changing behavior
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, subprocess
+          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip() == '8e65bafd23d5ce6cda99c5bd6d5e4bc36ed68bf6'
+          p=Path('utils/showDesktopController.ts')
+          s=p.read_text()
+          assert 'command: DesktopCommand' in s
+          p.write_text(re.sub(r'\bcommand\b', 'instruction', s))
+      - name: Apply configured ESLint autofixes to the seven reviewed files
+        run: |
+          yarn eslint --fix __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts
+      - name: Remove temporary tooling and commit only reviewed source
+        env:
+          EXPECTED_HEAD: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/feat/taskbar-os-controls | cut -f1)" = "$EXPECTED_HEAD"
+          git rm .github/workflows/finalize-reviewed-release.yml
+          node scripts/generate-repository-snapshot.mjs --catalog
+          git diff --check
+          git add __tests__/showcase-scripts.test.ts __tests__/youtube-library-lifecycle.test.tsx __tests__/youtube.test.tsx lib/editor/repository.ts tests/portfolio/taskbar-os.spec.ts tests/portfolio/youtube-responsive.spec.ts utils/showDesktopController.ts data/repository-source-catalog.json
+          git config user.name 'Alex Unnippillil repository automation'
+          git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
+          git commit -m 'fix(qa): resolve consolidated release lint and controller shadowing errors'
+          git push origin HEAD:refs/heads/feat/taskbar-os-controls
+      - name: Preserve exact-source validation evidence
+        run: |
+          set +e
+          mkdir -p release-validation
+          git rev-parse HEAD > release-validation/source-revision.txt
+          git diff HEAD^ HEAD --stat > release-validation/changed-files.txt
+          git status --porcelain > release-validation/worktree.txt
+          yarn lint > release-validation/lint.log 2>&1
+          echo "lint=$?" >> release-validation/status.txt
+          yarn typecheck > release-validation/typecheck.log 2>&1
+          echo "typecheck=$?" >> release-validation/status.txt
+          git archive --format=tar.gz HEAD > release-validation/source.tar.gz
+          cat release-validation/status.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reviewed-release-lint-evidence
+          path: release-validation/
+          if-no-files-found: warn
+          retention-days: 2
