@@ -81,6 +81,31 @@ describe('Pinball real Matter.js simulation', () => {
     for (let i = 0; i < 5; i += 1) world.step(1 / 120);
     expect(Body.getVelocity(ball).y).toBeLessThan(-5);
   });
+  it('exposes moving flipper velocity and clears it when a stroke stops', () => {
+    const rectangles = jest.spyOn(Bodies, 'rectangle');
+    const world = make();
+    const flippers = rectangles.mock.results.map((result) => result.value).filter((body) => body.label === 'flipper');
+    expect(flippers).toHaveLength(2);
+    const before = flippers.map((body) => ({ ...body.position }));
+    world.setLeftFlipper(-Math.PI / 4); world.setRightFlipper(Math.PI / 4);
+    world.step(1 / 120);
+    flippers.forEach((body, index) => {
+      expect(Body.getVelocity(body).x).toBeCloseTo(body.position.x - before[index].x, 8);
+      expect(Body.getVelocity(body).y).toBeCloseTo(body.position.y - before[index].y, 8);
+    });
+    expect(Body.getAngularVelocity(flippers[0])).toBeLessThan(0);
+    expect(Body.getAngularVelocity(flippers[1])).toBeGreaterThan(0);
+    for (let i = 0; i < 30; i += 1) world.step(1 / 120);
+    flippers.forEach((body) => {
+      expect(Body.getVelocity(body)).toEqual({ x: 0, y: 0 });
+      expect(Body.getAngularVelocity(body)).toBe(0);
+    });
+    world.resetFlippers();
+    flippers.forEach((body) => {
+      expect(Body.getVelocity(body)).toEqual({ x: 0, y: 0 });
+      expect(Body.getAngularVelocity(body)).toBe(0);
+    });
+  });
   it('idempotently destroys the world and stops all later work', () => {
     const world = make(); world.launchBall(1);
     world.destroy(); const steps = world.inspect().steps;

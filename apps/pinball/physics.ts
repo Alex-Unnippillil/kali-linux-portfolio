@@ -233,9 +233,16 @@ export function createPinballWorld(
       const maxMove = FIXED_STEP * (Math.abs(f.target - f.rest) > 0.05 ? 13 * flipperPower : 8);
       const next = f.angle + clamp(difference, -maxMove, maxMove, 0);
       f.rising = Math.abs(difference) > 0.001 && (index === 0 ? difference < 0 : difference > 0);
+      const center = flipperCenter(f.pivot, next);
+      const velocity = Vector.sub(center, f.body.position);
+      const angularVelocity = next - f.body.angle;
       f.angle = next;
-      Body.setPosition(f.body, flipperCenter(f.pivot, next), true);
-      Body.setAngle(f.body, next, true);
+      // Static flippers retain Matter's base tick. Explicit setters preserve the
+      // inferred motion without relying on missing updateVelocity type overloads.
+      Body.setPosition(f.body, center);
+      Body.setAngle(f.body, next);
+      Body.setVelocity(f.body, velocity);
+      Body.setAngularVelocity(f.body, angularVelocity);
     });
   };
   const resetFlippers = () => {
