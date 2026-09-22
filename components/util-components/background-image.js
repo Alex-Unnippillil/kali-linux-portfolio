@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import KaliWallpaper from './kali-wallpaper';
 import usePrefersReducedMotion from '../../hooks/usePrefersReducedMotion';
+import { useSettings } from '../../hooks/useSettings';
 
 const FALLBACK_OVERLAY = 'linear-gradient(180deg, rgba(6, 12, 20, 0.65) 0%, rgba(3, 8, 16, 0.88) 92%)';
 const LUMINANCE_SAMPLE_SIZE = 64;
@@ -19,6 +20,7 @@ const hexToRgba = (hex, alpha = 1) => {
 };
 
 export default function BackgroundImage({ theme }) {
+    const { workspacePreferences } = useSettings();
     const [needsOverlay, setNeedsOverlay] = useState(false);
     const [imageError, setImageError] = useState(false);
 
@@ -174,7 +176,8 @@ export default function BackgroundImage({ theme }) {
                     decoding="async"
                     fetchPriority="high"
                     style={{
-                        transform: 'scale(1.05)',
+                        objectFit: workspacePreferences.wallpaperFit,
+                        transform: workspacePreferences.wallpaperFit === 'contain' ? 'none' : 'scale(1.05)',
                     }}
                     onError={handleImageError}
                 />
@@ -227,6 +230,7 @@ export default function BackgroundImage({ theme }) {
                     animation: shouldAnimate ? 'ambientNoisePulse 6s ease-in-out infinite alternate' : undefined,
                 }}
             />
+            <div data-testid="wallpaper-dimming" className="pointer-events-none absolute inset-0" style={{ backgroundColor: '#000', opacity: workspacePreferences.wallpaperDim / 100 }} />
         </div>
     );
 }
