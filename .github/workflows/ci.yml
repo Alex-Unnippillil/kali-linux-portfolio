@@ -61,16 +61,10 @@ jobs:
       - if: matrix.check == 'lint'
         run: yarn lint
       - if: matrix.check == 'typecheck'
-        run: |
-          set -o pipefail
-          yarn typecheck 2>&1 | tee typecheck.log
+        run: yarn typecheck
       - name: Generate revision-bound source assets for tests
         if: matrix.check == 'test'
-        run: |
-          node scripts/generate-repository-snapshot.mjs
-          node scripts/generate-repository-snapshot.mjs --catalog
-          cp data/repository-source-catalog.json catalog-candidate.json
-          git restore --source=HEAD -- data/repository-source-catalog.json
+        run: node scripts/generate-repository-snapshot.mjs
       - if: matrix.check == 'test'
         run: yarn test --coverage --maxWorkers=2 --json --outputFile=jest-results.json
       - name: Summarize failing tests
@@ -105,22 +99,14 @@ jobs:
           set -o pipefail
           yarn npm audit --all --recursive --severity high 2>&1 | tee dependency-audit.log
       - if: matrix.check == 'build'
-        run: |
-          set -o pipefail
-          yarn build 2>&1 | tee build.log
+        run: yarn build
       - if: matrix.check == 'build'
-        run: |
-          set -o pipefail
-          yarn export 2>&1 | tee export.log
+        run: yarn export
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: validation-source-${{ matrix.check }}
-          path: |
-            validation-source.txt
-            typecheck.log
-            build.log
-            export.log
+          path: validation-source.txt
           retention-days: 7
           if-no-files-found: warn
       - uses: actions/upload-artifact@v4
@@ -138,12 +124,6 @@ jobs:
             jest-results.json
             jest-failures.json
             validation-source.txt
-            catalog-candidate.json
-            apps/pinball
-            __tests__/pinball*.ts
-            __tests__/pinball*.tsx
-            tests/helpers/pinball-world-mock.ts
-            tests/portfolio/pinball-app-polish.spec.ts
           if-no-files-found: warn
           retention-days: 7
       - uses: actions/upload-artifact@v4

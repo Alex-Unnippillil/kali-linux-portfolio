@@ -28,6 +28,7 @@ for (const viewport of [{ width: 320, height: 568 }, { width: 390, height: 844 }
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport.height);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await snapshot(page, `${browserName}-pinball-ready-${viewport.width}`);
     await page.keyboard.down('a'); await page.keyboard.down('d');
     await expect(game).toHaveAttribute('data-left-active', 'true');
     await expect(game).toHaveAttribute('data-right-active', 'true');
