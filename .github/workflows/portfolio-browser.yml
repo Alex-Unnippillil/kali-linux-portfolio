@@ -1,5 +1,7 @@
 name: Pinball browser diagnostics
 on:
+  push:
+    branches: [codex/pinball-browser-diagnostics-20260922]
   workflow_dispatch:
 permissions:
   contents: read
