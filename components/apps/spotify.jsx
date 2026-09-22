@@ -1,7 +1,7 @@
 import EmbedFrame from '../EmbedFrame';
 
 export const SPOTIFY_EMBED_URL =
-  'https://open.spotify.com/embed/playlist/37i9dQZF1E8NOMDYRneOXj?utm_source=generator';
+  'https://open.spotify.com/embed/playlist/37i9dQZEVXcCKlDWFOXnz9?utm_source=generator&si=01287378a9054dbc';
 
 export function SpotifyEmbed({ className = '', containerClassName = '' }) {
   return (
