@@ -1,11 +1,10 @@
-name: Kali desktop browser QA
+name: Pinball browser diagnostics
 on:
-  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
-  group: portfolio-browser-${{ github.event.pull_request.number || github.ref }}
+  group: pinball-diagnostic-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   browser:
@@ -20,25 +19,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
-      - name: Verify requested revision and integrate the exact PR base
+      - name: Record exact diagnostic sources
         env:
-          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-          EXPECTED_BASE: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD: ${{ github.sha }}
         run: |
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
-          if [ -n "$EXPECTED_BASE" ] && ! git merge-base --is-ancestor "$EXPECTED_BASE" HEAD; then
-            git config user.name 'CI validation'
-            git config user.email 'ci-validation@users.noreply.github.com'
-            git merge --no-edit "$EXPECTED_BASE"
-          fi
           {
-            echo "Requested head: $EXPECTED_HEAD"
-            echo "Requested base: $EXPECTED_BASE"
             echo "Tested commit: $(git rev-parse HEAD)"
             echo "Tested tree: $(git rev-parse HEAD^{tree})"
-            git ls-files -s hooks/useSettings.tsx components/screen/navbar.js
+            git ls-files -s apps/pinball tests/portfolio/pinball-app-polish.spec.ts
           } | tee validation-source.txt
       - uses: actions/setup-node@v6
         with:
@@ -51,13 +42,16 @@ jobs:
       - run: yarn install --immutable
       - run: yarn playwright install --with-deps chromium firefox webkit
       - run: yarn build
-      - run: yarn playwright test --config=playwright.portfolio.config.ts
+      - run: |
+          set -o pipefail
+          yarn playwright test --config=playwright.portfolio.config.ts pinball-app-polish 2>&1 | tee pinball-browser.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: portfolio-browser-evidence
+          name: pinball-browser-diagnostic
           path: |
             validation-source.txt
+            pinball-browser.log
             portfolio-screenshots
             portfolio-browser-report
             test-results
