@@ -105,3 +105,23 @@ test('phone taskbar shares desktop state across toggles, keyboard and rotation',
     expect(errors).toEqual([]);
   } finally { await context.close(); }
 });
+
+test('keyboard preview remains actionable when the pointer leaves before Close', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/');
+  await expect(page.locator('#about')).toBeVisible();
+  await openApp(page, 'Calculator', 'calculator');
+  const button = task(page, 'calculator');
+  await button.focus();
+  await page.keyboard.press('ArrowDown');
+  const preview = page.getByRole('dialog', { name: 'Calculator preview', exact: true });
+  await expect(preview.getByRole('button', { name: 'Switch to Calculator', exact: true })).toBeFocused();
+  await preview.hover();
+  await page.mouse.move(1350, 800);
+  // Exercise expiry of the actual 120 ms timer without relaxing an existing assertion.
+  await page.waitForTimeout(250);
+  await expect(preview).toBeVisible();
+  await preview.getByRole('button', { name: 'Close Calculator', exact: true }).click();
+  await expect(page.locator('#calculator')).toHaveCount(0);
+  await expect(preview).toHaveCount(0);
+});

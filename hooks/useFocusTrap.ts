@@ -62,6 +62,12 @@ export const useFocusTrap = (
       Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(isElementFocusable);
 
     const focusFirstElement = () => {
+      // Autofocus and its retries must not move a visitor's focus or collapse a
+      // text selection that is already inside the trap, even in the first tick.
+      const focused = document.activeElement;
+      if (focused instanceof HTMLElement && focused !== container && container.contains(focused)) {
+        return focused;
+      }
       const preferred = initialFocusRef?.current;
       const focusable = getFocusableElements();
 

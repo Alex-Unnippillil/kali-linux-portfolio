@@ -28,13 +28,13 @@ export default defineConfig({
     {
       name: "webkit",
       testMatch:
-        /(?:youtube-responsive|app-polish|x-profile|repository-editor|taskbar-(?:operating-system|os))\.spec\.ts/,
+        /(?:settings-control-center|youtube-responsive|app-polish|x-profile|repository-editor|taskbar-(?:operating-system|os))\.spec\.ts/,
       use: { ...devices["Desktop Safari"] },
     },
     {
       name: "firefox",
       testMatch:
-        /(?:youtube-responsive|app-polish|x-profile|repository-editor|taskbar-(?:operating-system|os))\.spec\.ts/,
+        /(?:settings-control-center|youtube-responsive|app-polish|x-profile|repository-editor|taskbar-(?:operating-system|os))\.spec\.ts/,
       use: { ...devices["Desktop Firefox"] },
     },
   ],

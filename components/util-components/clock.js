@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useSettings } from '../../hooks/useSettings'
 
 const MONTHS = [
     "Jan",
@@ -132,11 +133,13 @@ const Clock = ({
     onlyDay = false,
     onlyTime = false,
     showCalendar = false,
-    hour12 = true,
     variant = 'default',
     isOpen: controlledOpen,
     onToggle
 }) => {
+    const { workspacePreferences } = useSettings()
+    const hour12 = workspacePreferences.clockFormat === 'system' ? undefined : workspacePreferences.clockFormat === '12'
+    const showSeconds = workspacePreferences.showSeconds
     const [currentTime, setCurrentTime] = useState(null)
     const [internalOpen, setInternalOpen] = useState(false)
 
@@ -164,33 +167,39 @@ const Clock = ({
     const popoverId = `${headingId}-popover`
     const [canUsePortal, setCanUsePortal] = useState(false)
     const [popoverStyles, setPopoverStyles] = useState({})
+    const popoverPositioned = typeof popoverStyles.top === 'number'
 
     useEffect(() => {
-        const update = () => setCurrentTime(new Date())
-        update()
+        const update = () => { if (!document.hidden) setCurrentTime(new Date()) }
+        setCurrentTime(new Date())
+        document.addEventListener('visibilitychange', update)
         let worker
         let interval
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url))
             worker.onmessage = update
-            worker.postMessage({ action: 'start', interval: 10 * 1000 })
+            worker.postMessage({ action: 'start', interval: showSeconds ? 1000 : 10000 })
         } else {
-            interval = setInterval(update, 10 * 1000)
+            interval = setInterval(update, showSeconds ? 1000 : 10000)
         }
         return () => {
+            document.removeEventListener('visibilitychange', update)
             if (worker) {
                 worker.postMessage({ action: 'stop' })
                 worker.terminate()
             }
             if (interval) clearInterval(interval)
         }
-    }, [])
+    }, [showSeconds])
 
+    // Start at today when opened, not on each clock tick. Navigation and keyboard
+    // focus must remain stable while seconds, midnight, or visibility change.
     useEffect(() => {
-        if (!isOpen || !currentTime) return
-        setViewDate(new Date(currentTime.getFullYear(), currentTime.getMonth(), 1))
-        setFocusedDate(currentTime)
-    }, [isOpen, currentTime])
+        if (!isOpen) return
+        const today = new Date()
+        setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))
+        setFocusedDate(today)
+    }, [isOpen])
 
     useEffect(() => {
         if (!isOpen) return undefined
@@ -215,21 +224,23 @@ const Clock = ({
             document.removeEventListener('touchstart', handleClick)
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [isOpen, prefersReducedMotion])
+    }, [isOpen, prefersReducedMotion, setIsOpen])
 
     useEffect(() => {
-        if (!isOpen) return
+        // The portal is hidden until measured. Focus only after its visible commit;
+        // a position change alone must not steal focus from month controls.
+        if (!isOpen || !popoverPositioned) return
         if (activeCellRef.current) {
             activeCellRef.current.focus({ preventScroll: prefersReducedMotion })
         }
-    }, [isOpen, viewDate, focusedDate, prefersReducedMotion])
+    }, [isOpen, popoverPositioned, viewDate, focusedDate, prefersReducedMotion])
 
     useEffect(() => {
         if (previouslyOpenRef.current && !isOpen && buttonRef.current) {
             buttonRef.current.focus({ preventScroll: prefersReducedMotion })
         }
         previouslyOpenRef.current = isOpen
-    }, [isOpen, prefersReducedMotion])
+    }, [isOpen, prefersReducedMotion, setIsOpen])
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined
@@ -315,7 +326,8 @@ const Clock = ({
             new Intl.DateTimeFormat(undefined, {
                 weekday: 'long',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
+                year: 'numeric'
             }),
         []
     )
@@ -325,9 +337,10 @@ const Clock = ({
             new Intl.DateTimeFormat(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: showSeconds ? '2-digit' : undefined,
                 hour12
             }),
-        [hour12]
+        [hour12, showSeconds]
     )
 
     const timeFormatter = useMemo(
@@ -335,18 +348,19 @@ const Clock = ({
             new Intl.DateTimeFormat(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: showSeconds ? '2-digit' : undefined,
                 hour12
             }),
-        [hour12]
+        [hour12, showSeconds]
     )
 
     const handleToggle = useCallback(() => {
         setIsOpen((open) => !open)
-    }, [])
+    }, [setIsOpen])
 
     const handleClose = useCallback(() => {
         setIsOpen(false)
-    }, [])
+    }, [setIsOpen])
 
     const handleMonthChange = useCallback((offset) => {
         setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
@@ -406,11 +420,11 @@ const Clock = ({
                 setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1))
             }
         }
-    }, [prefersReducedMotion, viewDate])
+    }, [prefersReducedMotion, viewDate, setIsOpen])
 
     const handleDayClick = useCallback(() => {
         setIsOpen(false)
-    }, [])
+    }, [setIsOpen])
 
     const displayTime = useMemo(
         () =>
@@ -430,7 +444,10 @@ const Clock = ({
     const popoverStyle = isOpen
         ? {
             ...popoverStyles,
-            visibility: typeof popoverStyles.top === 'number' ? 'visible' : 'hidden'
+            // Visibility must change immediately before focus; only visual properties
+            // may transition, otherwise the first focused day remains hidden at t=0.
+            transitionProperty: 'opacity, transform',
+            visibility: popoverPositioned ? 'visible' : 'hidden'
         }
         : popoverStyles
 
@@ -445,9 +462,9 @@ const Clock = ({
             style={popoverStyle}
         >
             <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
-                <div className="flex flex-col" aria-live="polite" id={headingId}>
+                <div className="flex flex-col">
                     <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
-                    <span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
+                    <span id={headingId} aria-live="polite" className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
                     <span className="text-xs font-medium tracking-tight text-white/60">{friendlyTimeLabel}</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -504,6 +521,7 @@ const Clock = ({
                                     >
                                         <button
                                             type="button"
+                                            aria-label={friendlyDateFormatter.format(date)}
                                             onClick={handleDayClick}
                                             onKeyDown={(event) => handleDayKeyDown(event, date)}
                                             className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${inCurrentMonth ? 'text-white' : 'text-white/35'
@@ -575,7 +593,7 @@ const Clock = ({
                 aria-expanded={isOpen}
                 aria-controls={popoverId}
             >
-                <span className={textClassName} aria-live="polite">
+                <span className={textClassName}>
                     {displayTime}
                 </span>
                 {showCalendar && !isMinimal ? (

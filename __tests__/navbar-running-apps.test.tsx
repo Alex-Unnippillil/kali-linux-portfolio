@@ -487,3 +487,65 @@ describe('Taskbar asynchronous keyboard preview focus', () => {
     expect(close).toHaveFocus();
   });
 });
+
+describe('Taskbar preview interaction retention', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => { jest.restoreAllMocks(); jest.useRealTimers(); });
+  const openPreview = (keyboard = true) => {
+    const view = render(<Navbar />);
+    act(() => window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail })));
+    const bar = screen.getByRole('navigation', { name: 'Desktop taskbar' });
+    const button = within(bar).getByRole('button', { name: 'App One', exact: true });
+    if (keyboard) fireEvent.keyDown(button, { key: 'ArrowDown' });
+    else fireEvent.mouseEnter(button);
+    const preview = screen.getByRole('dialog', { name: 'App One preview' });
+    const activate = within(preview).getByRole('button', { name: 'Switch to App One', exact: true });
+    return { ...view, button, preview, activate };
+  };
+  test.each(['button', 'flyout'])('passive %s leave cannot dismiss a keyboard-focused preview', (surface) => {
+    const view = openPreview();
+    const command = jest.fn();
+    window.addEventListener('taskbar-command', command);
+    try {
+      expect(view.activate).toHaveFocus();
+      fireEvent.mouseLeave(surface === 'button' ? view.button : view.preview, { relatedTarget: document.body });
+      act(() => { jest.advanceTimersByTime(150); });
+      expect(view.preview).toBeInTheDocument();
+      expect(view.activate).toHaveFocus();
+      fireEvent.click(within(view.preview).getByRole('button', { name: 'Close App One', exact: true }));
+      expect(command).toHaveBeenCalledTimes(1);
+      expect(command.mock.calls[0][0].detail).toEqual({ appId: 'app1', action: 'close' });
+      expect(screen.queryByRole('dialog', { name: 'App One preview' })).toBeNull();
+    } finally { window.removeEventListener('taskbar-command', command); view.unmount(); }
+  });
+  test('pending dismissal rechecks whether the pointer is over the preview', () => {
+    const view = openPreview(false);
+    try {
+      fireEvent.mouseLeave(view.button, { relatedTarget: document.body });
+      // Pointer position after asynchronous thumbnail layout, before dismissal.
+      jest.spyOn(view.preview, 'matches').mockImplementation(selector => selector === ':hover');
+      act(() => { jest.advanceTimersByTime(150); });
+      expect(view.preview).toBeInTheDocument();
+      fireEvent.keyDown(view.activate, { key: 'Escape' });
+      expect(screen.queryByRole('dialog', { name: 'App One preview' })).toBeNull();
+    } finally { view.unmount(); }
+  });
+  test('an unfocused preview still dismisses after the pointer leaves', () => {
+    const view = openPreview(false);
+    try {
+      fireEvent.mouseLeave(view.preview, { relatedTarget: document.body });
+      act(() => { jest.advanceTimersByTime(150); });
+      expect(screen.queryByRole('dialog', { name: 'App One preview' })).toBeNull();
+    } finally { view.unmount(); }
+  });
+  test('a keyboard preview dismisses when focus moves outside its controls', () => {
+    const view = openPreview();
+    const outside = document.createElement('button');
+    document.body.appendChild(outside);
+    try {
+      act(() => outside.focus());
+      act(() => { jest.advanceTimersByTime(150); });
+      expect(screen.queryByRole('dialog', { name: 'App One preview' })).toBeNull();
+    } finally { outside.remove(); view.unmount(); }
+  });
+});

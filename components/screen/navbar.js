@@ -465,7 +465,21 @@ export default class Navbar extends PureComponent {
 
         schedulePreviewHide = () => {
                 this.clearPreviewHideTimeout();
+                const appId = this.state.preview?.appId;
+                if (!appId) return;
                 this.previewHideTimeout = setTimeout(() => {
+                        this.previewHideTimeout = null;
+                        if (this.state.preview?.appId !== appId) return;
+                        const flyout = this.previewFlyoutRef.current;
+                        const trigger = this.getTaskbarButtonElement(appId);
+                        const focused = document.activeElement;
+                        // Passive pointer/blur events must not dismiss controls still in use.
+                        // Recheck at expiry because thumbnail layout and focus can change.
+                        if ([flyout, trigger].some((element) => element
+                                && (element.contains(focused) || element.matches(':hover')))) {
+                                this.setPreviewLifecycleState('visible', { trigger: 'interaction-retained' });
+                                return;
+                        }
                         this.hidePreview();
                 }, 120);
         };
