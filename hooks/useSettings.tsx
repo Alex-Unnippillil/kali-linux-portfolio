@@ -6,6 +6,7 @@ import {
   useState,
   ReactNode,
   useRef,
+  useCallback,
 } from "react";
 import {
   getAccent as loadAccent,
@@ -43,6 +44,10 @@ import {
   getTheme as loadTheme,
   setTheme as saveTheme,
 } from "../utils/theme";
+import {
+  WorkspacePreferences, SettingsSnapshot, WORKSPACE_DEFAULTS, WORKSPACE_KEY,
+  SNAPSHOT_DEFAULTS, THEMES, parsePreferences, loadWorkspacePreferences,
+} from "../lib/settings/model";
 type Density = "regular" | "compact";
 
 // Predefined accent palette exposed to settings UI
@@ -71,7 +76,12 @@ const shadeColor = (color: string, percent: number): string => {
     .slice(1)}`;
 };
 
-interface SettingsContextValue {
+export interface SettingsContextValue {
+  preferencesReady: boolean;
+  storageError: boolean;
+  workspacePreferences: WorkspacePreferences;
+  setWorkspacePreferences: (patch: Partial<WorkspacePreferences>) => void;
+  applySnapshot: (patch: Partial<SettingsSnapshot>) => void;
   accent: string;
   wallpaper: string;
   bgImageName: string;
@@ -111,6 +121,9 @@ const DEFAULT_DESKTOP_THEME = resolveDesktopTheme({
 });
 
 export const SettingsContext = createContext<SettingsContextValue>({
+  preferencesReady: true, storageError: false,
+  workspacePreferences: WORKSPACE_DEFAULTS,
+  setWorkspacePreferences: () => {}, applySnapshot: () => {},
   accent: defaults.accent,
   wallpaper: defaults.wallpaper,
   bgImageName: defaults.wallpaper,
@@ -162,8 +175,45 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [networkSettingsLoaded, setNetworkSettingsLoaded] = useState(false);
   const [haptics, setHaptics] = useState<boolean>(defaults.haptics);
   const [volume, setVolume] = useState<number>(defaults.volume);
-  const [theme, setTheme] = useState<string>("default");
-  const previousThemeRef = useRef<string | null>(null);
+  const [theme, setThemeValue] = useState<string>("default");
+  const [preferencesReady, setPreferencesReady] = useState(false);
+  const [storageError, setStorageError] = useState(false);
+  const [workspacePreferences, setWorkspaceValue] = useState<WorkspacePreferences>({ ...WORKSPACE_DEFAULTS });
+  const themeTouched = useRef(false);
+  const persist = useCallback((write: () => unknown) => {
+    try { void Promise.resolve(write()).catch(() => setStorageError(true)); }
+    catch { setStorageError(true); }
+  }, []);
+  const setTheme = useCallback((value: string) => {
+    if (!THEMES.includes(value as SettingsSnapshot['theme'])) return;
+    themeTouched.current = true;
+    setThemeValue(value);
+    // An explicit user change may persist before asynchronous hydration completes.
+    persist(() => saveTheme(value));
+    const preset = DESKTOP_THEME_PRESETS[value];
+    setAccent(preset?.accent ?? defaults.accent);
+    setWallpaper(preset?.wallpaperName ?? defaults.wallpaper);
+    setUseKaliWallpaper(preset?.useKaliWallpaper ?? defaults.useKaliWallpaper);
+  }, [persist]);
+  const setWorkspacePreferences = useCallback((patch: Partial<WorkspacePreferences>) => {
+    const safe = parsePreferences(patch);
+    const workspacePatch = Object.fromEntries(Object.entries(safe).filter(([key]) => key in WORKSPACE_DEFAULTS));
+    setWorkspaceValue(current => ({ ...current, ...workspacePatch }));
+  }, []);
+  const applySnapshot = useCallback((patch: Partial<SettingsSnapshot>) => {
+    const safe = parsePreferences(patch);
+    const setters = { accent: setAccent, wallpaper: setWallpaper, useKaliWallpaper: setUseKaliWallpaper,
+      density: setDensity, reducedMotion: setReducedMotion, fontScale: setFontScale,
+      highContrast: setHighContrast, largeHitAreas: setLargeHitAreas, pongSpin: setPongSpin,
+      haptics: setHaptics, volume: setVolume, theme: setThemeValue };
+    // Validation is all-or-nothing, and React batches these updates into one render.
+    for (const key of Object.keys(setters) as (keyof typeof setters)[]) {
+      if (safe[key] !== undefined) (setters[key] as (value: unknown) => void)(safe[key]);
+    }
+    const workspacePatch = Object.fromEntries(Object.entries(safe).filter(([key]) => key in WORKSPACE_DEFAULTS));
+    setWorkspaceValue(current => ({ ...current, ...workspacePatch }));
+    themeTouched.current = true;
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -183,25 +233,41 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    (async () => {
-      setAccent(await loadAccent());
-      setWallpaper(await loadWallpaper());
-      setUseKaliWallpaper(await loadUseKaliWallpaper());
-      setDensity((await loadDensity()) as Density);
-      setReducedMotion(await loadReducedMotion());
-      setFontScale(await loadFontScale());
-      setHighContrast(await loadHighContrast());
-      setLargeHitAreas(await loadLargeHitAreas());
-      setPongSpin(await loadPongSpin());
-      setHaptics(await loadHaptics());
-      setVolume(await loadVolume());
-      setTheme(loadTheme());
-    })();
-  }, []);
+    let active = true;
+    const loaders = {
+      accent: loadAccent, wallpaper: loadWallpaper, useKaliWallpaper: loadUseKaliWallpaper,
+      density: loadDensity, reducedMotion: loadReducedMotion, fontScale: loadFontScale,
+      highContrast: loadHighContrast, largeHitAreas: loadLargeHitAreas, pongSpin: loadPongSpin,
+      haptics: loadHaptics, volume: loadVolume, theme: loadTheme,
+    };
+    // Read every value before any automatic write. One unavailable store must not
+    // prevent the rest of the settings from loading or leave unhandled rejections.
+    void Promise.all(Object.entries(loaders).map(async ([key, read]) => {
+      try {
+        const value = await read();
+        return [key, parsePreferences({ [key]: value })[key as keyof SettingsSnapshot]];
+      } catch {
+        if (active) setStorageError(true);
+        return [key, SNAPSHOT_DEFAULTS[key as keyof SettingsSnapshot]];
+      }
+    })).then(entries => {
+      if (!active) return;
+      const loaded = Object.fromEntries(entries) as Partial<SettingsSnapshot>;
+      if (themeTouched.current) {
+        delete loaded.theme; delete loaded.accent; delete loaded.wallpaper; delete loaded.useKaliWallpaper;
+      }
+      // Unlike choosing a theme, hydration must retain a visitor's custom accent.
+      applySnapshot(loaded);
+      try { setWorkspaceValue(loadWorkspacePreferences(window.localStorage)); }
+      catch { setStorageError(true); }
+      setPreferencesReady(true);
+    });
+    return () => { active = false; };
+  }, [applySnapshot]);
 
   useEffect(() => {
-    saveTheme(theme);
-  }, [theme]);
+    if (preferencesReady) persist(() => saveTheme(theme));
+  }, [theme, preferencesReady, persist]);
 
   useEffect(() => {
     const border = shadeColor(accent, -0.2);
@@ -217,15 +283,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(vars).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveAccent(accent);
-  }, [accent]);
+    if (preferencesReady) persist(() => saveAccent(accent));
+  }, [accent, preferencesReady, persist]);
 
   useEffect(() => {
-    saveWallpaper(wallpaper);
-  }, [wallpaper]);
+    if (preferencesReady) persist(() => saveWallpaper(wallpaper));
+  }, [wallpaper, preferencesReady, persist]);
   useEffect(() => {
-    saveUseKaliWallpaper(useKaliWallpaper);
-  }, [useKaliWallpaper]);
+    if (preferencesReady) persist(() => saveUseKaliWallpaper(useKaliWallpaper));
+  }, [useKaliWallpaper, preferencesReady, persist]);
 
   useEffect(() => {
     const spacing: Record<Density, Record<string, string>> = {
@@ -249,31 +315,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     Object.entries(spacing[density]).forEach(([key, value]) => {
       document.documentElement.style.setProperty(key, value);
     });
-    saveDensity(density);
-  }, [density]);
+    if (preferencesReady) persist(() => saveDensity(density));
+  }, [density, preferencesReady, persist]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("reduced-motion", reducedMotion);
-    saveReducedMotion(reducedMotion);
-  }, [reducedMotion]);
+    if (preferencesReady) persist(() => saveReducedMotion(reducedMotion));
+  }, [reducedMotion, preferencesReady, persist]);
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--font-multiplier",
       fontScale.toString(),
     );
-    saveFontScale(fontScale);
-  }, [fontScale]);
+    if (preferencesReady) persist(() => saveFontScale(fontScale));
+  }, [fontScale, preferencesReady, persist]);
   useEffect(() => {
     document.documentElement.classList.toggle("high-contrast", highContrast);
-    saveHighContrast(highContrast);
-  }, [highContrast]);
+    if (preferencesReady) persist(() => saveHighContrast(highContrast));
+  }, [highContrast, preferencesReady, persist]);
   useEffect(() => {
     document.documentElement.classList.toggle("large-hit-area", largeHitAreas);
-    saveLargeHitAreas(largeHitAreas);
-  }, [largeHitAreas]);
+    if (preferencesReady) persist(() => saveLargeHitAreas(largeHitAreas));
+  }, [largeHitAreas, preferencesReady, persist]);
   useEffect(() => {
-    savePongSpin(pongSpin);
-  }, [pongSpin]);
+    if (preferencesReady) persist(() => savePongSpin(pongSpin));
+  }, [pongSpin, preferencesReady, persist]);
 
   // Persistence must not replace or recapture the fetch guard during hydration.
   useEffect(() => {
@@ -339,14 +405,14 @@ const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname) || isYouTube
   }, [allowNetwork, networkSettingsLoaded]);
 
   useEffect(() => {
-    saveHaptics(haptics);
-  }, [haptics]);
+    if (preferencesReady) persist(() => saveHaptics(haptics));
+  }, [haptics, preferencesReady, persist]);
   useEffect(() => {
     const vol = volume / 100;
     if (typeof Howler !== "undefined") Howler.volume(vol);
     setMasterVolume(vol);
-    saveVolume(volume);
-  }, [volume]);
+    if (preferencesReady) persist(() => saveVolume(volume));
+  }, [volume, preferencesReady, persist]);
 
   const bgImageName = useKaliWallpaper ? "kali-gradient" : wallpaper;
   const desktopTheme = useMemo(
@@ -361,35 +427,16 @@ const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname) || isYouTube
     [theme, accent, wallpaper, bgImageName, useKaliWallpaper],
   );
   useEffect(() => {
-    const previousTheme = previousThemeRef.current;
-    const firstRun = previousTheme === null;
-    const themeChanged = previousTheme !== null && previousTheme !== theme;
-    const preset = DESKTOP_THEME_PRESETS[theme];
-    if (firstRun || themeChanged) {
-      if (preset?.accent && preset.accent !== accent) setAccent(preset.accent);
-      if (preset?.wallpaperName && preset.wallpaperName !== wallpaper)
-        setWallpaper(preset.wallpaperName);
-      if (
-        preset?.useKaliWallpaper !== undefined &&
-        preset.useKaliWallpaper !== useKaliWallpaper
-      ) {
-        setUseKaliWallpaper(preset.useKaliWallpaper);
-      }
-      previousThemeRef.current = theme;
-    }
-  }, [
-    theme,
-    accent,
-    wallpaper,
-    useKaliWallpaper,
-    setAccent,
-    setWallpaper,
-    setUseKaliWallpaper,
-  ]);
+    const root = document.documentElement;
+    root.dataset.reduceTransparency = String(workspacePreferences.reduceTransparency);
+    root.dataset.strongFocus = String(workspacePreferences.strongFocus);
+    if (preferencesReady) persist(() => window.localStorage.setItem(WORKSPACE_KEY, JSON.stringify(workspacePreferences)));
+  }, [workspacePreferences, preferencesReady, persist]);
 
   return (
     <SettingsContext.Provider
       value={{
+        preferencesReady, storageError, workspacePreferences, setWorkspacePreferences, applySnapshot,
         accent,
         wallpaper,
         bgImageName,
