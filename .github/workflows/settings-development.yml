@@ -1,0 +1,44 @@
+name: Settings development tooling
+on:
+  push:
+    branches: [feat/settings-control-center]
+    paths: [.github/workflows/settings-development.yml]
+permissions:
+  contents: read
+jobs:
+  tooling:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - run: yarn install --immutable
+      - name: Package only public source and installed development dependencies
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/tooling/runtime" "$RUNNER_TEMP/parts"
+          cp "$(command -v node)" "$RUNNER_TEMP/tooling/runtime/node"
+          git bundle create "$RUNNER_TEMP/tooling/source.bundle" --all
+          tar -czf "$RUNNER_TEMP/tooling/dependencies.tar.gz" node_modules
+          yarn playwright install chromium
+          tar -czf "$RUNNER_TEMP/tooling/chromium.tar.gz" -C "$HOME/.cache" ms-playwright
+          tar -cf "$RUNNER_TEMP/tooling.tar" -C "$RUNNER_TEMP/tooling" .
+          split -b 80000000 -d "$RUNNER_TEMP/tooling.tar" "$RUNNER_TEMP/parts/tooling-"
+          sha256sum "$RUNNER_TEMP/parts/"* > "$RUNNER_TEMP/parts/SHA256SUMS"
+          du -h "$RUNNER_TEMP/parts/"*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: settings-development-tooling
+          path: ${{ runner.temp }}/parts/
+          compression-level: 0
+          retention-days: 1
