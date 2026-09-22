@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
+import ShowDesktopButton from "./ShowDesktopButton";
 
 export interface WorkspaceWindow {
   id: string;
@@ -137,7 +138,8 @@ export default function WorkspaceSwitcher({
   if (workspaces.length === 0) return null;
 
   return (
-    <>
+    <div className="flex items-center gap-1">
+      <ShowDesktopButton />
       {/* Desktop: Horizontal number pills with Hover Preview */}
       <nav
         aria-label="Workspace switcher"
@@ -267,7 +269,7 @@ export default function WorkspaceSwitcher({
           </div>
         )}
       </div>
-    </>
+    </div>
   );
 }
 

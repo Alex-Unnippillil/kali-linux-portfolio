@@ -30,10 +30,10 @@ The combined feed requests at most three playlists concurrently and retains a
 separate continuation cursor for each playlist. Video IDs are deduplicated across
 pages/playlists. Empty, failed, invalid-cursor and exhausted responses do not
 cause automatic request loops. Failures expose an explicit retry. Refresh, channel
-changes, network-off and unmount cancel or invalidate in-flight responses.
+changes and unmount cancel or invalidate in-flight responses.
 Search and sort apply to **loaded videos**, not to the entire YouTube catalogue.
 
-When network access is enabled, the first available curated video is selected and embedded immediately, without autoplay. The official privacy-enhanced
+Opening YouTube immediately requests playlists and selects the first available curated video, without autoplay. The official privacy-enhanced
 YouTube embed remains the player. Search does not interrupt playback; the watch
 view provides a queue, previous/next, theatre layout, description expansion,
 sharing and an external YouTube fallback. Playback availability still depends on
@@ -41,7 +41,7 @@ YouTube, browser permissions, region, and the video's embedding restrictions.
 
 Watch later retains the existing `youtube:watch-later` local-storage format. It
 is browser-local and explicitly not presented as YouTube account synchronization.
-Network-off settings are respected; enabling requests requires a visitor action.
+Opening the app starts requests. The network-enable prompt is removed; unrelated apps retain their saved network preferences.
 
 ## Regression coverage
 
@@ -65,7 +65,7 @@ library, not a simulation of YouTube account subscriptions, recommendations or
 engagement statistics. Video counts and titles come from the existing API.
 
 The first available video is selected in playlist order and immediately embedded
-when network access is enabled. It does not autoplay or take keyboard focus.
+when the app opens. It does not autoplay or take keyboard focus.
 Changing categories, selecting a playlist, searching and saving videos leave the
 selected player mounted. Choosing another video changes the embed and brings its
 heading into keyboard focus. No account login or new API service is introduced.

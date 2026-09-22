@@ -13,6 +13,7 @@ const DEFAULT_SETTINGS = {
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
+  // YouTube reads are approved separately; arbitrary hosts remain opt-in.
   allowNetwork: false,
   haptics: true,
   volume: 100,
@@ -168,13 +169,9 @@ export async function setPongSpin(value) {
 export async function getAllowNetwork() {
   const storage = getLocalStorage();
   if (!storage) return DEFAULT_SETTINGS.allowNetwork;
+  // Reading a default must not overwrite a saved choice or manufacture an opt-out.
   const stored = storage.getItem('allow-network');
-  if (stored === null) {
-    // Default to blocking network requests and persist for future runs.
-    storage.setItem('allow-network', 'false');
-    return false;
-  }
-  return stored === 'true';
+  return stored === null ? DEFAULT_SETTINGS.allowNetwork : stored === 'true';
 }
 
 export async function setAllowNetwork(value) {

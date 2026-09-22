@@ -3,7 +3,6 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import EmbedFrame from "../../EmbedFrame";
 import useWatchLater from "../../../apps/youtube/state/watchLater";
-import { useSettings } from "../../../hooks/useSettings";
 import useYouTubeLibrary from "../../../hooks/useYouTubeLibrary";
 import {
   parseYouTubeChannelId,
@@ -54,7 +53,6 @@ export default function YouTubeApp({ channelId }: { channelId?: string }) {
 }
 
 function CuratedYouTube({ channel }: { channel: string }) {
-  const { allowNetwork, setAllowNetwork } = useSettings();
   const {
     directory,
     summary,
@@ -66,7 +64,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
     loadAll,
     retryErrors,
     refresh,
-  } = useYouTubeLibrary(channel, allowNetwork);
+  } = useYouTubeLibrary(channel);
   const [saved, setSaved] = useWatchLater();
   const [selection, setSelection] = useState<{
     channel: string;
@@ -99,19 +97,19 @@ function CuratedYouTube({ channel }: { channel: string }) {
     setQuery("");
   }, [channel]);
   useEffect(() => {
-    if (!directory || !allowNetwork || loadingAll) return;
+    if (!directory || loadingAll) return;
     const missing = directory.playlists.some(
       ({ id: key }) =>
         !pages[key] ||
         (!pages[key].loaded && !pages[key].loading && !pages[key].error),
     );
     if (missing) void loadAll();
-  }, [directory, allowNetwork, pages, loadingAll, loadAll]);
+  }, [directory, pages, loadingAll, loadAll]);
   useEffect(() => {
-    if (playing || !allowNetwork) return;
+    if (playing) return;
     const first = firstAvailableVideo(playlists, pages);
     if (first) setSelection({ channel, video: first });
-  }, [playing, allowNetwork, playlists, pages, channel]);
+  }, [playing, playlists, pages, channel]);
   useEffect(() => {
     setExpanded(false);
     // Automatic selection must never steal keyboard focus or scroll the desktop.
@@ -300,7 +298,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
     }
   };
   const thumbnail = (src: string, alt = "") =>
-    allowNetwork && src ? (
+    src ? (
       <img
         src={src}
         alt={alt}
@@ -395,7 +393,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
         <button
           type="button"
           className={styles.iconButton}
-          disabled={busy || !allowNetwork}
+          disabled={busy}
           aria-label="Refresh channel playlists"
           title="Refresh channel playlists"
           onClick={refresh}
@@ -483,27 +481,11 @@ function CuratedYouTube({ channel }: { channel: string }) {
             <span className={styles.avatar}>AU</span>
             <span>
               {summary?.title ?? "Alex’s library"}
-              <small>{playlists.length} public playlists</small>
+              <small>{loadingDirectory ? "Loading playlists…" : `${playlists.length} public playlists`}</small>
             </span>
             <VideoIcon name="external" />
           </a>
         </div>
-        {!allowNetwork && (
-          <section className={styles.notice}>
-            <h2>Connect the video library</h2>
-            <p>
-              Network access is off. Enable it to retrieve Alex’s public
-              playlists and load the YouTube player.
-            </p>
-            <button
-              className={styles.primaryButton}
-              type="button"
-              onClick={() => setAllowNetwork(true)}
-            >
-              Enable network
-            </button>
-          </section>
-        )}
         {directoryError && (
           <section className={styles.notice} role="alert">
             <h2>Could not load playlists</h2>
@@ -521,7 +503,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
         >
           <div className={styles.watchMain}>
             <div className={styles.playerShell}>
-              {playing && allowNetwork ? (
+              {playing ? (
                 <EmbedFrame
                   key={playing.videoId}
                   src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(playing.videoId)}?playsinline=1`}
@@ -540,11 +522,9 @@ function CuratedYouTube({ channel }: { channel: string }) {
                 <div className={styles.playerPlaceholder}>
                   <VideoIcon name="play" />
                   <p>
-                    {!allowNetwork
-                      ? "You are in control of network access."
-                      : busy
-                        ? "Finding your first video…"
-                        : "Select a video to begin."}
+                    {busy
+                      ? "Finding your first video…"
+                      : "Select a video to begin."}
                   </p>
                 </div>
               )}
@@ -863,7 +843,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
                   ? "Search covers loaded videos. The selected video stays ready above."
                   : showSaved
                     ? "Use the clock on any video to save it for later."
-                    : "Choose another collection, enable network access, or refresh the library."}
+                    : "Choose another collection or refresh the library."}
               </p>
               {query && (
                 <button

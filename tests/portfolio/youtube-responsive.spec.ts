@@ -156,7 +156,6 @@ for (const viewport of [
         name: "Enable network",
         exact: true,
       });
-      if (await enable.isVisible()) await activate(enable, touch);
       await expect(
         app.getByRole("button", {
           name: "Watch Inside the engineering portfolio",
@@ -168,6 +167,7 @@ for (const viewport of [
           exact: true,
         }),
       ).toBeVisible();
+      await expect(enable).toHaveCount(0);
       await expect(app.locator("iframe")).toHaveCount(1);
       await expect(app.locator("iframe")).not.toHaveAttribute(
         "src",
@@ -387,4 +387,45 @@ test("the first-visit hint is optional and does not replace the desktop", async 
     .press("Escape");
   await expect(help).toBeFocused();
   await expect(page.locator("#about")).toBeVisible();
+});
+
+
+test("a fresh visitor opens YouTube from the launcher without enabling network", async ({ page }) => {
+  await fixture(page);
+  await page.goto("/");
+  await expect(page.locator("#about")).toBeVisible();
+  await page.getByRole("button", { name: "Applications menu", exact: true }).click();
+  const menu = page.getByTestId("whisker-menu-dropdown");
+  await menu.getByRole("searchbox", { name: "Search applications" }).fill("YouTube");
+  await menu.getByTestId("whisker-menu-app-list")
+    .getByRole("button", { name: "YouTube", exact: true }).click();
+  const app = page.getByTestId("youtube-app");
+  await expect(app.getByRole("button", {
+    name: "Watch Inside the engineering portfolio", exact: true,
+  })).toBeVisible();
+  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", {
+    exact: true,
+  })).toBeVisible();
+  await expect(app.getByRole("button", { name: "Enable network", exact: true })).toHaveCount(0);
+  await expect(app.locator("iframe")).not.toHaveAttribute("src", /autoplay=1/);
+});
+
+test("opening YouTube loads immediately despite an old network opt-out, including after reload", async ({ page }) => {
+  await fixture(page);
+  await page.goto("/");
+  await expect(page.locator("#about")).toBeVisible();
+  await page.evaluate(() => localStorage.setItem("allow-network", "false"));
+  const directoryRequest = page.waitForRequest("**/api/youtube/directory?**");
+  await page.goto("/?app=youtube");
+  await directoryRequest;
+  const app = page.getByTestId("youtube-app");
+  await expect(app.getByRole("button", { name: "Enable network", exact: true })).toHaveCount(0);
+  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("false");
+  const reloadRequest = page.waitForRequest("**/api/youtube/directory?**");
+  await page.reload();
+  await reloadRequest;
+  await expect(app.getByTitle("YouTube player for Inside the engineering portfolio", { exact: true })).toBeVisible();
+  await expect(app.locator("iframe")).not.toHaveAttribute("src", /autoplay=1/);
+  expect(await page.evaluate(() => localStorage.getItem("allow-network"))).toBe("false");
 });

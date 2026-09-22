@@ -25,7 +25,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
+      - name: Verify requested revision and integrate the exact PR base
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_BASE: ${{ github.event.pull_request.base.sha }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          if [ -n "$EXPECTED_BASE" ] && ! git merge-base --is-ancestor "$EXPECTED_BASE" HEAD; then
+            git config user.name 'CI validation'
+            git config user.email 'ci-validation@users.noreply.github.com'
+            git merge --no-edit "$EXPECTED_BASE"
+          fi
+          {
+            echo "Requested head: $EXPECTED_HEAD"
+            echo "Requested base: $EXPECTED_BASE"
+            echo "Tested commit: $(git rev-parse HEAD)"
+            echo "Tested tree: $(git rev-parse HEAD^{tree})"
+            git ls-files -s .github/workflows/ci.yml hooks/useSettings.tsx __tests__/allowNetwork.test.ts
+            git status --porcelain
+          } | tee validation-source.txt
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -42,8 +62,38 @@ jobs:
         run: yarn lint
       - if: matrix.check == 'typecheck'
         run: yarn typecheck
+      - name: Generate revision-bound source assets for tests
+        if: matrix.check == 'test'
+        run: node scripts/generate-repository-snapshot.mjs
       - if: matrix.check == 'test'
-        run: yarn test --coverage --maxWorkers=2
+        run: yarn test --coverage --maxWorkers=2 --json --outputFile=jest-results.json
+      - name: Summarize failing tests
+        if: always() && matrix.check == 'test'
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          if (!fs.existsSync('jest-results.json')) process.exit(0);
+          const result = JSON.parse(fs.readFileSync('jest-results.json', 'utf8'));
+          const summary = {
+            source: cp.execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+            passed: result.numPassedTests,
+            failed: result.numFailedTests,
+            pending: result.numPendingTests,
+            failures: result.testResults.filter(suite => suite.status === 'failed').map(suite => ({
+              file: suite.name.replace(process.env.GITHUB_WORKSPACE + '/', ''),
+              message: suite.message,
+              tests: suite.assertionResults.filter(test => test.status === 'failed').map(test => ({
+                name: test.fullName,
+                messages: test.failureMessages,
+              })),
+            })),
+          };
+          const text = JSON.stringify(summary, null, 2);
+          fs.writeFileSync('jest-failures.json', text);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, '## Jest results\n```json\n' + text + '\n```\n');
+          console.log(text);
+          NODE
       - if: matrix.check == 'security'
         run: |
           set -o pipefail
@@ -53,12 +103,29 @@ jobs:
       - if: matrix.check == 'build'
         run: yarn export
       - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-source-${{ matrix.check }}
+          path: validation-source.txt
+          retention-days: 7
+          if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
         if: always() && matrix.check == 'security'
         with:
           name: dependency-audit
           path: dependency-audit.log
           retention-days: 7
           if-no-files-found: warn
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.check == 'test'
+        with:
+          name: jest-results
+          path: |
+            jest-results.json
+            jest-failures.json
+            validation-source.txt
+          if-no-files-found: warn
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         if: always() && matrix.check == 'test'
         with:

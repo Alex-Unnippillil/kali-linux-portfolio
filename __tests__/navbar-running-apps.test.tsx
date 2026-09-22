@@ -159,7 +159,8 @@ describe('Navbar running apps tray', () => {
     const button = screen.getByRole('button', { name: /app two/i });
     expect(button).toHaveAttribute('aria-pressed', 'false');
     expect(button).toHaveAttribute('data-active', 'false');
-    expect(button.querySelector('[data-testid="running-indicator"]')).toBeFalsy();
+    expect(button.querySelector('[data-testid="running-indicator"]')).toBeTruthy();
+    expect(button).toHaveAttribute('data-window-state', 'minimized');
   });
 
   it('reorders running apps through drag and drop', () => {
@@ -378,5 +379,111 @@ describe('Navbar running apps tray', () => {
     const ring = within(button).getByRole('status', { name: /download 75% complete/i });
     expect(ring).toHaveClass('taskbar-badge--ring');
     expect(ring).toHaveAttribute('style', expect.stringContaining('--taskbar-badge-progress: 270deg'));
+  });
+});
+
+describe('Taskbar operating-system interactions', () => {
+  const start = () => {
+    render(<Navbar />);
+    act(() => window.dispatchEvent(new CustomEvent('workspace-state', {
+      detail: {
+        ...multiAppWorkspaceDetail,
+        // A stale pin record must not hide the authoritative running-window state.
+        pinnedApps: [{ ...multiAppWorkspaceDetail.runningApps[0], isRunning: false }],
+      },
+    })));
+    return screen.getByRole('navigation', { name: 'Desktop taskbar' });
+  };
+
+  test('only the focused app is pressed and minimized apps retain a running indicator', () => {
+    const bar = start();
+    expect(bar.querySelectorAll('button[data-context="taskbar"][aria-pressed="true"]')).toHaveLength(1);
+    const pinned = within(bar).getByRole('button', { name: 'App One', exact: true });
+    expect(pinned).toHaveAttribute('data-window-state', 'focused');
+    expect(pinned.querySelector('[data-testid="running-indicator"]')).not.toBeNull();
+    const minimized = within(bar).getByRole('button', { name: 'App Three', exact: true });
+    expect(minimized).toHaveAttribute('data-window-state', 'minimized');
+    expect(minimized.querySelector('[data-testid="running-indicator"]')).not.toBeNull();
+  });
+
+  test('arrow keys and Home/End traverse both pinned and running lists', () => {
+    const bar = start();
+    const first = within(bar).getByRole('button', { name: 'App One', exact: true });
+    const second = within(bar).getByRole('button', { name: 'App Two', exact: true });
+    const last = within(bar).getByRole('button', { name: 'App Three', exact: true });
+    fireEvent.keyDown(first, { key: 'ArrowRight' });
+    expect(second).toHaveFocus();
+    fireEvent.keyDown(second, { key: 'End' });
+    expect(last).toHaveFocus();
+    fireEvent.keyDown(last, { key: 'ArrowRight' });
+    expect(first).toHaveFocus();
+    fireEvent.keyDown(first, { key: 'ArrowLeft' });
+    expect(last).toHaveFocus();
+    fireEvent.keyDown(last, { key: 'Home' });
+    expect(first).toHaveFocus();
+  });
+
+  test('preview actions are keyboard-ready without a thumbnail; Escape restores focus', () => {
+    const bar = start();
+    const button = within(bar).getByRole('button', { name: 'App One', exact: true });
+    fireEvent.keyDown(button, { key: 'ArrowDown' });
+    const preview = screen.getByRole('dialog', { name: 'App One preview' });
+    const activate = within(preview).getByRole('button', { name: 'Switch to App One', exact: true });
+    expect(activate).toHaveFocus();
+    fireEvent.keyDown(activate, { key: 'Escape' });
+    expect(button).toHaveFocus();
+    expect(screen.queryByRole('dialog', { name: 'App One preview' })).toBeNull();
+  });
+
+  test.each([
+    ['Switch to App One', 'open'],
+    ['Minimize App One window', 'minimize'],
+    ['Close App One', 'close'],
+  ])('preview action %s delegates %s to the desktop manager', (name, action) => {
+    const bar = start();
+    const handler = jest.fn();
+    window.addEventListener('taskbar-command', handler);
+    try {
+      fireEvent.keyDown(within(bar).getByRole('button', { name: 'App One', exact: true }), { key: 'ArrowDown' });
+      fireEvent.click(screen.getByRole('button', { name, exact: true }));
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].detail).toEqual({ appId: 'app1', action });
+      expect(screen.queryByRole('dialog', { name: 'App One preview' })).toBeNull();
+    } finally {
+      window.removeEventListener('taskbar-command', handler);
+    }
+  });
+});
+
+
+describe('Taskbar asynchronous keyboard preview focus', () => {
+  test('a matching late thumbnail focuses the action, never the dialog, and stale responses cannot consume that focus request', () => {
+    const instance = React.createRef<Navbar>();
+    render(<Navbar ref={instance} />);
+    act(() => window.dispatchEvent(new CustomEvent('workspace-state', { detail: workspaceEventDetail })));
+    const bar = screen.getByRole('navigation', { name: 'Desktop taskbar' });
+    const button = within(bar).getByRole('button', { name: 'App One', exact: true });
+    fireEvent.keyDown(button, { key: 'ArrowDown' });
+    const preview = screen.getByRole('dialog', { name: 'App One preview' });
+    const activate = within(preview).getByRole('button', { name: 'Switch to App One', exact: true });
+    const controller = instance.current!;
+    const active = controller.state.preview as unknown as { appId: string; requestId: number };
+    // Exercise the delayed-ref path: the request still owns keyboard focus when its thumbnail returns.
+    act(() => { preview.focus(); controller.previewFocusPending = true; });
+    act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+      detail: { appId: active.appId, requestId: active.requestId - 1, preview: null },
+    })));
+    expect(controller.previewFocusPending).toBe(true);
+    act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+      detail: { ...active, preview: null },
+    })));
+    expect(activate).toHaveFocus();
+    expect(controller.previewFocusPending).toBe(false);
+    const close = within(preview).getByRole('button', { name: 'Close App One', exact: true });
+    act(() => close.focus());
+    act(() => window.dispatchEvent(new CustomEvent('taskbar-preview-response', {
+      detail: { ...active, preview: null },
+    })));
+    expect(close).toHaveFocus();
   });
 });

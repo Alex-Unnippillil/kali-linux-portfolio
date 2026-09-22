@@ -10,6 +10,7 @@ import PerformanceGraph from '../ui/PerformanceGraph';
 import WorkspaceSwitcher from '../panel/WorkspaceSwitcher';
 import { NAVBAR_HEIGHT } from '../../utils/uiConstants';
 import TaskbarPreviewFlyout from './TaskbarPreviewFlyout';
+import styles from './Taskbar.module.css';
 import { parsePinnedAppsPayload } from '../../utils/taskbarPayload';
 
 const BADGE_TONE_COLORS = Object.freeze({
@@ -258,9 +259,8 @@ export default class Navbar extends PureComponent {
         isAppRunning = (app) => {
                 const appId = app?.id;
                 if (!appId) return false;
-                if (typeof app?.isRunning === 'boolean') return app.isRunning;
                 const runningApps = this.state?.runningApps || [];
-                return runningApps.some((item) => item?.id === appId);
+                return runningApps.some((item) => item?.id === appId) || app.isRunning === true;
         };
 
         componentDidMount() {
@@ -392,9 +392,12 @@ export default class Navbar extends PureComponent {
         };
 
         getTaskbarButtonElement = (appId) => {
-                if (!appId || !this.runningListRef?.current) return null;
+                if (!appId) return null;
                 const selectorValue = this.escapeAttributeValue(appId);
-                return this.runningListRef.current.querySelector(`button[data-app-id="${selectorValue}"]`);
+                const selector = `button[data-app-id="${selectorValue}"]`;
+                return this.pinnedListRef.current?.querySelector(selector)
+                        || this.runningListRef.current?.querySelector(selector)
+                        || null;
         };
 
         computePreviewPosition = (rect) => {
@@ -567,6 +570,8 @@ export default class Navbar extends PureComponent {
         handlePreviewResponse = (event) => {
                 const detail = event?.detail || {};
                 const { appId, requestId, preview } = detail;
+                const active = this.state.preview;
+                if (!active || active.appId !== appId || active.requestId !== requestId) return;
                 if (!appId || requestId === undefined || requestId === null) {
                         return;
                 }
@@ -574,8 +579,6 @@ export default class Navbar extends PureComponent {
                 this.setState((prevState) => {
                         const current = prevState.preview;
                         if (!current || current.appId !== appId || current.requestId !== requestId) {
-                                this.previewFocusPending = false;
-                                this.previewRefreshInFlight = false;
                                 return null;
                         }
                         return {
@@ -586,6 +589,7 @@ export default class Navbar extends PureComponent {
                                 },
                         };
                 }, () => {
+                        if (this.state.preview?.appId !== appId || this.state.preview?.requestId !== requestId) return;
                         this.previewRefreshInFlight = false;
                         // If we were refreshing, keep the "Updating…" label on-screen long enough to read.
                         if (this.state.preview?.updating) {
@@ -596,7 +600,8 @@ export default class Navbar extends PureComponent {
                                 this.startPreviewAutoRefresh();
                         }
                         if (this.previewFocusPending && this.previewFlyoutRef.current) {
-                                this.previewFlyoutRef.current.focus();
+                                this.previewFocusPending = false;
+                                this.previewFlyoutRef.current.querySelector('[data-preview-activate]')?.focus({ preventScroll: true });
                         }
                         this.previewFocusPending = false;
                 });
@@ -665,12 +670,13 @@ export default class Navbar extends PureComponent {
                                 updating: false,
                         },
                 }, () => {
+                        // Keyboard actions work immediately, even if a thumbnail never arrives.
+                        if (this.previewFocusPending && this.previewFlyoutRef.current) {
+                                this.previewFlyoutRef.current.querySelector('[data-preview-activate]')?.focus();
+                                this.previewFocusPending = false;
+                        }
                         if (shouldRequest) {
                                 this.dispatchPreviewRequest(app.id, requestId, Boolean(options.forceRefresh));
-                        } else if (this.previewFocusPending && this.previewFlyoutRef.current) {
-                                this.previewFlyoutRef.current.focus();
-                                this.previewFocusPending = false;
-                                this.startPreviewAutoRefresh();
                         } else {
                                 this.startPreviewAutoRefresh();
                         }
@@ -718,12 +724,41 @@ export default class Navbar extends PureComponent {
                 this.requestPreviewHide('flyout-blur');
         };
 
+        focusTaskbarButton = (appId) => {
+                const button = this.getTaskbarButtonElement(appId);
+                if (!button) return;
+                // Returning from Escape must not immediately open the same preview again.
+                this.suppressPreviewFocus = true;
+                button.focus({ preventScroll: true });
+                this.suppressPreviewFocus = false;
+                button.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        };
+
         handlePreviewKeyDown = (event) => {
                 if (event.key === 'Escape') {
                         event.stopPropagation();
                         event.preventDefault();
+                        const appId = this.state.preview?.appId;
                         this.hidePreview();
+                        this.focusTaskbarButton(appId);
                 }
+        };
+
+        handlePreviewAction = (action) => {
+                const appId = this.state.preview?.appId;
+                if (!appId) return;
+                if (action === 'close') {
+                        // Move focus before the app's taskbar button can be removed.
+                        const buttons = Array.from(this.navbarRef.current?.querySelectorAll('button[data-context="taskbar"]') || []);
+                        const index = buttons.findIndex((button) => button.dataset.appId === appId);
+                        const next = buttons[index + 1] || buttons[index - 1];
+                        if (next) this.focusTaskbarButton(next.dataset.appId);
+                        else this.navbarRef.current?.querySelector('button')?.focus();
+                } else {
+                        this.focusTaskbarButton(appId);
+                }
+                this.hidePreview();
+                this.dispatchTaskbarCommand({ appId, action });
         };
 
         handleRunningAppsChange = (runningApps) => {
@@ -758,7 +793,7 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonFocus = (event, app) => {
-                if (!this.isAppRunning(app)) return;
+                if (this.suppressPreviewFocus || !this.isAppRunning(app)) return;
                 this.requestPreviewOpen(app, event.currentTarget, { trigger: 'focus' });
         };
 
@@ -815,6 +850,20 @@ export default class Navbar extends PureComponent {
         };
 
         handleAppButtonKeyDown = (event, app) => {
+                // Traverse pinned and unpinned apps as one taskbar; don't consume OS shortcuts.
+                if (!event.altKey && !event.ctrlKey && !event.metaKey
+                        && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
+                        const buttons = Array.from(this.navbarRef.current?.querySelectorAll('button[data-context="taskbar"]') || []);
+                        const index = buttons.indexOf(event.currentTarget);
+                        if (!buttons.length || index < 0) return;
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+                                : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+                        buttons[nextIndex].focus();
+                        buttons[nextIndex].scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+                        return;
+                }
                 if (event.key === 'ArrowDown') {
                         if (!this.isAppRunning(app)) return;
                         event.preventDefault();
@@ -991,12 +1040,15 @@ export default class Navbar extends PureComponent {
         };
 
         renderTaskbarButton = (app, section) => {
-                const isMinimized = Boolean(app.isMinimized);
-                const isRunning = section === 'running' ? true : Boolean(app.isRunning);
-                const isActive = section === 'running' ? !isMinimized : (isRunning && !isMinimized);
-                const isFocused = section === 'running'
-                        ? Boolean(app.isFocused && isActive)
-                        : Boolean(app.isFocused && isActive);
+                // The running-window summary is authoritative, including for pinned apps.
+                const running = this.state.runningApps.find((item) => item.id === app.id);
+                const windowApp = running || app;
+                const isRunning = Boolean(running) || section === 'running' || Boolean(app.isRunning);
+                const isMinimized = isRunning && Boolean(windowApp.isMinimized);
+                const isFocused = isRunning && !isMinimized && Boolean(windowApp.isFocused);
+                const isActive = isFocused;
+                const windowState = !isRunning ? 'closed' : isMinimized ? 'minimized' : isFocused ? 'focused' : 'running';
+                const actionLabel = !isRunning ? 'Open' : isMinimized ? 'Restore' : isFocused ? 'Minimize' : 'Switch to';
                 const badge = app && typeof app.badge === 'object' ? app.badge : null;
                 const badgeNode = this.renderAppBadge(badge);
                 const buttonLabel = badge?.label ? `${app.title} — ${badge.label}` : app.title;
@@ -1005,18 +1057,21 @@ export default class Navbar extends PureComponent {
                         <button
                                 type="button"
                                 aria-label={buttonLabel}
-                                title={buttonLabel}
+                                title={`${actionLabel} ${app.title}`}
                                 aria-pressed={isActive}
+                                aria-describedby={`taskbar-state-${app.id}`}
+                                data-window-state={windowState}
                                 data-context="taskbar"
                                 data-app-id={app.id}
                                 data-active={isActive ? 'true' : 'false'}
                                 onClick={() => this.handleAppButtonClick(app)}
+                                onContextMenu={() => this.hidePreview()}
                                 onKeyDown={(event) => this.handleAppButtonKeyDown(event, app)}
                                 onMouseEnter={(event) => this.handleAppButtonMouseEnter(event, app)}
                                 onMouseLeave={this.handleAppButtonMouseLeave}
                                 onFocus={(event) => this.handleAppButtonFocus(event, app)}
                                 onBlur={this.handleAppButtonBlur}
-                                className={`group/btn relative flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${isFocused ? 'bg-white/[0.12]' : 'bg-transparent hover:bg-white/[0.06]'} text-white/80 hover:text-white`}
+                                className={`${styles.button} group/btn relative flex min-h-[36px] min-w-[36px] touch-manipulation items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60 ${isFocused ? 'bg-white/[0.12]' : 'bg-transparent hover:bg-white/[0.06]'} text-white/80 hover:text-white`}
                         >
                                 <span className="relative inline-flex items-center justify-center">
                                         <Image
@@ -1027,15 +1082,18 @@ export default class Navbar extends PureComponent {
                                                 className="h-5 w-5 transition-transform duration-150 group-hover/btn:scale-105"
                                         />
                                         {badgeNode}
-                                        {isActive && (
+                                        {isRunning && (
                                                 <span
                                                         aria-hidden="true"
                                                         data-testid="running-indicator"
-                                                        className="absolute -bottom-0.5 left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-cyan-400"
+                                                        className={styles.indicator}
                                                 />
                                         )}
                                 </span>
-                                <span className="hidden whitespace-nowrap text-[11px] font-medium text-white/80 group-hover/btn:text-white lg:inline">{app.title}</span>
+                                <span className="hidden max-w-[10rem] truncate whitespace-nowrap text-[11px] font-medium text-white/80 group-hover/btn:text-white lg:inline">{app.title}</span>
+                                <span id={`taskbar-state-${app.id}`} className="sr-only">
+                                        {windowState === 'closed' ? 'Pinned, not running' : windowState}. {actionLabel} window.
+                                </span>
                         </button>
                 );
         };
@@ -1421,6 +1479,10 @@ export default class Navbar extends PureComponent {
                                         image={preview?.image}
                                         status={preview?.status}
                                         updating={preview?.updating}
+                                        isMinimized={Boolean(this.state.runningApps.find((app) => app.id === preview?.appId)?.isMinimized)}
+                                        onActivate={() => this.handlePreviewAction('open')}
+                                        onMinimize={() => this.handlePreviewAction('minimize')}
+                                        onClose={() => this.handlePreviewAction('close')}
                                         position={preview?.position}
                                         onMouseEnter={this.handlePreviewMouseEnter}
                                         onMouseLeave={this.handlePreviewMouseLeave}

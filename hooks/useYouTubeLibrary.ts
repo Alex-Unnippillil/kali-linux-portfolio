@@ -71,16 +71,14 @@ async function readResponse<T>(url: string, signal: AbortSignal): Promise<T> {
   }
 }
 
-export default function useYouTubeLibrary(
-  channelId: string,
-  allowNetwork: boolean,
-) {
+// Opening this app starts its requests, independently of unrelated apps' network preferences.
+export default function useYouTubeLibrary(channelId: string) {
   const [directory, setDirectory] = useState<YouTubePlaylistDirectory | null>(
     null,
   );
   const [summary, setSummary] = useState<YouTubeChannelSummary | null>(null);
   const [pages, setPages] = useState<Record<string, PlaylistItemsState>>({});
-  const [loadingDirectory, setLoadingDirectory] = useState(false);
+  const [loadingDirectory, setLoadingDirectory] = useState(true);
   const [directoryError, setDirectoryError] = useState<string | null>(null);
   const [loadingAll, setLoadingAll] = useState(false);
   const [revision, setRevision] = useState(0);
@@ -102,69 +100,66 @@ export default function useYouTubeLibrary(
     setSummary(null);
     setDirectoryError(null);
     setLoadingAll(false);
-    setLoadingDirectory(allowNetwork);
+    setLoadingDirectory(true);
 
-    if (allowNetwork) {
-      void (async () => {
+    void (async () => {
+      try {
+        let payload: DirectoryPayload;
         try {
-          let payload: DirectoryPayload;
-          try {
-            payload = await readResponse<DirectoryPayload>(
-              `/api/youtube/directory?channelId=${encodeURIComponent(channelId)}`,
-              controller.signal,
-            );
-          } catch (error) {
-            if (controller.signal.aborted || !CLIENT_KEY) throw error;
-            const [channel, listings] = await Promise.all([
-              fetchYouTubeChannelSummary(
-                channelId,
-                CLIENT_KEY,
-                controller.signal,
-              ),
-              fetchYouTubePlaylistDirectoryByChannelId(
-                channelId,
-                CLIENT_KEY,
-                controller.signal,
-              ),
-            ]);
-            payload = { summary: channel, directory: listings };
-          }
-          const normalized = normalizePlaylistDirectory(payload.directory);
-          if (controller.signal.aborted || generation.current !== epoch) return;
-          const info = payload.summary;
-          setSummary(
-            info &&
-              typeof info.id === "string" &&
-              typeof info.title === "string"
-              ? {
-                  id: info.id,
-                  title: info.title,
-                  thumbnail:
-                    typeof info.thumbnail === "string" ? info.thumbnail : "",
-                }
-              : null,
+          payload = await readResponse<DirectoryPayload>(
+            `/api/youtube/directory?channelId=${encodeURIComponent(channelId)}`,
+            controller.signal,
           );
-          setDirectory(normalized);
         } catch (error) {
-          if (!controller.signal.aborted && generation.current === epoch)
-            setDirectoryError(errorText(error));
-        } finally {
-          if (!controller.signal.aborted && generation.current === epoch)
-            setLoadingDirectory(false);
+          if (controller.signal.aborted || !CLIENT_KEY) throw error;
+          const [channel, listings] = await Promise.all([
+            fetchYouTubeChannelSummary(
+              channelId,
+              CLIENT_KEY,
+              controller.signal,
+            ),
+            fetchYouTubePlaylistDirectoryByChannelId(
+              channelId,
+              CLIENT_KEY,
+              controller.signal,
+            ),
+          ]);
+          payload = { summary: channel, directory: listings };
         }
-      })();
-    }
+        const normalized = normalizePlaylistDirectory(payload.directory);
+        if (controller.signal.aborted || generation.current !== epoch) return;
+        const info = payload.summary;
+        setSummary(
+          info &&
+            typeof info.id === "string" &&
+            typeof info.title === "string"
+            ? {
+                id: info.id,
+                title: info.title,
+                thumbnail:
+                  typeof info.thumbnail === "string" ? info.thumbnail : "",
+              }
+            : null,
+        );
+        setDirectory(normalized);
+      } catch (error) {
+        if (!controller.signal.aborted && generation.current === epoch)
+          setDirectoryError(errorText(error));
+      } finally {
+        if (!controller.signal.aborted && generation.current === epoch)
+          setLoadingDirectory(false);
+      }
+    })();
     return () => {
       generation.current = epoch + 1;
       controller.abort();
       requests.forEach((request) => request.abort());
       requests.clear();
     };
-  }, [channelId, allowNetwork, revision]);
+  }, [channelId, revision]);
 
   const loadPage = useCallback(
     async (playlistId: string, append = false) => {
-      if (!allowNetwork) return;
       const previous = pageCache.current[playlistId] ?? emptyPage();
       if (
         previous.loading ||
@@ -216,12 +211,12 @@ export default function useYouTubeLibrary(
           requests.delete(playlistId);
       }
     },
-    [allowNetwork],
+    [],
   );
 
   const loadAll = useCallback(
     async (append = false) => {
-      if (!directory || !allowNetwork || allRequest.current) return;
+      if (!directory || allRequest.current) return;
       const epoch = generation.current;
       allRequest.current = true;
       setLoadingAll(true);
@@ -239,7 +234,7 @@ export default function useYouTubeLibrary(
         }
       }
     },
-    [directory, allowNetwork, loadPage],
+    [directory, loadPage],
   );
 
   const retryErrors = useCallback(async () => {
