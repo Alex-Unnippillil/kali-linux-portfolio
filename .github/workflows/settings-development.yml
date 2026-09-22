@@ -8,45 +8,24 @@ permissions:
 jobs:
   tooling:
     runs-on: ubuntu-22.04
-    timeout-minutes: 15
-    env:
-      NEXT_TELEMETRY_DISABLED: '1'
-      PUPPETEER_SKIP_DOWNLOAD: 'true'
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: .nvmrc
-      - run: corepack enable
-      - run: yarn install --immutable
-      - name: Package only public source and installed development dependencies
+      - name: Capture tracked source and revision only
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/tooling/runtime" "$RUNNER_TEMP/parts"
-          cp "$(command -v node)" "$RUNNER_TEMP/tooling/runtime/node"
-          git bundle create "$RUNNER_TEMP/tooling/source.bundle" --all
-          tar -czf "$RUNNER_TEMP/tooling/dependencies.tar.gz" node_modules
-          yarn playwright install chromium
-          tar -czf "$RUNNER_TEMP/tooling/chromium.tar.gz" -C "$HOME/.cache" ms-playwright
-          tar -cf "$RUNNER_TEMP/tooling.tar" -C "$RUNNER_TEMP/tooling" .
-          split -b 80000000 -d "$RUNNER_TEMP/tooling.tar" "$RUNNER_TEMP/parts/tooling-"
-          sha256sum "$RUNNER_TEMP/parts/"* > "$RUNNER_TEMP/parts/SHA256SUMS"
+          mkdir -p "$RUNNER_TEMP/settings-source"
+          git bundle create "$RUNNER_TEMP/settings-source/source.bundle" HEAD
+          git rev-parse HEAD > "$RUNNER_TEMP/settings-source/revision.txt"
+          git rev-parse HEAD^{tree} > "$RUNNER_TEMP/settings-source/tree.txt"
+          sha256sum "$RUNNER_TEMP/settings-source/source.bundle" > "$RUNNER_TEMP/settings-source/SHA256SUMS"
       - uses: actions/upload-artifact@v4
         with:
-          name: settings-tooling-a
-          path: |
-            ${{ runner.temp }}/parts/tooling-0[0-4]
-            ${{ runner.temp }}/parts/SHA256SUMS
-          compression-level: 0
-          retention-days: 1
-      - uses: actions/upload-artifact@v4
-        with:
-          name: settings-tooling-b
-          path: |
-            ${{ runner.temp }}/parts/tooling-0[5-9]
-          compression-level: 0
-          retention-days: 1
+          name: settings-continuation-source
+          path: ${{ runner.temp }}/settings-source/
+          retention-days: 2
+          if-no-files-found: error
