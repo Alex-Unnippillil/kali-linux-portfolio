@@ -284,7 +284,51 @@ const Pinball = () => {
 
     Events.on(render, 'afterRender', () => {
       const ctx = render.context;
+      const time = performance.now();
       ctx.save();
+      const playfieldGlow = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      playfieldGlow.addColorStop(0, 'rgba(59,130,246,0.16)');
+      playfieldGlow.addColorStop(0.55, 'rgba(15,23,42,0.04)');
+      playfieldGlow.addColorStop(1, 'rgba(2,6,23,0.24)');
+      ctx.fillStyle = playfieldGlow;
+      ctx.fillRect(18, 18, WIDTH - 36, HEIGHT - 36);
+
+      lanes.forEach((lane, index) => {
+        const pulse = 0.35 + Math.sin(time * 0.005 + index * 1.3) * 0.2;
+        const halo = ctx.createRadialGradient(
+          lane.position.x,
+          lane.position.y,
+          0,
+          lane.position.x,
+          lane.position.y,
+          30
+        );
+        halo.addColorStop(0, `rgba(56,189,248,${Math.max(pulse, 0.12)})`);
+        halo.addColorStop(1, 'rgba(56,189,248,0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(lane.position.x, lane.position.y, 30, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      bumpersRef.current.forEach(({ body, lit }) => {
+        if (!lit || !lightsRef.current) return;
+        const ring = ctx.createRadialGradient(
+          body.position.x,
+          body.position.y,
+          body.circleRadius * 0.3,
+          body.position.x,
+          body.position.y,
+          body.circleRadius * 1.8
+        );
+        ring.addColorStop(0, 'rgba(250,204,21,0.45)');
+        ring.addColorStop(1, 'rgba(250,204,21,0)');
+        ctx.fillStyle = ring;
+        ctx.beginPath();
+        ctx.arc(body.position.x, body.position.y, body.circleRadius * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
       ballsRef.current.forEach((b) => {
         ctx.fillStyle = 'rgba(0,0,0,0.3)';
         ctx.beginPath();

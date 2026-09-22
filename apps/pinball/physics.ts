@@ -53,6 +53,14 @@ interface Spark {
   hue: number;
 }
 
+interface InsertLamp {
+  x: number;
+  y: number;
+  radius: number;
+  hue: number;
+  phase: number;
+}
+
 interface LaneGlow {
   left: boolean;
   right: boolean;
@@ -217,6 +225,13 @@ export function createPinballWorld(
   const glowTimers: Partial<Record<Lane, number>> = {};
   const bumperTimers = new Map<Matter.Body, number>();
   const targetStates = new Map<Matter.Body, boolean>();
+  const tableLights: InsertLamp[] = [
+    { x: 70, y: 110, radius: 8, hue: 210, phase: 0.2 },
+    { x: WIDTH / 2, y: 140, radius: 9, hue: 180, phase: 1.1 },
+    { x: WIDTH - 70, y: 110, radius: 8, hue: 210, phase: 2.3 },
+    { x: 70, y: HEIGHT - 170, radius: 7, hue: 145, phase: 0.7 },
+    { x: WIDTH - 70, y: HEIGHT - 170, radius: 7, hue: 145, phase: 2.0 },
+  ];
   let locked = true;
 
   const lightLane = (lane: Lane) => {
@@ -300,6 +315,52 @@ export function createPinballWorld(
 
   const handleAfterRender = () => {
     const ctx = render.context;
+    const now = performance.now();
+
+    const playfieldGradient = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    playfieldGradient.addColorStop(0, "rgba(255,255,255,0.08)");
+    playfieldGradient.addColorStop(0.35, "rgba(255,255,255,0.02)");
+    playfieldGradient.addColorStop(1, "rgba(0,0,0,0.24)");
+    ctx.fillStyle = playfieldGradient;
+    ctx.fillRect(16, 16, WIDTH - 32, HEIGHT - 32);
+
+    ctx.save();
+    ctx.globalAlpha = 0.42;
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(46, 96);
+    ctx.quadraticCurveTo(WIDTH / 2, 46, WIDTH - 46, 96);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(46, HEIGHT - 136);
+    ctx.quadraticCurveTo(WIDTH / 2, HEIGHT - 176, WIDTH - 46, HEIGHT - 136);
+    ctx.stroke();
+    ctx.restore();
+
+    tableLights.forEach((light) => {
+      const pulse = 0.48 + Math.sin(now * 0.003 + light.phase) * 0.22;
+      const halo = ctx.createRadialGradient(
+        light.x,
+        light.y,
+        0,
+        light.x,
+        light.y,
+        light.radius * 3.4,
+      );
+      halo.addColorStop(0, `hsla(${light.hue}, 100%, 74%, ${Math.max(pulse, 0.2)})`);
+      halo.addColorStop(1, `hsla(${light.hue}, 100%, 60%, 0)`);
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(light.x, light.y, light.radius * 3.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = `hsla(${light.hue}, 96%, 78%, 0.9)`;
+      ctx.beginPath();
+      ctx.arc(light.x, light.y, light.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
     const { x, y } = ball.position;
     const gradient = ctx.createRadialGradient(
       x - 4,
@@ -324,9 +385,12 @@ export function createPinballWorld(
         ctx.shadowBlur = 20;
         ctx.fillStyle = "#ff0";
       } else {
-        ctx.fillStyle = "#555";
+        ctx.fillStyle = "#64748b";
       }
       ctx.fillRect(lx - 20, ly - 5, 40, 10);
+      ctx.strokeStyle = "rgba(226,232,240,0.6)";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(lx - 20, ly - 5, 40, 10);
       ctx.restore();
     };
 
@@ -334,9 +398,18 @@ export function createPinballWorld(
     drawLane(rightLane, glow.right);
 
     bumpers.forEach((bumper) => {
-      const angle = bumper.render.fillStyle === "#fde68a" ? 0.6 : 0.3;
+      const active = bumper.render.fillStyle === "#fde68a";
       ctx.save();
       ctx.translate(bumper.position.x, bumper.position.y);
+      if (active) {
+        const glow = ctx.createRadialGradient(0, 0, BUMPER_RADIUS * 0.35, 0, 0, BUMPER_RADIUS * 2);
+        glow.addColorStop(0, "rgba(254,240,138,0.65)");
+        glow.addColorStop(1, "rgba(254,240,138,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, BUMPER_RADIUS * 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
       const gradientBumper = ctx.createRadialGradient(0, 0, 6, 0, 0, BUMPER_RADIUS);
       gradientBumper.addColorStop(0, "rgba(255,255,255,0.9)");
       gradientBumper.addColorStop(1, bumper.render.fillStyle || "#f59e0b");
@@ -346,6 +419,11 @@ export function createPinballWorld(
       ctx.fill();
       ctx.strokeStyle = "rgba(255,255,255,0.4)";
       ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(15,23,42,0.6)";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, 0, BUMPER_RADIUS + 2, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     });
