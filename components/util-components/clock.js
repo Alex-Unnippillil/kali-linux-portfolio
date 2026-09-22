@@ -133,13 +133,12 @@ const Clock = ({
     onlyDay = false,
     onlyTime = false,
     showCalendar = false,
-    hour12: hour12Prop,
     variant = 'default',
     isOpen: controlledOpen,
     onToggle
 }) => {
     const { workspacePreferences } = useSettings()
-    const hour12 = workspacePreferences.clockFormat === 'system' ? hour12Prop : workspacePreferences.clockFormat === '12'
+    const hour12 = workspacePreferences.clockFormat === 'system' ? undefined : workspacePreferences.clockFormat === '12'
     const showSeconds = workspacePreferences.showSeconds
     const [currentTime, setCurrentTime] = useState(null)
     const [internalOpen, setInternalOpen] = useState(false)
@@ -168,6 +167,7 @@ const Clock = ({
     const popoverId = `${headingId}-popover`
     const [canUsePortal, setCanUsePortal] = useState(false)
     const [popoverStyles, setPopoverStyles] = useState({})
+    const popoverPositioned = typeof popoverStyles.top === 'number'
 
     useEffect(() => {
         const update = () => { if (!document.hidden) setCurrentTime(new Date()) }
@@ -192,11 +192,14 @@ const Clock = ({
         }
     }, [showSeconds])
 
+    // Start at today when opened, not on each clock tick. Navigation and keyboard
+    // focus must remain stable while seconds, midnight, or visibility change.
     useEffect(() => {
-        if (!isOpen || !currentTime) return
-        setViewDate(new Date(currentTime.getFullYear(), currentTime.getMonth(), 1))
-        setFocusedDate(currentTime)
-    }, [isOpen, currentTime])
+        if (!isOpen) return
+        const today = new Date()
+        setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))
+        setFocusedDate(today)
+    }, [isOpen])
 
     useEffect(() => {
         if (!isOpen) return undefined
@@ -224,11 +227,13 @@ const Clock = ({
     }, [isOpen, prefersReducedMotion, setIsOpen])
 
     useEffect(() => {
-        if (!isOpen) return
+        // The portal is hidden until measured. Focus only after its visible commit;
+        // a position change alone must not steal focus from month controls.
+        if (!isOpen || !popoverPositioned) return
         if (activeCellRef.current) {
             activeCellRef.current.focus({ preventScroll: prefersReducedMotion })
         }
-    }, [isOpen, viewDate, focusedDate, prefersReducedMotion])
+    }, [isOpen, popoverPositioned, viewDate, focusedDate, prefersReducedMotion])
 
     useEffect(() => {
         if (previouslyOpenRef.current && !isOpen && buttonRef.current) {
@@ -321,7 +326,8 @@ const Clock = ({
             new Intl.DateTimeFormat(undefined, {
                 weekday: 'long',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
+                year: 'numeric'
             }),
         []
     )
@@ -438,7 +444,10 @@ const Clock = ({
     const popoverStyle = isOpen
         ? {
             ...popoverStyles,
-            visibility: typeof popoverStyles.top === 'number' ? 'visible' : 'hidden'
+            // Visibility must change immediately before focus; only visual properties
+            // may transition, otherwise the first focused day remains hidden at t=0.
+            transitionProperty: 'opacity, transform',
+            visibility: popoverPositioned ? 'visible' : 'hidden'
         }
         : popoverStyles
 
@@ -453,9 +462,9 @@ const Clock = ({
             style={popoverStyle}
         >
             <div className="mb-4 flex items-center justify-between rounded-2xl border border-white/5 bg-white/5 px-3 py-2 shadow-inner">
-                <div className="flex flex-col" aria-live="polite" id={headingId}>
+                <div className="flex flex-col">
                     <span className="text-[0.65rem] uppercase tracking-[0.22em] text-cyan-200/70">{friendlyDateLabel}</span>
-                    <span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
+                    <span id={headingId} aria-live="polite" className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>
                     <span className="text-xs font-medium tracking-tight text-white/60">{friendlyTimeLabel}</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -512,6 +521,7 @@ const Clock = ({
                                     >
                                         <button
                                             type="button"
+                                            aria-label={friendlyDateFormatter.format(date)}
                                             onClick={handleDayClick}
                                             onKeyDown={(event) => handleDayKeyDown(event, date)}
                                             className={`flex h-9 w-9 items-center justify-center rounded-2xl text-sm font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950 ${inCurrentMonth ? 'text-white' : 'text-white/35'
@@ -583,7 +593,7 @@ const Clock = ({
                 aria-expanded={isOpen}
                 aria-controls={popoverId}
             >
-                <span className={textClassName} aria-live="polite">
+                <span className={textClassName}>
                     {displayTime}
                 </span>
                 {showCalendar && !isMinimal ? (

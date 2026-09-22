@@ -836,3 +836,36 @@ html {
   [data-window-compact="true"] input:not([type="checkbox"]):not([type="radio"]),
   [data-window-compact="true"] textarea, [data-window-compact="true"] select { font-size: max(16px, 1em); }
 }
+
+
+/* Browser-local accessibility preferences apply to desktop surfaces, including
+   portaled menus and previews, not just the Settings window. */
+html[data-reduce-transparency="true"] {
+  --color-surface-muted-alpha: 1;
+  --color-surface-raised-alpha: 1;
+  --color-overlay-strong-alpha: 1;
+  --color-overlay-soft-alpha: 1;
+  --kali-panel-alpha: 1;
+  --kali-bg-alpha: 1;
+}
+html[data-reduce-transparency="true"] :is(
+  .main-navbar-vp, .glass, .glass-subtle,
+  [aria-label="Phone taskbar"], [data-testid="whisker-menu-dropdown"],
+  [role="menu"], [role="dialog"], [data-window-titlebar]
+) {
+  background-color: var(--color-surface, #111b24) !important;
+  background-image: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html[data-strong-focus="true"] :focus-visible {
+  outline: 3px solid #ffffff !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 0 6px #07111e !important;
+}
+@media (forced-colors: active) {
+  html[data-strong-focus="true"] :focus-visible {
+    outline-color: Highlight !important;
+    box-shadow: none !important;
+  }
+}

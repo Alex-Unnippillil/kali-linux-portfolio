@@ -1717,10 +1717,26 @@
   }
   .mobileNav {
     display: block;
+    position: relative;
     grid-column: 2;
     grid-row: 1;
   }
+  .mobileNav::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    right: 13px;
+    top: calc(50% - 4px);
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid #b6c4d6;
+    border-bottom: 2px solid #b6c4d6;
+    transform: rotate(45deg);
+  }
   .mobileNav select {
+    appearance: none;
+    -webkit-appearance: none;
+    color-scheme: dark;
     color: #e0eaf6;
     background: #1d2b3c;
     border: 1px solid #ffffff24;
@@ -1728,7 +1744,7 @@
     min-height: 42px;
     width: 100%;
     min-width: 0;
-    padding: 8px 6px;
+    padding: 8px 32px 8px 10px;
     font-size: 0.69rem;
   }
   .topbar {

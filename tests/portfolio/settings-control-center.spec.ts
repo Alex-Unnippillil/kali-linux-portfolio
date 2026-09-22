@@ -181,7 +181,12 @@ test("phone settings categories remain readable, accessible and contained throug
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/apps/settings");
   const app = await ready(page);
-  await expect(app.getByRole("combobox", { name: "Settings category" })).toBeVisible();
+  const mobileCategory = app.getByRole("combobox", { name: "Settings category" });
+  await expect(mobileCategory).toBeVisible();
+  await expect(mobileCategory).toHaveCSS("appearance", "none");
+  await expect(mobileCategory).toHaveCSS("color-scheme", "dark");
+  await expect(mobileCategory).toHaveCSS("background-color", "rgb(29, 43, 60)");
+  await expect(mobileCategory).toHaveCSS("color", "rgb(224, 234, 246)");
   await screenshot(page, browserName, "overview-phone");
   for (const [id] of categories) {
     await category(app, id);
@@ -197,6 +202,8 @@ test("phone settings categories remain readable, accessible and contained throug
   await app.getByRole("radio", { name: "Compact", exact: true }).check();
   await noOverflow(app);
   await screenshot(page, browserName, "display-phone-large-text");
+  const largeTextAccessibility = await new AxeBuilder({ page }).include('[data-testid="settings-center"]').withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+  expect(largeTextAccessibility.violations).toEqual([]);
   await page.setViewportSize({ width: 844, height: 390 });
   await expect(app.getByRole("heading", { level: 1, name: "Display & accessibility", exact: true })).toBeVisible();
   await noOverflow(app);
@@ -251,11 +258,13 @@ test("desktop settings affect real wallpaper, global focus and panels, and clock
   const calendar = page.getByRole("dialog", { name: "Calendar", exact: true });
   await expect(calendar).toBeVisible();
   await expect(calendar).toHaveCSS("backdrop-filter", "none");
+  await expect(calendar).toHaveCSS("transition-property", "opacity, transform");
   const selectedDay = calendar.getByRole("grid").locator('button[tabindex="0"]');
   await expect(selectedDay).toBeFocused();
   await selectedDay.press("PageDown");
   await expect(calendar.getByRole("grid", { name: "October 2026", exact: true })).toBeVisible();
   const selectedDate = await selectedDay.getAttribute("aria-label");
+  expect(selectedDate).toBe("Thursday, October 22, 2026");
   const previousTime = await clock.innerText();
   await expect.poll(() => clock.innerText()).not.toBe(previousTime);
   await expect(calendar.getByRole("grid", { name: "October 2026", exact: true })).toBeVisible();
