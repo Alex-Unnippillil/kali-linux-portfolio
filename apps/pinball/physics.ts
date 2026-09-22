@@ -1,478 +1,429 @@
-import type Matter from "matter-js";
+import { Bodies, Body, Composite, Engine, Events, Vector } from 'matter-js';
+import type { IEventCollision } from 'matter-js';
+import { PinballRules, clamp, type HitKind, type RuleState } from './rules';
 import {
-  Bodies,
-  Body,
-  Engine,
-  Events,
-  Render,
-  World,
-} from "matter-js";
+  WIDTH, HEIGHT, BALL_RADIUS, SHOOTER, LEFT_PIVOT, RIGHT_PIVOT,
+  FLIPPER_LENGTH, REST_ANGLE, ACTIVE_ANGLE, RAILS, BUMPERS, LANES, TARGETS,
+  SLINGS, flipperCenter, type Point, type ThemeConfig,
+} from './table';
+import { createPinballRenderer, type Scene, type Particle } from './renderer';
+export type { ThemeConfig } from './table';
 
-const WIDTH = 400;
-const HEIGHT = 600;
-const BALL_RADIUS = 12;
-const DEFAULT_LEFT_ANGLE = Math.PI / 8;
-const DEFAULT_RIGHT_ANGLE = -Math.PI / 8;
-const MAX_SPARKS = 60;
-const PLUNGER_X = WIDTH - 60;
-const PLUNGER_Y = HEIGHT - 110;
-const BUMPER_RADIUS = 28;
-const DRAIN_LABEL = "drain";
-const BUMPER_LABEL = "bumper";
-const SLING_LABEL = "sling";
-const TARGET_LABEL = "target";
-
-export interface ThemeConfig {
-  bg: string;
-  flipper: string;
-}
-
+const FIXED_STEP = 1 / 120;
+const MAX_STEPS = 8;
+const MAX_SPEED = 24; // Matter velocities are normalised to a 60 Hz base tick.
 export interface PinballCallbacks {
   onScore: (points: number) => void;
   onBallLost?: () => void;
+  onState?: (state: RuleState) => void;
+  onSound?: (kind: string) => void;
 }
-
+export interface Inspection {
+  state: RuleState;
+  balls: { x: number; y: number; vx: number; vy: number }[];
+  flippers: { x: number; y: number; angle: number; pivot: Point }[];
+  steps: number;
+  bodyCount: number;
+}
 export interface PinballWorld {
-  step: (delta: number) => void;
+  step: (seconds: number) => void;
+  draw: () => void;
   destroy: () => void;
-  setBounce: (bounce: number) => void;
-  setTheme: (theme: ThemeConfig) => void;
+  setBounce: (value: number) => void;
+  setTheme: (value: ThemeConfig) => void;
+  setReducedMotion: (value: boolean) => void;
+  setFlipperPower: (value: number) => void;
   setLeftFlipper: (angle: number) => void;
   setRightFlipper: (angle: number) => void;
   resetFlippers: () => void;
-  nudge: (force: { x: number; y: number }) => void;
+  nudge: (force?: Point) => void;
   resetBall: () => void;
+  resetGame: () => void;
   launchBall: (power: number) => void;
   isBallLocked: () => boolean;
+  inspect: () => Inspection;
+}
+interface GameBall {
+  body: Body;
+  inShooter: boolean;
+  idle: number;
+  trail: Point[];
+  strikes: [number, number];
+}
+interface Flipper {
+  body: Body;
+  pivot: Point;
+  angle: number;
+  target: number;
+  rest: number;
+  stroke: number;
+  rising: boolean;
 }
 
-interface Spark {
-  x: number;
-  y: number;
-  life: number;
-  hue: number;
-}
-
-interface LaneGlow {
-  left: boolean;
-  right: boolean;
-}
-
-type Lane = keyof LaneGlow;
-
+/** No Runner or Render RAF: the app owns the only animation loop and pause clock. */
 export function createPinballWorld(
-  canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement | null,
   callbacks: PinballCallbacks,
-  theme: ThemeConfig,
-  bounce: number,
+  initialTheme: ThemeConfig,
+  bounce = 0.5,
 ): PinballWorld {
-  const engine = Engine.create();
-  engine.gravity.y = 1.1;
+  const engine = Engine.create({ positionIterations: 8, velocityIterations: 8 });
+  engine.gravity.y = 1;
+  const rules = new PinballRules();
+  const renderer = canvas ? createPinballRenderer(canvas) : null;
+  const entities = new Map<number, { kind: HitKind; index: number }>();
+  const flashes = new Map<string, number>();
+  const particles: Particle[] = [];
+  const balls: GameBall[] = [];
+  let theme = initialTheme;
+  let reducedMotion = false;
+  let disposed = false;
+  let accumulator = 0;
+  let clock = 0;
+  let steps = 0;
+  let lastReport = -Infinity;
+  let flipperPower = 1;
+  let extraBalls = 0;
+  let launchPower = 0.8;
+  let eventDirty = true;
 
-  const render = Render.create({
-    canvas,
-    engine,
-    options: {
-      width: WIDTH,
-      height: HEIGHT,
-      wireframes: false,
-      background: theme.bg,
-    },
-  });
-
-  const spawnPosition = { x: PLUNGER_X, y: PLUNGER_Y };
-
-  const ball = Bodies.circle(spawnPosition.x, spawnPosition.y, BALL_RADIUS, {
-    restitution: 0.92,
-    friction: 0.001,
-    render: { visible: false },
-    label: "ball",
-  });
-
-  Body.setInertia(ball, Infinity);
-
-  const boundaries = [
-    Bodies.rectangle(WIDTH / 2, -20, WIDTH, 40, { isStatic: true }),
-    Bodies.rectangle(WIDTH / 2, HEIGHT + 20, WIDTH, 40, { isStatic: true, isSensor: true, label: DRAIN_LABEL }),
-    Bodies.rectangle(-20, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
-    Bodies.rectangle(WIDTH + 20, HEIGHT / 2, 40, HEIGHT, { isStatic: true }),
-  ];
-
-  const funnelGuides = [
-    Bodies.rectangle(WIDTH / 2 - 70, 130, 140, 16, {
-      isStatic: true,
-      angle: 0.32,
-      render: { fillStyle: "#1f2937" },
-    }),
-    Bodies.rectangle(WIDTH / 2 + 70, 130, 140, 16, {
-      isStatic: true,
-      angle: -0.32,
-      render: { fillStyle: "#1f2937" },
-    }),
-    Bodies.rectangle(WIDTH - 40, HEIGHT / 2, 20, HEIGHT, { isStatic: true }),
-    Bodies.rectangle(WIDTH - 100, HEIGHT - 60, 160, 16, {
-      isStatic: true,
-      angle: -0.3,
-      render: { fillStyle: "#1f2937" },
-    }),
-  ];
-
-  const leftFlipper = Bodies.rectangle(120, HEIGHT - 40, 80, 20, {
-    isStatic: true,
-    angle: DEFAULT_LEFT_ANGLE,
-    restitution: bounce,
-    render: { fillStyle: theme.flipper },
-  });
-
-  const rightFlipper = Bodies.rectangle(WIDTH - 120, HEIGHT - 40, 80, 20, {
-    isStatic: true,
-    angle: DEFAULT_RIGHT_ANGLE,
-    restitution: bounce,
-    render: { fillStyle: theme.flipper },
-  });
-
-  const leftLane = Bodies.rectangle(80, 80, 40, 10, {
-    isStatic: true,
-    isSensor: true,
-    label: "lane-left",
-  });
-
-  const rightLane = Bodies.rectangle(WIDTH - 80, 80, 40, 10, {
-    isStatic: true,
-    isSensor: true,
-    label: "lane-right",
-  });
-
-  const bumpers = [
-    Bodies.circle(WIDTH / 2, 210, BUMPER_RADIUS, {
-      isStatic: true,
-      restitution: 1.3,
-      label: `${BUMPER_LABEL}-center`,
-      render: { fillStyle: "#f59e0b" },
-    }),
-    Bodies.circle(WIDTH / 2 - 80, 260, BUMPER_RADIUS, {
-      isStatic: true,
-      restitution: 1.25,
-      label: `${BUMPER_LABEL}-left`,
-      render: { fillStyle: "#f59e0b" },
-    }),
-    Bodies.circle(WIDTH / 2 + 80, 260, BUMPER_RADIUS, {
-      isStatic: true,
-      restitution: 1.25,
-      label: `${BUMPER_LABEL}-right`,
-      render: { fillStyle: "#f59e0b" },
-    }),
-  ];
-
-  const slings = [
-    Bodies.rectangle(85, HEIGHT - 120, 120, 16, {
-      isStatic: true,
-      angle: 0.7,
-      restitution: 1.05,
-      label: `${SLING_LABEL}-left`,
-      render: { fillStyle: "#4ade80" },
-    }),
-    Bodies.rectangle(WIDTH - 85, HEIGHT - 120, 120, 16, {
-      isStatic: true,
-      angle: -0.7,
-      restitution: 1.05,
-      label: `${SLING_LABEL}-right`,
-      render: { fillStyle: "#4ade80" },
-    }),
-  ];
-
-  const targets = [
-    Bodies.rectangle(120, 320, 14, 40, {
-      isStatic: true,
-      isSensor: true,
-      label: `${TARGET_LABEL}-1`,
-    }),
-    Bodies.rectangle(WIDTH - 120, 320, 14, 40, {
-      isStatic: true,
-      isSensor: true,
-      label: `${TARGET_LABEL}-2`,
-    }),
-    Bodies.rectangle(WIDTH / 2, 360, 14, 40, {
-      isStatic: true,
-      isSensor: true,
-      label: `${TARGET_LABEL}-3`,
-    }),
-  ];
-
-  World.add(engine.world, [
-    ball,
-    ...boundaries,
-    ...funnelGuides,
-    leftFlipper,
-    rightFlipper,
-    leftLane,
-    rightLane,
-    ...bumpers,
-    ...slings,
-    ...targets,
-  ]);
-
-  const sparks: Spark[] = [];
-  const glow: LaneGlow = { left: false, right: false };
-  const glowTimers: Partial<Record<Lane, number>> = {};
-  const bumperTimers = new Map<Matter.Body, number>();
-  const targetStates = new Map<Matter.Body, boolean>();
-  let locked = true;
-
-  const lightLane = (lane: Lane) => {
-    glow[lane] = true;
-    if (glowTimers[lane]) {
-      window.clearTimeout(glowTimers[lane]);
-    }
-    glowTimers[lane] = window.setTimeout(() => {
-      glow[lane] = false;
-    }, 500);
-  };
-
-  const flashBumper = (bumper: Matter.Body) => {
-    if (bumperTimers.has(bumper)) {
-      window.clearTimeout(bumperTimers.get(bumper));
-    }
-    bumper.render.fillStyle = "#fde68a";
-    const timer = window.setTimeout(() => {
-      bumper.render.fillStyle = "#f59e0b";
-      bumperTimers.delete(bumper);
-    }, 150);
-    bumperTimers.set(bumper, timer);
-  };
-
-  const dropTarget = (target: Matter.Body) => {
-    if (targetStates.get(target)) return;
-    targetStates.set(target, true);
-    callbacks.onScore(250);
-    const timer = window.setTimeout(() => {
-      targetStates.set(target, false);
-    }, 4000);
-    bumperTimers.set(target, timer);
-  };
-
-  const handleCollision = ({ pairs }: Matter.IEventCollision<Engine>) => {
-    pairs.forEach((pair) => {
-      const bodies = [pair.bodyA, pair.bodyB];
-      if (bodies.includes(ball) && bodies.includes(leftFlipper)) {
-        const { x, y } = pair.collision.supports[0];
-        sparks.push({ x, y, life: 1, hue: 45 });
-      }
-      if (bodies.includes(ball) && bodies.includes(rightFlipper)) {
-        const { x, y } = pair.collision.supports[0];
-        sparks.push({ x, y, life: 1, hue: 45 });
-      }
-      if (bodies.includes(ball) && bodies.includes(leftLane)) {
-        lightLane("left");
-        callbacks.onScore(100);
-      }
-      if (bodies.includes(ball) && bodies.includes(rightLane)) {
-        lightLane("right");
-        callbacks.onScore(100);
-      }
-      bumpers.forEach((bumper) => {
-        if (bodies.includes(ball) && bodies.includes(bumper)) {
-          const { x, y } = pair.collision.supports[0];
-          sparks.push({ x, y, life: 1, hue: 50 });
-          flashBumper(bumper);
-          callbacks.onScore(50);
-        }
-      });
-      slings.forEach((sling) => {
-        if (bodies.includes(ball) && bodies.includes(sling)) {
-          const { x, y } = pair.collision.supports[0];
-          sparks.push({ x, y, life: 1, hue: 150 });
-          callbacks.onScore(25);
-        }
-      });
-      targets.forEach((target) => {
-        if (bodies.includes(ball) && bodies.includes(target)) {
-          dropTarget(target);
-        }
-      });
-      const drain = boundaries[1];
-      if (bodies.includes(ball) && bodies.includes(drain)) {
-        locked = true;
-        callbacks.onBallLost?.();
-      }
-    });
-  };
-
-  const handleAfterRender = () => {
-    const ctx = render.context;
-    const { x, y } = ball.position;
-    const gradient = ctx.createRadialGradient(
-      x - 4,
-      y - 4,
-      BALL_RADIUS / 4,
-      x,
-      y,
-      BALL_RADIUS,
-    );
-    gradient.addColorStop(0, "#fff");
-    gradient.addColorStop(1, "#999");
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(x, y, BALL_RADIUS, 0, Math.PI * 2);
-    ctx.fill();
-
-    const drawLane = (lane: Body, active: boolean) => {
-      const { x: lx, y: ly } = lane.position;
-      ctx.save();
-      if (active) {
-        ctx.shadowColor = "#ffff00";
-        ctx.shadowBlur = 20;
-        ctx.fillStyle = "#ff0";
-      } else {
-        ctx.fillStyle = "#555";
-      }
-      ctx.fillRect(lx - 20, ly - 5, 40, 10);
-      ctx.restore();
+  const rails = RAILS.map(([x1, y1, x2, y2]) => Bodies.rectangle(
+    (x1 + x2) / 2, (y1 + y2) / 2, Math.hypot(x2 - x1, y2 - y1) + 6, 12,
+    { isStatic: true, angle: Math.atan2(y2 - y1, x2 - x1), restitution: 0.65, friction: 0.01, label: 'rail' },
+  ));
+  const flippers: Flipper[] = [
+    { pivot: LEFT_PIVOT, angle: REST_ANGLE },
+    { pivot: RIGHT_PIVOT, angle: Math.PI - REST_ANGLE },
+  ].map(({ pivot, angle }) => {
+    const center = flipperCenter(pivot, angle);
+    return {
+      pivot, angle, target: angle, rest: angle, stroke: 0, rising: false,
+      body: Bodies.rectangle(center.x, center.y, FLIPPER_LENGTH + 8, 16, {
+        isStatic: true, angle, chamfer: { radius: 7 }, friction: 0.15,
+        restitution: clamp(bounce, 0, 1, 0.5), label: 'flipper',
+      }),
     };
+  });
+  const register = (body: Body, kind: HitKind, index: number) => {
+    entities.set(body.id, { kind, index });
+    return body;
+  };
+  const bumpers = BUMPERS.map((b, index) => register(Bodies.circle(b.x, b.y, b.r, {
+    isStatic: true, restitution: 0.95, friction: 0, label: `bumper-${index}`,
+  }), 'bumper', index));
+  const lanes = LANES.map((p, index) => register(Bodies.rectangle(p.x, p.y, 57, 15, {
+    isStatic: true, isSensor: true, label: `lane-${index}`,
+  }), 'lane', index));
+  const targets = TARGETS.map((p, index) => register(Bodies.rectangle(p.x, p.y, 18, 29, {
+    isStatic: true, restitution: 0.8, chamfer: { radius: 3 }, label: `target-${index}`,
+  }), 'target', index));
+  const slings = SLINGS.map((vertices, index) => {
+    const center = vertices.reduce((sum, p) => ({ x: sum.x + p.x / 3, y: sum.y + p.y / 3 }), { x: 0, y: 0 });
+    return register(Bodies.fromVertices(center.x, center.y, [vertices.map((v) => ({ ...v }))], {
+      isStatic: true, restitution: 0.9, label: `sling-${index}`,
+    }), 'sling', index);
+  });
+  const spinner = register(Bodies.rectangle(197, 342, 52, 9, {
+    isStatic: true, isSensor: true, label: 'spinner',
+  }), 'spinner', 0);
+  Composite.add(engine.world, [...rails, ...flippers.map((f) => f.body), ...bumpers, ...lanes, ...targets, ...slings, spinner]);
 
-    drawLane(leftLane, glow.left);
-    drawLane(rightLane, glow.right);
-
-    bumpers.forEach((bumper) => {
-      const angle = bumper.render.fillStyle === "#fde68a" ? 0.6 : 0.3;
-      ctx.save();
-      ctx.translate(bumper.position.x, bumper.position.y);
-      const gradientBumper = ctx.createRadialGradient(0, 0, 6, 0, 0, BUMPER_RADIUS);
-      gradientBumper.addColorStop(0, "rgba(255,255,255,0.9)");
-      gradientBumper.addColorStop(1, bumper.render.fillStyle || "#f59e0b");
-      ctx.fillStyle = gradientBumper;
-      ctx.beginPath();
-      ctx.arc(0, 0, BUMPER_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.4)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.restore();
+  const report = (force = false) => {
+    if (disposed) return;
+    if (force || eventDirty || clock - lastReport >= 0.1) {
+      lastReport = clock;
+      eventDirty = false;
+      callbacks.onState?.(rules.snapshot());
+    }
+  };
+  const createBall = (position: Point, locked = false, velocity: Point = { x: 0, y: 0 }) => {
+    const body = Bodies.circle(position.x, position.y, BALL_RADIUS, {
+      restitution: 0.72, friction: 0.002, frictionStatic: 0,
+      frictionAir: 0.0015, density: 0.004, slop: 0.01, label: 'ball',
     });
-
-    targets.forEach((target) => {
-      ctx.save();
-      ctx.translate(target.position.x, target.position.y);
-      ctx.fillStyle = targetStates.get(target) ? "#111827" : "#f43f5e";
-      ctx.fillRect(-7, -20, 14, 40);
-      if (!targetStates.get(target)) {
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.fillRect(-7, -18, 14, 6);
-      }
-      ctx.restore();
+    Body.setInertia(body, Infinity);
+    Body.setStatic(body, locked);
+    if (!locked) Body.setVelocity(body, velocity);
+    balls.push({ body, inShooter: locked, idle: 0, trail: [], strikes: [-1, -1] });
+    Composite.add(engine.world, body);
+  };
+  const removeBall = (ball: GameBall) => {
+    Composite.remove(engine.world, ball.body);
+    const index = balls.indexOf(ball);
+    if (index >= 0) balls.splice(index, 1);
+  };
+  const serve = () => {
+    balls.slice().forEach(removeBall);
+    if (rules.snapshot().phase !== 'over') createBall(SHOOTER, true);
+  };
+  const burst = (position: Point, color: string, text: string) => {
+    if (reducedMotion) return;
+    // Bounded deterministic effects, not one timeout or random allocation per hit.
+    for (let i = 0; i < 6; i += 1) {
+      const angle = i * Math.PI / 3;
+      particles.push({ x: position.x, y: position.y, vx: Math.cos(angle) * 46, vy: Math.sin(angle) * 46,
+        life: 0.38, color, text: i === 0 ? text : '' });
+    }
+    if (particles.length > 72) particles.splice(0, particles.length - 72);
+  };
+  const boundSpeed = (body: Body) => {
+    const velocity = Body.getVelocity(body);
+    const speed = Math.hypot(velocity.x, velocity.y);
+    if (!Number.isFinite(speed)) {
+      Body.setPosition(body, { x: 197, y: 170 });
+      Body.setVelocity(body, { x: 0, y: 3 });
+    } else if (speed > MAX_SPEED) {
+      Body.setVelocity(body, { x: velocity.x * MAX_SPEED / speed, y: velocity.y * MAX_SPEED / speed });
+    }
+  };
+  const kick = (body: Body, origin: Point, speed: number) => {
+    const difference = Vector.sub(body.position, origin);
+    const length = Math.hypot(difference.x, difference.y);
+    const normal = length > 0.001 ? Vector.mult(difference, 1 / length) : { x: 0, y: -1 };
+    const velocity = Body.getVelocity(body);
+    const outward = Vector.dot(velocity, normal);
+    const impulse = Math.max(0, speed - outward);
+    Body.setVelocity(body, Vector.add(velocity, Vector.mult(normal, impulse)));
+    boundSpeed(body);
+  };
+  const strike = (ball: GameBall, flipper: Flipper, index: number) => {
+    if (!flipper.rising || rules.snapshot().tilted || ball.strikes[index] === flipper.stroke) return;
+    ball.strikes[index] = flipper.stroke;
+    const relative = Vector.sub(ball.body.position, flipper.pivot);
+    const lever = clamp(Math.hypot(relative.x, relative.y) / FLIPPER_LENGTH, 0.18, 1);
+    const velocity = Body.getVelocity(ball.body);
+    Body.setVelocity(ball.body, {
+      x: velocity.x * 0.35 + (index === 0 ? 1 : -1) * (2 + lever * 4),
+      y: Math.min(velocity.y, -(8 + lever * 12) * flipperPower),
     });
-
-    for (let i = sparks.length - 1; i >= 0; i -= 1) {
-      const spark = sparks[i];
-      const radius = 8 * spark.life;
-      const sparkGradient = ctx.createRadialGradient(
-        spark.x,
-        spark.y,
-        0,
-        spark.x,
-        spark.y,
-        radius,
-      );
-      const hue = spark.hue ?? 45;
-      sparkGradient.addColorStop(0, `hsla(${hue}, 100%, 70%, 0.9)`);
-      sparkGradient.addColorStop(1, "rgba(255,200,0,0)");
-      ctx.fillStyle = sparkGradient;
-      ctx.beginPath();
-      ctx.arc(spark.x, spark.y, radius, 0, Math.PI * 2);
-      ctx.fill();
-      spark.life -= 0.05;
-      if (spark.life <= 0) {
-        sparks.splice(i, 1);
-      }
+    boundSpeed(ball.body);
+    burst(ball.body.position, theme.flipper, '');
+    callbacks.onSound?.('flipper');
+  };
+  const collide = (event: IEventCollision<Engine>) => {
+    if (disposed || rules.snapshot().phase !== 'playing') return;
+    for (const pair of event.pairs) {
+      const ball = balls.find((b) => b.body === pair.bodyA || b.body === pair.bodyB);
+      if (!ball) continue;
+      const other = pair.bodyA === ball.body ? pair.bodyB : pair.bodyA;
+      const flipperIndex = flippers.findIndex((f) => f.body === other);
+      if (flipperIndex >= 0) strike(ball, flippers[flipperIndex], flipperIndex);
+      // collisionActive is only for striking a ball already resting on a flipper.
+      if (event.name !== 'collisionStart') continue;
+      const entity = entities.get(other.id);
+      if (!entity) continue;
+      const result = rules.hit(entity.kind, entity.index);
+      if (result.points <= 0) continue;
+      if (entity.kind === 'bumper') kick(ball.body, other.position, 12.5);
+      if (entity.kind === 'sling') kick(ball.body, other.position, 10);
+      flashes.set(`${entity.kind}:${entity.index}`, clock + 0.18);
+      burst(ball.body.position, theme.accent || theme.flipper, `+${result.points}`);
+      if (result.multiball) extraBalls += 2;
+      eventDirty = true;
+      callbacks.onScore(result.points);
+      callbacks.onSound?.(result.kind);
     }
-
-    while (sparks.length > MAX_SPARKS) {
-      sparks.shift();
-    }
   };
+  Events.on(engine, 'collisionStart', collide);
+  Events.on(engine, 'collisionActive', collide);
 
-  Events.on(engine, "collisionStart", handleCollision);
-  Events.on(render, "afterRender", handleAfterRender);
-
-  const step = (delta: number) => {
-    Engine.update(engine, delta * 1000);
-    if (locked) {
-      Body.setPosition(ball, spawnPosition);
-      Body.setVelocity(ball, { x: 0, y: 0 });
-    }
-    Render.world(render);
+  const moveFlippers = () => {
+    flippers.forEach((f, index) => {
+      const difference = f.target - f.angle;
+      const maxMove = FIXED_STEP * (Math.abs(f.target - f.rest) > 0.05 ? 13 * flipperPower : 8);
+      const next = f.angle + clamp(difference, -maxMove, maxMove, 0);
+      f.rising = Math.abs(difference) > 0.001 && (index === 0 ? difference < 0 : difference > 0);
+      f.angle = next;
+      Body.setPosition(f.body, flipperCenter(f.pivot, next), true);
+      Body.setAngle(f.body, next, true);
+    });
   };
-
-  const setBounce = (value: number) => {
-    leftFlipper.restitution = value;
-    rightFlipper.restitution = value;
-  };
-
-  const setTheme = (value: ThemeConfig) => {
-    (render.options as any).background = value.bg;
-    leftFlipper.render.fillStyle = value.flipper;
-    rightFlipper.render.fillStyle = value.flipper;
-  };
-
-  const setLeftFlipper = (angle: number) => {
-    Body.setAngle(leftFlipper, angle);
-  };
-
-  const setRightFlipper = (angle: number) => {
-    Body.setAngle(rightFlipper, angle);
-  };
-
   const resetFlippers = () => {
-    setLeftFlipper(DEFAULT_LEFT_ANGLE);
-    setRightFlipper(DEFAULT_RIGHT_ANGLE);
+    if (disposed) return;
+    flippers.forEach((f) => {
+      f.target = f.rest;
+      f.angle = f.rest;
+      f.rising = false;
+      Body.setPosition(f.body, flipperCenter(f.pivot, f.rest));
+      Body.setAngle(f.body, f.rest);
+      Body.setVelocity(f.body, { x: 0, y: 0 });
+      Body.setAngularVelocity(f.body, 0);
+    });
   };
-
-  const resetBall = () => {
-    Body.setPosition(ball, spawnPosition);
-    Body.setVelocity(ball, { x: 0, y: 0 });
-    locked = true;
+  const draw = () => {
+    if (disposed || !renderer) return;
+    const scene: Scene = {
+      theme, state: rules.snapshot(), time: clock, reducedMotion, flashes, particles,
+      balls: balls.map((b) => ({ x: b.body.position.x, y: b.body.position.y, trail: b.trail })),
+      flippers: flippers.map((f) => ({ pivot: f.pivot, angle: f.angle })),
+    };
+    renderer.draw(scene);
   };
-
-  const nudge = (force: { x: number; y: number }) => {
-    Body.applyForce(ball, ball.position, force);
+  const fixedUpdate = () => {
+    clock += FIXED_STEP;
+    steps += 1;
+    rules.advance(FIXED_STEP);
+    const state = rules.snapshot();
+    targets.forEach((target, index) => { target.isSensor = Boolean(state.targetMask & (1 << index)); });
+    moveFlippers();
+    balls.forEach((b) => boundSpeed(b.body));
+    Engine.update(engine, FIXED_STEP * 1000);
+    if (extraBalls > 0) {
+      createBall({ x: 165, y: 163 }, false, { x: -3, y: 2 });
+      createBall({ x: 229, y: 163 }, false, { x: 3, y: 2 });
+      extraBalls = 0;
+    }
+    for (const ball of balls.slice()) {
+      if (ball.body.isStatic) continue;
+      const p = ball.body.position;
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y)) {
+        Body.setPosition(ball.body, { x: 197, y: 170 });
+        Body.setVelocity(ball.body, { x: 0, y: 3 });
+        ball.inShooter = false;
+      }
+      if (ball.inShooter && p.y < 165) {
+        ball.inShooter = false;
+        Body.setVelocity(ball.body, { x: -5.5 - launchPower * 2, y: -7 - launchPower * 2.5 });
+      }
+      if (ball.inShooter && p.y > SHOOTER.y + 6 && ball.body.velocity.y > 0) {
+        rules.returnToShooter();
+        serve();
+        eventDirty = true;
+        break;
+      }
+      if (p.y > HEIGHT + BALL_RADIUS || p.x < -BALL_RADIUS * 2 || p.x > WIDTH + BALL_RADIUS * 2) {
+        const result = rules.drain();
+        removeBall(ball);
+        if (result !== 'remove' && result !== 'ignore') {
+          resetFlippers();
+          serve();
+          if (result === 'next' || result === 'over') callbacks.onBallLost?.();
+          callbacks.onSound?.(result === 'save' ? 'save' : 'drain');
+        }
+        eventDirty = true;
+        continue;
+      }
+      boundSpeed(ball.body);
+      const velocity = Body.getVelocity(ball.body);
+      const cradled = p.y > 575 && flippers.some((f) => Math.abs(f.target - f.rest) > 0.1);
+      ball.idle = !cradled && Math.hypot(velocity.x, velocity.y) < 0.35 ? ball.idle + FIXED_STEP : 0;
+      if (ball.idle > 5) {
+        // Recover a genuinely stuck ball, but never eject an intentional cradle.
+        Body.setVelocity(ball.body, { x: p.x < WIDTH / 2 ? 2 : -2, y: -5 });
+        ball.idle = 0;
+      }
+      if (!reducedMotion && steps % 2 === 0) {
+        ball.trail.unshift({ x: p.x, y: p.y });
+        if (ball.trail.length > 9) ball.trail.pop();
+      }
+    }
+    for (let i = particles.length - 1; i >= 0; i -= 1) {
+      const particle = particles[i];
+      particle.life -= FIXED_STEP;
+      particle.x += particle.vx * FIXED_STEP;
+      particle.y += particle.vy * FIXED_STEP;
+      if (particle.life <= 0) particles.splice(i, 1);
+    }
+    flashes.forEach((until, key) => { if (until < clock) flashes.delete(key); });
   };
-
-  const launchBall = (power: number) => {
-    if (!locked) return;
-    locked = false;
-    const launchForce = Math.min(Math.max(power, 0.2), 1.5);
-    Body.setPosition(ball, spawnPosition);
-    Body.setVelocity(ball, { x: -launchForce * 2, y: -launchForce * 24 });
+  const setFlipper = (index: number, angle: number) => {
+    if (disposed || rules.snapshot().tilted || rules.snapshot().phase === 'over') return;
+    const f = flippers[index];
+    const relative = index === 0 ? clamp(angle, ACTIVE_ANGLE, REST_ANGLE, REST_ANGLE)
+      : clamp(angle, -REST_ANGLE, -ACTIVE_ANGLE, -REST_ANGLE);
+    const next = index === 0 ? relative : Math.PI + relative;
+    if (Math.abs(next - f.rest) > 0.1 && Math.abs(f.target - f.rest) <= 0.1) f.stroke += 1;
+    f.target = next;
   };
-
+  const resetGame = () => {
+    if (disposed) return;
+    rules.reset();
+    accumulator = 0;
+    extraBalls = 0;
+    particles.length = 0;
+    flashes.clear();
+    resetFlippers();
+    serve();
+    report(true);
+    draw();
+  };
+  serve();
+  report(true);
+  draw();
   return {
-    step,
-    destroy: () => {
-      Events.off(engine, "collisionStart", handleCollision);
-      Events.off(render, "afterRender", handleAfterRender);
-      Object.values(glowTimers).forEach((timer) => {
-        if (timer) window.clearTimeout(timer);
-      });
-      bumperTimers.forEach((timer) => window.clearTimeout(timer));
-      Render.stop(render);
-      World.clear(engine.world, false);
-      Engine.clear(engine);
+    step: (seconds) => {
+      if (disposed || !Number.isFinite(seconds) || seconds < 0) return;
+      accumulator += Math.min(seconds, FIXED_STEP * MAX_STEPS);
+      let count = 0;
+      while (accumulator + 1e-10 >= FIXED_STEP && count < MAX_STEPS) {
+        fixedUpdate();
+        accumulator = Math.max(0, accumulator - FIXED_STEP);
+        count += 1;
+      }
+      report();
+      draw();
     },
-    setBounce,
-    setTheme,
-    setLeftFlipper,
-    setRightFlipper,
+    draw,
+    destroy: () => {
+      if (disposed) return;
+      disposed = true;
+      Events.off(engine, 'collisionStart', collide);
+      Events.off(engine, 'collisionActive', collide);
+      Composite.clear(engine.world, false);
+      Engine.clear(engine);
+      balls.length = 0;
+      particles.length = 0;
+      flashes.clear();
+      renderer?.destroy();
+    },
+    setBounce: (value) => { if (!disposed) flippers.forEach((f) => { f.body.restitution = clamp(value, 0, 1, 0.5); }); },
+    setFlipperPower: (value) => { if (!disposed) flipperPower = clamp(value, 0.75, 1.25, 1); },
+    setTheme: (value) => { if (!disposed) { theme = value; draw(); } },
+    setReducedMotion: (value) => {
+      if (disposed) return;
+      reducedMotion = value;
+      particles.length = 0;
+      balls.forEach((b) => { b.trail.length = 0; });
+      draw();
+    },
+    setLeftFlipper: (angle) => setFlipper(0, angle),
+    setRightFlipper: (angle) => setFlipper(1, angle),
     resetFlippers,
-    nudge,
-    resetBall,
-    launchBall,
-    isBallLocked: () => locked,
+    nudge: (force = { x: 0, y: -1 }) => {
+      if (disposed) return;
+      const result = rules.nudge();
+      if (result === 'ignored') return;
+      if (result === 'tilt') resetFlippers();
+      else balls.forEach((b) => {
+        const v = Body.getVelocity(b.body);
+        Body.setVelocity(b.body, { x: v.x + clamp(force.x, -1, 1, 0) * 1.5, y: v.y - 2.4 });
+        boundSpeed(b.body);
+      });
+      callbacks.onSound?.(result);
+      report(true);
+    },
+    resetBall: () => { if (!disposed && rules.snapshot().phase === 'ready') { serve(); draw(); } },
+    resetGame,
+    launchBall: (power) => {
+      if (disposed || !rules.launch()) return;
+      launchPower = clamp(power, 0.4, 1.4, 0.8);
+      const ball = balls[0];
+      if (ball) {
+        ball.inShooter = true;
+        Body.setStatic(ball.body, false);
+        Body.setInertia(ball.body, Infinity);
+        Body.setVelocity(ball.body, { x: 0, y: -(18 + launchPower * 5) });
+      }
+      callbacks.onSound?.('launch');
+      report(true);
+    },
+    isBallLocked: () => rules.snapshot().phase === 'ready',
+    inspect: () => ({
+      state: rules.snapshot(),
+      balls: balls.map((b) => { const v = Body.getVelocity(b.body); return { x: b.body.position.x, y: b.body.position.y, vx: v.x, vy: v.y }; }),
+      flippers: flippers.map((f) => ({ x: f.body.position.x, y: f.body.position.y, angle: f.angle, pivot: { ...f.pivot } })),
+      steps, bodyCount: Composite.allBodies(engine.world).length,
+    }),
   };
 }
-
-export const constants = {
-  WIDTH,
-  HEIGHT,
-  DEFAULT_LEFT_ANGLE,
-  DEFAULT_RIGHT_ANGLE,
-};
+export const constants = { WIDTH, HEIGHT, DEFAULT_LEFT_ANGLE: REST_ANGLE, DEFAULT_RIGHT_ANGLE: -REST_ANGLE, FIXED_STEP, MAX_STEPS, MAX_SPEED };

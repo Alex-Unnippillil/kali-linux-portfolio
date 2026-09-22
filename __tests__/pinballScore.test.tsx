@@ -1,177 +1,68 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import React from "react";
-import Pinball from "../apps/pinball";
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import React from 'react';
+import Pinball from '../apps/pinball';
+import { __world, __rules, __emit, __state } from '../tests/helpers/pinball-world-mock';
+jest.mock('../apps/pinball/physics', () => require('../tests/helpers/pinball-world-mock'));
+jest.mock('../apps/pinball/audio', () => ({ createPinballAudio: () => ({ unlock: jest.fn(), play: jest.fn(), suspend: jest.fn(), destroy: jest.fn(), setMuted: jest.fn() }) }));
 
-jest.mock("../apps/pinball/physics", () => {
-  const mockWorld = {
-    step: jest.fn(),
-    destroy: jest.fn(),
-    setBounce: jest.fn(),
-    setTheme: jest.fn(),
-    setLeftFlipper: jest.fn(),
-    setRightFlipper: jest.fn(),
-    resetFlippers: jest.fn(),
-    nudge: jest.fn(),
-    resetBall: jest.fn(),
-    launchBall: jest.fn(),
-    isBallLocked: jest.fn(() => true),
-  };
-
-  let callbacks:
-    | { onScore: (value: number) => void; onBallLost?: () => void }
-    | null = null;
-
-  return {
-    createPinballWorld: jest.fn((_, cb) => {
-      callbacks = cb;
-      return mockWorld;
-    }),
-    __callbacks: () => callbacks,
-    __world: () => mockWorld,
-    constants: {
-      WIDTH: 400,
-      HEIGHT: 600,
-      DEFAULT_LEFT_ANGLE: Math.PI / 8,
-      DEFAULT_RIGHT_ANGLE: -Math.PI / 8,
-    },
-  };
-});
-
-jest.mock(
-  "../../components/apps/Games/common",
-  () => {
-    const React = require("react");
-    const { useEffect } = React;
-    const Overlay = () => <div data-testid="overlay" />;
-    const useGameLoop = (callback: (delta: number) => void, running = true) => {
-      useEffect(() => {
-        if (!running) return;
-        callback(0.016);
-      }, [callback, running]);
-    };
-    return { Overlay, useGameLoop };
-  },
-  { virtual: true },
-);
-
-describe("Pinball scoring", () => {
-  const OriginalAudioContext = window.AudioContext;
-  const OriginalWebkitAudioContext = (window as any).webkitAudioContext;
-  const originalGetGamepads = (navigator as any).getGamepads;
-
-  class FakeAudioContext {
-    public state: AudioContextState = "running";
-    public currentTime = 0;
-    public destination = {};
-    resume = jest.fn().mockResolvedValue(undefined);
-    createOscillator() {
-      return {
-        type: "sine",
-        frequency: { setValueAtTime: jest.fn() },
-        connect: jest.fn(),
-        start: jest.fn(),
-        stop: jest.fn(),
-      };
-    }
-    createGain() {
-      return {
-        gain: {
-          setValueAtTime: jest.fn(),
-          exponentialRampToValueAtTime: jest.fn(),
-        },
-        connect: jest.fn(),
-      };
-    }
-  }
-
+describe('Pinball score and ball lifecycle', () => {
   beforeEach(() => {
     localStorage.clear();
-    (window as any).AudioContext = FakeAudioContext as unknown as typeof AudioContext;
-    (window as any).webkitAudioContext = FakeAudioContext as unknown as typeof AudioContext;
-    (navigator as any).getGamepads = () => [];
-    const { __world } = require("../apps/pinball/physics");
-    const world = __world();
-    Object.values(world).forEach((value) => {
-      if (typeof value === "function" && "mockClear" in value) {
-        (value as jest.Mock).mockClear();
-      }
-    });
+    jest.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
   });
-
-  afterEach(() => {
-    window.AudioContext = OriginalAudioContext;
-    (window as any).webkitAudioContext = OriginalWebkitAudioContext;
-    if (originalGetGamepads) {
-      (navigator as any).getGamepads = originalGetGamepads;
-    } else {
-      delete (navigator as any).getGamepads;
-    }
-  });
-
-  it("updates score and persists high score", async () => {
-    const { __callbacks, __world } = require("../apps/pinball/physics");
+  afterEach(() => jest.restoreAllMocks());
+  it('persists a high score and preserves legacy scores and layouts', () => {
+    localStorage.setItem('pinball-highscores', JSON.stringify({ classic: 100 }));
+    localStorage.setItem('pinball-layouts', '{"classic":{"bumpers":[]}}');
     const { unmount } = render(<Pinball />);
-
-    expect(__world().resetBall).toHaveBeenCalled();
-    const callbacks = __callbacks();
-    expect(callbacks).toBeTruthy();
-
-    act(() => {
-      callbacks?.onScore(150);
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText("000150")).toBeInTheDocument();
-      expect(screen.getByText(/HI 000150/)).toBeInTheDocument();
-    });
-
-    unmount();
-
-    render(<Pinball />);
-
-    await waitFor(() => {
-      expect(screen.getByText(/HI 000150/)).toBeInTheDocument();
-    });
+    expect(screen.getByText('HI 000100')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Launch ball' }));
+    act(() => { __rules().hit('target', 0); __emit(); });
+    expect(screen.getByLabelText('Score')).toHaveTextContent('000250');
+    expect(localStorage.getItem('highscore:pinball')).toBe('250');
+    unmount(); render(<Pinball />);
+    expect(screen.getByText('HI 000250')).toBeInTheDocument();
+    expect(localStorage.getItem('pinball-layouts')).toBe('{"classic":{"bumpers":[]}}');
   });
-});
-
-describe("Pinball ball lifecycle", () => {
-  it("launches, tracks ball count, and ends the game", async () => {
-    const { __callbacks, __world } = require("../apps/pinball/physics");
+  it('launches atomically and never consumes two lives for duplicate drains', () => {
     render(<Pinball />);
-
-    const launchButton = screen.getByRole("button", { name: /launch ball/i });
-    expect(launchButton).toBeEnabled();
-    expect(screen.getByText(/Balls: 3/)).toBeInTheDocument();
-
-    fireEvent.click(launchButton);
+    const launch = screen.getByRole('button', { name: 'Launch ball' });
+    fireEvent.click(launch); fireEvent.click(launch);
+    expect(__world().launchBall).toHaveBeenCalledTimes(1);
     expect(__world().launchBall).toHaveBeenCalledWith(0.8);
-    expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
-
-    const callbacks = __callbacks();
-    act(() => {
-      callbacks?.onBallLost?.();
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText(/Balls: 2/)).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole("button", { name: /launch ball/i })).toBeEnabled();
-
-    act(() => {
-      callbacks?.onBallLost?.();
-      callbacks?.onBallLost?.();
-    });
-
-    await waitFor(() => {
-      const banner = screen.getByTestId("pinball-status-banner");
-      expect(
-        within(banner).getByText(/Hit reset to start a new run/i),
-      ).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole("button", { name: /launch ball/i })).toBeDisabled();
-    expect(__world().resetBall.mock.calls.length).toBeGreaterThanOrEqual(4);
+    act(() => { __rules().advance(8); __rules().drain(); __rules().drain(); __emit(); });
+    expect(screen.getByText('Balls: 2')).toBeInTheDocument();
+    expect(launch).toBeEnabled();
+    for (let life = 0; life < 2; life += 1) {
+      fireEvent.click(launch);
+      act(() => { __rules().advance(8); __rules().drain(); __emit(); });
+    }
+    expect(screen.getByRole('heading', { name: 'Game over' })).toBeInTheDocument();
+    expect(launch).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
+    expect(screen.getByText('Balls: 3')).toBeInTheDocument();
+    expect(__world().resetGame).toHaveBeenCalledTimes(1);
+  });
+  it('confirms a restart and never discards the best score', () => {
+    render(<Pinball />);
+    act(() => __state({ score: 150, phase: 'playing' }));
+    fireEvent.click(screen.getByRole('button', { name: 'New game' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(__world().resetGame).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Start new game' }));
+    expect(screen.getByLabelText('Score')).toHaveTextContent('000000');
+    expect(screen.getByText('HI 000150')).toBeInTheDocument();
+  });
+  it('survives corrupt settings and unavailable storage', () => {
+    localStorage.setItem('pinball-settings-v2', '{broken');
+    localStorage.setItem('highscore:pinball', 'Infinity');
+    const { unmount } = render(<Pinball />);
+    expect(screen.getByText('HI 000000')).toBeInTheDocument();
+    unmount();
+    jest.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
+    jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('blocked'); });
+    render(<Pinball />);
+    expect(screen.getByRole('button', { name: 'Launch ball' })).toBeEnabled();
   });
 });
