@@ -8,9 +8,9 @@ import {
 describe('network preference storage', () => {
   beforeEach(() => window.localStorage.clear());
 
-  test('defaults to enabled without persisting a synthetic preference', async () => {
-    expect(defaults.allowNetwork).toBe(true);
-    await expect(getAllowNetwork()).resolves.toBe(true);
+  test('defaults to disabled without persisting a synthetic preference', async () => {
+    expect(defaults.allowNetwork).toBe(false);
+    await expect(getAllowNetwork()).resolves.toBe(false);
     expect(window.localStorage.getItem('allow-network')).toBeNull();
   });
 
@@ -20,10 +20,10 @@ describe('network preference storage', () => {
     expect(window.localStorage.getItem('allow-network')).toBe(String(value));
   });
 
-  test('resetting settings restores the enabled default', async () => {
-    await setAllowNetwork(false);
+  test('resetting settings restores the disabled default', async () => {
+    await setAllowNetwork(true);
     await resetSettings();
-    await expect(getAllowNetwork()).resolves.toBe(true);
+    await expect(getAllowNetwork()).resolves.toBe(false);
     expect(window.localStorage.getItem('allow-network')).toBeNull();
   });
 });

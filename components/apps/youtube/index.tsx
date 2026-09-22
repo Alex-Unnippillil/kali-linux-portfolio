@@ -843,7 +843,7 @@ function CuratedYouTube({ channel }: { channel: string }) {
                   ? "Search covers loaded videos. The selected video stays ready above."
                   : showSaved
                     ? "Use the clock on any video to save it for later."
-                    : "Choose another collection, enable network access, or refresh the library."}
+                    : "Choose another collection or refresh the library."}
               </p>
               {query && (
                 <button

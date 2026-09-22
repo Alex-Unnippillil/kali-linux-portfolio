@@ -8,7 +8,6 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
 
   beforeEach(() => {
     // Capture only for restoration; never invoke this reference without its receiver.
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     originalFetch = window.fetch;
     fetchSpy = jest.fn(() => Promise.resolve("ok"));
     // @ts-expect-error - jest mock assignment
@@ -37,7 +36,6 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
     const { result } = renderSettings();
     await act(async () => {});
     // Identity comparison only; calls below always go through window.fetch.
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const blockedFetch = window.fetch;
 
     await expect(window.fetch("//external.com")).rejects.toThrow(
@@ -104,12 +102,34 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  test("enables networking on a fresh visit without an extra consent click", async () => {
-    const { result } = renderSettings();
-    await waitFor(() => expect(result.current.allowNetwork).toBe(true));
-    expect(window.localStorage.getItem("allow-network")).toBe("true");
-    await expect(window.fetch("https://external.com")).resolves.toBe("ok");
-  });
+  test("keeps arbitrary hosts opt-in while approved YouTube reads load immediately", async () => {
+  const { result } = renderSettings();
+  await waitFor(() => expect(window.localStorage.getItem("allow-network")).toBe("false"));
+  expect(result.current.allowNetwork).toBe(false);
+  await expect(window.fetch("https://external.com")).rejects.toThrow("Network requests disabled");
+  await expect(window.fetch("/api/youtube/directory?channelId=example")).resolves.toBe("ok");
+  await expect(window.fetch("/api/youtube/playlist-items?playlistId=example")).resolves.toBe("ok");
+  for (const endpoint of ["channels", "channelSections", "playlists", "playlistItems"]) {
+    await expect(window.fetch(`https://www.googleapis.com/youtube/v3/${endpoint}?part=snippet`)).resolves.toBe("ok");
+  }
+  fetchSpy.mockClear();
+  for (const url of [
+    "http://www.googleapis.com/youtube/v3/playlists",
+    "https://www.googleapis.com/drive/v3/files",
+    "https://www.googleapis.com.attacker.test/youtube/v3/playlists",
+    "https://www.googleapis.com/youtube/v3/playlists/other",
+    "https://user:pass@www.googleapis.com/youtube/v3/playlists",
+  ]) {
+    await expect(window.fetch(url)).rejects.toThrow("Network requests disabled");
+  }
+  await expect(window.fetch("https://www.googleapis.com/youtube/v3/playlists", { method: "POST" })).rejects.toThrow("Network requests disabled");
+  const { Request: NativeRequest } = jest.requireActual<typeof import("undici")>("undici");
+  const writeRequest = new NativeRequest("https://www.googleapis.com/youtube/v3/playlists", { method: "POST" });
+  await expect(window.fetch(writeRequest as unknown as Request)).rejects.toThrow("Network requests disabled");
+  expect(fetchSpy).not.toHaveBeenCalled();
+  const readRequest = new NativeRequest("https://www.googleapis.com/youtube/v3/playlists");
+  await expect(window.fetch(readRequest as unknown as Request)).resolves.toBe("ok");
+});
 
   test("does not overwrite a saved enabled preference during startup", async () => {
     window.localStorage.setItem("allow-network", "true");
@@ -120,6 +140,7 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
   });
 
   test("keeps an opt-out after remount and can reconnect without a stale guard", async () => {
+    window.localStorage.setItem("allow-network", "true");
     const first = renderSettings();
     await waitFor(() => expect(first.result.current.allowNetwork).toBe(true));
     await act(async () => {
@@ -152,7 +173,7 @@ describe("SettingsProvider allowNetwork fetch guard", () => {
       createElement(
         StrictMode,
         null,
-        createElement(SettingsProvider, { children }),
+        createElement(SettingsProvider, null, children),
       );
     const settings = renderHook(() => useSettings(), { wrapper });
     await act(async () => {});

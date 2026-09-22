@@ -21,3 +21,15 @@ The monitor-shaped **Show desktop** control minimizes visible windows in the cur
 The YouTube regression suite checks immediate API requests and first-video embedding, including after reloading with a legacy network-off preference. It also checks that unrelated preference changes do not interrupt playback, failed or empty playlists do not loop, and closing or refreshing the app aborts stale requests. The player does not autoplay. Live API quota, credentials, network availability, and embedding permissions remain external requirements.
 
 PRs #10684 and #10685 were integrated into #10686 before the production gate. The reviewed public-source catalog was regenerated for the added taskbar files, and temporary integration workflows were removed. The older downloadable component-test package is not a substitute for combined repository checks; consult the exact-head CI results for executed validation.
+
+## Release repairs
+
+YouTube opens immediately with no network prompt even on a fresh browser or with
+an old saved network-off preference. The optional-network default remains off for
+unrelated apps: same-origin APIs and narrowly scoped HTTPS YouTube GET endpoints
+are allowed, not arbitrary external hosts or write requests.
+
+A completed Restore windows operation consumes its captured window set, so
+manually minimizing a window afterward does not turn the next Show desktop action
+into an unexpected restore. Targeted tests cover this sequence, approved YouTube
+reads, blocked unrelated hosts and write requests, and asynchronous preview focus.

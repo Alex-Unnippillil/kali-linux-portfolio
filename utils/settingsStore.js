@@ -13,7 +13,8 @@ const DEFAULT_SETTINGS = {
   highContrast: false,
   largeHitAreas: false,
   pongSpin: true,
-  allowNetwork: true,
+  // YouTube reads are approved separately; arbitrary hosts remain opt-in.
+  allowNetwork: false,
   haptics: true,
   volume: 100,
 };

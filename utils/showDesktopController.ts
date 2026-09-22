@@ -13,7 +13,7 @@ export function createShowDesktopController(send: (instruction: DesktopCommand) 
   const saved = new Map<number, string[]>();
   const listeners = new Set<() => void>();
   let view = EMPTY;
-  let operation: { workspace: number; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;
+  let operation: { workspace: number; restoring: boolean; queue: DesktopCommand[]; current?: DesktopCommand } | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let sending = false;
   const publish = () => {
@@ -49,6 +49,8 @@ export function createShowDesktopController(send: (instruction: DesktopCommand) 
       if (operation?.current && satisfied(operation.current)) pump();
       return;
     }
+    // A completed restore consumes its capture; later manual minimization is independent.
+    if (operation.restoring) saved.delete(operation.workspace);
     operation = undefined;
     publish();
   };
@@ -78,7 +80,7 @@ export function createShowDesktopController(send: (instruction: DesktopCommand) 
         saved.set(workspace, ids);
         queue = ids.map((appId) => ({ appId, action: 'minimize' }));
       }
-      operation = { workspace, queue };
+      operation = { workspace, queue, restoring: view.showing };
       publish(); pump();
     },
     reset() { clearTimer(); operation = undefined; saved.clear(); latest = { activeWorkspace: 0, runningApps: [] }; publish(); },

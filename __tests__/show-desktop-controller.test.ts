@@ -71,3 +71,26 @@ describe('Show desktop uses acknowledged window-manager commands', () => {
     expect(jest.getTimerCount()).toBe(0);
   });
 });
+
+test('completed restore cannot resurrect a later manually minimized window', () => {
+  const send = jest.fn<void, [DesktopCommand]>();
+  const controller = createShowDesktopController(send);
+  const publishState = (calculatorMinimized: boolean, aboutMinimized: boolean) =>
+    controller.update({ activeWorkspace: 0, runningApps: [
+      { id: 'calculator', isMinimized: calculatorMinimized },
+      { id: 'about', isMinimized: aboutMinimized, isFocused: true },
+    ] });
+  publishState(false, false);
+  controller.toggle(); publishState(true, false); publishState(true, true);
+  controller.toggle(); publishState(false, true); publishState(false, false);
+  expect(controller.getSnapshot().showing).toBe(false);
+  publishState(true, false);
+  expect(controller.getSnapshot()).toEqual({ showing: false, busy: false, available: true });
+  send.mockClear();
+  controller.toggle(); publishState(true, true);
+  expect(send.mock.calls).toEqual([[{ appId: 'about', action: 'minimize' }]]);
+  send.mockClear();
+  controller.toggle(); publishState(true, false);
+  expect(send.mock.calls).toEqual([[{ appId: 'about', action: 'open' }]]);
+  controller.reset();
+});

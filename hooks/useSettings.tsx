@@ -287,7 +287,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     if (typeof window === "undefined" || (networkSettingsLoaded && allowNetwork))
       return;
     // Keep the original identity for cleanup; invoke it below with .call(window, ...).
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalFetch = window.fetch;
     const normalizeRequest = (input: RequestInfo | URL): URL | null => {
       try {
@@ -316,7 +315,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         const protocol = resolvedUrl.protocol.toLowerCase();
         const isHttp = protocol === "http:" || protocol === "https:";
         const isSameOrigin = resolvedUrl.origin === window.location.origin;
-        const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname);
+        const method = init?.method ?? (
+  typeof input === "object" && input && "method" in input ? input.method : "GET"
+);
+const isYouTubeRead =
+  method.toUpperCase() === "GET" &&
+  resolvedUrl.origin === "https://www.googleapis.com" &&
+  !resolvedUrl.username &&
+  !resolvedUrl.password &&
+  /^\/youtube\/v3\/(channels|channelSections|playlists|playlistItems)$/.test(resolvedUrl.pathname);
+const isAllowed = ["api.github.com"].includes(resolvedUrl.hostname) || isYouTubeRead;
         if (isHttp && !isSameOrigin && !isAllowed) {
           return Promise.reject(new Error("Network requests disabled"));
         }

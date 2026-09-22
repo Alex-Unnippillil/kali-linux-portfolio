@@ -208,6 +208,7 @@ test("empty playlists do not refetch indefinitely", async () => {
   );
   render(<YouTubeApp />);
   await screen.findByRole("heading", { name: "No videos to show yet" });
+  expect(screen.queryByText(/enable network access/i)).not.toBeInTheDocument();
   await act(async () => {
     await Promise.resolve();
   });
