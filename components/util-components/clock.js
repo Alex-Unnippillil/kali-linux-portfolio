@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useSettings } from '../../hooks/useSettings'
 
 const MONTHS = [
     "Jan",
@@ -132,11 +133,14 @@ const Clock = ({
     onlyDay = false,
     onlyTime = false,
     showCalendar = false,
-    hour12 = true,
+    hour12: hour12Prop,
     variant = 'default',
     isOpen: controlledOpen,
     onToggle
 }) => {
+    const { workspacePreferences } = useSettings()
+    const hour12 = workspacePreferences.clockFormat === 'system' ? hour12Prop : workspacePreferences.clockFormat === '12'
+    const showSeconds = workspacePreferences.showSeconds
     const [currentTime, setCurrentTime] = useState(null)
     const [internalOpen, setInternalOpen] = useState(false)
 
@@ -166,25 +170,27 @@ const Clock = ({
     const [popoverStyles, setPopoverStyles] = useState({})
 
     useEffect(() => {
-        const update = () => setCurrentTime(new Date())
-        update()
+        const update = () => { if (!document.hidden) setCurrentTime(new Date()) }
+        setCurrentTime(new Date())
+        document.addEventListener('visibilitychange', update)
         let worker
         let interval
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             worker = new Worker(new URL('../../workers/timer.worker.ts', import.meta.url))
             worker.onmessage = update
-            worker.postMessage({ action: 'start', interval: 10 * 1000 })
+            worker.postMessage({ action: 'start', interval: showSeconds ? 1000 : 10000 })
         } else {
-            interval = setInterval(update, 10 * 1000)
+            interval = setInterval(update, showSeconds ? 1000 : 10000)
         }
         return () => {
+            document.removeEventListener('visibilitychange', update)
             if (worker) {
                 worker.postMessage({ action: 'stop' })
                 worker.terminate()
             }
             if (interval) clearInterval(interval)
         }
-    }, [])
+    }, [showSeconds])
 
     useEffect(() => {
         if (!isOpen || !currentTime) return
@@ -215,7 +221,7 @@ const Clock = ({
             document.removeEventListener('touchstart', handleClick)
             document.removeEventListener('keydown', handleKeyDown)
         }
-    }, [isOpen, prefersReducedMotion])
+    }, [isOpen, prefersReducedMotion, setIsOpen])
 
     useEffect(() => {
         if (!isOpen) return
@@ -229,7 +235,7 @@ const Clock = ({
             buttonRef.current.focus({ preventScroll: prefersReducedMotion })
         }
         previouslyOpenRef.current = isOpen
-    }, [isOpen, prefersReducedMotion])
+    }, [isOpen, prefersReducedMotion, setIsOpen])
 
     useEffect(() => {
         if (typeof window === 'undefined') return undefined
@@ -325,9 +331,10 @@ const Clock = ({
             new Intl.DateTimeFormat(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: showSeconds ? '2-digit' : undefined,
                 hour12
             }),
-        [hour12]
+        [hour12, showSeconds]
     )
 
     const timeFormatter = useMemo(
@@ -335,18 +342,19 @@ const Clock = ({
             new Intl.DateTimeFormat(undefined, {
                 hour: '2-digit',
                 minute: '2-digit',
+                second: showSeconds ? '2-digit' : undefined,
                 hour12
             }),
-        [hour12]
+        [hour12, showSeconds]
     )
 
     const handleToggle = useCallback(() => {
         setIsOpen((open) => !open)
-    }, [])
+    }, [setIsOpen])
 
     const handleClose = useCallback(() => {
         setIsOpen(false)
-    }, [])
+    }, [setIsOpen])
 
     const handleMonthChange = useCallback((offset) => {
         setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1))
@@ -406,11 +414,11 @@ const Clock = ({
                 setViewDate(new Date(nextDate.getFullYear(), nextDate.getMonth(), 1))
             }
         }
-    }, [prefersReducedMotion, viewDate])
+    }, [prefersReducedMotion, viewDate, setIsOpen])
 
     const handleDayClick = useCallback(() => {
         setIsOpen(false)
-    }, [])
+    }, [setIsOpen])
 
     const displayTime = useMemo(
         () =>
