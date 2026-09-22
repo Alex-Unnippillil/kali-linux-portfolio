@@ -8,24 +8,37 @@ permissions:
 jobs:
   tooling:
     runs-on: ubuntu-22.04
-    timeout-minutes: 5
+    timeout-minutes: 15
+    env:
+      PUPPETEER_SKIP_DOWNLOAD: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
-          fetch-depth: 0
           persist-credentials: false
-      - name: Capture tracked source and revision only
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - run: corepack enable
+      - uses: actions/cache@v4
+        with:
+          path: ~/.yarn/berry/cache
+          key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
+      - run: yarn install --immutable
+      - name: Capture source-bound local validation tools without credentials
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/settings-source"
-          git bundle create "$RUNNER_TEMP/settings-source/source.bundle" HEAD
-          git rev-parse HEAD > "$RUNNER_TEMP/settings-source/revision.txt"
-          git rev-parse HEAD^{tree} > "$RUNNER_TEMP/settings-source/tree.txt"
-          sha256sum "$RUNNER_TEMP/settings-source/source.bundle" > "$RUNNER_TEMP/settings-source/SHA256SUMS"
+          mkdir -p "$RUNNER_TEMP/settings-toolchain"
+          cp "$(command -v node)" "$RUNNER_TEMP/settings-toolchain/node"
+          tar -czf "$RUNNER_TEMP/settings-toolchain/dependencies.tar.gz" node_modules .yarn/install-state.gz
+          git rev-parse HEAD > "$RUNNER_TEMP/settings-toolchain/revision.txt"
+          sha256sum yarn.lock > "$RUNNER_TEMP/settings-toolchain/lockfile.sha256"
+          git bundle create "$RUNNER_TEMP/settings-toolchain/source.bundle" HEAD
       - uses: actions/upload-artifact@v4
         with:
-          name: settings-continuation-source
-          path: ${{ runner.temp }}/settings-source/
-          retention-days: 2
+          name: settings-locked-toolchain
+          path: ${{ runner.temp }}/settings-toolchain/
+          retention-days: 1
           if-no-files-found: error
