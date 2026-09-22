@@ -17,6 +17,7 @@ jobs:
       PUPPETEER_SKIP_DOWNLOAD: 'true'
       NEXT_TELEMETRY_DISABLED: '1'
       NEXT_PUBLIC_VERCEL_ENV: preview
+      VERCEL_ENV: preview
       NODE_OPTIONS: --max-old-space-size=4096
     steps:
       - uses: actions/checkout@v4
@@ -32,40 +33,33 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Apply reviewed desktop integrations
+      - name: Apply reviewed desktop and browser regressions
         shell: python
         run: |
           import subprocess
           from pathlib import Path
-          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()=='90dee70c653e9065c7264fe41212beae71ad761b'
+          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()=='bec99c918ef672567a64fbcf1177d48a5eac35fb'
           for name, expected in {
             '__tests__/settings-reset.test.tsx':'44ac54eb131480a3a73d1f8ea81445be98a1cf67',
             'docs/settings-control-center.md':'45c4654f39d771f06c0fa8a556ba754f1a9e8564',
             'tests/portfolio/settings-control-center.spec.ts':'623b2cdd407d5965aed68f03b912f2a161c2f764'
           }.items():
             assert subprocess.check_output(['git','hash-object',name],text=True).strip()==expected, f'{name}: reconcile changed source'
+          def edit(s, old, new):
+            assert s.count(old)==1, f'Expected one source match: {old[:100]}'
+            return s.replace(old,new)
           p=Path('components/util-components/clock.js'); s=p.read_text()
-          def replace(old,new):
-            global s
-            assert s.count(old)==1, f'Clock source match failed: {old[:80]}'
-            s=s.replace(old,new)
-          replace('    hour12: hour12Prop,\n','')
-          replace("workspacePreferences.clockFormat === 'system' ? hour12Prop :", "workspacePreferences.clockFormat === 'system' ? undefined :")
-          replace('''    useEffect(() => {
-                  if (!isOpen || !currentTime) return
-                  setViewDate(new Date(currentTime.getFullYear(), currentTime.getMonth(), 1))
-                  setFocusedDate(currentTime)
-              }, [isOpen, currentTime])''', '''    // Start at today when opened, not on each clock tick. Navigation and keyboard
-              // focus must remain stable while seconds, midnight, or visibility change.
-              useEffect(() => {
-                  if (!isOpen) return
-                  const today = new Date()
-                  setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))
-                  setFocusedDate(today)
-              }, [isOpen])''')
-          replace('<div className="flex flex-col" aria-live="polite" id={headingId}>','<div className="flex flex-col">')
-          replace('<span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>','<span id={headingId} aria-live="polite" className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>')
-          replace('<span className={textClassName} aria-live="polite">','<span className={textClassName}>')
+          s=edit(s,'    hour12: hour12Prop,\n','')
+          s=edit(s,"workspacePreferences.clockFormat === 'system' ? hour12Prop :", "workspacePreferences.clockFormat === 'system' ? undefined :")
+          s=edit(s,'    const [popoverStyles, setPopoverStyles] = useState({})', "    const [popoverStyles, setPopoverStyles] = useState({})\n    const popoverPositioned = typeof popoverStyles.top === 'number'")
+          s=edit(s,'    useEffect(() => {\n        if (!isOpen || !currentTime) return\n        setViewDate(new Date(currentTime.getFullYear(), currentTime.getMonth(), 1))\n        setFocusedDate(currentTime)\n    }, [isOpen, currentTime])','    // Start at today when opened, not on each clock tick. Navigation and keyboard\n    // focus must remain stable while seconds, midnight, or visibility change.\n    useEffect(() => {\n        if (!isOpen) return\n        const today = new Date()\n        setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))\n        setFocusedDate(today)\n    }, [isOpen])')
+          s=edit(s,'    useEffect(() => {\n        if (!isOpen) return\n        if (activeCellRef.current) {\n            activeCellRef.current.focus({ preventScroll: prefersReducedMotion })\n        }\n    }, [isOpen, viewDate, focusedDate, prefersReducedMotion])','    useEffect(() => {\n        // The portal is hidden until measured. Focus only after its visible commit;\n        // a position change alone must not steal focus from month controls.\n        if (!isOpen || !popoverPositioned) return\n        if (activeCellRef.current) {\n            activeCellRef.current.focus({ preventScroll: prefersReducedMotion })\n        }\n    }, [isOpen, popoverPositioned, viewDate, focusedDate, prefersReducedMotion])')
+          s=edit(s,"visibility: typeof popoverStyles.top === 'number' ? 'visible' : 'hidden'", "visibility: popoverPositioned ? 'visible' : 'hidden'")
+          s=edit(s,"                weekday: 'long',\n                month: 'long',\n                day: 'numeric'", "                weekday: 'long',\n                month: 'long',\n                day: 'numeric',\n                year: 'numeric'")
+          s=edit(s,'                                            onClick={handleDayClick}', '                                            aria-label={friendlyDateFormatter.format(date)}\n                                            onClick={handleDayClick}')
+          s=edit(s,'<div className="flex flex-col" aria-live="polite" id={headingId}>','<div className="flex flex-col">')
+          s=edit(s,'<span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>','<span id={headingId} aria-live="polite" className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>')
+          s=edit(s,'<span className={textClassName} aria-live="polite">','<span className={textClassName}>')
           p.write_bytes(s.replace('\n','\r\n').encode())
           p=Path('styles/globals.css'); s=p.read_text()
           assert 'html[data-reduce-transparency="true"] {' not in s
@@ -104,19 +98,32 @@ jobs:
           }
           '''
           p.write_text(s)
+          p=Path('components/apps/settings/SettingsCenter.module.css'); s=p.read_text()
+          s=edit(s,'  .mobileNav {\n    display: block;\n    grid-column: 2;\n    grid-row: 1;\n  }\n  .mobileNav select {','  .mobileNav {\n    display: block;\n    position: relative;\n    grid-column: 2;\n    grid-row: 1;\n  }\n  .mobileNav::after {\n    content: "";\n    position: absolute;\n    pointer-events: none;\n    right: 13px;\n    top: calc(50% - 4px);\n    width: 7px;\n    height: 7px;\n    border-right: 2px solid #b6c4d6;\n    border-bottom: 2px solid #b6c4d6;\n    transform: rotate(45deg);\n  }\n  .mobileNav select {')
+          s=edit(s,'    color: #e0eaf6;\n    background: #1d2b3c;','    appearance: none;\n    -webkit-appearance: none;\n    color-scheme: dark;\n    color: #e0eaf6;\n    background: #1d2b3c;')
+          s=edit(s,'    padding: 8px 6px;\n    font-size: 0.69rem;','    padding: 8px 32px 8px 10px;\n    font-size: 0.69rem;')
+          p.write_text(s)
+          p=Path('tests/portfolio/settings-control-center.spec.ts'); s=p.read_text()
+          s=edit(s,'  await expect(app.getByRole("combobox", { name: "Settings category" })).toBeVisible();\n  await screenshot(page, browserName, "overview-phone");','  const mobileCategory = app.getByRole("combobox", { name: "Settings category" });\n  await expect(mobileCategory).toBeVisible();\n  await expect(mobileCategory).toHaveCSS("appearance", "none");\n  await expect(mobileCategory).toHaveCSS("color-scheme", "dark");\n  await expect(mobileCategory).toHaveCSS("background-color", "rgb(29, 43, 60)");\n  await expect(mobileCategory).toHaveCSS("color", "rgb(224, 234, 246)");\n  await screenshot(page, browserName, "overview-phone");')
+          s=edit(s,'  await screenshot(page, browserName, "display-phone-large-text");\n  await page.setViewportSize', '''  await screenshot(page, browserName, "display-phone-large-text");
+            const largeTextAccessibility = await new AxeBuilder({ page }).include('[data-testid="settings-center"]').withTags(["wcag2a", "wcag2aa", "wcag21aa"]).analyze();
+            expect(largeTextAccessibility.violations).toEqual([]);
+            await page.setViewportSize''')
+          s=edit(s,'  const selectedDate = await selectedDay.getAttribute("aria-label");\n  const previousTime','  const selectedDate = await selectedDay.getAttribute("aria-label");\n  expect(selectedDate).toBe("Thursday, October 22, 2026");\n  const previousTime')
+          p.write_text(s)
           p=Path('playwright.portfolio.config.ts'); s=p.read_text()
           assert s.count('(?:youtube-responsive|')==2
           p.write_text(s.replace('(?:youtube-responsive|','(?:settings-control-center|youtube-responsive|'))
-      - name: Commit the final tracked candidate before source validation
+      - name: Commit final tracked candidate before source validation
         run: |
           set -euo pipefail
           git rm .github/workflows/settings-development.yml
           node scripts/generate-repository-snapshot.mjs --catalog
-          git add components/util-components/clock.js styles/globals.css playwright.portfolio.config.ts data/repository-source-catalog.json
+          git add components/util-components/clock.js components/apps/settings/SettingsCenter.module.css styles/globals.css playwright.portfolio.config.ts tests/portfolio/settings-control-center.spec.ts data/repository-source-catalog.json
           git -c core.whitespace=cr-at-eol diff --cached --check
           git config user.name 'Alex Unnippillil repository automation'
           git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
-          git commit -m 'fix(settings): complete clock and desktop accessibility integrations'
+          git commit -m 'fix(settings): finish accessible desktop controls and calendar focus lifecycle'
       - name: Check complete Settings release scope
         run: |
           set -euo pipefail
