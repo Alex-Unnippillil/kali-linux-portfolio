@@ -141,6 +141,15 @@ jobs:
           into an unexpected restore. Targeted tests cover this sequence, approved YouTube
           reads, blocked unrelated hosts and write requests, and asynchronous preview focus.
           ''')
+          # These comments referenced a rule absent from the active lint configuration.
+          for name in ['__tests__/allowNetwork.test.ts', 'hooks/useSettings.tsx']:
+              p = Path(name)
+              text = p.read_text()
+              text = '\n'.join(line for line in text.split('\n') if '// eslint-disable-next-line @typescript-eslint/unbound-method' not in line)
+              p.write_text(text)
+          replace('__tests__/allowNetwork.test.ts', 'createElement(SettingsProvider, { children })', 'createElement(SettingsProvider, null, children)')
+          replace('components/apps/youtube/index.tsx', 'Choose another collection, enable network access, or refresh the library.', 'Choose another collection or refresh the library.')
+          replace('__tests__/youtube.test.tsx', '  await screen.findByRole("heading", { name: "No videos to show yet" });', '  await screen.findByRole("heading", { name: "No videos to show yet" });\n  expect(screen.queryByText(/enable network access/i)).not.toBeInTheDocument();')
       - name: Fix and check the complete PR lint scope, not only the workflow push
         run: |
           set -euo pipefail
