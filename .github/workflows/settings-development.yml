@@ -35,10 +35,18 @@ jobs:
           tar -cf "$RUNNER_TEMP/tooling.tar" -C "$RUNNER_TEMP/tooling" .
           split -b 80000000 -d "$RUNNER_TEMP/tooling.tar" "$RUNNER_TEMP/parts/tooling-"
           sha256sum "$RUNNER_TEMP/parts/"* > "$RUNNER_TEMP/parts/SHA256SUMS"
-          du -h "$RUNNER_TEMP/parts/"*
       - uses: actions/upload-artifact@v4
         with:
-          name: settings-development-tooling
-          path: ${{ runner.temp }}/parts/
+          name: settings-tooling-a
+          path: |
+            ${{ runner.temp }}/parts/tooling-0[0-4]
+            ${{ runner.temp }}/parts/SHA256SUMS
+          compression-level: 0
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: settings-tooling-b
+          path: |
+            ${{ runner.temp }}/parts/tooling-0[5-9]
           compression-level: 0
           retention-days: 1
