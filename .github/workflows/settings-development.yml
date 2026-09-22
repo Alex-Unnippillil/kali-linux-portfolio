@@ -23,26 +23,6 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
-      - name: Apply checksum-bound reviewed changes
-        shell: python
-        run: |
-          import base64, gzip, hashlib, subprocess
-          from pathlib import Path
-          expected='d88c065d9077e7c117b246a0b1c9790560158c3a'
-          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()==expected, 'Reconcile changed source before applying this patch'
-          encoded='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'
-          patch=gzip.decompress(base64.b64decode(encoded))
-          assert hashlib.sha256(patch).hexdigest()=='aa17e2fec8a5ddaca215c3244032765e8073a6b80de63f2c62237a7bad621aed', 'Patch transfer integrity failed'
-          dest=Path('/tmp/settings-release.patch');dest.write_bytes(patch)
-          subprocess.run(['git','apply','--check',str(dest)],check=True)
-          subprocess.run(['git','apply',str(dest)],check=True)
-          subprocess.run(['git','rm','.github/workflows/settings-development.yml'],check=True)
-          subprocess.run(['git','add','__tests__/settings-reset.test.tsx','components/util-components/clock.js','styles/globals.css','playwright.portfolio.config.ts','tests/portfolio/settings-control-center.spec.ts','docs/settings-control-center.md','data/repository-source-catalog.json'],check=True)
-          tree=subprocess.check_output(['git','write-tree'],text=True).strip()
-          assert tree=='a1e44fb62c8ae85add3a8306f6aa9f1bdd4b52a4', 'Candidate tree differs from reviewed local source'
-          subprocess.run(['git','config','user.name','Alex Unnippillil repository automation'],check=True)
-          subprocess.run(['git','config','user.email','24538548+Alex-Unnippillil@users.noreply.github.com'],check=True)
-          subprocess.run(['git','commit','-m','fix(settings): complete accessible desktop integrations and configuration regressions'],check=True)
       - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
@@ -52,7 +32,92 @@ jobs:
           path: ~/.yarn/berry/cache
           key: yarn-${{ runner.os }}-${{ hashFiles('yarn.lock', '.nvmrc', '.yarnrc.yml') }}
       - run: yarn install --immutable
-      - name: Check the entire Settings release scope
+      - name: Apply reviewed desktop integrations
+        shell: python
+        run: |
+          import subprocess
+          from pathlib import Path
+          assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()=='90dee70c653e9065c7264fe41212beae71ad761b'
+          for name, expected in {
+            '__tests__/settings-reset.test.tsx':'44ac54eb131480a3a73d1f8ea81445be98a1cf67',
+            'docs/settings-control-center.md':'45c4654f39d771f06c0fa8a556ba754f1a9e8564',
+            'tests/portfolio/settings-control-center.spec.ts':'623b2cdd407d5965aed68f03b912f2a161c2f764'
+          }.items():
+            assert subprocess.check_output(['git','hash-object',name],text=True).strip()==expected, f'{name}: reconcile changed source'
+          p=Path('components/util-components/clock.js'); s=p.read_text()
+          def replace(old,new):
+            global s
+            assert s.count(old)==1, f'Clock source match failed: {old[:80]}'
+            s=s.replace(old,new)
+          replace('    hour12: hour12Prop,\n','')
+          replace("workspacePreferences.clockFormat === 'system' ? hour12Prop :", "workspacePreferences.clockFormat === 'system' ? undefined :")
+          replace('''    useEffect(() => {
+                  if (!isOpen || !currentTime) return
+                  setViewDate(new Date(currentTime.getFullYear(), currentTime.getMonth(), 1))
+                  setFocusedDate(currentTime)
+              }, [isOpen, currentTime])''', '''    // Start at today when opened, not on each clock tick. Navigation and keyboard
+              // focus must remain stable while seconds, midnight, or visibility change.
+              useEffect(() => {
+                  if (!isOpen) return
+                  const today = new Date()
+                  setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))
+                  setFocusedDate(today)
+              }, [isOpen])''')
+          replace('<div className="flex flex-col" aria-live="polite" id={headingId}>','<div className="flex flex-col">')
+          replace('<span className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>','<span id={headingId} aria-live="polite" className="text-base font-semibold tracking-tight text-white">{headingLabel}</span>')
+          replace('<span className={textClassName} aria-live="polite">','<span className={textClassName}>')
+          p.write_bytes(s.replace('\n','\r\n').encode())
+          p=Path('styles/globals.css'); s=p.read_text()
+          assert 'html[data-reduce-transparency="true"] {' not in s
+          s+='''
+
+          /* Browser-local accessibility preferences apply to desktop surfaces, including
+             portaled menus and previews, not just the Settings window. */
+          html[data-reduce-transparency="true"] {
+            --color-surface-muted-alpha: 1;
+            --color-surface-raised-alpha: 1;
+            --color-overlay-strong-alpha: 1;
+            --color-overlay-soft-alpha: 1;
+            --kali-panel-alpha: 1;
+            --kali-bg-alpha: 1;
+          }
+          html[data-reduce-transparency="true"] :is(
+            .main-navbar-vp, .glass, .glass-subtle,
+            [aria-label="Phone taskbar"], [data-testid="whisker-menu-dropdown"],
+            [role="menu"], [role="dialog"], [data-window-titlebar]
+          ) {
+            background-color: var(--color-surface, #111b24) !important;
+            background-image: none !important;
+            -webkit-backdrop-filter: none !important;
+            backdrop-filter: none !important;
+          }
+          html[data-strong-focus="true"] :focus-visible {
+            outline: 3px solid #ffffff !important;
+            outline-offset: 3px !important;
+            box-shadow: 0 0 0 6px #07111e !important;
+          }
+          @media (forced-colors: active) {
+            html[data-strong-focus="true"] :focus-visible {
+              outline-color: Highlight !important;
+              box-shadow: none !important;
+            }
+          }
+          '''
+          p.write_text(s)
+          p=Path('playwright.portfolio.config.ts'); s=p.read_text()
+          assert s.count('(?:youtube-responsive|')==2
+          p.write_text(s.replace('(?:youtube-responsive|','(?:settings-control-center|youtube-responsive|'))
+      - name: Commit the final tracked candidate before source validation
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/settings-development.yml
+          node scripts/generate-repository-snapshot.mjs --catalog
+          git add components/util-components/clock.js styles/globals.css playwright.portfolio.config.ts data/repository-source-catalog.json
+          git -c core.whitespace=cr-at-eol diff --cached --check
+          git config user.name 'Alex Unnippillil repository automation'
+          git config user.email '24538548+Alex-Unnippillil@users.noreply.github.com'
+          git commit -m 'fix(settings): complete clock and desktop accessibility integrations'
+      - name: Check complete Settings release scope
         run: |
           set -euo pipefail
           env GITHUB_EVENT_NAME=workflow_dispatch GITHUB_BASE_REF=main yarn lint
@@ -62,7 +127,7 @@ jobs:
           yarn test __tests__/settings-center.test.tsx __tests__/settings-hydration.test.tsx __tests__/settings-model.test.ts __tests__/settings-reset.test.tsx --runInBand
       - run: yarn playwright install --with-deps chromium firefox webkit
       - run: yarn build
-      - name: Validate new Settings flows before publishing candidate
+      - name: Validate Settings production-browser scenarios
         run: yarn playwright test --config=playwright.portfolio.config.ts settings-control-center.spec.ts
       - name: Fast-forward feature branch and run complete release gates
         env:
@@ -74,13 +139,14 @@ jobs:
           git push origin HEAD:refs/heads/feat/settings-control-center
           gh workflow run ci.yml --ref feat/settings-control-center
           gh workflow run portfolio-browser.yml --ref feat/settings-control-center
-      - name: Preserve exact source identity
+      - name: Preserve source identity and browser evidence
         if: always()
         run: |
           mkdir -p settings-validation
           git rev-parse HEAD > settings-validation/revision.txt
           git rev-parse HEAD^{tree} > settings-validation/tree.txt
           git status --porcelain > settings-validation/worktree.txt
+          git diff HEAD > settings-validation/uncommitted.patch
           git archive --format=tar.gz HEAD > settings-validation/source.tar.gz
       - uses: actions/upload-artifact@v4
         if: always()
