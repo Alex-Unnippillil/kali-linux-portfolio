@@ -19,7 +19,9 @@ const isElementFocusable = (element: HTMLElement) => {
     return false;
   }
 
-  if (element.hasAttribute('disabled')) {
+  // :disabled also covers controls inside a disabled fieldset, while keeping
+  // the first legend's controls available as required by the browser.
+  if (element.hasAttribute('disabled') || element.matches(':disabled')) {
     return false;
   }
 
@@ -27,7 +29,7 @@ const isElementFocusable = (element: HTMLElement) => {
     return false;
   }
 
-  if (element.closest('[aria-hidden="true"]')) {
+  if (element.closest('[hidden], [inert], [aria-hidden="true"]')) {
     return false;
   }
 
@@ -83,7 +85,9 @@ export const useFocusTrap = (
       candidate.focus();
 
       if (candidate instanceof HTMLInputElement || candidate instanceof HTMLTextAreaElement) {
-        if (typeof candidate.setSelectionRange === 'function') {
+        // Number, email, date and other non-text inputs expose this method but
+        // throw InvalidStateError when called; their selectionStart is null.
+        if (typeof candidate.selectionStart === 'number' && typeof candidate.setSelectionRange === 'function') {
           const valueLength = candidate.value.length;
           candidate.setSelectionRange(valueLength, valueLength);
         }
