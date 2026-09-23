@@ -14,6 +14,11 @@ const DEFAULT_MAP = {
   pause: 'Escape',
 };
 
+const keyMatches = (binding, event) => {
+  if (binding === 'Space') return event.key === ' ' || event.code === 'Space';
+  return binding === event.key || binding === event.code;
+};
+
 // Keyboard input handler that respects user remapping. It emits high level
 // actions like `up`/`down`/`pause` instead of raw keyboard events. A `game`
 // identifier can be provided to scope bindings per game.
@@ -24,9 +29,14 @@ const DEFAULT_MAP = {
  * @typedef {{ action: GameInputAction; type: string }} GameInputPayload
  */
 /**
- * @param {{ onInput?: (event: GameInputPayload) => void; game?: string; isFocused?: boolean }} options
+ * @param {{ onInput?: (event: GameInputPayload) => void; game?: string; isFocused?: boolean; enabled?: boolean }} options
  */
-export default function useGameInput({ onInput, game, isFocused = true } = {}) {
+export default function useGameInput({
+  onInput,
+  game,
+  isFocused = true,
+  enabled = true,
+} = {}) {
   const mapRef = useRef(DEFAULT_MAP);
 
   // Load mapping once on mount or when game changes
@@ -44,9 +54,9 @@ export default function useGameInput({ onInput, game, isFocused = true } = {}) {
 
   useEffect(() => {
     const handle = (e) => {
-      if (!shouldHandleGameKey(e, { isFocused })) return;
+      if (!shouldHandleGameKey(e, { isFocused, enabled })) return;
       const map = mapRef.current;
-      const action = Object.keys(map).find((k) => map[k] === e.key);
+      const action = Object.keys(map).find((k) => keyMatches(map[k], e));
       if (action && onInput) {
         onInput({ action, type: e.type });
         consumeGameKey(e);
@@ -58,5 +68,5 @@ export default function useGameInput({ onInput, game, isFocused = true } = {}) {
       window.removeEventListener('keydown', handle);
       window.removeEventListener('keyup', handle);
     };
-  }, [onInput, isFocused]);
+  }, [onInput, isFocused, enabled]);
 }
