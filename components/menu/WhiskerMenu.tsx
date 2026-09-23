@@ -136,7 +136,6 @@ const KALI_LOGO_PATH =
 
 type CategoryConfig = CategoryDefinition & { apps: AppMeta[] };
 
-
 interface WhiskerMenuProps {
   isOpen?: boolean;
   onToggle?: () => void;
@@ -380,9 +379,11 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      // Composition keys belong to the input method, including legacy IME
+      // confirmation events which may report keyCode 229 without isComposing.
+      if (e.defaultPrevented || e.isComposing || e.keyCode === 229) return;
       // Desktop and application handlers run before this window listener.
       // Do not reopen their shortcut or steal Command from a text editor.
-      if (e.defaultPrevented) return;
       const editing = e.target instanceof Element && Boolean(
         e.target.closest('input, textarea, select, [contenteditable="true"], [contenteditable=""], [role="textbox"]'),
       );
@@ -394,32 +395,38 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
 
       if (metaShortcut || altF1Shortcut) {
         e.preventDefault();
-        toggleMenu();
+        if (!e.repeat) toggleMenu();
         return;
       }
-      if (!isVisible) return;
-      const targetNode = e.target instanceof Node ? e.target : null;
-      if (targetNode && categoryListRef.current?.contains(targetNode)) {
-        return;
-      }
-
+      // An exiting menu remains mounted for animation, but must stop owning keys.
+      if (!isOpen) return;
       if (e.key === 'Escape') {
-        hideMenu();
-      } else if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setHighlight(h => Math.min(h + 1, currentApps.length - 1));
+        hideMenu();
+        return;
+      }
+      const targetNode = e.target instanceof Node ? e.target : document.activeElement;
+      // Results navigation belongs to search. Native buttons (including favorite
+      // and category actions) must activate themselves, not the highlighted result.
+      if (targetNode !== searchInputRef.current) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setHighlight(h => Math.max(0, Math.min(h + 1, currentApps.length - 1)));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setHighlight(h => Math.max(h - 1, 0));
       } else if (e.key === 'Enter') {
         e.preventDefault();
+        if (e.repeat) return;
         const app = currentApps[highlight];
-        if (app) openSelectedApp(app.id);
+        if (app && !app.disabled) openSelectedApp(app.id);
       }
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [currentApps, highlight, hideMenu, isVisible, openSelectedApp, toggleMenu]);
+  }, [currentApps, highlight, hideMenu, isOpen, openSelectedApp, toggleMenu]);
 
   useEffect(() => {
     const handleClick = (e: MouseEvent | TouchEvent) => {
@@ -519,31 +526,27 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
   };
 
   const handleCategoryNavigation = (direction: 1 | -1) => {
-    setCategoryHighlight((current) => {
-      const nextIndex = (current + direction + categoryConfigs.length) % categoryConfigs.length;
-      const nextCategory = categoryConfigs[nextIndex];
-      if (nextCategory) {
-        setCategory(nextCategory.id);
-        focusCategoryButton(nextIndex);
-      }
-      return nextIndex;
-    });
+    const nextIndex = (categoryHighlight + direction + categoryConfigs.length) % categoryConfigs.length;
+    const nextCategory = categoryConfigs[nextIndex];
+    if (nextCategory) {
+      setCategory(nextCategory.id);
+      setCategoryHighlight(nextIndex);
+      // Focus dispatches onFocus; keep that side effect outside a state updater.
+      focusCategoryButton(nextIndex);
+    }
   };
 
   const handleCategoryKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    // Always vertical navigation now that we use a sidebar on both mobile and desktop
+    if (!isOpen || event.defaultPrevented || event.nativeEvent.isComposing || event.keyCode === 229) return;
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    // Always vertical navigation now that we use a sidebar on both mobile and desktop.
+    // Enter/Space use the focused button's native click behavior.
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       handleCategoryNavigation(1);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       handleCategoryNavigation(-1);
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      const selected = categoryConfigs[categoryHighlight];
-      if (selected) {
-        setCategory(selected.id);
-      }
     }
   };
 
@@ -564,7 +567,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
           <svg
             aria-hidden="true"
             viewBox="0 0 100 100"
-            className="h-4.5 w-4.5 text-white/90 transition-all duration-200 group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)]"
+            className="h-4.5 w-4.5 text-white/90 transition-all duration-200 group-hover:text-cyan-400 group-hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]"
             fill="currentColor"
             focusable="false"
           >
@@ -611,6 +614,7 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
                   <button
                     key={app.id}
                     type="button"
+                    disabled={app.disabled}
                     onClick={() => openSelectedApp(app.id)}
                     className="group/fav relative flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.04] text-white ring-1 ring-white/[0.06] transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.08] hover:ring-white/[0.1] hover:shadow-[0_8px_20px_-8px_rgba(0,0,0,0.4)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60"
                     aria-label={`Open ${app.title}`}
@@ -727,7 +731,9 @@ const WhiskerMenu: React.FC<WhiskerMenuProps> = ({ isOpen: controlledOpen, onTog
                     : 'text-white/60 hover:bg-white/[0.04] hover:text-white/90'
                     } justify-center sm:justify-start`}
                   role="option"
+                  aria-label={cat.label}
                   aria-selected={category === cat.id}
+                  onFocus={() => setCategoryHighlight(index)}
                   onClick={() => {
                     setCategory(cat.id);
                     setCategoryHighlight(index);
