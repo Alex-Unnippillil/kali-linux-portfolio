@@ -84,3 +84,59 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 
     }
   });
 }
+
+for (const state of ["hidden", "inert", "disabled"] as const) {
+  test(`launcher Tab boundary excludes ${state} controls`, async ({ page, browserName }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto("/");
+    await expect(page.locator("#about")).toBeVisible();
+    const trigger = page.getByRole("button", { name: "Applications menu", exact: true });
+    await trigger.click();
+    const menu = page.getByTestId("whisker-menu-dropdown");
+    const search = menu.getByRole("searchbox", { name: "Search applications" });
+    await expect(search).toBeFocused();
+
+    // Exercise the actual launcher hook with unavailable controls after its last
+    // available action. No production-only test route or hook export is needed.
+    await menu.evaluate((node, condition) => {
+      const fixture = document.createElement("div");
+      fixture.dataset.testid = "focus-boundary-fixture";
+      const boundary = document.createElement("button");
+      boundary.textContent = "Focus boundary action";
+      fixture.append(boundary);
+      const excluded = document.createElement(condition === "disabled" ? "fieldset" : "div");
+      excluded.setAttribute(condition, "");
+      const unavailable = document.createElement("button");
+      unavailable.textContent = "Unavailable focus target";
+      excluded.append(unavailable);
+      fixture.append(excluded);
+      node.append(fixture);
+    }, state);
+    const boundary = menu.getByRole("button", { name: "Focus boundary action", exact: true });
+    await boundary.focus();
+    await expect(boundary).toBeFocused();
+    await page.evaluate(() => {
+      document.addEventListener("keydown", (event) => {
+        document.documentElement.dataset.focusTrapPrevented = String(event.defaultPrevented);
+      }, { once: true, capture: true });
+    });
+    await boundary.press("Tab");
+    // The trap must wrap synchronously, not let focus escape and repair it later.
+    await expect(page.locator("html")).toHaveAttribute("data-focus-trap-prevented", "true");
+    await expect(search).toBeFocused();
+    await menu.getByTestId("focus-boundary-fixture").evaluate((node) => node.remove());
+
+    if (state === "hidden") {
+      await mkdir("portfolio-screenshots", { recursive: true });
+      await page.screenshot({
+        path: `portfolio-screenshots/${browserName}-launcher-focus.png`,
+        animations: "disabled",
+      });
+    }
+    await search.press("Escape");
+    await expect(menu).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    expect(errors).toEqual([]);
+  });
+}
