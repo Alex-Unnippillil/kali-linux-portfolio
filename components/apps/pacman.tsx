@@ -846,6 +846,42 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
     </div>
   );
 
+  const statusPanel = (
+    <div className="grid min-w-[13rem] grid-cols-1 gap-1 text-xs text-slate-200 sm:min-w-[16rem]">
+      <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+        Mode:{' '}
+        <span className="text-cyan-300">
+          {mode === 'fright' ? 'Frightened' : mode}
+        </span>
+      </div>
+      <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+        Dots: <span className="text-amber-200">{pellets}</span>
+      </div>
+      <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
+        {powerMode ? (
+          <>
+            Power: <span className="text-fuchsia-300">{powerMode}</span>{' '}
+            <span className="text-slate-400">({Math.ceil(powerTimer)}s)</span>
+          </>
+        ) : (
+          <>
+            Power: <span className="text-slate-400">none</span>
+          </>
+        )}
+      </div>
+      {paused && (
+        <div className="rounded bg-slate-800/80 px-2 py-1 text-slate-300">
+          Paused - press Escape to resume
+        </div>
+      )}
+      {statusMessage && (
+        <div className="rounded bg-amber-500/80 px-2 py-1 text-center text-slate-900">
+          {statusMessage}
+        </div>
+      )}
+    </div>
+  );
+
   const renderStartScreen = () => (
     <div
       className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 text-white gap-4"
@@ -933,6 +969,7 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       pauseHotkeys={['Escape', 'p']}
       restartHotkeys={['r']}
       settingsPanel={settingsPanel}
+      statusPanel={statusPanel}
       isFocused={isFocused}
       editor={
         showEditor ? (
@@ -943,22 +980,6 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       }
     >
       <div className="relative h-full w-full flex flex-col bg-ub-cool-grey text-white">
-        <div className="mx-4 mt-2 rounded-md border border-blue-500/40 bg-black/70 px-3 py-2 text-[11px] uppercase tracking-[0.18em] text-yellow-300">
-          <div className="grid grid-cols-3 items-center gap-2 text-center">
-            <div>
-              <div className="text-[10px] text-slate-300">1UP</div>
-              <div className="font-bold text-lg leading-none text-yellow-200">{score.toString().padStart(6, '0')}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-300">HIGH SCORE</div>
-              <div className="font-bold text-lg leading-none text-red-300">{highScore.toString().padStart(6, '0')}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-slate-300">LEVEL</div>
-              <div className="font-bold text-lg leading-none text-sky-300">{(customLevel ? 1 : activeLevelIndex + 1).toString().padStart(2, '0')}</div>
-            </div>
-          </div>
-        </div>
         <div className="relative flex-1 w-full min-h-0 flex items-center justify-center">
           <canvas
             ref={canvasRef}
@@ -995,39 +1016,9 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
             </div>
           )}
         </div>
-        <div className="mt-3 mx-3 mb-2 grid grid-cols-2 gap-2 text-xs text-slate-200 sm:grid-cols-4">
-          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
-            Mode: <span className="text-cyan-300">{mode === 'fright' ? 'Frightened' : mode}</span>
-          </div>
-          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
-            Dots: <span className="text-amber-200">{pellets}</span>
-          </div>
-          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
-            Lives: <span className="text-yellow-300">{'● '.repeat(Math.max(0, lives)).trim() || '0'}</span>
-          </div>
-          <div className="rounded border border-slate-600/70 bg-slate-900/70 px-2 py-1">
-            {powerMode ? (
-              <>
-                Power: <span className="text-fuchsia-300">{powerMode}</span> <span className="text-slate-400">({Math.ceil(powerTimer)}s)</span>
-              </>
-            ) : (
-              <>Power: <span className="text-slate-400">none</span></>
-            )}
-          </div>
-          {statusMessage && (
-            <div className="col-span-full rounded bg-amber-500/80 px-2 py-1 text-center text-slate-900">
-              {statusMessage}
-            </div>
-          )}
-        </div>
         {isTouch && (
           <div className="mt-4">
             <VirtualPad onDirection={setBufferedDirection} />
-          </div>
-        )}
-        {paused && (
-          <div className="mt-3 text-xs text-slate-300">
-            Paused - press Escape to resume
           </div>
         )}
         <div className="sr-only" aria-live="polite">

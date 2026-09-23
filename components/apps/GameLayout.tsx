@@ -31,6 +31,7 @@ interface GameLayoutProps {
   pauseHotkeys?: string[];
   restartHotkeys?: string[];
   settingsPanel?: React.ReactNode;
+  statusPanel?: React.ReactNode;
   isFocused?: boolean;
 }
 
@@ -81,6 +82,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   pauseHotkeys,
   restartHotkeys,
   settingsPanel,
+  statusPanel,
   isFocused = true,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
@@ -290,6 +292,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     return () => window.removeEventListener('keydown', handler);
   }, [pauseHotkeys, restartHotkeys, handleRestart, isFocused]);
 
+  const actionButtonClass =
+    'min-h-8 rounded bg-gray-700 px-3 py-1 text-xs font-medium text-white transition hover:bg-gray-600 focus:outline-none focus:ring';
+
   return (
     <RecorderContext.Provider value={contextValue}>
       <div
@@ -314,11 +319,11 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           </button>
         </div>
       )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
+      <div className="absolute right-2 top-2 z-40 flex flex-wrap justify-end gap-2">
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={actionButtonClass}
         >
           {paused ? 'Resume' : 'Pause'}
         </button>
@@ -326,7 +331,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={handleRestart}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className={actionButtonClass}
           >
             Restart
           </button>
@@ -334,21 +339,21 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         <button
           type="button"
           onClick={snapshot}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={actionButtonClass}
         >
           Snapshot
         </button>
         <button
           type="button"
           onClick={replay}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={actionButtonClass}
         >
           Replay
         </button>
         <button
           type="button"
           onClick={shareApp}
-          className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+          className={actionButtonClass}
         >
           Share
         </button>
@@ -358,7 +363,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
             aria-label="Settings"
             aria-expanded={showSettings}
             onClick={() => setShowSettings((s) => !s)}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className={actionButtonClass}
           >
             Settings
           </button>
@@ -367,7 +372,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <button
             type="button"
             onClick={shareScore}
-            className="px-2 py-1 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+            className={actionButtonClass}
           >
             Share Score
           </button>
@@ -389,40 +394,47 @@ const GameLayout: React.FC<GameLayoutProps> = ({
         </div>
       )}
       <div
-        className="absolute top-2 left-2 z-10 text-sm flex flex-col gap-1"
+        className="absolute left-2 top-2 z-10 flex flex-col gap-2 text-sm"
         role="status"
         aria-live="polite"
       >
-        {stage !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
-            Stage: {stage}
-          </div>
-        )}
-        {lives !== undefined && (
-          <div className="rounded px-2 py-1 bg-slate-900/60 border border-slate-700/70 backdrop-blur">
-            Lives: {lives}
-          </div>
-        )}
-        {score !== undefined && (
-          <div
-            className={clsx(
-              'rounded px-2 py-1 bg-slate-900/70 border border-emerald-500/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
-              !prefersReducedMotion && scorePulse &&
-                'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
-            )}
-          >
-            Score: {score}
-          </div>
-        )}
-        {highScore !== undefined && (
-          <div
-            className={clsx(
-              'rounded px-2 py-1 bg-slate-900/70 border border-indigo-400/20 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
-              !prefersReducedMotion && highScorePulse &&
-                'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
-            )}
-          >
-            {highScoreLabel}: {highScore}
+        <div className="flex flex-col gap-1.5">
+          {stage !== undefined && (
+            <div className="rounded border border-slate-700/70 bg-slate-900/60 px-2 py-1 backdrop-blur">
+              Stage: {stage}
+            </div>
+          )}
+          {lives !== undefined && (
+            <div className="rounded border border-slate-700/70 bg-slate-900/60 px-2 py-1 backdrop-blur">
+              Lives: {lives}
+            </div>
+          )}
+          {score !== undefined && (
+            <div
+              className={clsx(
+                'rounded border border-emerald-500/20 bg-slate-900/70 px-2 py-1 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+                !prefersReducedMotion && scorePulse &&
+                  'scale-110 text-emerald-300 shadow-[0_0_18px_rgba(16,185,129,0.45)]',
+              )}
+            >
+              Score: {score}
+            </div>
+          )}
+          {highScore !== undefined && (
+            <div
+              className={clsx(
+                'rounded border border-indigo-400/20 bg-slate-900/70 px-2 py-1 backdrop-blur shadow-sm transition-transform duration-300 ease-out',
+                !prefersReducedMotion && highScorePulse &&
+                  'scale-105 text-indigo-300 shadow-[0_0_16px_rgba(129,140,248,0.35)]',
+              )}
+            >
+              {highScoreLabel}: {highScore}
+            </div>
+          )}
+        </div>
+        {statusPanel && (
+          <div className="rounded border border-slate-700/70 bg-slate-900/60 p-2 backdrop-blur">
+            {statusPanel}
           </div>
         )}
       </div>
