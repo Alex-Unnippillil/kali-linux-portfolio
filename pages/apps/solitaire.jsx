@@ -1,6 +1,6 @@
 import dynamic from 'next/dynamic';
 
-const PageSolitaire = dynamic(() => import('../../games/solitaire'), {
+const PageSolitaire = dynamic(() => import('../../apps/solitaire'), {
   ssr: false,
   loading: () => <p>Loading...</p>,
 });
