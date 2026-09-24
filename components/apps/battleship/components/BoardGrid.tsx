@@ -160,6 +160,7 @@ const BoardGrid = ({
   const heatArr = heatmap ?? [];
   const maxHeat = heatArr.length ? Math.max(...heatArr) : 0;
   const letters = Array.from({ length: BOARD_SIZE }, (_, i) => String.fromCharCode(65 + i));
+  const coordinate = (idx: number) => `${letters[idx % BOARD_SIZE]}${Math.floor(idx / BOARD_SIZE) + 1}`;
 
   return (
     <div className="battle-card">
@@ -190,6 +191,8 @@ const BoardGrid = ({
             ) : null}
             <div
               className="grid relative"
+              role="grid"
+              aria-label={label}
               style={{
                 gridTemplateColumns: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
                 gridTemplateRows: `repeat(${BOARD_SIZE}, ${cellSize}px)`,
@@ -231,14 +234,16 @@ const BoardGrid = ({
                     key={idx}
                     className="relative border border-ub-dark-grey/60"
                     style={{ width: cellSize, height: cellSize }}
+                    role="gridcell"
                   >
                     {isEnemy && onTargetSelect && !['hit', 'miss'].includes(cell ?? '') ? (
                       <button
                         type="button"
-                        className="h-full w-full"
+                        className="relative z-10 h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-cyan-200"
                         onClick={() => onTargetSelect(idx)}
-                        aria-label={`Select target at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                        aria-label={`Select target at ${coordinate(idx)}${selectedMark ? ', selected' : ''}`}
                         aria-pressed={selectedMark}
+                        tabIndex={cursorIndex === idx ? 0 : -1}
                       />
                     ) : null}
                     {!isEnemy && onPlacementClick ? (
@@ -246,9 +251,16 @@ const BoardGrid = ({
                         type="button"
                         className="absolute inset-0"
                         onClick={() => onPlacementClick(idx % BOARD_SIZE, Math.floor(idx / BOARD_SIZE))}
-                        aria-label={`Place ship at ${Math.floor(idx / BOARD_SIZE) + 1},${(idx % BOARD_SIZE) + 1}`}
+                        aria-label={`Place ship at ${coordinate(idx)}`}
+                        tabIndex={placementCursor === idx ? 0 : -1}
                       />
                     ) : null}
+                    {cell === 'ship' && !isEnemy && !hideInfo && (
+                      <div
+                        className="pointer-events-none absolute inset-[2px] rounded bg-gradient-to-br from-sky-500/80 to-blue-700/80 shadow-inner"
+                        aria-hidden="true"
+                      />
+                    )}
                     {cell === 'hit' && !hideInfo && <HitMarker colorblind={colorblind} reduced={reducedMotion} />}
                     {cell === 'miss' && !hideInfo && <MissMarker colorblind={colorblind} reduced={reducedMotion} />}
                     <div

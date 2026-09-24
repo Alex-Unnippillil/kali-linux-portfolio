@@ -31,4 +31,12 @@ describe('Battleship AIs', () => {
     const ai = new RandomSalvoAI({ rng: createRng(3) });
     runNoRepeat(ai);
   });
+
+  it('reading a Monte Carlo heatmap does not consume or change a seeded move', () => {
+    const observed = new MonteCarloAI({ rng: createRng(41) });
+    const control = new MonteCarloAI({ rng: createRng(41) });
+
+    expect(observed.getHeatmap()).toEqual(new Array(BOARD_SIZE * BOARD_SIZE).fill(0));
+    expect(observed.nextMove(25)).toBe(control.nextMove(25));
+  });
 });
