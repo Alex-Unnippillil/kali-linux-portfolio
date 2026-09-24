@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import ShowDesktopButton from "../panel/ShowDesktopButton";
-import { isCompactWindowViewport } from "../../utils/compactWindow";
+import { getViewportPolicy, subscribeViewportPolicy } from "../../utils/compactWindow";
 import styles from "./MobileTaskbar.module.css";
 
 type App = {
@@ -30,27 +30,12 @@ export default function MobileTaskbar({
   const activeId = apps.find((app) => app.isFocused && !app.isMinimized)?.id;
   useEffect(() => {
     const update = () => {
-      setCompact(
-        isCompactWindowViewport(
-          window.innerWidth,
-          window.innerHeight,
-          window.matchMedia("(any-pointer: coarse)").matches,
-        ),
-      );
-      const v = window.visualViewport;
-      setBottom(
-        v ? Math.max(0, window.innerHeight - v.height - v.offsetTop) : 0,
-      );
+      const policy = getViewportPolicy();
+      setCompact(policy.presentation.compact);
+      setBottom(policy.workingArea.obstruction.bottom);
     };
     update();
-    window.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("resize", update);
-    window.visualViewport?.addEventListener("scroll", update);
-    return () => {
-      window.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("resize", update);
-      window.visualViewport?.removeEventListener("scroll", update);
-    };
+    return subscribeViewportPolicy(update);
   }, []);
   useEffect(() => {
     active.current?.scrollIntoView?.({ block: "nearest", inline: "nearest" });

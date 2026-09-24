@@ -6,6 +6,7 @@ import {
   measureWindowTopOffset,
 } from "../../utils/windowLayout";
 import { useDesktopZIndex } from "./zIndexManager";
+import { getViewportPolicy, subscribeViewportPolicy } from "../../utils/compactWindow";
 
 type BaseWindowProps = React.ComponentProps<typeof BaseWindow>;
 // BaseWindow is a class component, so the instance type exposes helper methods.
@@ -104,11 +105,11 @@ const DesktopWindow = React.memo(
 
         const rect = node.getBoundingClientRect();
         const topOffset = measureWindowTopOffset();
-        const visualViewport = window.visualViewport;
-        const viewportWidth = visualViewport?.width ?? window.innerWidth;
-        const viewportHeight = visualViewport?.height ?? window.innerHeight;
-        const viewportLeft = visualViewport?.offsetLeft ?? 0;
-        const viewportTop = visualViewport?.offsetTop ?? 0;
+        const { visibleBounds } = getViewportPolicy().workingArea;
+        const viewportWidth = visibleBounds.width;
+        const viewportHeight = visibleBounds.height;
+        const viewportLeft = visibleBounds.left;
+        const viewportTop = visibleBounds.top;
         const combinedTopOffset = viewportTop + topOffset;
         const storedPosition = readNodePosition(node);
         const fallbackPosition = {
@@ -188,9 +189,9 @@ const DesktopWindow = React.memo(
           rafId = window.requestAnimationFrame(performClamp);
         };
 
-        window.addEventListener("resize", handler);
+        const unsubscribe = subscribeViewportPolicy(handler);
         return () => {
-          window.removeEventListener("resize", handler);
+          unsubscribe();
           if (rafId) window.cancelAnimationFrame(rafId);
         };
       }, [clampToViewport]);
