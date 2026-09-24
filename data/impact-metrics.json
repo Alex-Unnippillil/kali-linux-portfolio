@@ -1,0 +1,9 @@
+{
+  "source": "Sample OpenVAS scan results, 2024",
+  "metrics": [
+    { "severity": "Low", "count": 12 },
+    { "severity": "Medium", "count": 9 },
+    { "severity": "High", "count": 4 },
+    { "severity": "Critical", "count": 1 }
+  ]
+}
