@@ -137,12 +137,12 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
   }, [restoreAllFromHistory]);
 
   const baseActionButton =
-    'px-3 py-1.5 rounded-md text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange disabled:opacity-40 disabled:cursor-not-allowed';
+    'px-3 py-1.5 rounded-md text-sm font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] disabled:opacity-45 disabled:cursor-not-allowed';
   const subtleActionButton =
-    'px-3 py-1.5 rounded-md border border-white/10 bg-white/10 text-sm font-semibold transition-colors hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-ub-orange disabled:opacity-40 disabled:cursor-not-allowed';
+    'px-3 py-1.5 rounded-md border border-[color:var(--kali-panel-border)] bg-[color:var(--kali-panel-highlight)] text-sm font-semibold text-[color:var(--color-text)] transition-all hover:bg-[color:color-mix(in_srgb,var(--kali-panel-highlight)_82%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-kali-focus focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--kali-panel)] disabled:opacity-45 disabled:cursor-not-allowed disabled:hover:bg-[color:var(--kali-panel-highlight)]';
 
   return (
-    <div className="w-full h-full flex flex-col bg-ub-cool-grey text-white select-none">
+    <div className="w-full h-full flex flex-col bg-[color:var(--kali-panel)] text-[color:var(--color-text)] select-none">
       <div className="flex flex-wrap items-center justify-between gap-3 w-full bg-ub-warm-grey/40 px-3 py-2 text-sm">
         <span className="font-bold text-base">Trash</span>
         <div className="flex flex-wrap items-center gap-2">
@@ -150,21 +150,21 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
             <button
               onClick={restore}
               disabled={selected === null}
-              className={`${baseActionButton} bg-blue-600 text-white hover:bg-blue-500 disabled:hover:bg-blue-600`}
+              className={`${baseActionButton} bg-[color:var(--color-accent)] text-[color:var(--color-bg)] hover:bg-[color:color-mix(in_srgb,var(--color-accent)_85%,white_15%)] disabled:hover:bg-[color:var(--color-accent)]`}
             >
               Restore
             </button>
             <button
               onClick={remove}
               disabled={selected === null}
-              className={`${baseActionButton} bg-red-600 text-white hover:bg-red-500 disabled:hover:bg-red-600`}
+              className={`${baseActionButton} bg-[color:var(--color-severity-high)] text-[color:var(--color-bg)] hover:bg-[color:color-mix(in_srgb,var(--color-severity-high)_85%,white_15%)] disabled:hover:bg-[color:var(--color-severity-high)]`}
             >
               Delete
             </button>
             <button
               onClick={purge}
               disabled={selected === null}
-              className={`${baseActionButton} bg-yellow-500 text-black hover:bg-yellow-400 disabled:hover:bg-yellow-500`}
+              className={`${baseActionButton} bg-[color:var(--color-severity-critical)] text-[color:var(--color-bg)] hover:bg-[color:color-mix(in_srgb,var(--color-severity-critical)_85%,white_15%)] disabled:hover:bg-[color:var(--color-severity-critical)]`}
             >
               Purge
             </button>
