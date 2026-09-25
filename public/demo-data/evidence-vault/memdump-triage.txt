@@ -1,0 +1,18 @@
+Memory triage summary
+=====================
+
+Image: 2024-02-20T13:42Z
+Analyst: Priya Desai
+Host: ir-workstation-07
+
+Findings
+--------
+- Suspicious rundll32 invocation spawning powershell.exe (PID 2144).
+- LSASS access from unsigned binary `dump32.tmp` at 2024-02-20T13:11:54Z.
+- Beacon-like network traffic to 185.199.110.153 over HTTPS every 60 seconds.
+
+Next Actions
+------------
+1. Escalate to containment runbook IR-2024-001.
+2. Export full memory strings for malware triage.
+3. Capture firewall logs for 185.199.110.0/24 during time window.

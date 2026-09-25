@@ -81,7 +81,7 @@ Each table groups the entries declared in `apps.config.js` and captures current 
 | ghidra | Ghidra | Security simulations pod | **In progress** – simulator backlog | Reverse-engineering fixtures |
 | hashcat | Hashcat | Security simulations pod | **In progress** – simulator backlog | Hash samples |
 | msf-post | Metasploit Post | Security simulations pod | **In progress** – simulator backlog | Module JSON |
-| evidence-vault | Evidence Vault | Security simulations pod | **Needs polish** – clarify evidence data model | Forensics fixtures |
+| evidence-vault | Evidence Vault | Security simulations pod | **In review** – schema defined, fixtures updated, CRUD tests in place | Forensics fixtures |
 | mimikatz | Mimikatz | Security simulations pod | **In progress** – simulator backlog | Credential dump fixtures |
 | mimikatz/offline | Mimikatz Offline | Security simulations pod | **Ready** – offline datasets packaged with lab flows and Jest coverage | Offline dataset suite |
 | ettercap | Ettercap | Security simulations pod | **In progress** – simulator backlog | Network capture fixtures |
