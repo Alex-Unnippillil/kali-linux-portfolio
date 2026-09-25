@@ -1,6 +1,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -40,6 +41,9 @@ interface TabContextValue {
 const TabContext = createContext<TabContextValue>({ id: '', active: false, close: () => {} });
 export const useTab = () => useContext(TabContext);
 
+const OVERFLOW_ITEM_ESTIMATE = 36;
+const OVERFLOW_VIRTUAL_OVERSCAN = 4;
+
 const TabbedWindow: React.FC<TabbedWindowProps> = ({
   initialTabs,
   onNewTab,
@@ -58,6 +62,12 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const moreButtonRef = useRef<HTMLButtonElement>(null);
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const overflowItemRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+  const [overflowMenuHeight, setOverflowMenuHeight] = useState(0);
+  const [overflowMenuScrollTop, setOverflowMenuScrollTop] = useState(0);
+  const [overflowItemHeight, setOverflowItemHeight] = useState(OVERFLOW_ITEM_ESTIMATE);
+  const [focusedOverflowIndex, setFocusedOverflowIndex] = useState<number | null>(null);
+  const pendingOverflowFocus = useRef<number | null>(null);
 
   useEffect(() => {
     if (prevActive.current !== activeId) {
@@ -280,11 +290,201 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
     return tabs.filter((tab) => overflowSet.has(tab.id));
   }, [overflowedIds, tabs]);
 
+  const totalOverflowTabs = overflowTabs.length;
+
+  const virtualOverflow = useMemo(() => {
+    if (totalOverflowTabs === 0) {
+      return {
+        startIndex: 0,
+        endIndex: 0,
+        paddingTop: 0,
+        paddingBottom: 0,
+        items: [] as Array<{ tab: TabDefinition; index: number }>,
+      };
+    }
+
+    const itemHeight = overflowItemHeight || OVERFLOW_ITEM_ESTIMATE;
+    const containerHeight = overflowMenuHeight || 0;
+    const visibleCount = containerHeight
+      ? Math.ceil(containerHeight / itemHeight) + OVERFLOW_VIRTUAL_OVERSCAN * 2
+      : totalOverflowTabs;
+
+    let startIndex = Math.max(0, Math.floor(overflowMenuScrollTop / itemHeight) - OVERFLOW_VIRTUAL_OVERSCAN);
+    let endIndex = Math.min(totalOverflowTabs, startIndex + visibleCount);
+
+    if (endIndex - startIndex < visibleCount && endIndex < totalOverflowTabs) {
+      startIndex = Math.max(0, endIndex - visibleCount);
+    }
+
+    const paddingTop = startIndex * itemHeight;
+    const paddingBottom = Math.max(0, (totalOverflowTabs - endIndex) * itemHeight);
+    const items = overflowTabs.slice(startIndex, endIndex).map((tab, offset) => ({
+      tab,
+      index: startIndex + offset,
+    }));
+
+    return { startIndex, endIndex, paddingTop, paddingBottom, items };
+  }, [overflowItemHeight, overflowMenuHeight, overflowMenuScrollTop, overflowTabs, totalOverflowTabs]);
+
   useEffect(() => {
     if (overflowTabs.length === 0 && moreMenuOpen) {
       setMoreMenuOpen(false);
     }
   }, [moreMenuOpen, overflowTabs.length]);
+
+  useLayoutEffect(() => {
+    if (!moreMenuOpen) return;
+    const menu = moreMenuRef.current;
+    if (!menu) return;
+
+    const updateHeight = () => {
+      const height = menu.clientHeight;
+      if (height !== overflowMenuHeight) {
+        setOverflowMenuHeight(height);
+      }
+    };
+
+    updateHeight();
+
+    const observer =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            updateHeight();
+          })
+        : null;
+
+    observer?.observe(menu);
+
+    const handleScroll = () => {
+      setOverflowMenuScrollTop(menu.scrollTop);
+    };
+
+    menu.addEventListener('scroll', handleScroll, { passive: true });
+
+    return () => {
+      observer?.disconnect();
+      menu.removeEventListener('scroll', handleScroll);
+    };
+  }, [moreMenuOpen, overflowMenuHeight]);
+
+  const ensureOverflowItemVisible = useCallback(
+    (index: number) => {
+      if (!moreMenuRef.current) return;
+      const menu = moreMenuRef.current;
+      const itemHeight = overflowItemHeight || OVERFLOW_ITEM_ESTIMATE;
+      const containerHeight = overflowMenuHeight || menu.clientHeight || 0;
+      const top = index * itemHeight;
+      const bottom = top + itemHeight;
+
+      if (top < menu.scrollTop) {
+        menu.scrollTop = top;
+      } else if (bottom > menu.scrollTop + containerHeight) {
+        menu.scrollTop = bottom - containerHeight;
+      }
+    },
+    [overflowItemHeight, overflowMenuHeight],
+  );
+
+  const requestOverflowFocus = useCallback(
+    (index: number, { scroll = true }: { scroll?: boolean } = {}) => {
+      if (index < 0 || index >= totalOverflowTabs) return;
+      setFocusedOverflowIndex(index);
+      pendingOverflowFocus.current = index;
+      if (scroll) {
+        ensureOverflowItemVisible(index);
+      }
+    },
+    [ensureOverflowItemVisible, totalOverflowTabs],
+  );
+
+  useLayoutEffect(() => {
+    if (pendingOverflowFocus.current == null) return;
+    const node = overflowItemRefs.current.get(pendingOverflowFocus.current);
+    if (node) {
+      node.focus();
+      pendingOverflowFocus.current = null;
+    }
+  }, [virtualOverflow]);
+
+  const registerOverflowItem = useCallback(
+    (index: number, node: HTMLButtonElement | null) => {
+      if (node) {
+        overflowItemRefs.current.set(index, node);
+        const rect = node.getBoundingClientRect();
+        if (rect.height && Math.abs(rect.height - overflowItemHeight) > 0.5) {
+          setOverflowItemHeight(rect.height);
+        }
+      } else {
+        overflowItemRefs.current.delete(index);
+      }
+    },
+    [overflowItemHeight],
+  );
+
+  const handleOverflowKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+      if (totalOverflowTabs === 0) return;
+      const lastIndex = totalOverflowTabs - 1;
+      const pageJump =
+        overflowMenuHeight && overflowItemHeight
+          ? Math.max(1, Math.floor(overflowMenuHeight / overflowItemHeight))
+          : 5;
+
+      switch (event.key) {
+        case 'ArrowDown':
+          event.preventDefault();
+          requestOverflowFocus(Math.min(lastIndex, index + 1));
+          break;
+        case 'ArrowUp':
+          event.preventDefault();
+          requestOverflowFocus(Math.max(0, index - 1));
+          break;
+        case 'Home':
+          event.preventDefault();
+          requestOverflowFocus(0);
+          break;
+        case 'End':
+          event.preventDefault();
+          requestOverflowFocus(lastIndex);
+          break;
+        case 'PageDown':
+          event.preventDefault();
+          requestOverflowFocus(Math.min(lastIndex, index + pageJump));
+          break;
+        case 'PageUp':
+          event.preventDefault();
+          requestOverflowFocus(Math.max(0, index - pageJump));
+          break;
+        default:
+          break;
+      }
+    },
+    [overflowItemHeight, overflowMenuHeight, requestOverflowFocus, totalOverflowTabs],
+  );
+
+  useEffect(() => {
+    if (!moreMenuOpen) {
+      setFocusedOverflowIndex(null);
+      pendingOverflowFocus.current = null;
+      return;
+    }
+
+    if (totalOverflowTabs === 0) {
+      setFocusedOverflowIndex(null);
+      pendingOverflowFocus.current = null;
+      return;
+    }
+
+    const menu = moreMenuRef.current;
+    if (menu) {
+      menu.scrollTop = 0;
+      setOverflowMenuScrollTop(0);
+    }
+
+    const activeIndex = overflowTabs.findIndex((tab) => tab.id === activeId);
+    const targetIndex = activeIndex >= 0 ? activeIndex : 0;
+    requestOverflowFocus(targetIndex);
+  }, [activeId, moreMenuOpen, overflowTabs, requestOverflowFocus, totalOverflowTabs]);
 
   const scrollByAmount = useCallback((direction: 'left' | 'right') => {
     const container = scrollContainerRef.current;
@@ -403,18 +603,39 @@ const TabbedWindow: React.FC<TabbedWindowProps> = ({
                 role="menu"
                 className="absolute right-0 z-10 mt-1 w-48 rounded border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] py-1 text-[color:var(--color-text)] shadow-lg"
               >
-                {overflowTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    role="menuitem"
-                    className="flex w-full items-center justify-between px-3 py-1 text-left text-[color:color-mix(in_srgb,var(--color-text)_92%,transparent)] transition-colors hover:bg-[var(--kali-panel-highlight)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
-                    onClick={() => handleMoreSelect(tab.id)}
-                  >
-                    <span className="truncate">{tab.title}</span>
-                    {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
-                  </button>
-                ))}
+                <div
+                  style={{
+                    paddingTop: virtualOverflow.paddingTop,
+                    paddingBottom: virtualOverflow.paddingBottom,
+                  }}
+                  className="flex flex-col"
+                >
+                  {virtualOverflow.items.map(({ tab, index }) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      role="menuitem"
+                      ref={(node) => registerOverflowItem(index, node)}
+                      tabIndex={
+                        focusedOverflowIndex === null
+                          ? index === 0
+                            ? 0
+                            : -1
+                          : focusedOverflowIndex === index
+                          ? 0
+                          : -1
+                      }
+                      className="flex w-full items-center justify-between px-3 py-1 text-left text-[color:color-mix(in_srgb,var(--color-text)_92%,transparent)] transition-colors hover:bg-[var(--kali-panel-highlight)] hover:text-[color:var(--color-text)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ub-orange"
+                      onMouseDown={() => requestOverflowFocus(index, { scroll: false })}
+                      onFocus={() => setFocusedOverflowIndex(index)}
+                      onKeyDown={(event) => handleOverflowKeyDown(event, index)}
+                      onClick={() => handleMoreSelect(tab.id)}
+                    >
+                      <span className="truncate">{tab.title}</span>
+                      {tab.id === activeId && <span className="ml-2 text-xs text-ub-orange">Active</span>}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
