@@ -1,6 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 
+const sanitizeFilename = (input) => {
+  const base = path.basename(input || '');
+  const sanitized = base.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return sanitized.length > 0 ? sanitized : 'download';
+};
+
 export default function handler(req, res) {
   const { name } = req.query;
   const filename = Array.isArray(name) ? name.join('/') : name;
@@ -13,6 +19,9 @@ export default function handler(req, res) {
   }
   try {
     const data = fs.readFileSync(resolvedPath);
+    const safeName = sanitizeFilename(path.basename(resolvedPath));
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
     if (resolvedPath.endsWith('.json')) {
       res.setHeader('Content-Type', 'application/json');
     } else {
