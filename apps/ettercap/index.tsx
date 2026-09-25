@@ -14,6 +14,11 @@ const MODE_DESCRIPTIONS: Record<(typeof MODES)[number], string> = {
 };
 
 type TimelineStatus = 'done' | 'current' | 'pending';
+type TimelineStep = {
+  title: string;
+  description: string;
+  status: TimelineStatus;
+};
 type StatusTone = 'success' | 'warning' | 'error';
 type TimelineStep = {
   title: string;
