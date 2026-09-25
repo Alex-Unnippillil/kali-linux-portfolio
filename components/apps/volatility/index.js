@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
+import HorizontalScrollAffordance from '../shared/HorizontalScrollAffordance';
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
@@ -109,7 +110,11 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
 
   return (
     <div className="overflow-hidden rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
-      <table className="min-w-full table-auto text-xs text-[color:var(--color-text)]">
+      <HorizontalScrollAffordance
+        className="overflow-x-auto"
+        regionLabel="Volatility plugin results table"
+      >
+        <table className="min-w-full table-auto text-xs text-[color:var(--color-text)]">
         <thead className="bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.18))] text-[10px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.32))]">
           <tr>
             {columns.map((col) => (
@@ -150,7 +155,8 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
             </tr>
           ))}
         </tbody>
-      </table>
+        </table>
+      </HorizontalScrollAffordance>
     </div>
   );
 };
