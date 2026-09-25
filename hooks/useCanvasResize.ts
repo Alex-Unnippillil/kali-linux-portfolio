@@ -1,6 +1,19 @@
 import { useRef, useEffect } from 'react';
 
-export default function useCanvasResize(baseWidth: number, baseHeight: number) {
+type CanvasResizePayload = {
+  width: number;
+  height: number;
+  scale: number;
+  dpr: number;
+  baseWidth: number;
+  baseHeight: number;
+};
+
+export default function useCanvasResize(
+  baseWidth: number,
+  baseHeight: number,
+  onResize?: (payload: CanvasResizePayload) => void,
+) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -8,7 +21,6 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
 
     const resolveContainer = () => {
       const parent = canvas.parentElement;
@@ -41,7 +53,15 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
       canvas.style.height = `${height}px`;
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
-      ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+      if (ctx) ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0);
+      onResize?.({
+        width: canvas.width,
+        height: canvas.height,
+        scale,
+        dpr,
+        baseWidth,
+        baseHeight,
+      });
     };
 
     resize();
@@ -60,7 +80,7 @@ export default function useCanvasResize(baseWidth: number, baseHeight: number) {
       window.removeEventListener('resize', resize);
       ro?.disconnect();
     };
-  }, [baseWidth, baseHeight]);
+  }, [baseWidth, baseHeight, onResize]);
 
   return canvasRef;
 }
