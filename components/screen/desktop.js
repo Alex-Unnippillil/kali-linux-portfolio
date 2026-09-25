@@ -42,6 +42,22 @@ import {
 const FOLDER_CONTENTS_STORAGE_KEY = 'desktop_folder_contents';
 const WINDOW_SIZE_STORAGE_KEY = 'desktop_window_sizes';
 const PINNED_APPS_STORAGE_KEY = 'pinnedApps';
+const DESKTOP_ICON_POSITIONS_STORAGE_KEY = 'desktop_icon_positions';
+const WINDOW_TRASH_STORAGE_KEY = 'window-trash';
+const APP_SHORTCUTS_STORAGE_KEY = 'app_shortcuts';
+const NEW_FOLDERS_STORAGE_KEY = 'new_folders';
+const FREQUENT_APPS_STORAGE_KEY = 'frequentApps';
+
+const summarizeStorageError = (error) => {
+    if (error instanceof Error && typeof error.message === 'string') return error.message;
+    return String(error);
+};
+
+const warnStorageParseFailure = (storageKey, error) => {
+    if (process.env.NODE_ENV !== 'production') {
+        console.warn(`[desktop storage] Failed to parse "${storageKey}": ${summarizeStorageError(error)}`);
+    }
+};
 
 let toPngImporter = null;
 const resolveToPng = async () => {
@@ -81,6 +97,7 @@ const loadStoredFolderContents = () => {
         });
         return normalized;
     } catch (e) {
+        warnStorageParseFailure(FOLDER_CONTENTS_STORAGE_KEY, e);
         return {};
     }
 };
@@ -122,6 +139,7 @@ const loadStoredWindowSizes = (storageKey = WINDOW_SIZE_STORAGE_KEY) => {
         });
         return normalized;
     } catch (e) {
+        warnStorageParseFailure(storageKey, e);
         return {};
     }
 };
@@ -512,6 +530,7 @@ export class Desktop extends Component {
                 return parsed.filter((value) => typeof value === 'string');
             }
         } catch (e) {
+            warnStorageParseFailure(this.getTaskbarOrderStorageKey(), e);
             // ignore malformed entries and fall back to default order
         }
         return [];
@@ -572,6 +591,7 @@ export class Desktop extends Component {
                 return normalized;
             }
         } catch (e) {
+            warnStorageParseFailure(this.pinnedStorageKey, e);
             // ignore malformed entries and fall back to defaults
         }
 
@@ -860,6 +880,7 @@ export class Desktop extends Component {
             });
             return map;
         } catch (e) {
+            warnStorageParseFailure(this.iconSizePresetStorageKey, e);
             return map;
         }
     };
@@ -1669,6 +1690,7 @@ export class Desktop extends Component {
             const stored = safeLocalStorage.getItem('desktop_icon_positions');
             return stored ? JSON.parse(stored) : {};
         } catch (e) {
+            warnStorageParseFailure(DESKTOP_ICON_POSITIONS_STORAGE_KEY, e);
             return {};
         }
     };
@@ -2719,6 +2741,7 @@ export class Desktop extends Component {
                 }
             });
         } catch (e) {
+            warnStorageParseFailure(WINDOW_TRASH_STORAGE_KEY, e);
             return order;
         }
         return order;
@@ -4154,9 +4177,9 @@ export class Desktop extends Component {
     };
 
     checkForNewFolders = () => {
-        const stored = safeLocalStorage?.getItem('new_folders');
+        const stored = safeLocalStorage?.getItem(NEW_FOLDERS_STORAGE_KEY);
         if (!stored) {
-            safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
+            safeLocalStorage?.setItem(NEW_FOLDERS_STORAGE_KEY, JSON.stringify([]));
             return;
         }
         try {
@@ -4191,7 +4214,8 @@ export class Desktop extends Component {
                 this.updateAppsData();
             }
         } catch (e) {
-            safeLocalStorage?.setItem('new_folders', JSON.stringify([]));
+            warnStorageParseFailure(NEW_FOLDERS_STORAGE_KEY, e);
+            safeLocalStorage?.setItem(NEW_FOLDERS_STORAGE_KEY, JSON.stringify([]));
         }
     }
 
@@ -5552,7 +5576,7 @@ export class Desktop extends Component {
             return;
         } else {
             let frequentApps = [];
-            try { frequentApps = JSON.parse(safeLocalStorage?.getItem('frequentApps') || '[]'); } catch (e) { frequentApps = []; }
+            try { frequentApps = JSON.parse(safeLocalStorage?.getItem(FREQUENT_APPS_STORAGE_KEY) || '[]'); } catch (e) { warnStorageParseFailure(FREQUENT_APPS_STORAGE_KEY, e); frequentApps = []; }
             var currentApp = frequentApps.find(app => app.id === objId);
             if (currentApp) {
                 frequentApps.forEach((app) => {
@@ -5574,7 +5598,7 @@ export class Desktop extends Component {
                 return 0; // sort according to decreasing frequencies
             });
 
-            safeLocalStorage?.setItem('frequentApps', JSON.stringify(frequentApps));
+            safeLocalStorage?.setItem(FREQUENT_APPS_STORAGE_KEY, JSON.stringify(frequentApps));
 
             addRecentApp(objId);
 
@@ -5662,7 +5686,7 @@ export class Desktop extends Component {
         const ms = purgeDays * 24 * 60 * 60 * 1000;
         const now = Date.now();
         let trash = [];
-        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        try { trash = JSON.parse(safeLocalStorage?.getItem(WINDOW_TRASH_STORAGE_KEY) || '[]'); } catch (e) { warnStorageParseFailure(WINDOW_TRASH_STORAGE_KEY, e); trash = []; }
         trash = trash.filter(item => now - item.closedAt <= ms);
         trash.push({
             id: objId,
@@ -5801,19 +5825,19 @@ export class Desktop extends Component {
         if (appIndex === -1) return;
         apps[appIndex].desktop_shortcut = true;
         let shortcuts = [];
-        try { shortcuts = JSON.parse(safeLocalStorage?.getItem('app_shortcuts') || '[]'); } catch (e) { shortcuts = []; }
+        try { shortcuts = JSON.parse(safeLocalStorage?.getItem(APP_SHORTCUTS_STORAGE_KEY) || '[]'); } catch (e) { warnStorageParseFailure(APP_SHORTCUTS_STORAGE_KEY, e); shortcuts = []; }
         if (!shortcuts.includes(app_id)) {
             shortcuts.push(app_id);
-            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify(shortcuts));
+            safeLocalStorage?.setItem(APP_SHORTCUTS_STORAGE_KEY, JSON.stringify(shortcuts));
         }
         this.closeOverlay(SHORTCUT_OVERLAY_ID);
         this.updateAppsData();
     }
 
     checkForAppShortcuts = () => {
-        const shortcuts = safeLocalStorage?.getItem('app_shortcuts');
+        const shortcuts = safeLocalStorage?.getItem(APP_SHORTCUTS_STORAGE_KEY);
         if (!shortcuts) {
-            safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
+            safeLocalStorage?.setItem(APP_SHORTCUTS_STORAGE_KEY, JSON.stringify([]));
         } else {
             try {
                 JSON.parse(shortcuts).forEach(id => {
@@ -5823,7 +5847,8 @@ export class Desktop extends Component {
                     }
                 });
             } catch (e) {
-                safeLocalStorage?.setItem('app_shortcuts', JSON.stringify([]));
+                warnStorageParseFailure(APP_SHORTCUTS_STORAGE_KEY, e);
+                safeLocalStorage?.setItem(APP_SHORTCUTS_STORAGE_KEY, JSON.stringify([]));
             }
             this.updateAppsData();
         }
@@ -5831,7 +5856,7 @@ export class Desktop extends Component {
 
     updateTrashIcon = () => {
         let trash = [];
-        try { trash = JSON.parse(safeLocalStorage?.getItem('window-trash') || '[]'); } catch (e) { trash = []; }
+        try { trash = JSON.parse(safeLocalStorage?.getItem(WINDOW_TRASH_STORAGE_KEY) || '[]'); } catch (e) { warnStorageParseFailure(WINDOW_TRASH_STORAGE_KEY, e); trash = []; }
         const appIndex = apps.findIndex(app => app.id === 'trash');
         if (appIndex !== -1) {
             const icon = trash.length
@@ -5861,9 +5886,9 @@ export class Desktop extends Component {
         this.ensureFolderEntry(folderAppId);
         // store in local storage
         let new_folders = [];
-        try { new_folders = JSON.parse(safeLocalStorage?.getItem('new_folders') || '[]'); } catch (e) { new_folders = []; }
+        try { new_folders = JSON.parse(safeLocalStorage?.getItem(NEW_FOLDERS_STORAGE_KEY) || '[]'); } catch (e) { warnStorageParseFailure(NEW_FOLDERS_STORAGE_KEY, e); new_folders = []; }
         new_folders.push({ id: folderAppId, name: folder_name });
-        safeLocalStorage?.setItem('new_folders', JSON.stringify(new_folders));
+        safeLocalStorage?.setItem(NEW_FOLDERS_STORAGE_KEY, JSON.stringify(new_folders));
 
         this.setState({ showNameBar: false }, this.updateAppsData);
     };
