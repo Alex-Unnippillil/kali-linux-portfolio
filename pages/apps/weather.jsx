@@ -216,8 +216,12 @@ function WeatherBackground({ theme, children }) {
 
 function SegmentedControl({ label, options, value, onChange }) {
   return (
-    <div className="flex flex-col gap-2" role="radiogroup" aria-label={label}>
-      <div className="inline-flex overflow-hidden rounded-lg border border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,transparent)] shadow-[0_8px_24px_rgba(15,23,42,0.3)]">
+    <div
+      className="flex w-full flex-col gap-2 sm:flex-row sm:items-center"
+      role="radiogroup"
+      aria-label={label}
+    >
+      <div className="flex w-full flex-col overflow-hidden rounded-lg border border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,transparent)] shadow-[0_8px_24px_rgba(15,23,42,0.3)] sm:inline-flex sm:flex-row">
         {options.map((option, index) => {
           const isActive = option.value === value;
           return (
@@ -228,9 +232,9 @@ function SegmentedControl({ label, options, value, onChange }) {
               aria-checked={isActive}
               aria-label={option.ariaLabel ?? option.label}
               onClick={() => onChange(option.value)}
-              className={`relative flex min-w-[6.5rem] flex-1 flex-col gap-1 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide transition-all sm:text-sm ${
+              className={`relative flex w-full flex-1 flex-col gap-1 px-3 py-2 text-left text-xs font-medium uppercase tracking-wide transition-all sm:min-w-[6.5rem] sm:text-sm ${
                 index > 0
-                  ? 'border-l border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent)]'
+                  ? 'border-t border-[color:color-mix(in_srgb,var(--kali-panel-border)_85%,transparent)] sm:border-t-0 sm:border-l'
                   : ''
               } ${
                 isActive
@@ -252,11 +256,71 @@ function SegmentedControl({ label, options, value, onChange }) {
   );
 }
 
-function WeatherCard({ id, title, subtitle, accent, mounted, children }) {
+function SkeletonBlock({ className }) {
+  return <div aria-hidden="true" className={`animate-pulse rounded-md bg-white/20 ${className}`} />;
+}
+
+function CurrentConditionsSkeleton() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-3">
+        <SkeletonBlock className="h-12 w-2/3" />
+        <SkeletonBlock className="h-3 w-1/2" />
+        <SkeletonBlock className="h-16 w-full" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={`conditions-${index}`} className="space-y-2">
+            <SkeletonBlock className="h-3 w-20" />
+            <SkeletonBlock className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function HourlyForecastSkeleton() {
+  return (
+    <div className="flex gap-2 overflow-hidden">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={`hourly-${index}`}
+          className="flex min-w-[5.5rem] flex-col gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-panel-border)_75%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_82%,transparent)] px-3 py-2"
+        >
+          <SkeletonBlock className="h-3 w-10" />
+          <SkeletonBlock className="h-5 w-12" />
+          <SkeletonBlock className="h-8 w-full" />
+          <SkeletonBlock className="h-3 w-16" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WeatherHighlightsSkeleton() {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div
+          key={`highlight-${index}`}
+          className="space-y-2 rounded-lg border border-[color:color-mix(in_srgb,var(--kali-panel-border)_70%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_84%,transparent)] p-3"
+        >
+          <SkeletonBlock className="h-3 w-16" />
+          <SkeletonBlock className="h-4 w-20" />
+          <SkeletonBlock className="h-3 w-24" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WeatherCard({ id, title, subtitle, accent, mounted, isLoading, skeleton, children }) {
   return (
     <section
       aria-labelledby={id}
-      className={`group rounded-xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_80%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_80%,transparent)] p-4 shadow-[0_12px_32px_rgba(15,23,42,0.35)] transition-all duration-500 ease-out ${
+      aria-busy={isLoading}
+      className={`group w-full rounded-xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_80%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_80%,transparent)] p-4 shadow-[0_12px_32px_rgba(15,23,42,0.35)] transition-all duration-500 ease-out ${
         mounted ? 'translate-y-0 opacity-100' : 'translate-y-3 opacity-0'
       }`}
     >
@@ -281,7 +345,13 @@ function WeatherCard({ id, title, subtitle, accent, mounted, children }) {
         />
       </div>
       <div className="space-y-3 text-sm text-[color:color-mix(in_srgb,var(--kali-text)_90%,transparent)]">
-        {children}
+        {isLoading ? (
+          <div data-testid={`${id}-skeleton`} aria-hidden="true">
+            {skeleton}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     </section>
   );
@@ -429,6 +499,7 @@ export default function WeatherAppPage() {
   const [isOffline, setIsOffline] = useState(
     typeof navigator !== 'undefined' ? !navigator.onLine : false,
   );
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setIsMounted(true);
@@ -460,6 +531,14 @@ export default function WeatherAppPage() {
     const themeKey = selectedCity?.background ?? 'default';
     return CONDITION_THEMES[themeKey] ?? CONDITION_THEMES.default;
   }, [selectedCity]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timeout = setTimeout(() => setIsLoading(false), 350);
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [selectedCityId, unitSystem]);
 
   return (
     <WeatherBackground theme={activeTheme}>
@@ -502,13 +581,15 @@ export default function WeatherAppPage() {
         />
 
         <main className="flex-1 overflow-y-auto rounded-2xl border border-[color:color-mix(in_srgb,var(--kali-panel-border)_82%,transparent)] bg-[color:color-mix(in_srgb,var(--kali-panel)_65%,transparent)]/70 p-4 shadow-[0_16px_40px_rgba(15,23,42,0.4)] backdrop-blur-xl scrollbar-thin scrollbar-track-transparent scrollbar-thumb-[color:color-mix(in_srgb,var(--kali-panel-border)_88%,transparent)] sm:p-6">
-          <div className="flex flex-col gap-6">
+          <div className="grid gap-6 lg:grid-cols-2" data-testid="weather-cards">
             <WeatherCard
               id="current-conditions"
               title="Current Conditions"
               subtitle={selectedCity.summary}
               accent={activeTheme.accent}
               mounted={isMounted}
+              isLoading={isLoading}
+              skeleton={<CurrentConditionsSkeleton />}
             >
               <CurrentConditions city={selectedCity} units={unitSystem} />
             </WeatherCard>
@@ -519,6 +600,8 @@ export default function WeatherAppPage() {
               subtitle="Next 12 hours outlook"
               accent={activeTheme.accent}
               mounted={isMounted}
+              isLoading={isLoading}
+              skeleton={<HourlyForecastSkeleton />}
             >
               <HourlyForecast city={selectedCity} units={unitSystem} />
             </WeatherCard>
@@ -529,6 +612,8 @@ export default function WeatherAppPage() {
               subtitle="Key metrics at a glance"
               accent={activeTheme.accent}
               mounted={isMounted}
+              isLoading={isLoading}
+              skeleton={<WeatherHighlightsSkeleton />}
             >
               <WeatherHighlights city={selectedCity} units={unitSystem} />
             </WeatherCard>
