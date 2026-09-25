@@ -1,6 +1,8 @@
 import seedrandom from 'seedrandom';
 
-let rng = seedrandom('', { state: true });
+type SeedRandomState = ReturnType<typeof seedrandom> | seedrandom.prng;
+
+let rng: SeedRandomState = seedrandom('', { state: true });
 
 export const random = () => rng();
 
@@ -16,5 +18,16 @@ export const deserialize = (state: string) => {
   rng = seedrandom('', { state: JSON.parse(state) });
 };
 
-const rngApi = { random, reset, serialize, deserialize };
+export const createRng = (state?: string, seed?: string) => {
+  const instance: SeedRandomState = state
+    ? seedrandom('', { state: JSON.parse(state) })
+    : seedrandom(seed ?? '', { state: true });
+
+  return {
+    random: () => instance(),
+    serialize: () => JSON.stringify((instance as any).state()),
+  };
+};
+
+const rngApi = { random, reset, serialize, deserialize, createRng };
 export default rngApi;
