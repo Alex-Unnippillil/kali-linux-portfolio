@@ -1,15 +1,14 @@
 @import './globals.css';
+@import './typography.css';
 @import './animation.css';
-
-html {
-    font-size: clamp(12px, calc(16px * var(--font-multiplier)), 24px);
-}
 
 body{
     font-family: var(--font-family-base);
     font-display: swap;
     background-color: var(--color-bg);
     color: var(--color-text);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
 }
 
 :root {
@@ -721,7 +720,8 @@ html[data-theme='matrix'] .word-search-clue {
 textarea,
 pre {
     font-family: monospace;
-    line-height: 1.2;
+    font-size: var(--font-size-body-sm);
+    line-height: var(--line-height-code);
 }
 
 /* Visible focus rings for copy buttons and text areas */

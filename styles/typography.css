@@ -1,0 +1,188 @@
+:root {
+  --baseline-grid: 0.25rem;
+
+  --font-size-root: clamp(15px, 0.95vw + 14px, 18px);
+  --font-size-body-sm: clamp(0.875rem, 0.84rem + 0.2vw, 0.975rem);
+  --font-size-body: clamp(1rem, 0.96rem + 0.24vw, 1.125rem);
+  --font-size-body-lg: clamp(1.125rem, 1.05rem + 0.35vw, 1.25rem);
+
+  --font-size-heading-6: clamp(1.0625rem, 1rem + 0.3vw, 1.35rem);
+  --font-size-heading-5: clamp(1.25rem, 1.15rem + 0.45vw, 1.5rem);
+  --font-size-heading-4: clamp(1.5rem, 1.35rem + 0.6vw, 1.875rem);
+  --font-size-heading-3: clamp(1.8125rem, 1.6rem + 0.85vw, 2.25rem);
+  --font-size-heading-2: clamp(2.125rem, 1.75rem + 1.1vw, 2.75rem);
+  --font-size-heading-1: clamp(2.75rem, 2.05rem + 1.5vw, 3.5rem);
+
+  --line-height-body: clamp(
+    calc(var(--baseline-grid) * 6),
+    calc(var(--baseline-grid) * 5.5 + 0.3vw),
+    calc(var(--baseline-grid) * 7)
+  );
+  --line-height-heading: clamp(
+    calc(var(--baseline-grid) * 5.5),
+    calc(var(--baseline-grid) * 5 + 0.25vw),
+    calc(var(--baseline-grid) * 6.5)
+  );
+  --line-height-heading-tight: clamp(
+    calc(var(--baseline-grid) * 5),
+    calc(var(--baseline-grid) * 4.5 + 0.2vw),
+    calc(var(--baseline-grid) * 6)
+  );
+  --line-height-display: clamp(
+    calc(var(--baseline-grid) * 7),
+    calc(var(--baseline-grid) * 6 + 0.35vw),
+    calc(var(--baseline-grid) * 8)
+  );
+  --line-height-code: clamp(
+    calc(var(--baseline-grid) * 5),
+    calc(var(--baseline-grid) * 4.5 + 0.2vw),
+    calc(var(--baseline-grid) * 6)
+  );
+
+  --letter-spacing-heading: 0.01em;
+}
+
+html {
+  font-size: calc(var(--font-size-root) * var(--font-multiplier));
+}
+
+body {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+small {
+  font-size: var(--font-size-body-sm);
+  line-height: var(--line-height-body);
+}
+
+.large-text {
+  font-size: var(--font-size-body-lg);
+  line-height: var(--line-height-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  margin: 0 0 calc(var(--baseline-grid) * 4);
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-heading);
+}
+
+h1 {
+  font-size: var(--font-size-heading-1);
+  line-height: var(--line-height-display);
+}
+
+h2 {
+  font-size: var(--font-size-heading-2);
+  line-height: var(--line-height-display);
+}
+
+h3 {
+  font-size: var(--font-size-heading-3);
+  line-height: var(--line-height-heading);
+}
+
+h4 {
+  font-size: var(--font-size-heading-4);
+  line-height: var(--line-height-heading);
+}
+
+h5 {
+  font-size: var(--font-size-heading-5);
+  line-height: var(--line-height-heading-tight);
+}
+
+h6 {
+  font-size: var(--font-size-heading-6);
+  line-height: var(--line-height-heading-tight);
+  text-transform: uppercase;
+}
+
+p,
+ul,
+ol,
+dl,
+blockquote {
+  margin: 0 0 calc(var(--baseline-grid) * 4);
+  line-height: var(--line-height-body);
+}
+
+p:last-child,
+ul:last-child,
+ol:last-child,
+dl:last-child,
+blockquote:last-child {
+  margin-bottom: 0;
+}
+
+li {
+  margin-bottom: calc(var(--baseline-grid) * 2);
+  line-height: inherit;
+}
+
+li:last-child {
+  margin-bottom: 0;
+}
+
+.heading {
+  font-weight: 600;
+  letter-spacing: var(--letter-spacing-heading);
+  color: inherit;
+  margin: 0 0 calc(var(--baseline-grid) * 4);
+}
+
+.heading--1 {
+  font-size: var(--font-size-heading-1);
+  line-height: var(--line-height-display);
+}
+
+.heading--2 {
+  font-size: var(--font-size-heading-2);
+  line-height: var(--line-height-display);
+}
+
+.heading--3 {
+  font-size: var(--font-size-heading-3);
+  line-height: var(--line-height-heading);
+}
+
+.heading--4 {
+  font-size: var(--font-size-heading-4);
+  line-height: var(--line-height-heading);
+}
+
+.heading--5 {
+  font-size: var(--font-size-heading-5);
+  line-height: var(--line-height-heading-tight);
+}
+
+.heading--6 {
+  font-size: var(--font-size-heading-6);
+  line-height: var(--line-height-heading-tight);
+  text-transform: uppercase;
+}
+
+.heading--align-center {
+  text-align: center;
+}
+
+.heading--align-end {
+  text-align: end;
+}
+
+code,
+pre,
+textarea,
+kbd,
+samp {
+  line-height: var(--line-height-code);
+}
+
+.text-measure {
+  max-width: 70ch;
+}
