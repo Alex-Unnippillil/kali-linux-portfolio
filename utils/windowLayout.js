@@ -153,10 +153,17 @@ export const measureTaskbarHeight = () => {
   return DEFAULT_SNAP_BOTTOM_INSET;
 };
 
+export const normalizeSnapBottomInset = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+  return DEFAULT_SNAP_BOTTOM_INSET;
+};
+
 export const measureSnapBottomInset = () => {
   const measured = measureTaskbarHeight();
   if (typeof measured === 'number' && Number.isFinite(measured)) {
-    return Math.max(measured, DEFAULT_SNAP_BOTTOM_INSET);
+    return normalizeSnapBottomInset(measured);
   }
   return DEFAULT_SNAP_BOTTOM_INSET;
 };
