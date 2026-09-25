@@ -19,6 +19,7 @@ import SpeedControls from '../../games/pacman/components/SpeedControls';
 import MazeEditor from '../../games/pacman/components/MazeEditor';
 import Modal from '../base/Modal';
 import useGamepad from './Games/common/useGamepad';
+import { formatGameKey } from '../../utils/gameInput';
 import {
   createInitialState,
   step,
@@ -37,6 +38,17 @@ const TILE_SIZE = 22;
 const FIXED_STEP = 1 / 120;
 const FRIGHT_FLASH_WINDOW = 1.5;
 const MAX_DELTA = 0.1;
+const PACMAN_DEFAULT_KEYMAP = {
+  up: 'ArrowUp',
+  down: 'ArrowDown',
+  left: 'ArrowLeft',
+  right: 'ArrowRight',
+  action: 'Space',
+  pause: 'Escape',
+};
+
+type PacmanKeyAction = keyof typeof PACMAN_DEFAULT_KEYMAP;
+type PacmanRemapAction = PacmanKeyAction | 'restart';
 
 const DEFAULT_SCHEDULE = [
   { mode: 'scatter' as const, duration: 7 },
@@ -179,8 +191,92 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
   const pauseRequestedRef = useRef(false);
   const padConnectedRef = useRef(false);
+  const [waitingForAction, setWaitingForAction] = useState<PacmanRemapAction | null>(null);
+  const [remapMessage, setRemapMessage] = useState('');
+
+  const isPacmanKeymap = (
+    value: unknown,
+  ): value is typeof PACMAN_DEFAULT_KEYMAP => {
+    if (!value || typeof value !== 'object') return false;
+    return (Object.keys(PACMAN_DEFAULT_KEYMAP) as PacmanKeyAction[]).every(
+      (action) => typeof (value as Record<string, unknown>)[action] === 'string',
+    );
+  };
+  const [keymap, setKeymap, resetKeymap] = usePersistentState(
+    'pacman:keymap',
+    PACMAN_DEFAULT_KEYMAP,
+    isPacmanKeymap,
+  );
+  const [restartKey, setRestartKey, resetRestartKey] = usePersistentState(
+    'pacman:restartKey',
+    'r',
+    (value): value is string => typeof value === 'string',
+  );
 
   const activeLevel = customLevel ?? levels[activeLevelIndex] ?? DEFAULT_LEVEL;
+
+  const emitKeymapUpdate = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    window.dispatchEvent(
+      new CustomEvent('game-keymap-updated', { detail: { game: 'pacman' } }),
+    );
+  }, []);
+
+  useEffect(() => {
+    emitKeymapUpdate();
+  }, [keymap, emitKeymapUpdate]);
+
+  const normalizeCapturedKey = useCallback((event: KeyboardEvent) => {
+    if (event.key === ' ' || event.code === 'Space') return 'Space';
+    return event.key;
+  }, []);
+
+  const applyKeyBinding = useCallback(
+    (action: PacmanKeyAction, key: string) => {
+      setKeymap((current) => {
+        const next = { ...current, [action]: key };
+        const conflictingAction = (Object.keys(current) as PacmanKeyAction[]).find(
+          (candidate) => candidate !== action && current[candidate] === key,
+        );
+        // Conflict policy: swap the two actions so no binding is silently dropped.
+        if (conflictingAction) {
+          next[conflictingAction] = current[action];
+          setRemapMessage(
+            `${action} is now ${formatGameKey(key)}. Swapped with ${conflictingAction}.`,
+          );
+        } else {
+          setRemapMessage(`${action} is now ${formatGameKey(key)}.`);
+        }
+        return next;
+      });
+    },
+    [setKeymap],
+  );
+
+  useEffect(() => {
+    if (!waitingForAction) return undefined;
+    const handleCapture = (event: KeyboardEvent) => {
+      event.preventDefault();
+      if (event.key === 'Escape') {
+        setWaitingForAction(null);
+        setRemapMessage('Remap canceled.');
+        return;
+      }
+      const key = normalizeCapturedKey(event);
+      if (waitingForAction === 'restart') {
+        setRestartKey(key);
+        setRemapMessage(`restart is now ${formatGameKey(key)}.`);
+      } else {
+        applyKeyBinding(waitingForAction, key);
+      }
+      setWaitingForAction(null);
+    };
+
+    window.addEventListener('keydown', handleCapture);
+    return () => {
+      window.removeEventListener('keydown', handleCapture);
+    };
+  }, [waitingForAction, applyKeyBinding, normalizeCapturedKey, setRestartKey]);
 
   const filteredLevels = useMemo(() => {
     const source = classicOnly ? levels.slice(0, 1) : levels;
@@ -756,10 +852,10 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
     pauseRequestedRef.current = false;
     if (!paused) {
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: keymap.pause }));
       }
     }
-  }, [paused]);
+  }, [paused, keymap.pause]);
 
   const handlePlayMaze = useCallback(
     (maze: number[][]) => {
@@ -835,6 +931,62 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
           gameSpeed={gameSpeed}
           setGameSpeed={setGameSpeed}
         />
+      </div>
+      <div className="rounded bg-slate-900/60 p-2 space-y-2">
+        <div className="text-xs uppercase tracking-wide text-slate-300">Controls</div>
+        {(Object.keys(PACMAN_DEFAULT_KEYMAP) as PacmanKeyAction[]).map((action) => (
+          <div key={action} className="flex items-center justify-between gap-2 text-xs">
+            <span className="capitalize text-slate-200">{action}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setWaitingForAction(action);
+                setRemapMessage('');
+              }}
+              className="rounded bg-slate-700 px-2 py-1"
+            >
+              {waitingForAction === action ? 'Press a key…' : formatGameKey(keymap[action])}
+            </button>
+          </div>
+        ))}
+        <div className="flex items-center justify-between gap-2 text-xs">
+          <span className="capitalize text-slate-200">Restart</span>
+          <button
+            type="button"
+            onClick={() => {
+              setWaitingForAction('restart');
+              setRemapMessage('');
+            }}
+            className="rounded bg-slate-700 px-2 py-1"
+          >
+            {waitingForAction === 'restart' ? 'Press a key…' : formatGameKey(restartKey)}
+          </button>
+        </div>
+        {waitingForAction && (
+          <button
+            type="button"
+            onClick={() => {
+              setWaitingForAction(null);
+              setRemapMessage('Remap canceled.');
+            }}
+            className="w-full rounded bg-slate-700 px-2 py-1 text-xs"
+          >
+            Cancel remap
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            resetKeymap();
+            resetRestartKey();
+            setWaitingForAction(null);
+            setRemapMessage('Controls reset to defaults.');
+          }}
+          className="w-full rounded bg-slate-700 px-2 py-1 text-xs"
+        >
+          Reset controls to defaults
+        </button>
+        {remapMessage && <p className="text-[11px] text-amber-300">{remapMessage}</p>}
       </div>
       <button
         type="button"
@@ -930,8 +1082,8 @@ const Pacman: React.FC<{ windowMeta?: { isFocused?: boolean } }> = ({
       highScore={highScore}
       onPauseChange={setPaused}
       onRestart={resetGame}
-      pauseHotkeys={['Escape', 'p']}
-      restartHotkeys={['r']}
+      pauseHotkeys={[keymap.pause]}
+      restartHotkeys={[restartKey]}
       settingsPanel={settingsPanel}
       isFocused={isFocused}
       editor={
