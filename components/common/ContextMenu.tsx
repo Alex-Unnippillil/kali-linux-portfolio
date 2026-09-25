@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useRovingTabIndex from '../../hooks/useRovingTabIndex';
 
 export interface MenuItem {
+  id?: string;
   label: React.ReactNode;
   onSelect: () => void;
 }
@@ -68,6 +69,35 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
     }
   }, [open]);
 
+  const keyedItems = useMemo(() => {
+    const labelCounts = new Map<string, number>();
+
+    return items.map((item) => {
+      if (item.id) {
+        return { ...item, key: item.id };
+      }
+
+      const derivedLabel =
+        typeof item.label === 'string' || typeof item.label === 'number'
+          ? String(item.label)
+          : 'menu-item';
+
+      const normalizedLabel = derivedLabel
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '') || 'menu-item';
+
+      const count = (labelCounts.get(normalizedLabel) ?? 0) + 1;
+      labelCounts.set(normalizedLabel, count);
+
+      return {
+        ...item,
+        key: count === 1 ? normalizedLabel : `${normalizedLabel}-${count}`,
+      };
+    });
+  }, [items]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -101,9 +131,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
       className={(open ? 'block ' : 'hidden ') +
         'cursor-default w-52 context-menu-bg border text-left border-gray-900 rounded text-white py-4 absolute z-50 text-sm'}
     >
-      {items.map((item, i) => (
+      {keyedItems.map((item) => (
         <button
-          key={i}
+          key={item.key}
           role="menuitem"
           tabIndex={-1}
           onClick={() => {
@@ -120,4 +150,3 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ targetRef, items }) => {
 };
 
 export default ContextMenu;
-
