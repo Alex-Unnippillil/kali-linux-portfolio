@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
+import { compactUi } from '../shared/compactUi';
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
@@ -110,7 +111,9 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
   return (
     <div className="overflow-hidden rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
       <table className="min-w-full table-auto text-xs text-[color:var(--color-text)]">
-        <thead className="bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.18))] text-[10px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.32))]">
+        <thead
+          className={`bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.18))] ${compactUi.labelSmall} text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.32))]`}
+        >
           <tr>
             {columns.map((col) => (
               <th
@@ -142,7 +145,7 @@ const SortableTable = ({ columns, data, onRowClick, rowClassName }) => {
               {columns.map((col) => (
                 <td
                   key={col.key}
-                  className="px-3 py-2 whitespace-nowrap text-[11px] text-[color:color-mix(in_srgb,var(--kali-terminal-text)_82%,rgba(148,210,255,0.18))]"
+                  className={`whitespace-nowrap px-3 py-2 ${compactUi.bodySmall} text-[color:color-mix(in_srgb,var(--kali-terminal-text)_82%,rgba(148,210,255,0.18))]`}
                 >
                   {col.render ? col.render(row) : row[col.key]}
                 </td>
@@ -190,7 +193,7 @@ const VolatilityApp = () => {
     <li>
       <button
         type="button"
-        className="text-left text-[11px] text-amber-200 transition hover:text-white"
+        className={`text-left ${compactUi.bodySmall} text-amber-200 transition hover:text-white`}
         onClick={() => {
           setSelectedPid(node.pid);
           setFinding(glossary.pstree);
@@ -253,7 +256,9 @@ const VolatilityApp = () => {
       <div className="flex flex-1 flex-col gap-4 px-4 pb-4 text-[color:var(--kali-terminal-text)]">
         <div className="flex flex-col gap-4 lg:flex-row">
           <div className="flex-1 overflow-hidden rounded-xl border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-[0_20px_40px_rgba(5,12,20,0.45)]">
-            <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.16))] px-3 py-2 text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.28))]">
+            <div
+              className={`flex flex-wrap items-center gap-2 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.16))] px-3 py-2 ${compactUi.labelSmall} text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.28))]`}
+            >
               {tabs.map((tab) => (
                 <button
                   key={tab}
@@ -271,7 +276,7 @@ const VolatilityApp = () => {
             <div className="flex-1 overflow-auto p-3 text-xs text-[color:var(--color-text)]">
               {activeTab === 'pstree' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.pstree.description}</p>
+                  <p className={`${compactUi.bodySmall} text-gray-400`}>{glossary.pstree.description}</p>
                   <div className="flex flex-col gap-4 xl:flex-row">
                     <ul className="space-y-2 rounded-lg border border-[color:var(--kali-border)] bg-[color:var(--kali-panel-highlight)] p-3 text-xs">
                       {pstree.map((node) => (
@@ -294,7 +299,7 @@ const VolatilityApp = () => {
                           />
                         </div>
                       ) : (
-                        <p className="rounded-lg border border-dashed border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)] p-4 text-[11px] text-gray-400">
+                        <p className={`rounded-lg border border-dashed border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_94%,transparent)] p-4 ${compactUi.bodySmall} text-gray-400`}>
                           Select a process to view modules.
                         </p>
                       )}
@@ -304,7 +309,7 @@ const VolatilityApp = () => {
               )}
               {activeTab === 'pslist' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.pslist.description}</p>
+                  <p className={`${compactUi.bodySmall} text-gray-400`}>{glossary.pslist.description}</p>
                   <SortableTable
                     columns={pslistColumns}
                     data={pslist}
@@ -314,7 +319,7 @@ const VolatilityApp = () => {
               )}
               {activeTab === 'netscan' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.netscan.description}</p>
+                  <p className={`${compactUi.bodySmall} text-gray-400`}>{glossary.netscan.description}</p>
                   <SortableTable
                     columns={netscanColumns}
                     data={netscan}
@@ -329,7 +334,7 @@ const VolatilityApp = () => {
               )}
               {activeTab === 'malfind' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.malfind.description}</p>
+                  <p className={`${compactUi.bodySmall} text-gray-400`}>{glossary.malfind.description}</p>
                   <SortableTable
                     columns={[
                       { key: 'pid', label: 'PID' },
@@ -351,7 +356,7 @@ const VolatilityApp = () => {
               )}
               {activeTab === 'yarascan' && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-gray-400">{glossary.yara.description}</p>
+                  <p className={`${compactUi.bodySmall} text-gray-400`}>{glossary.yara.description}</p>
                   <SortableTable
                     columns={[
                       { key: 'pid', label: 'PID' },
@@ -362,7 +367,7 @@ const VolatilityApp = () => {
                         label: 'Heuristic',
                         render: (row) => (
                             <span
-                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize ${
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 ${compactUi.chipSmall} capitalize ${
                                 heuristicColors[row.heuristic] ?? severityPalette.informational.chip
                               }`}
                           >
@@ -384,18 +389,18 @@ const VolatilityApp = () => {
           {finding && (
             <aside className="w-full rounded-xl border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 text-xs shadow-inner lg:w-72">
               <h3 className="text-sm font-semibold text-white">Explain this finding</h3>
-              <p className="mt-2 text-[11px] text-gray-300">{finding.description}</p>
+              <p className={`mt-2 ${compactUi.bodySmall} text-gray-300`}>{finding.description}</p>
               <a
                 href={finding.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 inline-flex items-center gap-1 text-[11px] text-amber-300 underline decoration-dotted underline-offset-2"
+                className={`mt-3 inline-flex items-center gap-1 ${compactUi.bodySmall} text-amber-300 underline decoration-dotted underline-offset-2`}
               >
                 Learn more <span aria-hidden="true">↗</span>
               </a>
               <button
                 onClick={() => setFinding(null)}
-                className="mt-4 inline-flex items-center gap-1 text-[11px] text-rose-300 hover:text-rose-200"
+                className={`mt-4 inline-flex items-center gap-1 ${compactUi.bodySmall} text-rose-300 hover:text-rose-200`}
               >
                 <span aria-hidden="true">✕</span>
                 Close

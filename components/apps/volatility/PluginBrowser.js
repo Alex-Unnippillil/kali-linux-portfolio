@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import plugins from '../../../public/demo-data/volatility/plugins.json';
+import { compactUi } from '../shared/compactUi';
 
 const VOLATILITY_VERSION = '3.0';
 
@@ -34,7 +35,7 @@ const PluginBrowser = () => {
 
   return (
     <div className="space-y-4 text-xs text-gray-200">
-      <p className="rounded-lg border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-[11px] text-amber-100">
+      <p className={`rounded-lg border border-amber-500/40 bg-amber-950/40 px-3 py-2 ${compactUi.bodySmall} text-amber-100`}>
         Plugin data is provided for educational use only. Highlighted entries indicate simulated suspicious artefacts.
       </p>
       <div className="flex items-center gap-2">
@@ -51,7 +52,7 @@ const PluginBrowser = () => {
           <path d="M3 4h18l-7 8v6l-4 2v-8z" />
         </svg>
         <select
-          className="rounded border border-gray-700 bg-gray-900 px-2 py-1 text-[11px]"
+          className={`rounded border border-gray-700 bg-gray-900 px-2 py-1 ${compactUi.bodySmall}`}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
@@ -72,7 +73,7 @@ const PluginBrowser = () => {
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-white">{p.name}</h3>
               <span
-                className={`ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                className={`ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${compactUi.chipSmall} ${
                   categoryAccent[p.category] || 'bg-gray-800 text-gray-200'
                 }`}
               >
@@ -80,16 +81,16 @@ const PluginBrowser = () => {
               </span>
             </div>
             {p.minVersion && p.minVersion !== VOLATILITY_VERSION && (
-              <p className="mt-1 text-[10px] text-rose-300">
+              <p className={`${compactUi.labelSmall} mt-1 text-rose-300`}>
                 Requires Volatility {p.minVersion}
               </p>
             )}
-            <p className="mt-2 text-[11px] text-gray-300">{p.description}</p>
+            <p className={`mt-2 ${compactUi.bodySmall} text-gray-300`}>{p.description}</p>
             <a
               href={p.doc}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-300 underline decoration-dotted underline-offset-2"
+              className={`mt-2 inline-flex items-center gap-1 ${compactUi.bodySmall} text-amber-300 underline decoration-dotted underline-offset-2`}
             >
               Volatility 3 docs
               <span aria-hidden="true">↗</span>
@@ -98,14 +99,14 @@ const PluginBrowser = () => {
         ))}
       </div>
       {selected && (
-        <div className="rounded-xl border border-gray-800 bg-black/70 text-[11px]">
+        <div className={`rounded-xl border border-gray-800 bg-black/70 ${compactUi.bodySmall}`}>
           <div className="flex items-center justify-between border-b border-gray-800 px-3 py-2">
             <h4 className="text-sm font-semibold text-white">
               {selected.name} sample output
             </h4>
             <button
               type="button"
-              className="rounded-full border border-gray-700 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-300 transition hover:border-amber-500 hover:text-amber-200"
+              className={`rounded-full border border-gray-700 px-2 py-0.5 ${compactUi.chipSmall} text-gray-300 transition hover:border-amber-500 hover:text-amber-200`}
               onClick={() => setSelected(null)}
             >
               Clear
