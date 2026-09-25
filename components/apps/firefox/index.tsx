@@ -138,7 +138,7 @@ const Firefox: React.FC = () => {
     <div className="flex h-full min-h-0 flex-col bg-[var(--kali-surface)] text-[color:var(--kali-text)]">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-3 border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 border-b border-[color:var(--kali-border)] bg-[var(--kali-overlay)] px-4 py-3 text-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between"
       >
         <label htmlFor="firefox-address" className="sr-only">
           Address
@@ -194,7 +194,7 @@ const Firefox: React.FC = () => {
         </div>
         <button
           type="submit"
-          className="h-10 rounded-md bg-[color:var(--color-primary)] px-4 text-sm font-semibold text-[color:var(--color-inverse)] shadow-[0_12px_32px_-12px_var(--kali-blue-glow)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
+          className="inline-flex h-10 min-w-[5.5rem] items-center justify-center rounded-md bg-[color:var(--color-primary)] px-4 text-sm font-semibold text-[color:var(--color-inverse)] shadow-[0_12px_32px_-12px_var(--kali-blue-glow)] transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color:var(--color-primary)]"
         >
           Go
         </button>
