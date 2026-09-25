@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import usePersistentState from '../hooks/usePersistentState';
+import { useSettings } from '../hooks/useSettings';
 
 const GitHubStars = ({ user, repo }) => {
   const ref = useRef(null);
@@ -7,10 +8,12 @@ const GitHubStars = ({ user, repo }) => {
   const [stars, setStars] = usePersistentState(`gh-stars-${user}/${repo}`, null);
   const [loading, setLoading] = useState(stars === null);
   const isTestEnv = process.env.NODE_ENV === 'test';
+  const { allowNetwork } = useSettings();
+  const networkAllowed = allowNetwork || isTestEnv;
 
   const fetchStars = useCallback(async () => {
     try {
-      if (isTestEnv) {
+      if (!networkAllowed) {
         setStars((prev) => (prev === null ? 0 : prev));
         setLoading(false);
         return;
@@ -25,7 +28,7 @@ const GitHubStars = ({ user, repo }) => {
     } finally {
       setLoading(false);
     }
-  }, [user, repo, setStars, isTestEnv]);
+  }, [user, repo, setStars, networkAllowed]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
