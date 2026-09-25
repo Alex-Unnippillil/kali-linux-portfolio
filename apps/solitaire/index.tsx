@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { GameState } from '../games/solitaire/logic';
 import {
   initGame,
@@ -36,22 +36,42 @@ const Solitaire = () => {
 
   const [state, setState] = useState<GameState>(() => initGame(getStoredMode()));
   const [hint, setHint] = useState<string | null>(null);
+  const [tick, setTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    setTick(Date.now());
+    if (state.isWon) return undefined;
+    const id = window.setInterval(() => {
+      setTick(Date.now());
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [state.isWon, state.startTime]);
 
   const refresh = () => setState({ ...state });
+
+  const elapsedSeconds = Math.max(0, Math.floor((tick - state.startTime) / 1000));
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const onDraw = () => {
     draw(state);
     refresh();
+    setHint(null);
   };
 
   const onReset = () => {
     setState(initGame(state.drawMode));
     setHint(null);
+    setTick(Date.now());
   };
 
   const onAutoMove = () => {
-    autoMove(state);
+    const moved = autoMove(state);
     refresh();
+    setHint(moved ? null : 'No automatic foundation moves available.');
   };
 
   const onHint = () => {
@@ -108,6 +128,10 @@ const Solitaire = () => {
         <button type="button" onClick={onReset} className={BUTTON_CLASSES}>
           Reset
         </button>
+        <div className="ml-auto flex flex-wrap items-center gap-3 text-sm">
+          <span className="font-semibold">Score: {state.score}</span>
+          <span className="font-semibold">Time: {formatTime(elapsedSeconds)}</span>
+        </div>
       </div>
       <div className="mb-4 flex gap-4">
         <div>
@@ -134,7 +158,12 @@ const Solitaire = () => {
           </div>
         ))}
       </div>
-      {hint && <p className="mt-4">Hint: {hint}</p>}
+      {state.isWon && (
+        <p className="mt-4 font-semibold text-[color:var(--color-severity-low)]">
+          You win! 🎉
+        </p>
+      )}
+      {hint && <p className="mt-2">Hint: {hint}</p>}
     </div>
   );
 };
