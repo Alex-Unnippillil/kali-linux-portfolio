@@ -10,6 +10,7 @@ import {
 
 const DEFAULT_TIME = { 2: 30, 4: 60, 6: 120 };
 const SETTINGS_KEY_PREFIX = 'game:memory:settings';
+const PROGRESS_KEY_PREFIX = 'game:memory:progress';
 
 // Built-in theme assets that can be used by the memory game.
 const BUILT_IN_THEMES = {
@@ -78,6 +79,121 @@ const sanitizeSettings = (settings, themePacks) => {
   safe.seed = typeof settings.seed === 'string' && settings.seed.trim() ? settings.seed : generateSeed();
   safe.themeName = getSafeThemeName(themePacks, settings.themeName);
   return safe;
+};
+
+const loadProgress = (key) => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
+const saveProgress = (key, payload) => {
+  if (typeof window === 'undefined') return false;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(payload));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const clearProgress = (key) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const sanitizeProgress = (progress, themePacks) => {
+  if (!progress || typeof progress !== 'object' || progress.v !== 1) return null;
+
+  const size = Number(progress?.size);
+  if (!VALID_SIZES.includes(size)) return null;
+
+  const timerMode = VALID_TIMER_MODES.includes(progress?.timerMode) ? progress.timerMode : null;
+  const deckType = VALID_DECK_TYPES.includes(progress?.deckType) ? progress.deckType : null;
+  const motionSetting = VALID_MOTION_SETTINGS.includes(progress?.motionSetting)
+    ? progress.motionSetting
+    : null;
+  if (!timerMode || !deckType || !motionSetting) return null;
+
+  const patternTheme = PATTERN_THEMES[progress?.patternTheme] ? progress.patternTheme : 'vibrant';
+  const previewTime = Number.isFinite(progress?.previewTime)
+    ? Math.min(10, Math.max(0, Math.round(progress.previewTime)))
+    : 3;
+  const themeName = getSafeThemeName(themePacks, progress?.themeName);
+  if (deckType === 'theme' && themeName !== progress?.themeName) return null;
+
+  if (typeof progress.seed !== 'string' || !progress.seed.trim()) return null;
+  if (typeof progress.sound !== 'boolean') return null;
+
+  const total = size * size;
+  const cards = Array.isArray(progress.cards) ? progress.cards : null;
+  if (!cards || cards.length !== total) return null;
+  const safeCards = cards.map((card) => {
+    if (!card || typeof card !== 'object') return null;
+    if (!Number.isInteger(card.id)) return null;
+    if (typeof card.pairId !== 'string' || !card.pairId) return null;
+    const hasValue = Object.prototype.hasOwnProperty.call(card, 'value');
+    const hasImage = typeof card.image === 'string' && card.image.trim();
+    if (!hasValue && !hasImage) return null;
+    return { ...card };
+  });
+  if (safeCards.some((card) => card === null)) return null;
+
+  const sanitizeIndexArray = (input, { maxLength = total, dedupe = false } = {}) => {
+    if (!Array.isArray(input)) return [];
+    const ints = input.filter((item) => Number.isInteger(item) && item >= 0 && item < total);
+    const trimmed = ints.slice(0, maxLength);
+    return dedupe ? Array.from(new Set(trimmed)) : trimmed;
+  };
+
+  const matched = sanitizeIndexArray(progress.matched, { dedupe: true });
+  if (matched.length > total) return null;
+
+  const rawFlipped = Array.isArray(progress.flipped) ? progress.flipped : [];
+  let flipped = rawFlipped.length > 2 ? [] : sanitizeIndexArray(rawFlipped, { maxLength: 2 });
+
+  const moves = Number.isFinite(progress.moves) ? Math.max(0, Math.floor(progress.moves)) : 0;
+  const time = Number.isFinite(progress.time) ? Math.max(0, Math.floor(progress.time)) : 0;
+  const stars = Number.isFinite(progress.stars)
+    ? Math.min(3, Math.max(1, Math.floor(progress.stars)))
+    : 3;
+  const streak = Number.isFinite(progress.streak) ? Math.max(0, Math.floor(progress.streak)) : 0;
+  const activeIndex = Number.isInteger(progress.activeIndex)
+    ? Math.min(total - 1, Math.max(0, progress.activeIndex))
+    : 0;
+
+  return {
+    v: 1,
+    savedAt: Number.isFinite(progress.savedAt) ? progress.savedAt : Date.now(),
+    size,
+    timerMode,
+    deckType,
+    patternTheme,
+    previewTime,
+    sound: progress.sound,
+    motionSetting,
+    seed: progress.seed,
+    themeName,
+    cards: safeCards,
+    flipped,
+    matched,
+    moves,
+    time,
+    stars,
+    streak,
+    activeIndex,
+    isRunning: Boolean(progress.isRunning),
+    userPaused: Boolean(progress.userPaused),
+  };
 };
 
 const isEditableTarget = (target) => {
@@ -154,7 +270,12 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
     [player, size, timerMode]
   );
   const settingsKey = useMemo(() => `${SETTINGS_KEY_PREFIX}:${player}`, [player]);
+  const progressKey = useMemo(() => `${PROGRESS_KEY_PREFIX}:${player}`, [player]);
   const matchedSet = useMemo(() => new Set(matched), [matched]);
+  const restoredOnMountRef = useRef(false);
+  const didInitialLoadRef = useRef(false);
+  const saveDebounceRef = useRef();
+  const [lastSavedAt, setLastSavedAt] = useState(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return undefined;
@@ -273,6 +394,8 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
   }, [sound]);
 
   const reset = useCallback(() => {
+    clearProgress(progressKey);
+    setLastSavedAt(null);
     clearAllTimeouts();
     setIsResolving(false);
     setIsRunning(false);
@@ -332,11 +455,72 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
     themePacks,
     themeName,
     clearAllTimeouts,
+    progressKey,
     seed,
     schedule,
   ]);
 
   useEffect(() => {
+    if (didInitialLoadRef.current) return;
+    didInitialLoadRef.current = true;
+
+    const rawProgress = loadProgress(progressKey);
+    if (!rawProgress) return;
+    const safe = sanitizeProgress(rawProgress, themePacks);
+    if (!safe) {
+      clearProgress(progressKey);
+      return;
+    }
+
+    restoredOnMountRef.current = true;
+    setSize(safe.size);
+    setTimerMode(safe.timerMode);
+    setDeckType(safe.deckType);
+    setPatternTheme(safe.patternTheme);
+    setPreviewTime(safe.previewTime);
+    setSound(safe.sound);
+    setMotionSetting(safe.motionSetting);
+    setSeed(safe.seed);
+    setThemeName(safe.themeName);
+
+    setCards(safe.cards);
+    setFlipped(safe.flipped);
+    setMatched(safe.matched);
+    setMoves(safe.moves);
+    setTime(safe.time);
+    setStars(safe.stars);
+    setStreak(safe.streak);
+    setActiveIndex(safe.activeIndex);
+    setIsRunning(safe.isRunning);
+    setUserPaused(true);
+
+    setPreviewing(false);
+    setIsResolving(false);
+    setUiLocked(false);
+    setHighlight([]);
+    setParticles([]);
+    setNudge(false);
+    pauseStartedRef.current = null;
+
+    displayedTimeRef.current = safe.time;
+    initialTimeRef.current = safe.timerMode === 'countdown' ? DEFAULT_TIME[safe.size] || 60 : 0;
+    if (safe.isRunning) {
+      const elapsedSoFar =
+        safe.timerMode === 'countup' ? safe.time : initialTimeRef.current - safe.time;
+      startRef.current = performance.now() - Math.max(0, elapsedSoFar) * 1000;
+    } else {
+      startRef.current = 0;
+    }
+
+    setLastSavedAt(safe.savedAt);
+  }, [progressKey, themePacks]);
+
+  useEffect(() => {
+    if (!didInitialLoadRef.current) return;
+    if (restoredOnMountRef.current) {
+      restoredOnMountRef.current = false;
+      return;
+    }
     reset();
   }, [reset, roundId]);
 
@@ -388,13 +572,15 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
   useEffect(() => {
     if (!cards.length) return;
     if (matched.length === cards.length) {
+      clearProgress(progressKey);
+      setLastSavedAt(null);
       setIsRunning(false);
       saveBest();
       const elapsed = timerMode === 'countdown' ? initialTimeRef.current - time : time;
       setAnnouncement(`You won in ${moves} moves and ${elapsed} seconds`);
       onWin?.(player, { moves, time: elapsed });
     }
-  }, [matched, cards.length, saveBest, moves, time, timerMode, onWin, player]);
+  }, [matched, cards.length, progressKey, saveBest, moves, time, timerMode, onWin, player]);
 
   useEffect(() => {
     const pairs = cards.length / 2 || 1;
@@ -414,10 +600,81 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
 
   useEffect(() => {
     if (timeUp) {
+      clearProgress(progressKey);
+      setLastSavedAt(null);
       setAnnouncement("Time's up");
       setIsRunning(false);
     }
-  }, [timeUp]);
+  }, [timeUp, progressKey]);
+
+  useEffect(() => {
+    if (saveDebounceRef.current) {
+      clearTimeout(saveDebounceRef.current);
+      saveDebounceRef.current = null;
+    }
+    if (!cards.length || previewing || isResolving || timeUp || matched.length === cards.length) {
+      return undefined;
+    }
+    const payload = {
+      v: 1,
+      savedAt: Date.now(),
+      size,
+      timerMode,
+      deckType,
+      patternTheme,
+      previewTime,
+      sound,
+      motionSetting,
+      seed,
+      themeName: getSafeThemeName(themePacks, themeName),
+      cards,
+      flipped,
+      matched,
+      moves,
+      time,
+      stars,
+      streak,
+      activeIndex,
+      isRunning,
+      userPaused,
+    };
+    saveDebounceRef.current = setTimeout(() => {
+      if (saveProgress(progressKey, payload)) {
+        setLastSavedAt(payload.savedAt);
+      }
+    }, 350);
+    return () => {
+      if (saveDebounceRef.current) {
+        clearTimeout(saveDebounceRef.current);
+        saveDebounceRef.current = null;
+      }
+    };
+  }, [
+    progressKey,
+    cards,
+    flipped,
+    matched,
+    moves,
+    time,
+    stars,
+    streak,
+    activeIndex,
+    isRunning,
+    userPaused,
+    previewing,
+    isResolving,
+    timeUp,
+    size,
+    timerMode,
+    deckType,
+    patternTheme,
+    previewTime,
+    sound,
+    motionSetting,
+    seed,
+    themeName,
+    themePacks,
+  ]);
 
   const triggerStreakEffect = useCallback(() => {
     if (effectiveReduce) return;
@@ -709,6 +966,17 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
         </button>
         <button
           type="button"
+          onClick={() => {
+            clearProgress(progressKey);
+            setLastSavedAt(null);
+            reset();
+          }}
+          className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+        >
+          Clear Save
+        </button>
+        <button
+          type="button"
           onClick={() => setUserPaused((p) => !p)}
           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
           disabled={timeUp}
@@ -826,6 +1094,7 @@ const MemoryBoard = ({ player, themePacks, onWin, roundId }) => {
             className="w-24"
           />
         </div>
+        {lastSavedAt && <span className="text-xs text-gray-300">Autosaved</span>}
       </div>
     </div>
   );
