@@ -29,6 +29,7 @@ const NessusReport: React.FC = () => {
   const [host, setHost] = useState<string>('All');
   const [family, setFamily] = useState<string>('All');
   const [findings, setFindings] = useState<Finding[]>(data as Finding[]);
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
   const hosts = useMemo(
     () => Array.from(new Set(findings.map((f) => f.host))).sort(),
@@ -71,13 +72,39 @@ const NessusReport: React.FC = () => {
       setSeverity('All');
       setHost('All');
       setFamily('All');
+      setSelectedRows(new Set());
     } catch {
       alert('Invalid JSON file.');
     }
   };
 
+  const toggleRow = (id: string) => {
+    setSelectedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    setSelectedRows((prev) => {
+      if (prev.size === filtered.length) {
+        return new Set();
+      }
+      return new Set(filtered.map((f) => f.id));
+    });
+  };
+
   const exportCSV = () => {
-    const rows = filtered.map((f) => [
+    const rowsToExport =
+      selectedRows.size > 0
+        ? findings.filter((f) => selectedRows.has(f.id))
+        : filtered;
+    const rows = rowsToExport.map((f) => [
       f.id,
       f.name,
       f.cvss,
@@ -163,6 +190,7 @@ const NessusReport: React.FC = () => {
           accept=".json"
           className="text-black p-1 rounded"
           onChange={handleFile}
+          aria-label="Import report"
         />
         <label htmlFor="severity-filter" className="text-sm">
           Filter severity
@@ -244,6 +272,14 @@ const NessusReport: React.FC = () => {
       <table className="w-full mb-4 text-sm">
         <thead>
           <tr className="text-left border-b border-gray-700 h-9">
+            <th className="px-2" scope="col">
+              <input
+                type="checkbox"
+                aria-label="Select all"
+                checked={selectedRows.size === filtered.length && filtered.length > 0}
+                onChange={() => toggleAll()}
+              />
+            </th>
             <th className="px-2" scope="col">ID</th>
             <th className="px-2" scope="col">Finding</th>
             <th className="px-2" scope="col">CVSS</th>
@@ -256,11 +292,26 @@ const NessusReport: React.FC = () => {
           {filtered.map((f) => (
             <tr
               key={f.id}
-              className="border-b border-gray-800 cursor-pointer hover:bg-gray-800 border-l-4"
+              className={`border-b border-gray-800 cursor-pointer border-l-4 ${
+                selectedRows.has(f.id)
+                  ? 'bg-gray-800'
+                  : 'hover:bg-gray-800'
+              }`}
               style={{ borderLeftColor: severityColors[f.severity] }}
 
               onClick={() => setSelected(f)}
             >
+              <td className="px-2">
+                <input
+                  type="checkbox"
+                  checked={selectedRows.has(f.id)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    toggleRow(f.id);
+                  }}
+                  aria-label={`Select finding ${f.id}`}
+                />
+              </td>
               <td className="px-2">{f.id}</td>
               <td className="px-2">{f.name}</td>
               <td className="px-2">{f.cvss}</td>
