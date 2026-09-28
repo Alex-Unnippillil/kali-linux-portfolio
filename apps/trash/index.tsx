@@ -16,6 +16,8 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     pushHistory,
     restoreFromHistory,
     restoreAllFromHistory,
+    restore: restoreItem,
+    empty: emptyTrash,
   } = useTrashState();
   const [selected, setSelected] = useState<number | null>(null);
   const [purgeDays, setPurgeDays] = useState(30);
@@ -48,10 +50,9 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
     const item = items[selected];
     if (!window.confirm(`Restore ${item.title}?`)) return;
     openApp(item.id);
-    setItems(items => items.filter((_, i) => i !== selected));
+    restoreItem(selected);
     setSelected(null);
-    notifyChange();
-  }, [items, selected, openApp, setItems]);
+  }, [items, selected, openApp, restoreItem]);
 
   const remove = useCallback(() => {
     if (selected === null) return;
@@ -96,11 +97,9 @@ export default function Trash({ openApp }: { openApp: (id: string) => void }) {
       count -= 1;
       if (count <= 0) {
         clearInterval(timer);
-        pushHistory(items);
-        setItems([]);
+        emptyTrash();
         setSelected(null);
         setEmptyCountdown(null);
-        notifyChange();
       } else {
         setEmptyCountdown(count);
       }
