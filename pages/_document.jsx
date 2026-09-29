@@ -17,6 +17,8 @@ class MyDocument extends Document {
         <Head>
           <link rel="icon" href="/favicon.ico" />
           <link rel="manifest" href="/manifest.webmanifest" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+          <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
           <meta name="theme-color" content="#0f1317" />
           <meta name="kali-build-revision" content={process.env.NEXT_PUBLIC_BUILD_ID || 'development'} />
           {/* eslint-disable-next-line @next/next/no-sync-scripts */}
