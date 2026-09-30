@@ -32,6 +32,8 @@ export default function YouTubePlayer({ videoId }) {
       playerRef.current = new YT.Player(containerRef.current, {
         videoId,
         host: 'https://www.youtube-nocookie.com',
+        height: '100%',
+        width: '100%',
         playerVars: {
           enablejsapi: 1,
           origin: window.location.origin,
@@ -202,134 +204,136 @@ export default function YouTubePlayer({ videoId }) {
         />
         <link rel="preconnect" href="https://i.ytimg.com" />
       </Head>
-      <div
-        className="relative w-full"
-        style={{ aspectRatio: '16 / 9' }}
-        tabIndex={0}
-        onKeyDown={handleKey}
-      >
-        <div className="w-full h-full" ref={containerRef}>
-          {!activated && (
-            <button
-              type="button"
-              aria-label="Play video"
-              onClick={loadPlayer}
-              className="relative w-full h-full flex items-center justify-center"
-            >
-              <img
-                src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
-                alt="YouTube video thumbnail"
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="68"
-                height="48"
-                viewBox="0 0 68 48"
-                className="relative z-10"
-              >
-                <path
-                  className="ytp-large-play-button-bg"
-                  d="M.66 37.58c-.6 2.27 1.1 4.42 3.43 4.42h59.82c2.33 0 4.04-2.15 3.43-4.42L60.49 5.4c-.37-1.37-1.62-2.32-3.04-2.32H10.68c-1.42 0-2.67.95-3.04 2.32L.66 37.58z"
-                  fill="#f00"
-                />
-                <path d="M45.5 24L27.5 14v20" fill="#fff" />
-              </svg>
-            </button>
-          )}
-        </div>
-
-        {/* Play/Pause, PiP + Doc-PiP buttons */}
-        {activated && (
-          <div className="absolute top-2 right-2 flex gap-2 z-40">
-            <button
-              type="button"
-              aria-label={isPlaying ? 'Pause video' : 'Play video'}
-              onClick={togglePlay}
-              className="bg-black/60 text-white px-2 py-1 rounded"
-            >
-              {isPlaying ? 'Pause' : 'Play'}
-            </button>
-            <button
-              type="button"
-              aria-label="Picture in Picture"
-              onClick={triggerPiP}
-              className="bg-black/60 text-white px-2 py-1 rounded"
-            >
-              PiP
-            </button>
-            <button
-              type="button"
-              aria-label="Notes"
-              onClick={() => setShowNotes((s) => !s)}
-              className="bg-black/60 text-white px-2 py-1 rounded"
-            >
-              Notes
-            </button>
-          </div>
-        )}
-
-        {/* Chapter drawer */}
-        {showChapters && chapters.length > 0 && (
-          <div className="absolute bottom-0 left-0 bg-black/80 text-white text-sm max-h-1/2 overflow-auto w-48 z-40">
-            {chapters.map((ch) => (
+      <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+        <div
+          className="absolute inset-0"
+          tabIndex={0}
+          onKeyDown={handleKey}
+        >
+          <div className="relative h-full w-full" ref={containerRef}>
+            {!activated && (
               <button
-                key={ch.startTime}
                 type="button"
-                className="block w-full text-left px-3 py-2 hover:bg-black/60"
-                onClick={() => {
-                  playerRef.current?.seekTo(ch.startTime, true);
-                  setShowChapters(false);
-                }}
+                aria-label="Play video"
+                onClick={loadPlayer}
+                className="group relative flex h-full w-full items-center justify-center overflow-hidden rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400"
               >
-                {ch.title}
+                <img
+                  src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                  alt="YouTube video thumbnail"
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <span className="sr-only">Play video</span>
+                <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-black/70 p-4 transition group-hover:bg-black/80">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="32"
+                    height="32"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                    className="fill-white"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </span>
               </button>
-            ))}
-          </div>
-        )}
-
-        {/* Notes side panel */}
-        {showNotes && (
-          <div className="absolute top-0 right-0 w-64 h-full bg-black/90 text-white text-sm p-2 z-50 flex flex-col">
-            <button
-              type="button"
-              aria-label="Close notes"
-              className="absolute top-1 right-1 px-2"
-              onClick={() => setShowNotes(false)}
-            >
-              ✕
-            </button>
-            {supported ? (
-              <>
-                <input
-                  type="search"
-                  placeholder="Search notes"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="mb-2 bg-black/80 border border-white/20 p-1"
-                />
-                {search && results.length > 0 && (
-                  <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
-                    {results.map((r) => (
-                      <li key={r.id} className="mb-1">
-                        <strong>{r.id}</strong>: {r.text.slice(0, 50)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <textarea
-                  value={notes}
-                  onChange={handleNoteChange}
-                  className="flex-1 bg-black/80 border border-white/20 p-1"
-                  placeholder="Write notes…"
-                />
-              </>
-            ) : (
-              <p className="pr-4">OPFS not supported.</p>
             )}
           </div>
-        )}
+
+          {/* Play/Pause, PiP + Doc-PiP buttons */}
+          {activated && (
+            <div className="absolute top-2 right-2 flex gap-2 z-40">
+              <button
+                type="button"
+                aria-label={isPlaying ? 'Pause video' : 'Play video'}
+                onClick={togglePlay}
+                className="bg-black/60 text-white px-2 py-1 rounded"
+              >
+                {isPlaying ? 'Pause' : 'Play'}
+              </button>
+              <button
+                type="button"
+                aria-label="Picture in Picture"
+                onClick={triggerPiP}
+                className="bg-black/60 text-white px-2 py-1 rounded"
+              >
+                PiP
+              </button>
+              <button
+                type="button"
+                aria-label="Notes"
+                onClick={() => setShowNotes((s) => !s)}
+                className="bg-black/60 text-white px-2 py-1 rounded"
+              >
+                Notes
+              </button>
+            </div>
+          )}
+
+          {/* Chapter drawer */}
+          {showChapters && chapters.length > 0 && (
+            <div className="absolute bottom-0 left-0 bg-black/80 text-white text-sm max-h-1/2 overflow-auto w-48 z-40">
+              {chapters.map((ch) => (
+                <button
+                  key={ch.startTime}
+                  type="button"
+                  className="block w-full text-left px-3 py-2 hover:bg-black/60"
+                  onClick={() => {
+                    playerRef.current?.seekTo(ch.startTime, true);
+                    setShowChapters(false);
+                  }}
+                >
+                  {ch.title}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Notes side panel */}
+          {showNotes && (
+            <div className="absolute top-0 right-0 w-64 h-full bg-black/90 text-white text-sm p-2 z-50 flex flex-col">
+              <button
+                type="button"
+                aria-label="Close notes"
+                className="absolute top-1 right-1 px-2"
+                onClick={() => setShowNotes(false)}
+              >
+                ✕
+              </button>
+              {supported ? (
+                <>
+                  <input
+                    type="search"
+                    aria-label="Search notes"
+                    placeholder="Search notes"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="mb-2 bg-black/80 border border-white/20 p-1"
+                  />
+                  {search && results.length > 0 && (
+                    <ul className="mb-2 overflow-auto max-h-24 border border-white/20 p-1">
+                      {results.map((r) => (
+                        <li key={r.id} className="mb-1">
+                          <strong>{r.id}</strong>: {r.text.slice(0, 50)}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <textarea
+                    value={notes}
+                    onChange={handleNoteChange}
+                    className="flex-1 bg-black/80 border border-white/20 p-1 resize-none"
+                    placeholder="Write notes…"
+                    aria-label="Video notes"
+                  />
+                </>
+              ) : (
+                <p className="text-center mt-4">Persistent notes unavailable</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
