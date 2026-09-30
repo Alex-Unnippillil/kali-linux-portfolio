@@ -9,6 +9,16 @@ interface VideoPlayerProps {
   className?: string;
 }
 
+const TEXT_INPUT_TYPES = new Set([
+  "text",
+  "search",
+  "email",
+  "password",
+  "tel",
+  "url",
+  "number",
+]);
+
 const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
   src,
   poster,
@@ -108,18 +118,19 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
           <button onClick={() => send({ type: "toggle" })}>Play/Pause</button>
           <button onClick={() => send({ type: "seek", delta: -5 })}>-5s</button>
           <button onClick={() => send({ type: "seek", delta: 5 })}>+5s</button>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={vol}
-            onChange={(e) => {
-              const v = parseFloat(e.target.value);
-              setVol(v);
-              send({ type: "volume", value: v });
-            }}
-          />
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={vol}
+              aria-label="Adjust volume"
+              onChange={(e) => {
+                const v = parseFloat(e.target.value);
+                setVol(v);
+                send({ type: "volume", value: v });
+              }}
+            />
         </div>
       );
     };
@@ -127,9 +138,65 @@ const VideoPlayerInner: React.FC<VideoPlayerProps> = ({
     await open(<DocPipControls initialVolume={initialVolume} />);
   };
 
+  const handleKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      const target = event.target as HTMLElement | null;
+      if (target) {
+        const tagName = target.tagName;
+        if (tagName === "TEXTAREA" || target.isContentEditable) return;
+        if (tagName === "INPUT" && TEXT_INPUT_TYPES.has((target as HTMLInputElement).type))
+          return;
+      }
+
+      switch (event.key) {
+        case " ":
+        case "Space":
+        case "Spacebar":
+          event.preventDefault();
+          if (video.paused) video.play();
+          else video.pause();
+          break;
+        case "ArrowLeft":
+          event.preventDefault();
+          video.currentTime = Math.max(0, video.currentTime - 5);
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          if (Number.isFinite(video.duration)) {
+            video.currentTime = Math.min(video.duration || 0, video.currentTime + 5);
+          } else {
+            video.currentTime += 5;
+          }
+          break;
+        default:
+          if (event.key.toLowerCase() === "m") {
+            event.preventDefault();
+            video.muted = !video.muted;
+          }
+      }
+    },
+    []
+  );
+
   return (
-    <div className={`relative ${className}`.trim()}>
-      <video ref={videoRef} src={src} poster={poster} controls className="w-full h-auto" />
+    <div
+      className={`relative ${className} focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-400`.trim()}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      role="group"
+      aria-label="Video player"
+    >
+      <video
+        ref={videoRef}
+        src={src}
+        poster={poster}
+        controls
+        className="w-full h-auto"
+        aria-label="Video"
+      />
       {pipSupported && (
         <button
           type="button"
