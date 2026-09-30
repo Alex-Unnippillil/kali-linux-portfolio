@@ -13,6 +13,8 @@ export default function YouTubePlayer({ videoId }) {
   const containerRef = useRef(null); // DOM node hosting the iframe
   const playerRef = useRef(null); // YT.Player instance
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [clsScore, setClsScore] = useState(0);
   const [chapters, setChapters] = useState([]); // [{title, startTime}]
   const [showChapters, setShowChapters] = useState(false);
   const [showNotes, setShowNotes] = useState(false);
@@ -21,6 +23,73 @@ export default function YouTubePlayer({ videoId }) {
   const [results, setResults] = useState([]);
   const prefersReducedMotion = usePrefersReducedMotion();
   const { supported, getDir, readFile, writeFile, listFiles } = useOPFS();
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return undefined;
+    }
+
+    const query = window.matchMedia('(max-width: 768px)');
+    const updateViewport = (event) => {
+      setIsMobileViewport(event.matches);
+    };
+
+    setIsMobileViewport(query.matches);
+
+    if (typeof query.addEventListener === 'function') {
+      query.addEventListener('change', updateViewport);
+    } else if (typeof query.addListener === 'function') {
+      query.addListener(updateViewport);
+    }
+
+    return () => {
+      if (typeof query.removeEventListener === 'function') {
+        query.removeEventListener('change', updateViewport);
+      } else if (typeof query.removeListener === 'function') {
+        query.removeListener(updateViewport);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !isMobileViewport ||
+      typeof window === 'undefined' ||
+      typeof window.PerformanceObserver !== 'function'
+    ) {
+      setClsScore(0);
+      return undefined;
+    }
+
+    const { PerformanceObserver } = window;
+    const supportedEntryTypes = PerformanceObserver.supportedEntryTypes || [];
+    if (!supportedEntryTypes.includes('layout-shift')) {
+      setClsScore(0);
+      return undefined;
+    }
+
+    let clsValue = 0;
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (!entry.hadRecentInput) {
+          clsValue += entry.value;
+        }
+      }
+      setClsScore(Number(clsValue.toFixed(3)));
+    });
+
+    observer.observe({ type: 'layout-shift', buffered: true });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isMobileViewport]);
+
+  useEffect(() => {
+    if (isMobileViewport && clsScore > 0.1) {
+      console.warn(`YouTubePlayer CLS on mobile exceeded 0.1 (score: ${clsScore})`);
+    }
+  }, [clsScore, isMobileViewport]);
 
   // Load the YouTube IFrame API lazily on user interaction
   const loadPlayer = () => {
@@ -204,38 +273,49 @@ export default function YouTubePlayer({ videoId }) {
       </Head>
       <div
         className="relative w-full"
-        style={{ aspectRatio: '16 / 9' }}
+        data-cls-score={clsScore.toFixed(3)}
         tabIndex={0}
         onKeyDown={handleKey}
       >
-        <div className="w-full h-full" ref={containerRef}>
+        <div
+          className="relative w-full overflow-hidden"
+          style={{ paddingBottom: '56.25%' }}
+        >
+          <div
+            ref={containerRef}
+            className="absolute inset-0 h-full w-full bg-black"
+            aria-hidden={!activated}
+          />
           {!activated && (
             <button
               type="button"
               aria-label="Play video"
               onClick={loadPlayer}
-              className="relative w-full h-full flex items-center justify-center"
+              className="absolute inset-0 flex h-full w-full items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-white/80"
             >
               <img
                 src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
                 alt="YouTube video thumbnail"
                 loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover"
               />
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="68"
-                height="48"
-                viewBox="0 0 68 48"
-                className="relative z-10"
-              >
-                <path
-                  className="ytp-large-play-button-bg"
-                  d="M.66 37.58c-.6 2.27 1.1 4.42 3.43 4.42h59.82c2.33 0 4.04-2.15 3.43-4.42L60.49 5.4c-.37-1.37-1.62-2.32-3.04-2.32H10.68c-1.42 0-2.67.95-3.04 2.32L.66 37.58z"
-                  fill="#f00"
-                />
-                <path d="M45.5 24L27.5 14v20" fill="#fff" />
-              </svg>
+              <span className="relative z-10 inline-flex items-center justify-center rounded-full bg-black/70 p-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="32"
+                  height="32"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-white"
+                  aria-hidden="true"
+                >
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              </span>
             </button>
           )}
         </div>
@@ -307,6 +387,7 @@ export default function YouTubePlayer({ videoId }) {
                   placeholder="Search notes"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  aria-label="Search saved video notes"
                   className="mb-2 bg-black/80 border border-white/20 p-1"
                 />
                 {search && results.length > 0 && (
@@ -321,6 +402,7 @@ export default function YouTubePlayer({ videoId }) {
                 <textarea
                   value={notes}
                   onChange={handleNoteChange}
+                  aria-label="Video notes"
                   className="flex-1 bg-black/80 border border-white/20 p-1"
                   placeholder="Write notes…"
                 />
