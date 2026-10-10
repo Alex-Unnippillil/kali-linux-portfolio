@@ -3,6 +3,7 @@ import urlsnarfFixture from '../../../public/demo-data/dsniff/urlsnarf.json';
 import arpspoofFixture from '../../../public/demo-data/dsniff/arpspoof.json';
 import pcapFixture from '../../../public/demo-data/dsniff/pcap.json';
 import TerminalOutput from '../../TerminalOutput';
+import { AppPanel, AppToolbar } from '../shared';
 
 // Simple parser that attempts to extract protocol, host and remaining details
 // Each parsed line is also given a synthetic timestamp for display purposes
@@ -440,9 +441,9 @@ const Dsniff = () => {
   }, [arpspoofLogs.length, domainSummary, filters.length, pcapSummary.length, protocolFilter.length, search, urlsnarfLogs.length]);
 
   return (
-    <div className="h-full w-full overflow-auto bg-ub-cool-grey text-white">
+    <AppPanel className="h-full w-full overflow-auto rounded-none bg-ub-cool-grey text-white" tone="subtle">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <AppToolbar className="items-start rounded-xl border">
           <div className="space-y-1">
             <h1 className="text-xl font-semibold text-slate-100 md:text-2xl">dsniff capture console</h1>
             <p className="max-w-xl text-sm leading-relaxed text-slate-300/90">
@@ -455,10 +456,11 @@ const Dsniff = () => {
           >
             <span>Export summary</span>
           </button>
-        </div>
+        </AppToolbar>
 
-        <div
-          className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 shadow-inner"
+        <AppPanel
+          className="px-4 py-3 text-sm text-amber-100 shadow-inner"
+          tone="warning"
           role="alert"
         >
           <div className="flex items-start gap-3">
@@ -474,13 +476,13 @@ const Dsniff = () => {
               </p>
             </div>
           </div>
-        </div>
+        </AppPanel>
 
         <section className="space-y-3" data-testid="suite-tools">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
             Suite tools
           </h2>
-          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
+          <AppPanel className="overflow-hidden rounded-2xl border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full table-fixed text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
                 <tr>
@@ -510,7 +512,7 @@ const Dsniff = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </AppPanel>
         </section>
 
         <section className="space-y-3" data-testid="triage-dashboard">
@@ -593,7 +595,7 @@ const Dsniff = () => {
               <SessionTile key={`tile-${i}`} session={pkt} onView={() => setSelectedPacket(i)} />
             ))}
           </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
+          <AppPanel className="overflow-hidden rounded-2xl border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
                 <tr>
@@ -633,7 +635,7 @@ const Dsniff = () => {
                 ))}
               </tbody>
             </table>
-          </div>
+          </AppPanel>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <button
               onClick={copySelectedPacket}
@@ -686,7 +688,7 @@ const Dsniff = () => {
               </button>
             </div>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-950/50 shadow-sm">
+          <AppPanel className="overflow-hidden rounded-2xl border-slate-800/80 bg-slate-950/50 shadow-sm">
             <table className="w-full text-left text-xs md:text-sm">
               <thead className="bg-slate-900/60 text-[11px] uppercase tracking-[0.25em] text-slate-400">
                 <tr>
@@ -732,7 +734,7 @@ const Dsniff = () => {
                 No domains match the current risk filter.
               </div>
             )}
-          </div>
+          </AppPanel>
         </section>
 
         <section className="space-y-3" data-testid="capture-timeline">
@@ -902,7 +904,7 @@ const Dsniff = () => {
           )}
         </div>
       </div>
-    </div>
+    </AppPanel>
   );
 };
 

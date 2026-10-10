@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import MemoryHeatmap from './MemoryHeatmap';
 import PluginBrowser from './PluginBrowser';
 import PluginWalkthrough from '../../../apps/volatility/components/PluginWalkthrough';
+import { AppPanel, AppToolbar } from '../shared';
 import memoryFixture from '../../../public/demo-data/volatility/memory.json';
 import pslistJson from '../../../public/demo-data/volatility/pslist.json';
 import netscanJson from '../../../public/demo-data/volatility/netscan.json';
@@ -219,8 +220,8 @@ const VolatilityApp = () => {
   ];
 
   return (
-    <div className="flex h-full w-full flex-col gap-4 rounded-2xl border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_96%,rgba(4,12,20,0.35))] text-white shadow-xl shadow-black/40">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(4,24,36,0.35))] px-4 py-3">
+    <AppPanel className="flex h-full w-full flex-col gap-4 rounded-2xl text-white shadow-xl shadow-black/40" tone="subtle">
+      <AppToolbar className="bg-[color:color-mix(in_srgb,var(--kali-panel)_92%,rgba(4,24,36,0.35))]">
         <div>
           <h1 className="text-lg font-semibold uppercase tracking-wide text-gray-100">
             Volatility analyzer
@@ -246,13 +247,13 @@ const VolatilityApp = () => {
             </>
           )}
         </button>
-      </div>
+      </AppToolbar>
       <div className="px-4 pt-2">
         <MemoryHeatmap data={heatmapData} />
       </div>
       <div className="flex flex-1 flex-col gap-4 px-4 pb-4 text-[color:var(--kali-terminal-text)]">
         <div className="flex flex-col gap-4 lg:flex-row">
-          <div className="flex-1 overflow-hidden rounded-xl border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] shadow-[0_20px_40px_rgba(5,12,20,0.45)]">
+          <AppPanel className="flex-1 overflow-hidden shadow-[0_20px_40px_rgba(5,12,20,0.45)]">
             <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(15,148,210,0.16))] px-3 py-2 text-[11px] uppercase tracking-wide text-[color:color-mix(in_srgb,var(--kali-terminal-text)_70%,rgba(148,210,255,0.28))]">
               {tabs.map((tab) => (
                 <button
@@ -380,9 +381,9 @@ const VolatilityApp = () => {
               {activeTab === 'plugins' && <PluginBrowser />}
               {activeTab === 'walkthrough' && <PluginWalkthrough />}
             </div>
-          </div>
+          </AppPanel>
           {finding && (
-            <aside className="w-full rounded-xl border border-[color:var(--kali-border)] bg-[color:var(--kali-panel)] p-4 text-xs shadow-inner lg:w-72">
+            <AppPanel as="aside" className="w-full p-4 text-xs shadow-inner lg:w-72">
               <h3 className="text-sm font-semibold text-white">Explain this finding</h3>
               <p className="mt-2 text-[11px] text-gray-300">{finding.description}</p>
               <a
@@ -400,12 +401,12 @@ const VolatilityApp = () => {
                 <span aria-hidden="true">✕</span>
                 Close
               </button>
-            </aside>
+            </AppPanel>
           )}
         </div>
       </div>
       {output && (
-        <div className="mx-4 mb-4 overflow-auto rounded-xl border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_88%,rgba(2,20,14,0.35))] text-xs font-mono text-[color:var(--kali-terminal-text)] shadow-inner shadow-[0_0_18px_color-mix(in_srgb,var(--kali-terminal-green)_20%,transparent)]">
+        <AppPanel className="mx-4 mb-4 overflow-auto text-xs font-mono shadow-inner shadow-[0_0_18px_color-mix(in_srgb,var(--kali-terminal-green)_20%,transparent)]" tone="terminal">
           {output.split('\n').map((line, i) => (
             <div
               key={i}
@@ -418,9 +419,9 @@ const VolatilityApp = () => {
               {line || '\u00A0'}
             </div>
           ))}
-        </div>
+        </AppPanel>
       )}
-    </div>
+    </AppPanel>
   );
 };
 
