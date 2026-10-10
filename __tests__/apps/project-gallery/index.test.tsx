@@ -11,6 +11,7 @@ const useRouterMock = useRouter as unknown as jest.Mock;
 
 describe('ProjectGalleryPage', () => {
   const originalFetch = global.fetch;
+  const originalMatchMedia = window.matchMedia;
 
   const projects = [
     {
@@ -49,6 +50,19 @@ describe('ProjectGalleryPage', () => {
   ];
 
   beforeEach(() => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
+    Object.defineProperty(window, 'innerHeight', { configurable: true, writable: true, value: 800 });
+    window.matchMedia = jest.fn().mockImplementation((query: string) => ({
+      matches: query.includes('min-width') ? window.innerWidth >= 640 : false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    }));
+
     useRouterMock.mockReturnValue({
       pathname: '/apps/project-gallery',
       query: {},
@@ -64,11 +78,11 @@ describe('ProjectGalleryPage', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    window.matchMedia = originalMatchMedia;
     if (originalFetch) {
       global.fetch = originalFetch;
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      delete (global as any).fetch;
+      delete (globalThis as { fetch?: typeof fetch }).fetch;
     }
   });
 
@@ -102,5 +116,35 @@ describe('ProjectGalleryPage', () => {
     expect(
       screen.getByText(/Use the filter chips above to add or remove stacks, tags, or years/i),
     ).toBeInTheDocument();
+  });
+
+  it('keeps narrow-window toolbar and helper copy on compact readable classes', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 420 });
+
+    render(<ProjectGalleryPage />);
+
+    const activeFiltersLabel = await screen.findByText('Active filters');
+    const toolbarRow = activeFiltersLabel.closest('div');
+    expect(toolbarRow).toHaveClass('flex-wrap');
+
+    const emptyHelper = screen.getByText(/No filters selected\. Use the chips below/i);
+    expect(emptyHelper).toHaveClass('text-sm');
+    expect(emptyHelper).toHaveClass('text-white/70');
+  });
+
+  it('renders card overflow containers for narrow layouts', async () => {
+    Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 390 });
+
+    render(<ProjectGalleryPage />);
+
+    const title = await screen.findByRole('heading', { name: 'Terminal Dashboard' });
+    const cardBody = title.closest('div[class*="overflow-hidden"]');
+    expect(cardBody).toBeInTheDocument();
+    expect(cardBody).toHaveClass('overflow-hidden');
+
+    const thumbnail = screen.getByAltText('Terminal Dashboard');
+    const imageFrame = thumbnail.closest('div');
+    expect(imageFrame).toHaveClass('overflow-hidden');
+    expect(imageFrame).toHaveClass('rounded-lg');
   });
 });
