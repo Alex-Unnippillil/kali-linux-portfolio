@@ -31,8 +31,8 @@ reset role;
 create temporary table original_grants as
   select relacl from pg_class where oid = 'public.floorplan_annotations'::regclass;
 
-\ir ../floorplan_annotations_rls.sql
-\ir ../floorplan_annotations_rls.sql
+\ir ../../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql
+\ir ../../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql
 
 select pg_temp.assert_true(relrowsecurity and not relforcerowsecurity,
   'RLS is enabled without forcing owner enforcement')
@@ -93,8 +93,8 @@ create temporary table original_policies as
   select * from pg_policies
   where schemaname = 'public' and tablename = 'floorplan_annotations';
 
-\ir ../floorplan_annotations_rls.sql
-\ir ../floorplan_annotations_rls.sql
+\ir ../../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql
+\ir ../../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql
 
 select pg_temp.assert_true(not exists (
   (select * from original_policies except select * from pg_policies)

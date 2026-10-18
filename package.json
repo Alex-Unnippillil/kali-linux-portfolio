@@ -25,7 +25,9 @@
     "verify:all": "node scripts/verify.mjs",
     "dedupe:fix": "yarn dedupe",
     "x:import": "node scripts/import-x-showcase.mjs",
-    "source:catalog": "node scripts/generate-repository-snapshot.mjs --catalog"
+    "source:catalog": "node scripts/generate-repository-snapshot.mjs --catalog",
+    "test:dependency-security": "node --test tests/node/audit-security.test.cjs tests/node/verify-braces-backport.test.cjs",
+    "audit:security": "node scripts/security/audit-security.cjs"
   },
   "engines": {
     "node": "24.x"
@@ -57,7 +59,7 @@
     "diff": "^8",
     "dompurify": "^3.2.6",
     "fast-xml-parser": "^5.3.5",
-    "figlet": "^1.8.2",
+    "figlet": "^1.12.0",
     "framer-motion": "^11.0.3",
     "hash-wasm": "^4.12.0",
     "howler": "^2.2.4",
@@ -126,11 +128,12 @@
     "fast-glob": "^3.3.3",
     "jest": "30.0.5",
     "jest-environment-jsdom": "30.0.5",
+    "js-yaml": "4.3.2",
     "magic-string": "0.30.18",
     "node-mocks-http": "1.17.2",
     "pa11y": "^9.0.1",
     "playwright-core": "^1.55.0",
-    "sharp": "^0.35.4",
+    "sharp": "^0.35.5",
     "test-exclude": "7.0.1",
     "undici": "^7.16.0",
     "wait-on": "^8.0.4",
@@ -148,7 +151,9 @@
     "three-bmfont-text": "2.3.0",
     "postcss": "^8.5.18",
     "serialize-javascript": "^7.0.3",
-    "puppeteer": "^25.8.0"
+    "puppeteer": "^25.8.0",
+    "braces@npm:^3.0.3": "patch:braces@npm%3A3.0.3#~/.yarn/patches/braces-npm-3.0.3-582c14023c.patch",
+    "braces@npm:~3.0.2": "patch:braces@npm%3A3.0.3#~/.yarn/patches/braces-npm-3.0.3-582c14023c.patch"
   },
   "packageManager": "yarn@4.9.2"
 }

@@ -1,13 +1,17 @@
 # Database security patches
 
-These SQL files are applied separately from the application. GitHub Actions,
+Database SQL and the canonical files in `supabase/migrations/` are applied
+separately from the application. GitHub Actions,
 Vercel builds, and GitHub Pages deployments do **not** apply them to Supabase.
 Merging a patch does not by itself resolve a live database advisory.
 
 ## `public.floorplan_annotations`: enable RLS
 
-`floorplan_annotations_rls.sql` resolves the **RLS Disabled in Public** finding
-when applied to the existing table in the Supabase project reporting it.
+[The canonical migration](../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql)
+resolves the **RLS Disabled in Public** finding when applied to the existing table
+in the Supabase project reporting it. The [deployment record and manual
+workflow](../supabase/README.md) identify the already-applied migration; do not
+create a second migration merely to repeat it.
 The patch is safe to rerun and deliberately fails if the table is missing,
 so a wrong project or schema is not silently treated as fixed.
 
@@ -42,8 +46,10 @@ bypass RLS. Enabling RLS does not make an existing permissive policy safe.
    client access is needed but no appropriate policy exists, determine the real
    ownership/access rules before adding one. Do not add `USING (true)` or
    `WITH CHECK (true)` merely to silence a warning or restore unrestricted access.
-3. As the table owner, execute `sql/floorplan_annotations_rls.sql` in that
-   project's SQL Editor, or through its existing database deployment process.
+3. Follow the [manual deployment workflow](../supabase/README.md). Check migration
+   history first: the recorded production migration is already applied. For a
+   separately approved target missing this change, apply the canonical migration
+   through its established migration process.
 4. Verify that the following query returns `true` and that the policies and
    grants above are unchanged:
 

@@ -3,11 +3,13 @@ on:
   pull_request:
     paths:
       - 'sql/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/database-security.yml'
   push:
     branches: [main]
     paths:
       - 'sql/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/database-security.yml'
   workflow_dispatch:
 permissions:
