@@ -322,6 +322,15 @@ describe('Desktop overlay window controls', () => {
 });
 
 describe('Desktop window state transitions', () => {
+  it('starts with every application closed when no initial app is requested', () => {
+    const instance = new Desktop({});
+
+    expect(Object.values(instance.state.closed_windows)).toEqual(
+      expect.arrayContaining([true]),
+    );
+    expect(Object.values(instance.state.closed_windows).every(Boolean)).toBe(true);
+  });
+
   it('closes promptly without waiting for a pending screenshot capture', async () => {
     const originalEnvironment = process.env.NODE_ENV;
     const instance = new Desktop({});
