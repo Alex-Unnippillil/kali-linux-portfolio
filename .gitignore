@@ -9,6 +9,7 @@
 !.yarn/plugins
 !.yarn/sdks
 !.yarn/versions
+!.yarn/patches
 /.pnp
 .pnp.cjs
 .pnp.loader.mjs
@@ -63,3 +64,6 @@ tsconfig.tsbuildinfo
 /public/showcase/repository/
 /public/showcase/repository.tmp/
 /data/x-profile-snapshot.json.tmp
+
+# Raw dependency audit evidence (uploaded by CI)
+/dependency-audit.log

@@ -96,8 +96,8 @@ jobs:
           NODE
       - if: matrix.check == 'security'
         run: |
-          set -o pipefail
-          yarn npm audit --all --recursive --severity high 2>&1 | tee dependency-audit.log
+          yarn test:dependency-security
+          yarn audit:security
       - if: matrix.check == 'build'
         run: yarn build
       - if: matrix.check == 'build'
