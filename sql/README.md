@@ -9,9 +9,8 @@ Merging a patch does not by itself resolve a live database advisory.
 
 [The canonical migration](../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql)
 resolves the **RLS Disabled in Public** finding when applied to the existing table
-in the Supabase project reporting it. The [deployment record and manual
-workflow](../supabase/README.md) identify the already-applied migration; do not
-create a second migration merely to repeat it.
+in the Supabase project reporting it. See the [manual workflow and history safeguards](../supabase/README.md); do not
+create a second migration merely to repeat an existing remote version.
 The patch is safe to rerun and deliberately fails if the table is missing,
 so a wrong project or schema is not silently treated as fixed.
 
@@ -47,9 +46,9 @@ bypass RLS. Enabling RLS does not make an existing permissive policy safe.
    ownership/access rules before adding one. Do not add `USING (true)` or
    `WITH CHECK (true)` merely to silence a warning or restore unrestricted access.
 3. Follow the [manual deployment workflow](../supabase/README.md). Check migration
-   history first: the recorded production migration is already applied. For a
-   separately approved target missing this change, apply the canonical migration
-   through its established migration process.
+   history first. If this version is already present, verify its state. Otherwise,
+   apply the canonical migration only to the approved target through its
+   established migration process.
 4. Verify that the following query returns `true` and that the policies and
    grants above are unchanged:
 
