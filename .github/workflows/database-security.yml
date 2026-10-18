@@ -1,0 +1,37 @@
+name: Database security
+on:
+  pull_request:
+    paths:
+      - 'sql/**'
+      - '.github/workflows/database-security.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sql/**'
+      - '.github/workflows/database-security.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  floorplan-rls:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # Disposable CI database only; never connects to Supabase.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test RLS on an isolated PostgreSQL database
+        run: >-
+          psql -X -v ON_ERROR_STOP=1 --host=localhost --username=postgres
+          --dbname=postgres --file=sql/tests/floorplan_annotations_rls.sql
