@@ -10,7 +10,7 @@ const Ubuntu = dynamic(() => import('../components/ubuntu'), {
 });
 export default function Home() {
   const router = useRouter();
-  const initialApp = typeof router.query.app === 'string' ? router.query.app : 'about';
+  const initialApp = typeof router.query.app === 'string' ? router.query.app : undefined;
   return <><Meta /><Ubuntu initialApp={initialApp} />
     <noscript><main className="bg-ub-cool-grey p-8 text-white"><h1>Alex Unnippillil — Kali Linux portfolio</h1><p>The interactive desktop needs JavaScript. Read the profile, projects and contact details without it.</p><nav aria-label="Portfolio documents"><Link prefetch={false} href="/about/">About Alex</Link> · <Link prefetch={false} href="/projects/">Projects</Link> · <Link prefetch={false} href="/contact/">Contact</Link></nav></main></noscript>
   </>;

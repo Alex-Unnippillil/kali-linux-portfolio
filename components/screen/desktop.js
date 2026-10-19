@@ -315,12 +315,9 @@ export class Desktop extends Component {
         const initialAppMinimized = {};
         apps.forEach((app) => {
             initialAppFocused[app.id] = false;
-            initialAppClosed[app.id] = app.id === 'about' ? false : true;
+            initialAppClosed[app.id] = true;
             initialAppMinimized[app.id] = false;
         });
-        if (process.env.NODE_ENV === 'test') {
-            initialAppClosed.about = true;
-        }
 
         const initialWindowSizes = {};
         const storedFolderContents = {};
@@ -3843,9 +3840,11 @@ export class Desktop extends Component {
                     this.setWorkspaceState({ window_positions: positions }, () => {
                         session.windows.forEach(({ id }) => this.openApp(id));
                     });
-                } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
-                    const initialApp = apps.some((app) => app.id === this.props.initialApp && !app.disabled) ? this.props.initialApp : 'about';
-                    this.openApp(initialApp, this.props.initialContext);
+                } else if (
+                    (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') &&
+                    apps.some((app) => app.id === this.props.initialApp && !app.disabled)
+                ) {
+                    this.openApp(this.props.initialApp, this.props.initialContext);
                 }
             });
             this.checkForNewFolders();
