@@ -3,18 +3,12 @@
 import React, { useState, useEffect } from "react";
 import Tabs from "../Tabs";
 import ToggleSwitch from "../ToggleSwitch";
+import { getInputCapabilities, subscribeViewportPolicy } from "../../utils/compactWindow";
 
 const PANEL_PREFIX = "xfce.panel.";
 
 const isCoarsePointer = (): boolean => {
-  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-    return false;
-  }
-  try {
-    return window.matchMedia("(pointer: coarse)").matches;
-  } catch {
-    return false;
-  }
+  return getInputCapabilities().coarsePointer;
 };
 
 const resolveNumberSetting = (
@@ -95,8 +89,7 @@ export default function Preferences() {
   }, [autohide]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-    const media = window.matchMedia("(pointer: coarse)");
+    if (typeof window === "undefined") return;
     const handleChange = () => {
       if (!localStorage.getItem(`${PANEL_PREFIX}size`)) {
         setSize(resolveNumberSetting("size", 40, 24));
@@ -108,18 +101,7 @@ export default function Preferences() {
         setOrientation(resolveOrientationSetting());
       }
     };
-    if (typeof media.addEventListener === "function") {
-      media.addEventListener("change", handleChange);
-    } else if (typeof media.addListener === "function") {
-      media.addListener(handleChange);
-    }
-    return () => {
-      if (typeof media.removeEventListener === "function") {
-        media.removeEventListener("change", handleChange);
-      } else if (typeof media.removeListener === "function") {
-        media.removeListener(handleChange);
-      }
-    };
+    return subscribeViewportPolicy(handleChange);
   }, []);
 
   return (
@@ -201,4 +183,3 @@ export default function Preferences() {
     </div>
   );
 }
-

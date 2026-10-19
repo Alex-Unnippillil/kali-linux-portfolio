@@ -3,7 +3,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import useIsTouchDevice from '../../hooks/useIsTouchDevice';
 import styles from './DesktopGuide.module.css';
-import { isCompactWindowViewport } from '../../utils/compactWindow';
+import { getViewportPolicy, subscribeViewportPolicy } from '../../utils/compactWindow';
 
 const SEEN_KEY = 'kali:desktop-guide:v1';
 
@@ -25,19 +25,12 @@ export default function DesktopGuide() {
 
   useEffect(() => {
     const update = () => {
-      setCompact(isCompactWindowViewport(window.innerWidth, window.innerHeight, window.matchMedia('(any-pointer: coarse)').matches));
-      const viewport = window.visualViewport;
-      setBottom(viewport ? Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop) : 0);
+      const policy = getViewportPolicy();
+      setCompact(policy.presentation.compact);
+      setBottom(policy.workingArea.obstruction.bottom);
     };
     update();
-    window.addEventListener('resize', update);
-    window.visualViewport?.addEventListener('resize', update);
-    window.visualViewport?.addEventListener('scroll', update);
-    return () => {
-      window.removeEventListener('resize', update);
-      window.visualViewport?.removeEventListener('resize', update);
-      window.visualViewport?.removeEventListener('scroll', update);
-    };
+    return subscribeViewportPolicy(update);
   }, []);
 
   useEffect(() => {

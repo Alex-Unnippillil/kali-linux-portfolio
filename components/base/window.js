@@ -2,7 +2,7 @@
 
 import React, { Component, useCallback, useEffect, useRef, useState } from 'react';
 import Draggable from 'react-draggable';
-import { isCompactWindowViewport, compactWindowBounds } from '../../utils/compactWindow';
+import { compactWindowBounds, getViewportPolicy, subscribeViewportPolicy } from '../../utils/compactWindow';
 import Settings from '../apps/settings';
 import { logPageView } from '../../utils/analytics';
 import { SnapOverlayContext } from '../desktop/SnapOverlay';
@@ -53,28 +53,8 @@ const computeSnapCommitThreshold = (size) =>
     clamp(size * SNAP_COMMIT_THRESHOLD_RATIO, SNAP_COMMIT_THRESHOLD_MIN, SNAP_COMMIT_THRESHOLD_MAX);
 
 const getViewportMetrics = () => {
-    if (typeof window === 'undefined') {
-        return { width: 0, height: 0, left: 0, top: 0 };
-    }
-
-    const fallbackWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 0;
-    const fallbackHeight = typeof window.innerHeight === 'number' ? window.innerHeight : 0;
-    const visualViewport = window.visualViewport;
-
-    if (visualViewport) {
-        const width = Number.isFinite(visualViewport.width) ? visualViewport.width : fallbackWidth;
-        const height = Number.isFinite(visualViewport.height) ? visualViewport.height : fallbackHeight;
-        const left = Number.isFinite(visualViewport.offsetLeft) ? visualViewport.offsetLeft : 0;
-        const top = Number.isFinite(visualViewport.offsetTop) ? visualViewport.offsetTop : 0;
-        return {
-            width: width || fallbackWidth,
-            height: height || fallbackHeight,
-            left,
-            top,
-        };
-    }
-
-    return { width: fallbackWidth, height: fallbackHeight, left: 0, top: 0 };
+    const visible = getViewportPolicy().workingArea.visibleBounds;
+    return visible;
 };
 
 const percentOf = (value, total) => {
@@ -172,8 +152,8 @@ export class Window extends Component {
     constructor(props) {
         super(props);
         this.id = null;
-        const { width: viewportWidth, height: viewportHeight, left: viewportLeft, top: viewportTop } = getViewportMetrics();
-        const isPortrait = viewportHeight > viewportWidth;
+        const layoutViewport = getViewportPolicy().workingArea.layout;
+        const isPortrait = layoutViewport.height > layoutViewport.width;
         const initialTopInset = typeof window !== 'undefined'
             ? measureWindowTopOffset()
             : DEFAULT_WINDOW_TOP_OFFSET;
@@ -187,7 +167,7 @@ export class Window extends Component {
             : 85;
         this.startX =
             props.initialX ??
-            (isPortrait ? window.innerWidth * 0.05 : 60);
+            (isPortrait ? layoutViewport.width * 0.05 : 60);
         this.startY = clampWindowTopPosition(props.initialY, initialTopInset);
 
         this.state = {
@@ -235,9 +215,7 @@ export class Window extends Component {
     }
 
     isCompactViewport = () => {
-        const { width, height } = getViewportMetrics();
-        const coarse = typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches;
-        return isCompactWindowViewport(width, height, coarse);
+        return getViewportPolicy().presentation.compact;
     }
 
     notifySizeChange = () => {
@@ -258,9 +236,7 @@ export class Window extends Component {
         logPageView(`/${this.id}`, 'Custom Title');
 
         // on window resize, resize boundary
-        window.addEventListener('resize', this.resizeBoundries);
-        window.visualViewport?.addEventListener?.('resize', this.resizeBoundries);
-        window.visualViewport?.addEventListener?.('scroll', this.resizeBoundries);
+        this._unsubscribeViewportPolicy = subscribeViewportPolicy(this.resizeBoundries);
         // Listen for context menu events to toggle inert background
         window.addEventListener('context-menu-open', this.setInertBackground);
         window.addEventListener('context-menu-close', this.removeInertBackground);
@@ -344,9 +320,8 @@ export class Window extends Component {
         this.hideSnapPreview();
         logPageView('/desktop', 'Custom Title');
 
-        window.removeEventListener('resize', this.resizeBoundries);
-        window.visualViewport?.removeEventListener?.('resize', this.resizeBoundries);
-        window.visualViewport?.removeEventListener?.('scroll', this.resizeBoundries);
+        this._unsubscribeViewportPolicy?.();
+        this._unsubscribeViewportPolicy = null;
         window.removeEventListener('context-menu-open', this.setInertBackground);
         window.removeEventListener('context-menu-close', this.removeInertBackground);
         const root = this.getWindowNode();
@@ -392,9 +367,9 @@ export class Window extends Component {
     }
 
     setDefaultWindowDimenstion = () => {
-        const { width: viewportWidth, height: viewportHeight } = getViewportMetrics();
-        const isMobile = viewportWidth < 640;
-        const isPortrait = viewportHeight > viewportWidth;
+        const layoutViewport = getViewportPolicy().workingArea.layout;
+        const isMobile = layoutViewport.width < 640;
+        const isPortrait = layoutViewport.height > layoutViewport.width;
 
         // Resolve responsive dimensions
         const resolveResponsive = (responsiveProp, defaultProp, fallbackMobile, fallbackDesktop) => {
@@ -430,7 +405,7 @@ export class Window extends Component {
         const height = Math.max(resolvedHeight, this.state.minHeight);
 
         if (isMobile || isPortrait) {
-            this.startX = window.innerWidth * 0.05;
+            this.startX = layoutViewport.width * 0.05;
         }
 
         this.setState(

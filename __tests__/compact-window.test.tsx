@@ -1,7 +1,11 @@
 import React, { act } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import Window from '../components/base/window';
-import { compactWindowBounds, isCompactWindowViewport } from '../utils/compactWindow';
+import {
+  compactWindowBounds,
+  getViewportPolicy,
+  isCompactWindowViewport,
+} from '../utils/compactWindow';
 
 jest.mock('react-draggable', () => ({ __esModule: true, default: ({ children, disabled }: any) => <div data-testid="drag-controller" data-disabled={disabled}>{children}</div> }));
 const windowProps = { id: 'compact-test', title: 'Test app', focus: jest.fn(), hasMinimised: jest.fn(), closed: jest.fn(), openApp: jest.fn(), screen: () => <input aria-label="Application search" /> };
@@ -12,6 +16,62 @@ test('phone landscape is compact but tablet and desktop layouts are retained', (
   expect(isCompactWindowViewport(844, 390, false)).toBe(false);
   expect(isCompactWindowViewport(768, 1024, true)).toBe(false);
   expect(isCompactWindowViewport(1440, 900)).toBe(false);
+});
+
+const policyTarget = ({
+  width,
+  height,
+  coarse = false,
+  fine = false,
+  hover = false,
+  visual,
+  keyboardHeight = 0,
+}: {
+  width: number;
+  height: number;
+  coarse?: boolean;
+  fine?: boolean;
+  hover?: boolean;
+  visual?: { width: number; height: number; offsetLeft?: number; offsetTop?: number };
+  keyboardHeight?: number;
+}) => ({
+  innerWidth: width,
+  innerHeight: height,
+  visualViewport: visual,
+  matchMedia: (query: string) => ({
+    matches: query.includes('coarse') ? coarse : query.includes('fine') ? fine : hover,
+  }),
+  navigator: keyboardHeight ? { virtualKeyboard: { boundingRect: { height: keyboardHeight } } } : {},
+});
+
+test.each([
+  ['phone portrait', policyTarget({ width: 390, height: 844, coarse: true }), true],
+  ['phone landscape', policyTarget({ width: 844, height: 390, coarse: true }), true],
+  ['tablet', policyTarget({ width: 768, height: 1024, coarse: true }), false],
+  ['hybrid laptop', policyTarget({ width: 1366, height: 768, coarse: true, fine: true, hover: true }), false],
+  ['desktop touchscreen', policyTarget({ width: 1920, height: 1080, coarse: true, fine: true }), false],
+] as const)('%s gets a stable presentation mode', (_name, target, compact) => {
+  const policy = getViewportPolicy(target as any);
+  expect(policy.presentation.compact).toBe(compact);
+  expect(policy.input.hybrid).toBe(target.matchMedia('(any-pointer: coarse)').matches
+    && (target.matchMedia('(any-pointer: fine)').matches || target.matchMedia('(any-hover: hover)').matches));
+});
+
+test('virtual keyboard changes visible work area, not stable phone presentation', () => {
+  const target = policyTarget({
+    width: 390,
+    height: 844,
+    coarse: true,
+    visual: { width: 390, height: 480, offsetTop: 0 },
+    keyboardHeight: 364,
+  });
+  const policy = getViewportPolicy(target as any, { bottom: 8, left: 4 });
+  expect(policy.presentation).toEqual({ mode: 'compact', compact: true });
+  expect(policy.workingArea.layout).toEqual({ width: 390, height: 844 });
+  expect(policy.workingArea.visibleBounds).toEqual({ width: 390, height: 480, left: 0, top: 0 });
+  expect(policy.workingArea.obstruction.bottom).toBe(364);
+  expect(policy.workingArea.virtualKeyboard).toEqual({ visible: true, height: 364 });
+  expect(policy.workingArea.safeArea).toEqual({ top: 0, right: 0, bottom: 8, left: 4 });
 });
 test('compact bounds respect the navbar, dock, safe areas and visible viewport', () => {
   expect(compactWindowBounds({ width: 390, height: 844, left: 0, top: 0 }, 66, 58, { left: 4, right: 4 })).toEqual({ x: 4, y: 66, width: 382, height: 720 });
