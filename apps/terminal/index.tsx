@@ -12,6 +12,7 @@ import { FauxFileSystem, TerminalFileSystem, VirtualFileSystem } from './utils/f
 import { createOutputBuffer, stripAnsi } from './utils/outputBuffer';
 import { createWorkerRunner } from './utils/workerRunner';
 import { useTerminalPreferences, type TerminalPrefs } from './hooks/useTerminalPreferences';
+import apps from '../../apps.config';
 
 // --- Polished Icons ---
 const CopyIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -123,6 +124,7 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
     },
     openApp,
     listCommands: () => commandRegistry.getAll(),
+    listApps: () => (apps || []).map((app) => ({ id: app.id, title: app.title, disabled: Boolean(app.disabled) })),
   });
 
   // Initialize FS
@@ -442,6 +444,15 @@ const TerminalApp = forwardRef<TerminalHandle, TerminalProps>(({ openApp, sessio
             text: `${buildPromptTextRef.current()} ${command}`,
           });
           schedulePersistRef.current();
+        },
+        getAutocompleteCandidates: (buffer) => {
+          const normalized = buffer.trimStart();
+          if (!normalized.startsWith('open ')) return [];
+          const query = normalized.slice(5).toLowerCase();
+          const catalog = (contextRef.current.listApps?.() || []).filter((app) => !app.disabled);
+          return catalog
+            .filter((app) => app.id.toLowerCase().startsWith(query))
+            .map((app) => `open ${app.id}`);
         },
       });
 

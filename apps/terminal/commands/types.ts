@@ -15,6 +15,7 @@ export interface CommandContext {
   clear: () => void;
   openApp?: (id: string) => void;
   listCommands: () => CommandDefinition[];
+  listApps?: () => Array<{ id: string; title?: string; disabled?: boolean }>;
 }
 
 export type CommandHandler = (args: string, ctx: CommandContext) => void | Promise<void>;
