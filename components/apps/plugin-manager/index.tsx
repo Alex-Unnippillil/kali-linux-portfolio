@@ -46,8 +46,27 @@ const formatTimestamp = (timestamp: string) => {
 type FilterOption = 'all' | 'installed' | 'available';
 type SortOption = 'alpha' | 'size';
 
+const DEMO_PLUGINS: PluginInfo[] = [
+  {
+    id: 'demo',
+    file: 'demo.json',
+    sandbox: 'worker',
+    size: 146,
+    description: 'Echoes a static message from a sandboxed worker.',
+  },
+];
+
+const DEMO_MANIFESTS: Record<string, PluginManifest> = {
+  'demo.json': {
+    id: 'demo',
+    sandbox: 'worker',
+    code: "self.postMessage('content');",
+  },
+};
+
 export default function PluginManager() {
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
+  const [catalogStatus, setCatalogStatus] = useState('Loading plugin catalog…');
   const [installed, setInstalled] = useState<Record<string, PluginManifest>>(
     () => {
       if (typeof window !== 'undefined') {
@@ -92,14 +111,40 @@ export default function PluginManager() {
 
   useEffect(() => {
     fetch('/api/plugins')
-      .then((res) => res.json())
-      .then(setPlugins)
-      .catch(() => setPlugins([]));
+      .then((res) => {
+        if ('ok' in res && !res.ok) throw new Error('Plugin API unavailable');
+        return res.json();
+      })
+      .then((catalog) => {
+        if (Array.isArray(catalog) && catalog.length > 0) {
+          setPlugins(catalog);
+          setCatalogStatus('Server plugin catalog loaded.');
+        } else {
+          setPlugins(DEMO_PLUGINS);
+          setCatalogStatus('No server plugins were returned, so the offline demo catalog is shown.');
+        }
+      })
+      .catch(() => {
+        setPlugins(DEMO_PLUGINS);
+        setCatalogStatus('Plugin API unavailable; using the offline demo catalog.');
+      });
   }, []);
 
   const install = async (plugin: PluginInfo) => {
-    const res = await fetch(`/api/plugins/${plugin.file}`);
-    const manifest: PluginManifest = await res.json();
+    let manifest: PluginManifest;
+    try {
+      const res = await fetch(`/api/plugins/${plugin.file}`);
+      if ('ok' in res && !res.ok) throw new Error('Plugin manifest unavailable');
+      manifest = await res.json();
+    } catch {
+      const fallback = DEMO_MANIFESTS[plugin.file];
+      if (!fallback) {
+        setCatalogStatus(`Unable to install ${plugin.id}; no offline manifest is available.`);
+        return;
+      }
+      manifest = fallback;
+      setCatalogStatus(`Installed ${plugin.id} from the offline demo manifest.`);
+    }
     const updated = { ...installed, [plugin.id]: manifest };
     setInstalled(updated);
     try {
@@ -237,6 +282,9 @@ export default function PluginManager() {
           <h1 className="mb-1 text-2xl font-semibold">Plugin Catalog</h1>
           <p className="text-sm text-[color:color-mix(in_srgb,var(--color-text)_70%,transparent)]">
             Discover sandboxed utilities and keep installed plugins up to date.
+          </p>
+          <p className="mt-2 rounded-lg border border-[color:var(--kali-border)] bg-[color:color-mix(in_srgb,var(--kali-panel)_78%,transparent)] px-3 py-2 text-xs text-[color:color-mix(in_srgb,var(--color-text)_72%,transparent)]" role="status">
+            {catalogStatus}
           </p>
         </div>
         <div className="flex flex-wrap gap-4" role="group" aria-label="Plugin filters">
