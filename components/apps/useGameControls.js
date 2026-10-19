@@ -38,6 +38,37 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
   const gamepad = useGamepad();
   const padTime = useRef(0);
 
+  const resetControls = useCallback(() => {
+    stateRef.current.keys = {};
+    stateRef.current.fire = false;
+    stateRef.current.hyperspace = false;
+    stateRef.current.joystick = {
+      x: 0,
+      y: 0,
+      active: false,
+      startX: 0,
+      startY: 0,
+    };
+  }, []);
+
+  // Minimized/unfocused games are paused by contract. Clear held state so a
+  // key or touch released while inactive cannot remain stuck after resume.
+  useEffect(() => {
+    if (!enabled || !isFocused) resetControls();
+  }, [enabled, isFocused, resetControls]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') resetControls();
+    };
+    window.addEventListener('blur', resetControls);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('blur', resetControls);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [resetControls]);
+
   // keyboard controls for directional games
   useEffect(() => {
     if (!onDirection || !enabled) return undefined;
@@ -137,7 +168,6 @@ const useGameControls = (arg, gameId = 'default', options = {}) => {
       else stateRef.current.keys[e.key] = true;
     };
     const handleUp = (e) => {
-      if (!shouldHandleGameKey(e, { isFocused })) return;
       const map = getMapping(gameId, defaultMap);
       if (e.key === map.fire) stateRef.current.fire = false;
       else if (e.key === map.hyperspace) stateRef.current.hyperspace = false;

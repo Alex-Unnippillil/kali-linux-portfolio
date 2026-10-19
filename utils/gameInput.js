@@ -4,8 +4,24 @@ const isTextInput = (el) => {
   return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
 };
 
-export const shouldHandleGameKey = (event, { isFocused = true } = {}) => {
-  if (!isFocused) return false;
+export const GAME_INPUT_ACTIONS = Object.freeze([
+  'up',
+  'down',
+  'left',
+  'right',
+  'action',
+  'pause',
+]);
+
+export const shouldHandleGameKey = (
+  event,
+  { isFocused = true, enabled = true } = {},
+) => {
+  if (!enabled || !isFocused) return false;
+  if (event.isComposing) return false;
+  if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+    return false;
+  }
   if (isTextInput(event.target)) return false;
   return true;
 };

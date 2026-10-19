@@ -32,6 +32,7 @@ interface GameLayoutProps {
   restartHotkeys?: string[];
   settingsPanel?: React.ReactNode;
   isFocused?: boolean;
+  result?: React.ReactNode;
 }
 
 interface RecordedInput {
@@ -82,6 +83,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   restartHotkeys,
   settingsPanel,
   isFocused = true,
+  result,
 }) => {
   const [showHelp, setShowHelp] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -94,6 +96,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
   const [highScorePulse, setHighScorePulse] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const replayTimeout = React.useRef<number | undefined>(undefined);
 
   const close = useCallback(() => setShowHelp(false), []);
   const toggle = useCallback(() => setShowHelp((h) => !h), []);
@@ -174,10 +177,19 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       deserializeRng(ev.rng);
       replayHandler(ev.input, i);
       i += 1;
-      setTimeout(step, 100);
+      replayTimeout.current = window.setTimeout(step, 100);
     };
     step();
   }, [log, replayHandler]);
+
+  useEffect(
+    () => () => {
+      if (replayTimeout.current !== undefined) {
+        window.clearTimeout(replayTimeout.current);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (score === undefined || prefersReducedMotion) return;
@@ -256,6 +268,18 @@ const GameLayout: React.FC<GameLayoutProps> = ({
     };
   }, []);
 
+  // Losing desktop focus includes minimization. Games stay paused when focus
+  // returns so resuming is always an explicit player action.
+  useEffect(() => {
+    if (!isFocused) {
+      setPaused(true);
+      setReplaying(false);
+      if (replayTimeout.current !== undefined) {
+        window.clearTimeout(replayTimeout.current);
+      }
+    }
+  }, [isFocused]);
+
   const resume = useCallback(() => setPaused(false), []);
 
   const contextValue = { record, registerReplay };
@@ -295,6 +319,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({
       <div
         className="relative flex h-full w-full min-h-0 flex-col"
         data-reduced-motion={prefersReducedMotion}
+        data-game-active={isFocused && !paused}
         data-game-viewport
       >
         {showHelp && <HelpOverlay gameId={gameId} onClose={close} />}
@@ -302,19 +327,24 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           <div
             className="absolute inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center"
             role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            onClick={resume}
-            className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
-            autoFocus
+            aria-label="Game paused"
+            aria-modal="true"
           >
-            Resume
-          </button>
-        </div>
-      )}
-      <div className="absolute top-2 right-2 z-40 flex space-x-2">
+            <button
+              type="button"
+              onClick={resume}
+              className="px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring"
+              autoFocus
+            >
+              Resume
+            </button>
+          </div>
+        )}
+        <div
+          className="absolute top-2 right-2 z-40 flex max-w-[calc(100%-1rem)] flex-wrap justify-end gap-2"
+          role="toolbar"
+          aria-label="Game controls"
+        >
         <button
           type="button"
           onClick={() => setPaused((p) => !p)}
@@ -382,7 +412,17 @@ const GameLayout: React.FC<GameLayoutProps> = ({
           ?
         </button>
       </div>
-      {children}
+        {children}
+        {result !== undefined && (
+          <div
+            className="sr-only"
+            role="status"
+            aria-live="assertive"
+            aria-atomic="true"
+          >
+            {result}
+          </div>
+        )}
       {showSettings && settingsPanel && (
         <div className="absolute top-12 right-2 z-50 rounded border border-slate-700/80 bg-slate-900/95 p-3 shadow-xl max-w-xs w-[18rem]">
           {settingsPanel}
