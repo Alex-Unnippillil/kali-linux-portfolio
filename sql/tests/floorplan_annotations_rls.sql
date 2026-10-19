@@ -22,8 +22,22 @@ begin
 end;
 $$;
 
+-- Verify the SQL execution identity, not just a simulated request claim.
+-- These roles are synthetic; this is not Supabase Auth or PostgREST validation.
+create function pg_temp.assert_role(expected_role text, expected_rls boolean)
+returns void language plpgsql as $$
+begin
+  perform pg_temp.assert_true(current_user = expected_role, 'expected SQL role is active');
+  perform pg_temp.assert_true((select not rolsuper from pg_roles where rolname = current_user),
+    'assertions do not execute as a superuser');
+  perform pg_temp.assert_true(row_security_active('public.floorplan_annotations') = expected_rls,
+    'effective row security matches the test scenario');
+end;
+$$;
+
 -- The baseline is actually exposed through table grants before the patch.
 set local role floorplan_test_anon;
+select pg_temp.assert_role('floorplan_test_anon', false);
 select pg_temp.assert_true(count(*) = 2, 'baseline exposes rows before RLS')
 from public.floorplan_annotations;
 reset role;
@@ -64,14 +78,20 @@ end;
 $$;
 
 set local role floorplan_test_anon;
+select pg_temp.assert_role('floorplan_test_anon', true);
 select pg_temp.assert_default_deny();
 reset role;
 set local role floorplan_test_authenticated;
+select pg_temp.assert_role('floorplan_test_authenticated', true);
+select set_config('request.jwt.claim.sub', 'alice', true);
+select pg_temp.assert_default_deny();
+select set_config('request.jwt.claim.sub', 'bob', true);
 select pg_temp.assert_default_deny();
 reset role;
 
 -- Server-side BYPASSRLS access remains available for every CRUD operation.
 set local role floorplan_test_service;
+select pg_temp.assert_role('floorplan_test_service', false);
 select pg_temp.assert_true(count(*) = 2, 'service role reads all rows')
 from public.floorplan_annotations;
 insert into public.floorplan_annotations values (3, 'service');
@@ -104,9 +124,11 @@ select pg_temp.assert_true(not exists (
 ), 'existing policies are unchanged');
 
 set local role floorplan_test_anon;
+select pg_temp.assert_role('floorplan_test_anon', true);
 select pg_temp.assert_default_deny();
 reset role;
 set local role floorplan_test_authenticated;
+select pg_temp.assert_role('floorplan_test_authenticated', true);
 select set_config('request.jwt.claim.sub', 'alice', true);
 select pg_temp.assert_true(count(*) = 1 and min(owner_id) = 'alice',
   'existing policy restricts reads to the owner') from public.floorplan_annotations;

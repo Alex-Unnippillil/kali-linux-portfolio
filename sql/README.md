@@ -74,15 +74,38 @@ already exists. Its synthetic columns and roles are test fixtures, not a
 proposed production schema. All fixture changes are rolled back.
 
 ```sh
-psql -X -v ON_ERROR_STOP=1 --dbname=rls_test \
-  --file=sql/tests/floorplan_annotations_rls.sql
+FLOORPLAN_RLS_DISPOSABLE=1 PGHOST=localhost PGUSER=postgres PGDATABASE=rls_test \
+  bash sql/tests/run-floorplan-rls.sh
 ```
 
-The test covers default-deny reads and writes for ordinary API-like roles,
-service-role bypass, repeated application, and preservation/enforcement of an
-existing restricted policy. The Database security workflow runs it in an
-isolated PostgreSQL service. It never connects to Supabase or applies a live
-database change.
+The runner requires explicit disposable opt-in and rejects an existing public
+data schema or fixture roles. These guards are not permission to point it at a
+live connection. It first executes the canonical migration without the target
+table and accepts only the intended undefined-table error (`42P01`); unrelated
+errors fail the run. It then runs the transactional fixture and verifies that
+the table and roles are absent after rollback.
+
+The SQL test covers default-deny reads and writes for ordinary API-like roles,
+two simulated request subjects, service-role bypass, repeated application, and
+preservation/enforcement of an existing restricted policy. Assertions verify
+the effective SQL role, absence of superuser execution, and whether RLS is
+actually active. The Database security workflow runs it in an isolated
+PostgreSQL service. It never connects to Supabase or applies a live change.
+
+Runner guard tests need only Node.js and Bash:
+
+```sh
+node --test sql/tests/verify-floorplan-rls-runner.mjs
+```
+
+These are migration-mechanics tests. Their `owner_id` schema, policy, and
+identities are synthetic; setting a claim does not authenticate a Supabase user.
+They do not prove a portfolio-specific access contract, actual PostgREST
+behavior, a real-schema replay, or production recovery. There is no established
+portfolio caller or schema for this table in the repository. Verify the
+portfolio's deployment-to-database mapping and the table's relevance before
+adding any real application policy or target-specific acceptance test. See the
+[evidence-first task specification](../docs/supabase-security-deployment-prompt.md).
 
 References: [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security)
 and [PostgreSQL row security](https://www.postgresql.org/docs/current/ddl-rowsecurity.html).

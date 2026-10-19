@@ -1,4 +1,4 @@
-# Supabase security and deployment: an evidence-first task prompt
+# Kali Linux Portfolio: evidence-first Supabase security and deployment
 
 This is a reusable task specification, not a report of completed security or
 deployment work. Adding it to the repository does not execute the prompt, change
@@ -34,13 +34,14 @@ application-wide security audit or infrastructure redesign.
   identities and records in an isolated environment. Record the actual role and
   claims relevant to authorization without exposing tokens or personal data.
 
-The existing public starting points are the
+Repository artifacts to evaluate for relevance include the
 [canonical enable-only migration](../supabase/migrations/20261018154457_enable_floorplan_annotations_rls.sql),
 [migration guidance](../supabase/README.md),
 [SQL regression and limitations](../sql/README.md), and
 [database-security workflow](../.github/workflows/database-security.yml).
-The synthetic regression fixture is not the production schema or proof of the
-application's ownership model.
+A checked-in migration or synthetic regression fixture does not establish that
+the portfolio uses its target table or database. The fixture is not a production
+schema or proof of the portfolio's ownership model.
 
 ## 3. Specific methods and tools
 
@@ -70,18 +71,25 @@ summary, an advisor's silence, or a successful web build alone is insufficient.
 
 ## Rewritten prompt
 
-Complete the existing Supabase row-level-security and GitHub database-deployment
-task for this repository. Go deeper on its correctness and evidence, without
+Work only on `Alex-Unnippillil/kali-linux-portfolio` and the Supabase targets
+verified to serve its own deployed features. Complete its row-level-security and
+GitHub database-deployment task. Go deeper on correctness and evidence, without
 adding unrelated security work, features, dependency changes, preview projects,
 or infrastructure redesign. Preserve the simulation-only product boundary and
 follow the repository's maintainer instructions.
 
 ### A. Establish the narrow contract from primary evidence
 
-1. Identify the exact repository commit, canonical migration version and SQL,
-   affected table, intended target, and existing deployment route. Verify the
-   target privately; use placeholders in public artifacts. Treat previous
-   summaries as leads to verify, not current-state evidence.
+1. Pin the exact commit of `Alex-Unnippillil/kali-linux-portfolio`. Before any
+   database work, verify each relevant caller's database mapping from this
+   repository's code and its own deployment configuration, distinguishing
+   production from preview. Environment-variable names, matching table names,
+   checked-in SQL, and another application's settings are not proof of that
+   mapping. If the feature is unconfigured or the mapping is unverified, report
+   that fact and pause dependent work; do not substitute another application's
+   database. Once verified, identify the relevant canonical migration version
+   and SQL, affected table, and deployment route. Keep target identifiers private
+   and use placeholders publicly. Revalidate prior summaries against this scope.
 2. Read the target's relevant catalog state and migration history without
    changing it. Capture the table definition, ownership/relationship constraints,
    RLS flags, policies, effective grants, and relevant role attributes. Inspect
@@ -90,10 +98,13 @@ follow the repository's maintainer instructions.
    Produce a small role-by-operation matrix for `SELECT`, `INSERT`, `UPDATE`, and
    `DELETE`, including which rows each caller may access and why. Link each rule
    to a source or an explicit product decision. Do not invent ownership columns,
-   tenant membership, or policies. If callers or intended rules cannot be
-   established, identify that precise gap and pause the dependent change.
-4. Decide whether the existing enable-only migration already meets that
-   contract. No-policy default-deny is correct only if ordinary client access is
+   tenant membership, or policies. Do not import another application's access
+   contract. If callers or intended rules cannot be established, identify that
+   precise gap and pause the dependent change.
+4. Evaluate the existing enable-only migration only if its table and target
+   are verified as relevant to this portfolio. Otherwise, do not apply or change
+   it for this task. Decide whether the applicable migration meets the contract.
+   No-policy default-deny is correct only if ordinary client access is
    intentionally absent. A passing service-role query does not demonstrate RLS
    enforcement. Make only the smallest justified correction, if one is needed.
 
