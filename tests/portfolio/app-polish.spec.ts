@@ -140,3 +140,97 @@ for (const state of ["hidden", "inert", "disabled"] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
+  test(`launcher honors focused buttons and categories at ${viewport.width}px`, async ({ page, browserName }) => {
+    await page.setViewportSize(viewport);
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await page.goto("/");
+    await expect(page.locator("#about")).toBeVisible();
+    await page.evaluate(() => {
+      document.documentElement.dataset.launcherAppEvents = "[]";
+      window.addEventListener("open-app", event => {
+        const events = JSON.parse(document.documentElement.dataset.launcherAppEvents || "[]");
+        events.push((event as CustomEvent).detail);
+        document.documentElement.dataset.launcherAppEvents = JSON.stringify(events);
+      });
+    });
+    const trigger = page.getByRole("button", { name: "Applications menu", exact: true });
+    const menu = page.getByTestId("whisker-menu-dropdown");
+    const search = menu.getByRole("searchbox", { name: "Search applications" });
+    await trigger.click();
+    await search.fill("Calculator");
+    const favorite = menu.getByRole("button", { name: "Open Terminal", exact: true });
+    await favorite.focus();
+    await favorite.press("Enter");
+    await expect(page.locator("#terminal")).toBeVisible();
+    await expect(page.locator("#calculator")).toHaveCount(0);
+    await expect(page.locator("html")).toHaveAttribute("data-launcher-app-events", '["terminal"]');
+    await page.locator("#terminal").getByRole("button", { name: "Window close", exact: true }).click();
+    await expect(menu).toHaveCount(0);
+
+    await trigger.click();
+    await search.fill("");
+    const calculator = menu.getByTestId("whisker-menu-app-list").getByRole("button", { name: "Calculator", exact: true });
+    await calculator.focus();
+    await calculator.press("Enter");
+    await expect(page.locator("#calculator")).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-launcher-app-events", '["terminal","calculator"]');
+    await page.locator("#calculator").getByRole("button", { name: "Window close", exact: true }).click();
+    await expect(menu).toHaveCount(0);
+
+    await trigger.click();
+    const favorites = menu.getByRole("option", { name: "Favorites", exact: true });
+    await favorites.focus();
+    await favorites.press("Enter");
+    await expect(favorites).toHaveAttribute("aria-selected", "true");
+    const recent = menu.getByRole("option", { name: "Recent", exact: true });
+    await recent.focus();
+    await recent.press("ArrowDown");
+    const information = menu.getByRole("option", { name: "Information Gathering", exact: true });
+    await expect(information).toHaveAttribute("aria-selected", "true");
+    await expect(information).toBeFocused();
+    await mkdir("portfolio-screenshots", { recursive: true });
+    await page.screenshot({
+      path: `portfolio-screenshots/${browserName}-launcher-keyboard-${viewport.width}.png`,
+      animations: "disabled",
+    });
+    await information.press("Escape");
+    await expect(menu).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+    expect(errors).toEqual([]);
+  });
+
+  test(`launcher preserves composition events and ordinary search at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    const errors: string[] = [];
+    page.on("pageerror", error => errors.push(error.message));
+    await page.goto("/");
+    await expect(page.locator("#about")).toBeVisible();
+    const trigger = page.getByRole("button", { name: "Applications menu", exact: true });
+    await trigger.click();
+    const menu = page.getByTestId("whisker-menu-dropdown");
+    const search = menu.getByRole("searchbox", { name: "Search applications" });
+    await search.fill("Calculator");
+    // These are explicit synthetic event-contract checks, not OS-level IME emulation.
+    const unconsumed = await search.evaluate(node => {
+      const outcomes: boolean[] = [];
+      for (const signal of [{ isComposing: true }, { keyCode: 229 }]) {
+        for (const key of ["Enter", "Escape", "ArrowDown", "ArrowUp"]) {
+          const event = new KeyboardEvent("keydown", { key, ...signal, bubbles: true, cancelable: true });
+          outcomes.push(node.dispatchEvent(event));
+        }
+      }
+      return outcomes;
+    });
+    expect(unconsumed).toEqual(Array(8).fill(true));
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await expect(search).toHaveValue("Calculator");
+    await expect(page.locator("#calculator")).toHaveCount(0);
+    await search.press("Enter");
+    await expect(page.locator("#calculator")).toBeVisible();
+    await expect(menu).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}
