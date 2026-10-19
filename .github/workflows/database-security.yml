@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Test the disposable runner failure handling
-        run: node --test sql/tests/run-floorplan-rls.test.mjs
+        run: node --test sql/tests/verify-floorplan-rls-runner.mjs
       - name: Test RLS on an isolated PostgreSQL database
         env:
           FLOORPLAN_RLS_DISPOSABLE: '1'

@@ -1341,7 +1341,7 @@
     "sql/leaderboard.sql",
     "sql/tests/floorplan_annotations_rls.sql",
     "sql/tests/run-floorplan-rls.sh",
-    "sql/tests/run-floorplan-rls.test.mjs",
+    "sql/tests/verify-floorplan-rls-runner.mjs",
     "src/chat/chatManager.ts",
     "styles/animation.css",
     "styles/globals.css",

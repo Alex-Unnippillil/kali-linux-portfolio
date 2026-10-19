@@ -95,7 +95,7 @@ PostgreSQL service. It never connects to Supabase or applies a live change.
 Runner guard tests need only Node.js and Bash:
 
 ```sh
-node --test sql/tests/run-floorplan-rls.test.mjs
+node --test sql/tests/verify-floorplan-rls-runner.mjs
 ```
 
 These are migration-mechanics tests. Their `owner_id` schema, policy, and
