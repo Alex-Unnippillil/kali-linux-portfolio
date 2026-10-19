@@ -58,3 +58,9 @@ environment and review gate before enabling live deployments.
 
 References: [Supabase migration management](https://supabase.com/docs/guides/local-development/database-migrations)
 and [deployment environments](https://supabase.com/docs/guides/deployment/managing-environments).
+
+## Evidence-first task specification
+
+For a narrowly scoped, verifiable continuation of the security and deployment
+work, see [the task prompt and its evidence requirements](../docs/supabase-security-deployment-prompt.md).
+It is a reusable specification, not a claim about any live project's state.
