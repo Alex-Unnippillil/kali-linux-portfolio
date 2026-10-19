@@ -22,9 +22,13 @@ not evidence that a live database finding has been resolved.
 
 For a reviewed database change:
 
-1. Confirm the intended project and inspect its current schema, policies, and
-   grants using read-only queries. Review and approve the specific access impact
-   before changing live security settings.
+1. Verify the project serves `Alex-Unnippillil/kali-linux-portfolio` using this
+   repository's caller code and its own deployment configuration. A checked-in
+   migration, matching table name, or another application's settings does not
+   establish that mapping. If it is unverified or the feature is unconfigured,
+   pause dependent database work. Once verified, inspect the relevant schema,
+   policies, and grants with read-only queries. Review and approve the specific
+   access impact before changing live security settings.
 2. Read remote migration history with `list_migrations` or the established CLI
    workflow. If this version is already present, verify the resulting state
    rather than submitting it again. Reconcile any history mismatch first.

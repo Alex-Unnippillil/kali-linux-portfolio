@@ -33,7 +33,12 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
+      - name: Test the disposable runner failure handling
+        run: node --test sql/tests/run-floorplan-rls.test.mjs
       - name: Test RLS on an isolated PostgreSQL database
-        run: >-
-          psql -X -v ON_ERROR_STOP=1 --host=localhost --username=postgres
-          --dbname=postgres --file=sql/tests/floorplan_annotations_rls.sql
+        env:
+          FLOORPLAN_RLS_DISPOSABLE: '1'
+          PGHOST: localhost
+          PGUSER: postgres
+          PGDATABASE: postgres
+        run: bash sql/tests/run-floorplan-rls.sh
