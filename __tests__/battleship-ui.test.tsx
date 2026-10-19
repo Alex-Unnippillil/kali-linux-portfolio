@@ -75,4 +75,37 @@ describe('Battleship UI', () => {
 
     expect(screen.getAllByText(/Pass the device/i).length).toBeGreaterThan(0);
   });
+
+  it('allows an intact hotseat ship cell to be selected without disclosing it', () => {
+    render(<BattleshipApp />);
+
+    fireEvent.change(screen.getByLabelText(/Game Mode/i), { target: { value: 'hotseat' } });
+    fireEvent.click(screen.getByRole('button', { name: /Begin Battle/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Ready/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Begin Battle/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Ready/i }));
+
+    const saved = JSON.parse(localStorage.getItem('battleship-session') || 'null');
+    const intactShipIndex = saved.players[1].board.findIndex((cell: string) => cell === 'ship');
+    const column = String.fromCharCode(65 + (intactShipIndex % 10));
+    const row = Math.floor(intactShipIndex / 10) + 1;
+    const target = screen.getByRole('button', { name: `Select target at ${column}${row}` });
+
+    expect(target).not.toHaveAccessibleName(/ship/i);
+    fireEvent.click(target);
+    expect(screen.getByText(/Selected 1\/1/i)).toBeInTheDocument();
+  });
+
+  it('claims a turn atomically when Fire is clicked repeatedly', () => {
+    render(<BattleshipApp />);
+    fireEvent.click(screen.getByRole('button', { name: /Begin Battle/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Select target/i })[0]);
+    const fire = screen.getByRole('button', { name: /Fire Salvo/i });
+
+    fireEvent.click(fire);
+    fireEvent.click(fire);
+
+    const stats = JSON.parse(localStorage.getItem('battleship-stats') || '{}');
+    expect(stats.shotsFired).toBe(1);
+  });
 });

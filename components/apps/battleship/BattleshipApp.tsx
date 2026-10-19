@@ -358,7 +358,7 @@ const BattleshipApp = () => {
         noTouch={settings.noTouch}
         onNoTouchChange={(value: boolean) => {
           setNoTouch(value);
-          restart({ salvoMode: settings.salvo });
+          restart({ salvoMode: settings.salvo, noTouchMode: value });
         }}
         colorblind={settings.colorblind}
         onColorblindChange={(value: boolean) => setColorblind(value)}

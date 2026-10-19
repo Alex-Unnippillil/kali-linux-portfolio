@@ -274,6 +274,12 @@ export const useBattleshipGame = () => {
   const shotTimers = useRef(new Map<number, number>());
   const aiTurnTimer = useRef<number | null>(null);
   const hasBootstrapped = useRef(false);
+  // Refs are used as atomic guards because React state updates do not prevent a
+  // second click in the same event batch. The generation rejects delayed work
+  // belonging to a match that has since been restarted.
+  const turnClaimedRef = useRef(false);
+  const matchGenerationRef = useRef(0);
+  const resultRecordedRef = useRef(false);
 
   const enemyShipSet = useMemo(() => {
     const enemy = players[activePlayer === 0 ? 1 : 0];
@@ -420,6 +426,7 @@ export const useBattleshipGame = () => {
       playerBoard: PlayerState['board'],
       enemyBoard: PlayerState['board'],
       seed: number,
+      noTouchValue = noTouch,
     ) => {
       if (modeValue !== 'ai') {
         aiRef.current = null;
@@ -430,7 +437,7 @@ export const useBattleshipGame = () => {
       }
 
       let aiInstance;
-      if (diff === 'hard') aiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 2) });
+      if (diff === 'hard') aiInstance = new MonteCarloAI({ noAdjacency: noTouchValue, rng: createRng(seed + 2) });
       else if (diff === 'medium') aiInstance = new RandomSalvoAI({ rng: createRng(seed + 2) });
       else aiInstance = new RandomAI({ rng: createRng(seed + 2) });
 
@@ -438,36 +445,39 @@ export const useBattleshipGame = () => {
       playerBoard.forEach((cell, idx) => {
         if (cell === 'hit' || cell === 'miss') aiInstance.record(idx, cell === 'hit');
       });
-      const aiHeatmap = readHeatmap(aiInstance);
-      if (aiHeatmap) {
-        aiInstance.nextMove();
-        setAiHeat(readHeatmap(aiInstance)?.slice() ?? Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-      } else {
-        setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
-      }
+      // Heatmaps describe completed analysis only. Never call nextMove merely
+      // to paint the UI: doing so advances seeded RNG and changes future play.
+      setAiHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
 
-      const playerAiInstance = new MonteCarloAI({ noAdjacency: noTouch, rng: createRng(seed + 3) });
+      const playerAiInstance = new MonteCarloAI({ noAdjacency: noTouchValue, rng: createRng(seed + 3) });
       enemyBoard.forEach((cell, idx) => {
         if (cell === 'hit' || cell === 'miss') playerAiInstance.record(idx, cell === 'hit');
       });
-      playerAiInstance.nextMove();
       playerAiRef.current = playerAiInstance;
-      setGuessHeat(playerAiInstance.getHeatmap().slice());
+      setGuessHeat(Array(BOARD_SIZE * BOARD_SIZE).fill(0));
     },
     [noTouch],
   );
 
   const restart = useCallback(
-    (options?: { diff?: string; salvoMode?: boolean; modeOverride?: BattleMode }) => {
+    (options?: { diff?: string; salvoMode?: boolean; modeOverride?: BattleMode; noTouchMode?: boolean }) => {
       const diff = options?.diff ?? difficulty;
       const salvoMode = options?.salvoMode ?? salvo;
       const modeValue = (options?.modeOverride ?? mode) as BattleMode;
+      const noTouchValue = options?.noTouchMode ?? noTouch;
       const seed = Date.now();
+      matchGenerationRef.current += 1;
+      turnClaimedRef.current = false;
+      resultRecordedRef.current = false;
+      if (aiTurnTimer.current && typeof window !== 'undefined') {
+        window.clearTimeout(aiTurnTimer.current);
+        aiTurnTimer.current = null;
+      }
       setSavedSessionCandidate(null);
       setSession(null);
-      const playerLayout = decorateShips(randomizePlacement(noTouch, { maxAttempts: 50, seed }));
+      const playerLayout = decorateShips(randomizePlacement(noTouchValue, { maxAttempts: 50, seed }));
       const opponentLayout = decorateShips(
-        randomizePlacement(noTouch, {
+        randomizePlacement(noTouchValue, {
           maxAttempts: 50,
           seed: seed + 1,
         }),
@@ -514,7 +524,7 @@ export const useBattleshipGame = () => {
         },
       ]);
 
-      configureAiFromBoards(modeValue, diff as BattleshipSession['difficulty'], playerBoard, opponentBoard, seed);
+      configureAiFromBoards(modeValue, diff as BattleshipSession['difficulty'], playerBoard, opponentBoard, seed, noTouchValue);
 
       announce('info', 'Fresh deployment grid established.', 'Deployment Reset');
       setDifficulty(diff);
@@ -555,12 +565,16 @@ export const useBattleshipGame = () => {
     setHoverPreview(null);
     setShotEffects([]);
 
+    matchGenerationRef.current += 1;
+    turnClaimedRef.current = activeSession.mode === 'ai' && activeSession.phase === 'battle' && activeSession.activePlayer === 1;
+    resultRecordedRef.current = false;
     configureAiFromBoards(
       activeSession.mode,
       activeSession.difficulty,
       restoredPlayers[0].board,
       restoredPlayers[1].board,
       activeSession.savedAt,
+      activeSession.noTouch,
     );
 
     setSavedSessionCandidate(null);
@@ -713,7 +727,10 @@ export const useBattleshipGame = () => {
 
   const startBattle = useCallback(() => {
     const current = players[placementPlayer];
-    if (current.ships.some((s) => !s.cells)) {
+    const validation = validatePlacement(current.ships, { size: BOARD_SIZE, noTouch });
+    const expectedLengths = SHIP_DEFS.map((ship) => ship.len).sort().join(',');
+    const actualLengths = current.ships.map((ship) => ship.len).sort().join(',');
+    if (!validation.ok || expectedLengths !== actualLengths || current.ships.some((s) => s.cells.length !== s.len)) {
       announce('warning', 'Place every vessel before starting the mission.');
       return;
     }
@@ -741,20 +758,21 @@ export const useBattleshipGame = () => {
     setSelectedTargets([]);
     setTurnCount(0);
     announce('info', 'Deployment complete. Your turn to strike!', 'Engagement Begins');
-  }, [announce, mode, placementPlayer, players]);
+  }, [announce, mode, noTouch, placementPlayer, players]);
 
   const toggleTarget = useCallback(
     (idx: number, maxShots: number) => {
-      if (phase !== 'battle') return;
+      if (phase !== 'battle' || passScreen || modal || turnClaimedRef.current || !isValidIndex(idx)) return;
       const enemyBoard = opponentState.board;
-      if (enemyBoard[idx]) return;
+      // An intact ship is private board truth, but remains a legal target.
+      if (enemyBoard[idx] === 'hit' || enemyBoard[idx] === 'miss') return;
       setSelectedTargets((sel) => {
         if (sel.includes(idx)) return sel.filter((s) => s !== idx);
         if (sel.length >= maxShots) return sel;
         return [...sel, idx];
       });
     },
-    [phase, opponentState.board],
+    [modal, passScreen, phase, opponentState.board],
   );
 
   const resolveSunkShips = useCallback(
@@ -782,6 +800,9 @@ export const useBattleshipGame = () => {
 
   const finalizeVictory = useCallback(
     (winnerIndex: number) => {
+      if (resultRecordedRef.current) return;
+      resultRecordedRef.current = true;
+      turnClaimedRef.current = true;
       const isPlayerOne = winnerIndex === 0;
       const opponentIndex = winnerIndex === 0 ? 1 : 0;
       const winnerLabel = mode === 'hotseat' ? `Player ${winnerIndex + 1}` : 'Commander';
@@ -791,7 +812,7 @@ export const useBattleshipGame = () => {
 
       setStats((prev: typeof stats) => {
         const totalGames = prev.totalGames + 1;
-        const totalTurns = prev.totalTurns + turnCount;
+        const totalTurns = prev.totalTurns + turnCount + 1;
         const newStats = {
           ...prev,
           totalGames,
@@ -835,7 +856,8 @@ export const useBattleshipGame = () => {
   }, []);
 
   const aiTurn = useCallback(
-    (shots: number, playerHit: boolean) => {
+    (shots: number, playerHit: boolean, generation: number) => {
+      if (generation !== matchGenerationRef.current || resultRecordedRef.current) return;
       const playerIndex = 0;
       let playerBoard = players[playerIndex].board.slice();
       let heat = aiHeat.slice();
@@ -873,12 +895,8 @@ export const useBattleshipGame = () => {
         return;
       }
 
-      if (readHeatmap(aiRef.current)) {
-        aiRef.current?.nextMove();
-        heat = readHeatmap(aiRef.current)?.slice() ?? heat;
-      }
-
       setAiHeat(heat);
+      turnClaimedRef.current = false;
       announce(
         playerHit ? 'warning' : 'info',
         playerHit ? 'Enemy is retaliating after your strike!' : 'Enemy salvos splashed harmlessly.',
@@ -888,7 +906,8 @@ export const useBattleshipGame = () => {
   );
 
   const fireSelected = useCallback(() => {
-    if (phase !== 'battle' || !selectedTargets.length) return;
+    if (phase !== 'battle' || passScreen || modal || turnClaimedRef.current || !selectedTargets.length) return;
+    turnClaimedRef.current = true;
     const maxShots = computeShotLimit(salvo, activePlayerState);
     const targets = selectedTargets.slice(0, maxShots);
     const hitsOnTruth = new Set(targets.filter((idx) => enemyShipSet.has(idx)));
@@ -940,18 +959,20 @@ export const useBattleshipGame = () => {
     }
 
     const aiCount = computeShotLimit(salvo, opponentState);
+    const generation = matchGenerationRef.current;
     if (aiTurnTimer.current) window.clearTimeout(aiTurnTimer.current);
-    aiTurnTimer.current = window.setTimeout(() => aiTurn(aiCount, hits.length > 0), 150);
+    aiTurnTimer.current = window.setTimeout(() => aiTurn(aiCount, hits.length > 0, generation), 150);
     announce(
       hits.length ? 'success' : 'warning',
       hits.length ? 'Direct hit! Brace for counter-fire.' : 'Shots splashed – adjust targeting.',
     );
-  }, [activePlayer, activePlayerState, aiTurn, announce, enemyShipSet, finalizeVictory, handleHotseatTurnEnd, mode, opponentState, phase, resolveSunkShips, salvo, selectedTargets, setStats, spawnShotEffect, updatePlayerState]);
+  }, [activePlayer, activePlayerState, aiTurn, announce, enemyShipSet, finalizeVictory, handleHotseatTurnEnd, modal, mode, opponentState, passScreen, phase, resolveSunkShips, salvo, selectedTargets, setStats, spawnShotEffect, updatePlayerState]);
 
   const handlePassScreenReady = useCallback(() => {
     setPassScreen(false);
     setSelectedTargets([]);
     setCursor(0);
+    turnClaimedRef.current = false;
     if (phase === 'battle') {
       announce('info', `Player ${activePlayer + 1}, take your turn.`);
     }
